@@ -18,4 +18,7 @@ class Share {
   final String? error;
 
   bool get isFinished => status == 'done' || status == 'failed';
+
+  /// Finished without anything read from it (the book says so, with a hint to share a screenshot).
+  bool get couldNotRead => status == 'failed' || gaps.contains('unreadable');
 }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../shares/presentation/recent_shares.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
 
@@ -17,6 +18,30 @@ class PlacesListPage extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final places = context.watch<PlacesController>();
     final list = places.places;
+    final shared = context.watch<RecentShares>();
+    // Shares the server is still reading, or could not read (last 24 h), above the saved places.
+    final inbox = [
+      for (final _ in shared.reading)
+        NotebookRow(
+          mark: const SizedBox.square(
+            dimension: 14,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          child: Text(
+            l.shareReadingLine,
+            style: Notebook.of(context).hand.copyWith(fontSize: 22),
+          ),
+        ),
+      for (final _ in shared.failed)
+        NotebookRow(
+          mark: Icon(
+            Icons.error_outline,
+            size: 18,
+            color: Notebook.of(context).margin,
+          ),
+          child: Text(l.shareFailed),
+        ),
+    ];
 
     final List<Widget> lines;
     if (!places.loaded) {
@@ -37,7 +62,7 @@ class PlacesListPage extends StatelessWidget {
           ),
         ),
       ];
-    } else if (list.isEmpty) {
+    } else if (list.isEmpty && inbox.isEmpty) {
       lines = [_Note(text: l.homeEmpty)];
     } else {
       lines = [for (final p in list) PlaceTile(place: p)];
@@ -51,7 +76,7 @@ class PlacesListPage extends StatelessWidget {
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
-            children: lines,
+            children: [...inbox, ...lines],
           ),
         ),
       ),

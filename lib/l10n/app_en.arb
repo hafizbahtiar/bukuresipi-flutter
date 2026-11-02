@@ -204,5 +204,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "shareSavedLeaving": "Saved. It will be in your book in a minute.",
+  "shareReadingLine": "Reading a post you shared…",
+  "northUp": "North up"
 }

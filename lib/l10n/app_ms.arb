@@ -152,5 +152,8 @@
   "ownerNewSuffix": "{count} baru minggu ini",
   "ownerJoined": "Daftar {date}",
   "checkBranches": "Semak cawangan",
-  "branchesChecked": "Cawangan disemak: {merged} digabung, {removed} dibuang."
+  "branchesChecked": "Cawangan disemak: {merged} digabung, {removed} dibuang.",
+  "shareSavedLeaving": "Disimpan. Ia akan ada dalam buku anda sebentar lagi.",
+  "shareReadingLine": "Sedang membaca hantaran yang anda kongsi…",
+  "northUp": "Utara ke atas"
 }

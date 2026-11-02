@@ -6,6 +6,7 @@ import '../../auth/presentation/pages/account_page.dart';
 import '../../places/presentation/pages/places_list_page.dart';
 import '../../places/presentation/pages/places_map_page.dart';
 import '../../places/presentation/places_controller.dart';
+import '../../shares/presentation/recent_shares.dart';
 
 /// Signed-in home: Book, Map and Account tabs. Rebuilt after every share (the share page goes back to '/'), so it
 /// reloads the places.
@@ -25,7 +26,23 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // After the first frame: load() notifies at once (spinner), which is not allowed while this page is building.
     final places = context.read<PlacesController>();
-    WidgetsBinding.instance.addPostFrameCallback((_) => places.load());
+    final shared = context.read<RecentShares>();
+    void refresh() {
+      places.load();
+      shared.load();
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => refresh());
+    // Back from TikTok after sharing: the post may be read by now.
+    _life = AppLifecycleListener(onResume: refresh);
+  }
+
+  late final AppLifecycleListener _life;
+
+  @override
+  void dispose() {
+    _life.dispose();
+    super.dispose();
   }
 
   @override
