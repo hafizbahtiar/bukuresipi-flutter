@@ -6,6 +6,7 @@ import '../../auth/presentation/pages/account_page.dart';
 import '../../places/presentation/pages/places_list_page.dart';
 import '../../places/presentation/pages/places_map_page.dart';
 import '../../places/presentation/places_controller.dart';
+import '../../recipes/presentation/recipes_controller.dart';
 import '../../shares/presentation/recent_shares.dart';
 
 /// Signed-in home: Book, Map and Account tabs. Rebuilt after every share (the share page goes back to '/'), so it
@@ -26,9 +27,11 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // After the first frame: load() notifies at once (spinner), which is not allowed while this page is building.
     final places = context.read<PlacesController>();
+    final recipes = context.read<RecipesController>();
     final shared = context.read<RecentShares>();
     void refresh() {
       places.load();
+      recipes.load();
       shared.load();
     }
 

@@ -15,6 +15,7 @@ import '../../features/home/presentation/home_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_shares_page.dart';
 import '../../features/owner/presentation/pages/owner_users_page.dart';
+import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
 import '../../features/shares/presentation/share_page.dart';
 import '../network/update_gate.dart';
 import '../widgets/system_pages.dart';
@@ -85,6 +86,11 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
       GoRoute(
         path: '/places/:id',
         builder: (_, state) => PlaceDetailPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/recipes/:id',
+        builder: (_, state) =>
+            RecipeDetailPage(id: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/places/:id/pin/:branchId',

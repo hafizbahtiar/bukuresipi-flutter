@@ -3,6 +3,7 @@ import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.da
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -15,6 +16,7 @@ import 'package:bukuresipi_flutter/features/shares/presentation/recent_shares.da
 import '../../../fakes.dart';
 import '../../shares/presentation/share_intake_test.dart' show FakeShares;
 import '../places_fixtures.dart';
+import '../../recipes/recipes_fixtures.dart';
 
 void main() {
   late FakePlaces repo;
@@ -24,6 +26,8 @@ void main() {
   Future<void> pump(WidgetTester t, Widget page, {String role = 'user'}) async {
     places = PlacesController(repo);
     await places.load();
+    final recipes = RecipesController(FakeRecipes());
+    await recipes.load();
     final auth = AuthController(
       FakeAuthRepository()
         ..session = true
@@ -41,6 +45,7 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: places),
+          ChangeNotifierProvider.value(value: recipes),
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider(
             create: (_) => RecentShares(

@@ -86,6 +86,7 @@ class ShareRepositoryImpl implements ShareRepository {
     status: j['status'] as String,
     kind: j['kind'] as String,
     restaurantId: j['restaurantId'] as String?,
+    recipeId: j['recipeId'] as String?,
     gaps: [...(j['gaps'] as List? ?? const []).cast<String>()],
     error: j['error'] as String?,
   );
