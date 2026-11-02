@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/log.dart';
 import '../domain/share.dart';
 import '../domain/share_repository.dart';
 
@@ -19,6 +20,7 @@ class RecentShares extends ChangeNotifier {
   final Duration every;
   List<Share> _shares = const [];
   Timer? _next;
+  String _logged = '';
 
   List<Share> get reading => [
     for (final s in _shares)
@@ -34,6 +36,12 @@ class RecentShares extends ChangeNotifier {
     final wasReading = {for (final s in reading) s.id};
     try {
       _shares = await _repo.recent();
+      // `flutter run` console: each share's state, once per change (polling repeats the same list).
+      final now = [
+        for (final s in _shares)
+          'share ${s.id}: ${s.status}, kind ${s.kind}, ${s.reason.isEmpty ? 'ok' : s.reason}',
+      ].join('\n');
+      if (now != _logged) log(_logged = now);
     } catch (_) {
       // Offline for a moment: the next load tries again.
     }

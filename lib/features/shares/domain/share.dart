@@ -20,5 +20,8 @@ class Share {
   bool get isFinished => status == 'done' || status == 'failed';
 
   /// Finished without anything read from it (the book says so, with a hint to share a screenshot).
+  /// Why it stopped: the server's error code, else its gaps ("unreadable").
+  String get reason => error ?? gaps.join(', ');
+
   bool get couldNotRead => status == 'failed' || gaps.contains('unreadable');
 }

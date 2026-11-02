@@ -165,12 +165,14 @@ void main() {
       repo = FakePlaces();
       shared = [
         const Share(id: 's1', status: 'processing', kind: 'unknown'),
-        const Share(id: 's2', status: 'failed', kind: 'unknown'),
+        const Share(id: 's2', status: 'failed', kind: 'unknown', error: 'ai_failed'),
       ];
       await pump(t, const PlacesListPage());
       await t.pump();
       expect(find.text('Reading a post you shared…'), findsOneWidget);
       expect(find.textContaining('could not read this post'), findsOneWidget);
+    // Why, for whoever is looking into it.
+    expect(find.textContaining('ai_failed'), findsOneWidget);
       shared = [];
     },
   );
