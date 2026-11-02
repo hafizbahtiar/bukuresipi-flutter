@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../domain/share_repository.dart';
@@ -99,6 +100,7 @@ class ShareIntake extends ChangeNotifier {
     if (items.isEmpty) return;
     _source.reset();
     final item = items.first;
+    log('share in: ${item.kind.name} ${item.value ?? ''}');
     switch (item.kind) {
       case IncomingKind.url:
         // Android reports our own App Links (email links) here: those are routes, not shares.
@@ -107,7 +109,9 @@ class ShareIntake extends ChangeNotifier {
         _pending = item;
       case IncomingKind.text:
         final link = firstLink(item.value!);
+        if (link == null) log('share: no https link in the text');
         if (link == null) return _set(const ShareFailed('no_link'), show: true);
+        log('share: link $link');
         _pending = Incoming.url(link);
       case IncomingKind.image:
         _pending = item;
@@ -142,8 +146,10 @@ class ShareIntake extends ChangeNotifier {
       final id = item.kind == IncomingKind.image
           ? await _repo.submitImage(item.value!)
           : await _repo.submitLink(item.value!);
+      log('share: accepted, id $id');
       _set(ShareAccepted(id), show: true);
     } catch (e) {
+      log('share: refused, ${ApiException.from(e).code}');
       _set(ShareFailed(ApiException.from(e).code), show: true);
     } finally {
       _sending = false;
