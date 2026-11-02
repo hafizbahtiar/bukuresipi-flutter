@@ -81,6 +81,14 @@ class Branch {
   /// Set by hand in the app: shown, but not verified yet.
   bool get pinnedByUser => pinSource == 'user';
 
+  /// Google Maps search by coordinates (opens the Maps app when installed). null = no pin.
+  String? get mapsUrl => hasPin
+      ? Uri.https('www.google.com', '/maps/search/', {
+          'api': '1',
+          'query': '$lat,$lng',
+        }).toString()
+      : null;
+
   bool get hasPin => lat != null && lng != null;
 
   /// "Jalan Ampang, Kuala Lumpur": whatever is known, for one line under a name.

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/settings/locale_controller.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
@@ -41,79 +42,153 @@ class _AccountPageState extends State<AccountPage> {
     final locale = context.watch<LocaleController>();
     final user = auth.user;
     if (user == null) return const Scaffold();
-    final c = Theme.of(context).colorScheme;
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final verified = user.emailVerified;
+    Icon mark(IconData icon, [Color? color]) =>
+        Icon(icon, size: 20, color: color ?? nb.inkSoft);
+    final next = Icon(Icons.chevron_right, color: nb.inkSoft);
 
     return Scaffold(
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.accountTitle)),
-      body: RefreshIndicator(
-        onRefresh: () => auth.refreshUser().catchError(
-          (Object e) => _snack(errorText(l, e)),
-        ),
-        child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: [
-            ListTile(
-              leading: CircleAvatar(
-                child: Text(
-                  (user.name ?? user.email).characters.first.toUpperCase(),
+      body: NotebookPage(
+        child: RefreshIndicator(
+          onRefresh: () => auth.refreshUser().catchError(
+            (Object e) => _snack(errorText(l, e)),
+          ),
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 24),
+            children: [
+              NotebookRow(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name ?? user.email,
+                      style: text.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (user.name != null)
+                      Text(
+                        user.email,
+                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                      ),
+                  ],
                 ),
               ),
-              title: Text(user.name ?? user.email),
-              subtitle: user.name == null ? null : Text(user.email),
-            ),
-            ListTile(
-              leading: Icon(
-                user.emailVerified
-                    ? Icons.verified_outlined
-                    : Icons.mark_email_unread_outlined,
-                color: user.emailVerified ? c.primary : c.error,
+              NotebookRow(
+                mark: mark(
+                  verified ? Icons.check : Icons.mail_outline,
+                  verified ? nb.pandan : nb.margin,
+                ),
+                onTap: verified || _sending ? null : _resend,
+                trailing: _sending
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(verified ? l.emailVerified : l.emailNotVerified),
+                    if (!verified)
+                      Text(
+                        l.resendVerification,
+                        style: text.bodySmall?.copyWith(
+                          color: nb.pandanDeep,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              title: Text(
-                user.emailVerified ? l.emailVerified : l.emailNotVerified,
+              NotebookRow(
+                mark: mark(Icons.translate),
+                trailing: _LangChoice(
+                  lang: locale.lang,
+                  onChanged: locale.setLang,
+                ),
+                child: Text(l.language),
               ),
-              subtitle: user.emailVerified ? null : Text(l.resendVerification),
-              trailing: _sending
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : null,
-              onTap: user.emailVerified || _sending ? null : _resend,
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.lock_outline),
-              title: Text(l.changePasswordTitle),
-              onTap: () => context.push('/account/password'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.translate),
-              title: Text(l.language),
-              trailing: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'ms', label: Text('BM')),
-                  ButtonSegment(value: 'en', label: Text('EN')),
-                ],
-                selected: {locale.lang},
-                onSelectionChanged: (s) => locale.setLang(s.first),
-                showSelectedIcon: false,
+              NotebookRow(
+                mark: mark(Icons.lock_outline),
+                onTap: () => context.push('/account/password'),
+                trailing: next,
+                child: Text(l.changePasswordTitle),
               ),
-            ),
-            if (user.isOwner)
-              ListTile(
-                leading: const Icon(Icons.admin_panel_settings_outlined),
-                title: Text(l.ownerTitle),
-                onTap: () => context.push('/owner'),
+              if (user.isOwner)
+                NotebookRow(
+                  mark: mark(Icons.admin_panel_settings_outlined),
+                  onTap: () => context.push('/owner'),
+                  trailing: next,
+                  child: Text(l.ownerTitle),
+                ),
+              NotebookRow(
+                mark: mark(Icons.logout, nb.margin),
+                onTap: () => auth.logout(),
+                child: Text(
+                  l.signOut,
+                  style: TextStyle(
+                    color: nb.margin,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.logout, color: c.error),
-              title: Text(l.signOut, style: TextStyle(color: c.error)),
-              onTap: () => auth.logout(),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// BM / EN, the chosen one marked with a kunyit highlighter stroke.
+class _LangChoice extends StatelessWidget {
+  const _LangChoice({required this.lang, required this.onChanged});
+
+  final String lang;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final (code, label) in const [('ms', 'BM'), ('en', 'EN')])
+          Semantics(
+            button: true,
+            selected: code == lang,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => onChanged(code),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: code == lang
+                      ? nb.kunyit.withValues(alpha: 0.55)
+                      : null,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: code == lang
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: code == lang ? nb.ink : nb.inkSoft,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

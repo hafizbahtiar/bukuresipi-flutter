@@ -19,15 +19,27 @@ class NorthButton extends StatelessWidget {
       listenable: map,
       builder: (context, _) {
         final bearing = map.cameraPosition?.bearing ?? 0;
-        return FloatingActionButton.small(
-          heroTag: null,
-          tooltip: tooltip,
-          backgroundColor: nb.paper,
-          foregroundColor: nb.margin,
-          onPressed: () => map.animateCamera(CameraUpdate.bearingTo(0)),
-          child: Transform.rotate(
-            angle: -bearing * pi / 180,
-            child: const Icon(Icons.navigation),
+        return Tooltip(
+          message: tooltip,
+          child: Material(
+            color: nb.paper,
+            elevation: 2,
+            shadowColor: nb.ink.withValues(alpha: 0.3),
+            shape: CircleBorder(side: BorderSide(color: nb.line)),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => map.animateCamera(CameraUpdate.bearingTo(0)),
+              // 48 across, a 22 arrow: room for it at any angle.
+              child: SizedBox.square(
+                dimension: 48,
+                child: Center(
+                  child: Transform.rotate(
+                    angle: -bearing * pi / 180,
+                    child: Icon(Icons.navigation, size: 22, color: nb.margin),
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       },

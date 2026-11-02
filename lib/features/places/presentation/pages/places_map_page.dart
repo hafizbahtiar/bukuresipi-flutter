@@ -6,13 +6,13 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
 import '../widgets/north_button.dart';
 import '../widgets/unpinned_actions.dart';
-import 'places_list_page.dart';
 
 /// OpenFreeMap: free vector tiles, no key, no request cap; its style carries the OpenStreetMap attribution.
 const _style = 'https://tiles.openfreemap.org/styles/liberty';
@@ -95,7 +95,7 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
           ),
       ],
       [
-        for (final (p, _) in pins) {'place': p.id},
+        for (final (p, b) in pins) {'place': p.id, 'branch': b.id},
       ],
     );
     if (!fit) return;
@@ -118,79 +118,64 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
   void _tapped(Circle c) {
     final place = _places.byId(c.data?['place'] as String? ?? '');
     if (place == null || !mounted) return;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: PlaceTile(place: place),
-        ),
-      ),
+    final branch =
+        place.branches.where((b) => b.id == c.data?['branch']).firstOrNull ??
+        place.savedBranch;
+    showNotebookSheet<void>(
+      context,
+      builder: (context) => _PinSheet(place: place, branch: branch),
     );
   }
 
   void _showUnpinned() {
     final l = AppLocalizations.of(context);
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.75,
-          ),
-          // Rebuilds as places get pinned: a found place leaves this list.
-          child: Consumer<PlacesController>(
-            builder: (context, places, _) {
-              final text = Theme.of(context).textTheme;
-              return NotebookPage(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        notebookGutter + 10,
-                        0,
-                        20,
-                        12,
-                      ),
-                      child: Text(
-                        l.unpinnedHelp,
-                        style: text.bodyMedium?.copyWith(
-                          color: Notebook.of(context).inkSoft,
-                        ),
-                      ),
-                    ),
-                    for (final p in places.unpinned)
-                      NotebookRow(
-                        mark: const PinMark(pinned: false),
-                        onTap: () => context.push('/places/${p.id}'),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              p.restaurant.name,
-                              style: text.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (p.savedBranch case final b?) ...[
-                              if (b.label != null &&
-                                  b.label != p.restaurant.name)
-                                Text(b.label!, style: text.bodySmall),
-                              UnpinnedActions(place: p, branch: b),
-                            ],
-                          ],
-                        ),
-                      ),
-                  ],
+    showNotebookSheet<void>(
+      context,
+      // Rebuilds as places get pinned: a found place leaves this list.
+      builder: (context) => Consumer<PlacesController>(
+        builder: (context, places, _) {
+          final text = Theme.of(context).textTheme;
+          return ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 10,
+                  0,
+                  20,
+                  12,
                 ),
-              );
-            },
-          ),
-        ),
+                child: Text(
+                  l.unpinnedHelp,
+                  style: text.bodyMedium?.copyWith(
+                    color: Notebook.of(context).inkSoft,
+                  ),
+                ),
+              ),
+              for (final p in places.unpinned)
+                NotebookRow(
+                  mark: const PinMark(pinned: false),
+                  onTap: () => context.push('/places/${p.id}'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.restaurant.name,
+                        style: text.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (p.savedBranch case final b?) ...[
+                        if (b.label != null && b.label != p.restaurant.name)
+                          Text(b.label!, style: text.bodySmall),
+                        UnpinnedActions(place: p, branch: b),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -293,6 +278,99 @@ class _Slip extends StatelessWidget {
           child: child,
         ),
       ),
+    );
+  }
+}
+
+/// A pin tapped on the map: the place on a notebook sheet, then open it or get directions.
+class _PinSheet extends StatelessWidget {
+  const _PinSheet({required this.place, this.branch});
+
+  final Place place;
+  final Branch? branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final b = branch;
+    return ListView(
+      shrinkWrap: true,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+          child: Text(
+            place.restaurant.name,
+            style: text.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              height: 1.15,
+            ),
+          ),
+        ),
+        if (b != null)
+          NotebookRow(
+            mark: PinMark(pinned: b.hasPin),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  b.label ?? b.where ?? '-',
+                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                if (b.where != null && b.where != b.label)
+                  Text(
+                    b.where!,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                if (b.pinnedByUser)
+                  Text(
+                    l.pinnedByUser,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+              ],
+            ),
+          ),
+        if (place.note case final note? when note.isNotEmpty)
+          NotebookRow(
+            child: Text(
+              note,
+              style: nb.hand.copyWith(fontSize: 22, color: nb.ink),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 16, 20, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/places/${place.id}');
+                  },
+                  child: Text(l.openPlace),
+                ),
+              ),
+              if (b?.mapsUrl case final url?) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 46),
+                      shape: const StadiumBorder(),
+                    ),
+                    onPressed: () =>
+                        openLink(context, url, failed: l.openFailed),
+                    icon: const Icon(Icons.directions),
+                    label: Text(l.directions),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

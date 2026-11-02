@@ -108,13 +108,8 @@ void main() {
   ) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
-    final button = find.text('Remove from my book');
-    await t.scrollUntilVisible(
-      button,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await t.tap(button);
+    // In the floating dock: always in reach, no scrolling.
+    await t.tap(find.byTooltip('Remove from my book'));
     await t.pumpAndSettle();
     expect(repo.removed, isEmpty);
     await t.tap(find.widgetWithText(TextButton, 'Remove'));
@@ -177,6 +172,22 @@ void main() {
       expect(find.text('Reading a post you shared…'), findsOneWidget);
       expect(find.textContaining('could not read this post'), findsOneWidget);
       shared = [];
+    },
+  );
+
+  testWidgets(
+    'Save note in the dock is off until the note changes, then saves it',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      await t.tap(find.byTooltip('Save note'));
+      await t.pump();
+      expect(repo.notes, isEmpty);
+      await t.enterText(find.byType(TextField), 'Order the ayam goreng');
+      await t.pump();
+      await t.tap(find.byTooltip('Save note'));
+      await t.pumpAndSettle();
+      expect(repo.notes, {'a': 'Order the ayam goreng'});
     },
   );
 }
