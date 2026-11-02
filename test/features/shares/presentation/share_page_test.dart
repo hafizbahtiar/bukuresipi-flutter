@@ -24,6 +24,12 @@ class PollingShares extends FakeShares {
   );
 }
 
+class UnreadableShares extends FakeShares {
+  @override
+  Future<Share> get(String id) async =>
+      Share(id: id, status: 'done', kind: 'other', gaps: const ['unreadable']);
+}
+
 void main() {
   Future<(ShareIntake, FakeIncoming)> pump(
     WidgetTester t,
@@ -80,4 +86,17 @@ void main() {
     await t.pump();
     expect(find.textContaining('Stories disappear'), findsOneWidget);
   });
+
+  testWidgets(
+    'a post the API could not read says so and suggests a screenshot',
+    (t) async {
+      final (_, incoming) = await pump(t, UnreadableShares());
+      incoming.controller.add([
+        const Incoming.text('https://vt.tiktok.com/ZS1/'),
+      ]);
+      await t.pump();
+      await t.pump();
+      expect(find.textContaining('Try sharing a screenshot'), findsOneWidget);
+    },
+  );
 }

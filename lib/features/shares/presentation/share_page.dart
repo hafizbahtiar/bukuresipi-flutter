@@ -121,7 +121,7 @@ class _ProgressState extends State<_Progress> {
           ? _Message(text: l.shareStillWorking)
           : _Message(text: l.shareReading, busy: true);
     }
-    if (s.status == 'failed') {
+    if (s.status == 'failed' || s.gaps.contains('unreadable')) {
       return _Message(text: l.shareFailed, icon: Icons.error_outline);
     }
     return switch (s.kind) {
