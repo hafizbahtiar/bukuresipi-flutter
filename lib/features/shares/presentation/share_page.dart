@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/log.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
 import '../domain/share.dart';
@@ -93,6 +94,9 @@ class _ProgressState extends State<_Progress> {
     if (++_polls > _maxPolls) return _stop();
     try {
       final s = await context.read<ShareRepository>().get(widget.id);
+      log(
+        'share ${s.id}: ${s.status}, kind ${s.kind}, gaps ${s.gaps}${s.error == null ? '' : ', error ${s.error}'}',
+      );
       if (!mounted) return;
       setState(() => _share = s);
       if (s.isFinished) _stop();

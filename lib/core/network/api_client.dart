@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../log.dart';
 import '../storage/token_store.dart';
 
 /// The one Dio for the API (`<baseUrl>/api/v1`). Every request carries `X-App-Version` (the API answers 426 when the
@@ -27,7 +28,14 @@ class ApiClient {
       _bare.httpClientAdapter = adapter;
     }
     dio.interceptors.add(
-      InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
+      InterceptorsWrapper(
+        onRequest: _onRequest,
+        onError: _onError,
+        onResponse: (r, h) {
+          log('<- ${r.statusCode} ${r.requestOptions.path}');
+          h.next(r);
+        },
+      ),
     );
   }
 
@@ -47,6 +55,7 @@ class ApiClient {
   Future<_Refresh>? _refreshing;
 
   void _onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    log('-> ${options.method} ${options.path}');
     final access = tokens.current?.access;
     if (options.extra['auth'] != false && access != null) {
       options.headers['Authorization'] = 'Bearer $access';
@@ -59,6 +68,9 @@ class ApiClient {
     ErrorInterceptorHandler handler,
   ) async {
     final res = error.response;
+    log(
+      '<- ${res?.statusCode ?? error.type.name} ${error.requestOptions.path} ${res?.data is Map ? (res!.data as Map)['error'] : ''}',
+    );
     final options = error.requestOptions;
     if (res?.statusCode == 426) onUpdateRequired?.call();
     final sent = options.headers['Authorization'];
