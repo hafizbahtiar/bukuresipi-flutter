@@ -177,5 +177,6 @@
   "signOutTitle": "Log keluar?",
   "signOutConfirm": "Anda perlu emel dan kata laluan untuk log masuk semula.",
   "ownerPerDay": "sehari",
-  "ownerPerMonth": "sebulan"
+  "ownerPerMonth": "sebulan",
+  "dataCredits": "Data peta © penyumbang OpenStreetMap. Data tempat © Overture Maps Foundation."
 }

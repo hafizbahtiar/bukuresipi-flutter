@@ -149,6 +149,20 @@ class _AccountPageState extends State<AccountPage> {
                   ),
                 ),
               ),
+              // Pins come from these open datasets; their licences ask for the credit.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 10,
+                  24,
+                  20,
+                  16,
+                ),
+                child: Text(
+                  l.dataCredits,
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: nb.inkSoft),
+                ),
+              ),
             ],
           ),
         ),
