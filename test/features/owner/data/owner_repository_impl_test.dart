@@ -32,7 +32,7 @@ void main() {
               'name': 'Nominatim',
               'vendorUrl': null,
               'freeUnits': null,
-              'monthlyCap': 100,
+              'cap': 100,
               'active': true,
               'used': 90,
             },
@@ -57,17 +57,17 @@ void main() {
           {
             'code': 'geo:nominatim',
             'name': 'N',
-            'monthlyCap': 50,
+            'cap': 50,
             'active': false,
             'used': 1,
           },
         ),
       );
-      final m = await repo.updateMeter('geo:nominatim', monthlyCap: 50);
+      final m = await repo.updateMeter('geo:nominatim', cap: 50);
       expect(adapter.requests.single.method, 'PATCH');
       expect(adapter.requests.single.path, '/owner/meters/geo%3Anominatim');
-      expect(adapter.requests.single.data, {'monthlyCap': 50});
-      expect([m.monthlyCap, m.active], [50, false]);
+      expect(adapter.requests.single.data, {'cap': 50});
+      expect([m.cap, m.active], [50, false]);
     },
   );
 

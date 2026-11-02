@@ -5,7 +5,7 @@ abstract interface class OwnerRepository {
   Future<OwnerStats> getStats();
 
   /// Only the given fields change.
-  Future<Meter> updateMeter(String code, {int? monthlyCap, bool? active});
+  Future<Meter> updateMeter(String code, {int? cap, bool? active});
 
   /// Newest first; [query] matches part of the email.
   Future<List<OwnerUser>> listUsers({String? query});

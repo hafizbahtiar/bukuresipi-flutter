@@ -43,11 +43,11 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<Meter> updateMeter(String code, {int? monthlyCap, bool? active}) =>
+  Future<Meter> updateMeter(String code, {int? cap, bool? active}) =>
       _call(() async {
         final res = await _dio.patch<Map<String, dynamic>>(
           '/owner/meters/${Uri.encodeComponent(code)}',
-          data: {'monthlyCap': ?monthlyCap, 'active': ?active},
+          data: {'cap': ?cap, 'active': ?active},
         );
         return _meter(res.data!);
       });
@@ -100,7 +100,8 @@ Meter _meter(Map<String, dynamic> m) => Meter(
   code: m['code'] as String,
   name: m['name'] as String,
   used: m['used'] as int,
-  monthlyCap: m['monthlyCap'] as int,
+  cap: m['cap'] as int,
+  period: m['period'] as String? ?? 'month',
   active: m['active'] as bool,
   vendorUrl: m['vendorUrl'] as String?,
 );

@@ -211,5 +211,7 @@
   "openPlace": "Open",
   "ok": "OK",
   "signOutTitle": "Sign out?",
-  "signOutConfirm": "You will need your email and password to sign in again."
+  "signOutConfirm": "You will need your email and password to sign in again.",
+  "ownerPerDay": "a day",
+  "ownerPerMonth": "a month"
 }

@@ -59,7 +59,7 @@ class _OwnerPageState extends State<OwnerPage> {
     try {
       final updated = await repo.updateMeter(
         m.code,
-        monthlyCap: change.$1,
+        cap: change.$1,
         active: change.$2,
       );
       if (mounted) setState(() => _stats = _stats?.withMeter(updated));
@@ -204,7 +204,7 @@ class _MeterTile extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 meter.active
-                    ? '${meter.used} / ${meter.monthlyCap}'
+                    ? '${meter.used} / ${meter.cap} ${meter.period == 'day' ? l.ownerPerDay : l.ownerPerMonth}'
                     : l.ownerMeterOff,
                 style: TextStyle(
                   color: !meter.active || high ? nb.margin : nb.inkSoft,
@@ -240,7 +240,7 @@ class _MeterDialog extends StatefulWidget {
 }
 
 class _MeterDialogState extends State<_MeterDialog> {
-  late final _cap = TextEditingController(text: '${widget.meter.monthlyCap}');
+  late final _cap = TextEditingController(text: '${widget.meter.cap}');
   late bool _active = widget.meter.active;
 
   @override
@@ -285,7 +285,7 @@ class _MeterDialogState extends State<_MeterDialog> {
           onPressed: cap == null
               ? null
               : () => Navigator.pop(context, (
-                  int.tryParse(_cap.text) ?? widget.meter.monthlyCap,
+                  int.tryParse(_cap.text) ?? widget.meter.cap,
                   _active,
                 )),
           child: Text(l.save),
