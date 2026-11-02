@@ -11,6 +11,12 @@ abstract interface class ShareRepository {
 
   Future<Share> get(String id);
 
+  /// Reads a failed/unreadable share again (it goes back to pending).
+  Future<void> retry(String id);
+
+  /// Takes a failed/unreadable share off the list.
+  Future<void> dismiss(String id);
+
   /// The user's shares from the last 24 h, newest first.
   Future<List<Share>> recent();
 }

@@ -35,6 +35,14 @@ class FakeShares implements ShareRepository {
 
   List<Share> recentList = [];
   int recentReads = 0;
+  final retried = <String>[];
+  final dismissed = <String>[];
+
+  @override
+  Future<void> retry(String id) async => retried.add(id);
+
+  @override
+  Future<void> dismiss(String id) async => dismissed.add(id);
 
   @override
   Future<List<Share>> recent() async {

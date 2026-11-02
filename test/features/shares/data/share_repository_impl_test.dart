@@ -82,6 +82,20 @@ void main() {
     );
   });
 
+  test('retry POSTs and dismiss DELETEs the share', () async {
+    final repo = make(
+      (o) => o.method == 'POST'
+          ? (202, {'status': 'pending'})
+          : (204, null),
+    );
+    await repo.retry('s-1');
+    await repo.dismiss('s-1');
+    expect(
+      [for (final r in adapter.requests) '${r.method} ${r.path}'],
+      ['POST /shares/s-1/retry', 'DELETE /shares/s-1'],
+    );
+  });
+
   test('recent: the last day of shares, as the book shows them', () async {
     final repo = make(
       (_) => (
