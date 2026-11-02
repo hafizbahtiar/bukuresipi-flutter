@@ -8,6 +8,7 @@ import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/shares/presentation/share_intake.dart';
 import 'l10n/gen/app_localizations.dart';
 
 class BukuresipiApp extends StatefulWidget {
@@ -22,6 +23,15 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     context.read<AuthController>(),
     context.read<UpdateGate>(),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    // Shares can arrive before the first frame (app opened from the share sheet): start once the router exists.
+    final shares = context.read<ShareIntake>();
+    shares.onShow = () => _router.go('/share');
+    shares.start();
+  }
 
   @override
   void dispose() {
