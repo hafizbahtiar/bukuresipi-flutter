@@ -30,21 +30,24 @@ class Meter {
     required this.code,
     required this.name,
     required this.used,
-    required this.monthlyCap,
+    required this.cap,
     required this.active,
     this.vendorUrl,
+    this.period = 'month',
   });
 
   final String code;
   final String name;
   final int used;
-  final int monthlyCap;
+  final int cap;
   final bool active;
   final String? vendorUrl;
 
+  /// 'day' or 'month': what [cap] and [used] count.
+  final String period;
+
   /// 0..1 of the cap used (1 when the cap is 0).
-  double get share =>
-      monthlyCap <= 0 ? 1 : (used / monthlyCap).clamp(0, 1).toDouble();
+  double get share => cap <= 0 ? 1 : (used / cap).clamp(0, 1).toDouble();
 }
 
 class OwnerUser {

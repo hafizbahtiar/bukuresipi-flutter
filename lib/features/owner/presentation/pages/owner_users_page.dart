@@ -5,6 +5,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
 import '../load_view.dart';
 
 /// Owner: users, newest first, searchable by email. The one action is ending a user's sessions.
@@ -78,23 +79,13 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
       ),
     );
     if (end != true || !mounted) return;
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Text(l.ownerEndSessionsConfirm(u.email)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.ownerSignOut),
-          ),
-        ],
-      ),
+    final yes = await showNotebookDialog(
+      context,
+      message: l.ownerEndSessionsConfirm(u.email),
+      tone: DialogTone.danger,
+      confirmLabel: l.ownerSignOut,
     );
-    if (yes != true) return;
+    if (!yes) return;
     try {
       await repo.endSessions(u.id);
       messenger.showSnackBar(SnackBar(content: Text(l.ownerSessionsEnded)));

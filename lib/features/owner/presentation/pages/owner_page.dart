@@ -51,16 +51,17 @@ class _OwnerPageState extends State<OwnerPage> {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
     final messenger = ScaffoldMessenger.of(context);
-    final change = await showDialog<(int, bool)>(
-      context: context,
-      builder: (_) => _MeterDialog(meter: m),
+    final change = await showNotebookSheet<(int, String, bool)>(
+      context,
+      builder: (_) => _MeterSheet(meter: m),
     );
     if (change == null) return;
     try {
       final updated = await repo.updateMeter(
         m.code,
-        monthlyCap: change.$1,
-        active: change.$2,
+        cap: change.$1,
+        period: change.$2,
+        active: change.$3,
       );
       if (mounted) setState(() => _stats = _stats?.withMeter(updated));
     } catch (e) {
@@ -204,7 +205,7 @@ class _MeterTile extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 meter.active
-                    ? '${meter.used} / ${meter.monthlyCap}'
+                    ? '${meter.used} / ${meter.cap} ${meter.period == 'day' ? l.ownerPerDay : l.ownerPerMonth}'
                     : l.ownerMeterOff,
                 style: TextStyle(
                   color: !meter.active || high ? nb.margin : nb.inkSoft,
@@ -229,19 +230,20 @@ class _MeterTile extends StatelessWidget {
   }
 }
 
-/// Returns (cap, on) or null when cancelled.
-class _MeterDialog extends StatefulWidget {
-  const _MeterDialog({required this.meter});
+/// Returns (cap, period, on) or null when cancelled.
+class _MeterSheet extends StatefulWidget {
+  const _MeterSheet({required this.meter});
 
   final Meter meter;
 
   @override
-  State<_MeterDialog> createState() => _MeterDialogState();
+  State<_MeterSheet> createState() => _MeterSheetState();
 }
 
-class _MeterDialogState extends State<_MeterDialog> {
-  late final _cap = TextEditingController(text: '${widget.meter.monthlyCap}');
+class _MeterSheetState extends State<_MeterSheet> {
+  late final _cap = TextEditingController(text: '${widget.meter.cap}');
   late bool _active = widget.meter.active;
+  late String _period = widget.meter.period == 'day' ? 'day' : 'month';
 
   @override
   void dispose() {
@@ -252,12 +254,31 @@ class _MeterDialogState extends State<_MeterDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
     final cap = int.tryParse(_cap.text);
-    return AlertDialog(
-      title: Text(widget.meter.name),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+    Widget period(String value, String label) => ChoiceChip(
+      label: Text(label),
+      selected: _period == value,
+      onSelected: (_) => setState(() => _period = value),
+      selectedColor: nb.mist,
+      side: BorderSide(color: nb.line),
+      labelStyle: TextStyle(
+        color: _period == value ? nb.pandanDeep : nb.inkSoft,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 16),
         children: [
+          Text(
+            widget.meter.name,
+            style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
           TextField(
             controller: _cap,
             keyboardType: TextInputType.number,
@@ -268,29 +289,47 @@ class _MeterDialogState extends State<_MeterDialog> {
             decoration: InputDecoration(labelText: l.ownerMeterCap),
             onChanged: (_) => setState(() {}),
           ),
+          const SizedBox(height: 20),
+          Text(
+            l.ownerMeterPeriod,
+            style: text.labelLarge?.copyWith(color: nb.inkSoft),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              period('day', l.ownerPeriodDay),
+              period('month', l.ownerPeriodMonth),
+            ],
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(l.ownerMeterActive),
             value: _active,
             onChanged: (v) => setState(() => _active = v),
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l.cancel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: cap == null
+                      ? null
+                      : () => Navigator.pop(context, (cap, _period, _active)),
+                  child: Text(l.save),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l.cancel),
-        ),
-        TextButton(
-          onPressed: cap == null
-              ? null
-              : () => Navigator.pop(context, (
-                  int.tryParse(_cap.text) ?? widget.meter.monthlyCap,
-                  _active,
-                )),
-          child: Text(l.save),
-        ),
-      ],
     );
   }
 }

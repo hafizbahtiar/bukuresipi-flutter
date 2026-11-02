@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../recipes/presentation/recipes_controller.dart';
 import '../../../shares/presentation/recent_shares.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
@@ -16,8 +17,11 @@ class PlacesListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
     final places = context.watch<PlacesController>();
     final list = places.places;
+    final recipes = context.watch<RecipesController>();
     final shared = context.watch<RecentShares>();
     // Shares the server is still reading, or could not read (last 24 h), above the saved places.
     final inbox = [
@@ -25,7 +29,7 @@ class PlacesListPage extends StatelessWidget {
         NotebookRow(
           mark: const SizedBox.square(
             dimension: 14,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator.adaptive(strokeWidth: 2),
           ),
           child: Text(
             l.shareReadingLine,
@@ -55,11 +59,11 @@ class PlacesListPage extends StatelessWidget {
     ];
 
     final List<Widget> lines;
-    if (!places.loaded) {
+    if (!places.loaded || !recipes.loaded) {
       lines = const [
         Padding(
           padding: EdgeInsets.all(48),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator.adaptive()),
         ),
       ];
     } else if (list.isEmpty && places.error != null) {
@@ -73,11 +77,53 @@ class PlacesListPage extends StatelessWidget {
           ),
         ),
       ];
-    } else if (list.isEmpty && inbox.isEmpty) {
+    } else if (list.isEmpty &&
+        recipes.recipes.isEmpty &&
+        recipes.error != null) {
+      lines = [
+        _Note(text: l.recipesLoadFailed),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(left: notebookGutter + 2),
+            child: TextButton(
+              onPressed: recipes.load,
+              child: Text(l.tryAgain),
+            ),
+          ),
+        ),
+      ];
+    } else if (list.isEmpty && recipes.recipes.isEmpty && inbox.isEmpty) {
       lines = [_Note(text: l.homeEmpty)];
     } else {
       lines = [for (final p in list) PlaceTile(place: p)];
     }
+
+    final recipeLines = <Widget>[
+      if (recipes.recipes.isNotEmpty) NotebookHeading(l.recipesHeading),
+      for (final r in recipes.recipes)
+        NotebookRow(
+          mark: Icon(Icons.restaurant_menu, size: 18, color: nb.inkSoft),
+          onTap: () => context.push('/recipes/${r.id}'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                r.name,
+                style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  '${l.recipeIngredientCount(r.ingredientCount)} · '
+                  '${l.recipeStepCount(r.stepCount)}',
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ];
 
     return Scaffold(
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.homeTitle)),
@@ -87,7 +133,7 @@ class PlacesListPage extends StatelessWidget {
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
-            children: [...inbox, ...lines],
+            children: [...inbox, ...lines, ...recipeLines],
           ),
         ),
       ),

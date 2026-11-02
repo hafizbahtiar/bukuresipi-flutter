@@ -6,13 +6,8 @@ Meter meter({
   int used = 90,
   int cap = 100,
   bool active = true,
-}) => Meter(
-  code: code,
-  name: 'Nominatim',
-  used: used,
-  monthlyCap: cap,
-  active: active,
-);
+}) =>
+    Meter(code: code, name: 'Nominatim', used: used, cap: cap, active: active);
 
 OwnerUser ownerUser(String email, {bool verified = true, int shares = 0}) =>
     OwnerUser(
@@ -36,7 +31,7 @@ class FakeOwner implements OwnerRepository {
   List<FailedShare> shares = [];
   final queries = <String?>[];
   final loggedOut = <String>[];
-  final meterUpdates = <(String, int?, bool?)>[];
+  final meterUpdates = <(String, int?, String?, bool?)>[];
 
   @override
   Future<OwnerStats> getStats() async => stats;
@@ -44,17 +39,19 @@ class FakeOwner implements OwnerRepository {
   @override
   Future<Meter> updateMeter(
     String code, {
-    int? monthlyCap,
+    int? cap,
+    String? period,
     bool? active,
   }) async {
-    meterUpdates.add((code, monthlyCap, active));
+    meterUpdates.add((code, cap, period, active));
     final m = stats.meters.firstWhere((m) => m.code == code);
     return Meter(
       code: code,
       name: m.name,
       used: m.used,
-      monthlyCap: monthlyCap ?? m.monthlyCap,
+      cap: cap ?? m.cap,
       active: active ?? m.active,
+      period: period ?? m.period,
     );
   }
 

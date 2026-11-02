@@ -19,6 +19,8 @@ import 'features/owner/data/owner_repository_impl.dart';
 import 'features/owner/domain/owner_repository.dart';
 import 'features/places/data/places_repository_impl.dart';
 import 'features/places/presentation/places_controller.dart';
+import 'features/recipes/data/recipes_repository_impl.dart';
+import 'features/recipes/presentation/recipes_controller.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
 import 'features/shares/data/webview_caption_reader.dart';
 import 'features/shares/data/share_repository_impl.dart';
@@ -50,11 +52,21 @@ Future<void> main() async {
     ..onUpdateRequired = update.markRequired;
   auth.restore();
   final places = PlacesController(PlacesRepositoryImpl(api.dio));
+  final recipes = RecipesController(RecipesRepositoryImpl(api.dio));
   auth.addListener(() {
-    if (auth.status == AuthStatus.signedOut) places.clear();
+    if (auth.status == AuthStatus.signedOut) {
+      places.clear();
+      recipes.clear();
+    }
   });
   final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
-  final recent = RecentShares(shareRepo, onFinished: places.load);
+  final recent = RecentShares(
+    shareRepo,
+    onFinished: () async {
+      await places.load();
+      await recipes.load();
+    },
+  );
   auth.addListener(() {
     if (auth.status == AuthStatus.signedOut) recent.clear();
   });
@@ -74,6 +86,7 @@ Future<void> main() async {
         Provider<ShareRepository>.value(value: shareRepo),
         ChangeNotifierProvider.value(value: shares),
         ChangeNotifierProvider.value(value: places),
+        ChangeNotifierProvider.value(value: recipes),
         ChangeNotifierProvider.value(value: recent),
         Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),

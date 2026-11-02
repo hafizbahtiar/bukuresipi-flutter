@@ -6,6 +6,7 @@ class Share {
     required this.status,
     required this.kind,
     this.restaurantId,
+    this.recipeId,
     this.gaps = const [],
     this.error,
   });
@@ -14,6 +15,7 @@ class Share {
   final String status;
   final String kind;
   final String? restaurantId;
+  final String? recipeId;
   final List<String> gaps;
   final String? error;
 

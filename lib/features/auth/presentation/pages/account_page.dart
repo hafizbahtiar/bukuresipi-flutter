@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/settings/locale_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
@@ -86,7 +87,9 @@ class _AccountPageState extends State<AccountPage> {
                 trailing: _sending
                     ? const SizedBox.square(
                         dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       )
                     : null,
                 child: Column(
@@ -106,6 +109,7 @@ class _AccountPageState extends State<AccountPage> {
               ),
               NotebookRow(
                 mark: mark(Icons.translate),
+                onTap: () => locale.setLang(locale.lang == 'ms' ? 'en' : 'ms'),
                 trailing: _LangChoice(
                   lang: locale.lang,
                   onChanged: locale.setLang,
@@ -127,7 +131,16 @@ class _AccountPageState extends State<AccountPage> {
                 ),
               NotebookRow(
                 mark: mark(Icons.logout, nb.margin),
-                onTap: () => auth.logout(),
+                onTap: () async {
+                  final yes = await showNotebookDialog(
+                    context,
+                    title: l.signOutTitle,
+                    message: l.signOutConfirm,
+                    tone: DialogTone.danger,
+                    confirmLabel: l.signOut,
+                  );
+                  if (yes) await auth.logout();
+                },
                 child: Text(
                   l.signOut,
                   style: TextStyle(
