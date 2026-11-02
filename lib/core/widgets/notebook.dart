@@ -14,21 +14,24 @@ class NotebookPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nb = Notebook.of(context);
-    return Stack(
-      children: [
-        Positioned(
-          left: notebookGutter - 8,
-          top: 0,
-          bottom: 0,
-          child: ExcludeSemantics(
-            child: Container(
-              width: 1.5,
-              color: nb.margin.withValues(alpha: 0.55),
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Stack(
+        children: [
+          Positioned(
+            left: notebookGutter - 8,
+            top: 0,
+            bottom: 0,
+            child: ExcludeSemantics(
+              child: Container(
+                width: 1.5,
+                color: nb.margin.withValues(alpha: 0.55),
+              ),
             ),
           ),
-        ),
-        child,
-      ],
+          child,
+        ],
+      ),
     );
   }
 }

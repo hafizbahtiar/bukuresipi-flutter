@@ -109,6 +109,7 @@ class _AccountPageState extends State<AccountPage> {
               ),
               NotebookRow(
                 mark: mark(Icons.translate),
+                onTap: () => locale.setLang(locale.lang == 'ms' ? 'en' : 'ms'),
                 trailing: _LangChoice(
                   lang: locale.lang,
                   onChanged: locale.setLang,
