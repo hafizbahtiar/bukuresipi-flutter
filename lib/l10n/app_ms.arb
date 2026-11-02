@@ -159,5 +159,7 @@
   "openPlace": "Buka",
   "ok": "OK",
   "signOutTitle": "Log keluar?",
-  "signOutConfirm": "Anda perlu emel dan kata laluan untuk log masuk semula."
+  "signOutConfirm": "Anda perlu emel dan kata laluan untuk log masuk semula.",
+  "ownerPerDay": "sehari",
+  "ownerPerMonth": "sebulan"
 }

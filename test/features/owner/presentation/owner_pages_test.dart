@@ -42,7 +42,7 @@ void main() {
       await pump(t, const OwnerPage());
       expect(find.text('12'), findsOneWidget);
       expect(find.text('Nominatim'), findsOneWidget);
-      expect(find.text('90 / 100'), findsOneWidget);
+      expect(find.text('90 / 100 a month'), findsOneWidget);
     },
   );
 
