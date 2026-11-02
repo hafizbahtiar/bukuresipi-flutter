@@ -110,3 +110,154 @@ class PinMark extends StatelessWidget {
     );
   }
 }
+
+/// A bottom sheet as a notebook page: paper, the red margin line, ruled rows inside.
+Future<T?> showNotebookSheet<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+}) {
+  final nb = Notebook.of(context);
+  return showModalBottomSheet<T>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    backgroundColor: nb.paper,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+      side: BorderSide(color: nb.line),
+    ),
+    builder: (context) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+        ),
+        child: NotebookPage(child: builder(context)),
+      ),
+    ),
+  );
+}
+
+/// One button of an [ActionDock]. No [onPressed] = shown, but off.
+class DockAction {
+  const DockAction({
+    required this.icon,
+    required this.label,
+    this.tooltip,
+    this.onPressed,
+    this.danger = false,
+    this.busy = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? tooltip;
+  final VoidCallback? onPressed;
+  final bool danger;
+  final bool busy;
+}
+
+/// A page's actions on a slip of paper floating at the bottom, always in reach. Use as the Scaffold's
+/// bottomNavigationBar with `extendBody: true`, and pad the page's list by [ActionDock.clearance].
+class ActionDock extends StatelessWidget {
+  const ActionDock({super.key, required this.actions});
+
+  final List<DockAction> actions;
+
+  static const clearance = 104.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Material(
+        color: nb.paper,
+        elevation: 3,
+        shadowColor: nb.ink.withValues(alpha: 0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: nb.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            for (final a in actions) Expanded(child: _DockButton(action: a)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DockButton extends StatelessWidget {
+  const _DockButton({required this.action});
+
+  final DockAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    final a = action;
+    final on = a.onPressed != null && !a.busy;
+    final color = !on
+        ? nb.inkSoft.withValues(alpha: 0.45)
+        : a.danger
+        ? nb.margin
+        : nb.pandanDeep;
+    return Tooltip(
+      message: a.tooltip ?? a.label,
+      child: InkWell(
+        onTap: on ? a.onPressed : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox.square(
+                dimension: 24,
+                child: a.busy
+                    ? Padding(
+                        padding: const EdgeInsets.all(3),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: nb.pandan,
+                        ),
+                      )
+                    : Icon(a.icon, color: color),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                a.label,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A heading on the page, after the margin line.
+class NotebookHeading extends StatelessWidget {
+  const NotebookHeading(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 28, 20, 6),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.titleMedium
+          ?.copyWith(fontWeight: FontWeight.w700),
+    ),
+  );
+}

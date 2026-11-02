@@ -11,15 +11,86 @@ import '../../domain/place.dart';
 import '../places_controller.dart';
 import '../widgets/unpinned_actions.dart';
 
-class PlaceDetailPage extends StatelessWidget {
+/// One saved place as a notebook page; its actions (directions, save note, check branches, remove) float in a dock.
+class PlaceDetailPage extends StatefulWidget {
   const PlaceDetailPage({super.key, required this.id});
 
   final String id;
 
   @override
+  State<PlaceDetailPage> createState() => _PlaceDetailPageState();
+}
+
+class _PlaceDetailPageState extends State<PlaceDetailPage> {
+  final _note = TextEditingController();
+  String? _savedNote; // what the server has; null until the place is shown
+  bool _savingNote = false;
+  bool _checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _note.addListener(
+      () => setState(() {}),
+    ); // Save note turns on once the text differs
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  void _snack(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _saveNote(Place place) async {
+    final l = AppLocalizations.of(context);
+    FocusScope.of(context).unfocus();
+    setState(() => _savingNote = true);
+    try {
+      await context.read<PlacesController>().updateNote(place.id, _note.text);
+      _savedNote = _note.text;
+      _snack(l.noteSaved);
+    } catch (e) {
+      _snack(errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _savingNote = false);
+    }
+  }
+
+  Future<void> _checkBranches(Place place) async {
+    final l = AppLocalizations.of(context);
+    setState(() => _checking = true);
+    try {
+      final done = await context.read<PlacesController>().tidyBranches(
+        place.restaurant.id,
+      );
+      _snack(l.branchesChecked(done.merged, done.removed));
+    } catch (e) {
+      _snack(errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  Future<void> _remove(Place place) async {
+    final l = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final places = context.read<PlacesController>();
+    if (!await _confirm(context, l.removeConfirm, l.remove)) return;
+    try {
+      await places.remove(place.id);
+      await navigator.maybePop();
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final place = context.watch<PlacesController>().byId(id);
+    final place = context.watch<PlacesController>().byId(widget.id);
     final owner = context.select<AuthController, bool>(
       (a) => a.user?.isOwner ?? false,
     );
@@ -34,18 +105,54 @@ class PlaceDetailPage extends StatelessWidget {
         ),
       );
     }
+    if (_savedNote == null) {
+      _savedNote = place.note ?? '';
+      _note.text = _savedNote!;
+    }
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final r = place.restaurant;
     final branch = place.savedBranch;
     // The post's branch first, then the others.
     final branches = [?branch, ...place.branches.where((b) => b != branch)];
+    final dirty = _note.text.trim() != _savedNote!.trim();
 
     return Scaffold(
       appBar: AppBar(),
+      extendBody: true,
+      bottomNavigationBar: ActionDock(
+        actions: [
+          if (branch?.mapsUrl case final url?)
+            DockAction(
+              icon: Icons.directions,
+              label: l.directions,
+              onPressed: () => openLink(context, url, failed: l.openFailed),
+            ),
+          DockAction(
+            icon: Icons.edit_note,
+            label: l.noteSave,
+            onPressed: dirty ? () => _saveNote(place) : null,
+            busy: _savingNote,
+          ),
+          if (owner)
+            DockAction(
+              icon: Icons.merge_type,
+              label: l.checkBranches,
+              onPressed: () => _checkBranches(place),
+              busy: _checking,
+            ),
+          DockAction(
+            icon: Icons.delete_outline,
+            label: l.remove,
+            tooltip: l.removePlace,
+            danger: true,
+            onPressed: () => _remove(place),
+          ),
+        ],
+      ),
       body: NotebookPage(
         child: ListView(
-          padding: const EdgeInsets.only(bottom: 40),
+          padding: const EdgeInsets.only(bottom: ActionDock.clearance),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
@@ -67,29 +174,10 @@ class PlaceDetailPage extends StatelessWidget {
                         style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                       ),
                     ),
-                  if (branch?.hasPin ?? false)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 14),
-                      child: FilledButton.tonalIcon(
-                        onPressed: () => openLink(
-                          context,
-                          _mapsUrl(branch!),
-                          failed: l.openFailed,
-                        ),
-                        icon: const Icon(Icons.directions),
-                        label: Text(l.directions),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(0, 44),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
-            _Heading(
-              l.branchesTitle,
-              action: owner ? _CheckBranches(restaurantId: r.id) : null,
-            ),
+            NotebookHeading(l.branchesTitle),
             for (final b in branches)
               _BranchRow(
                 place: place,
@@ -98,49 +186,15 @@ class PlaceDetailPage extends StatelessWidget {
                 owner: owner,
               ),
             if (r.halalClaim != null && r.halalQuote != null) ...[
-              _Heading(l.halalTitle),
+              NotebookHeading(l.halalTitle),
               _HalalQuote(restaurant: r),
             ],
-            _Heading(l.noteTitle),
-            _NoteEditor(place: place),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 2, 28, 20, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => _remove(context, place),
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(l.removePlace),
-                  style: TextButton.styleFrom(foregroundColor: nb.margin),
-                ),
-              ),
-            ),
+            NotebookHeading(l.noteTitle),
+            _NoteField(controller: _note),
           ],
         ),
       ),
     );
-  }
-
-  /// Google Maps search by coordinates (opens the Maps app when installed).
-  static String _mapsUrl(Branch b) => Uri.https(
-    'www.google.com',
-    '/maps/search/',
-    {'api': '1', 'query': '${b.lat},${b.lng}'},
-  ).toString();
-
-  Future<void> _remove(BuildContext context, Place place) async {
-    final l = AppLocalizations.of(context);
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final places = context.read<PlacesController>();
-    final yes = await _confirm(context, l.removeConfirm, l.remove);
-    if (!yes) return;
-    try {
-      await places.remove(place.id);
-      await navigator.maybePop();
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-    }
   }
 }
 
@@ -166,75 +220,6 @@ Future<bool> _confirm(
       ),
     ) ??
     false;
-
-class _Heading extends StatelessWidget {
-  const _Heading(this.text, {this.action});
-
-  final String text;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 28, 20, 6),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
-        ?action,
-      ],
-    ),
-  );
-}
-
-/// Owner: merge this restaurant's branches that are the same shop, drop empty ones (on the server, with Clef).
-class _CheckBranches extends StatefulWidget {
-  const _CheckBranches({required this.restaurantId});
-
-  final String restaurantId;
-
-  @override
-  State<_CheckBranches> createState() => _CheckBranchesState();
-}
-
-class _CheckBranchesState extends State<_CheckBranches> {
-  bool _busy = false;
-
-  Future<void> _check() async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _busy = true);
-    try {
-      final done = await context.read<PlacesController>().tidyBranches(
-        widget.restaurantId,
-      );
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.branchesChecked(done.merged, done.removed))),
-      );
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => TextButton.icon(
-    onPressed: _busy ? null : _check,
-    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-    icon: _busy
-        ? const SizedBox.square(
-            dimension: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        : const Icon(Icons.merge_type, size: 18),
-    label: Text(AppLocalizations.of(context).checkBranches),
-  );
-}
 
 class _BranchRow extends StatelessWidget {
   const _BranchRow({
@@ -355,43 +340,11 @@ class _HalalQuote extends StatelessWidget {
   }
 }
 
-/// The user's own note, in handwriting on the page's lines.
-class _NoteEditor extends StatefulWidget {
-  const _NoteEditor({required this.place});
+/// The user's own note, in handwriting on the page's lines (saved from the dock).
+class _NoteField extends StatelessWidget {
+  const _NoteField({required this.controller});
 
-  final Place place;
-
-  @override
-  State<_NoteEditor> createState() => _NoteEditorState();
-}
-
-class _NoteEditorState extends State<_NoteEditor> {
-  late final _note = TextEditingController(text: widget.place.note ?? '');
-  bool _saving = false;
-
-  Future<void> _save() async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    FocusScope.of(context).unfocus();
-    setState(() => _saving = true);
-    try {
-      await context.read<PlacesController>().updateNote(
-        widget.place.id,
-        _note.text,
-      );
-      messenger.showSnackBar(SnackBar(content: Text(l.noteSaved)));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _note.dispose();
-    super.dispose();
-  }
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -402,39 +355,27 @@ class _NoteEditorState extends State<_NoteEditor> {
     );
     return Padding(
       padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _note,
-            maxLength: 500,
-            minLines: 2,
-            maxLines: 6,
-            textCapitalization: TextCapitalization.sentences,
-            style: nb.hand.copyWith(fontSize: 24, height: 1.3, color: nb.ink),
-            decoration: InputDecoration(
-              hintText: l.noteHint,
-              hintStyle: nb.hand.copyWith(
-                fontSize: 22,
-                color: nb.inkSoft.withValues(alpha: 0.6),
-              ),
-              filled: false,
-              border: underline,
-              enabledBorder: underline,
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: nb.pandan, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 6),
-            ),
+      child: TextField(
+        controller: controller,
+        maxLength: 500,
+        minLines: 2,
+        maxLines: 6,
+        textCapitalization: TextCapitalization.sentences,
+        style: nb.hand.copyWith(fontSize: 24, height: 1.3, color: nb.ink),
+        decoration: InputDecoration(
+          hintText: l.noteHint,
+          hintStyle: nb.hand.copyWith(
+            fontSize: 22,
+            color: nb.inkSoft.withValues(alpha: 0.6),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _saving ? null : _save,
-              child: Text(l.noteSave),
-            ),
+          filled: false,
+          border: underline,
+          enabledBorder: underline,
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: nb.pandan, width: 2),
           ),
-        ],
+          contentPadding: const EdgeInsets.symmetric(vertical: 6),
+        ),
       ),
     );
   }
