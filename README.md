@@ -5,8 +5,7 @@ The Bukuresipi app (Android + iOS). API: `bukuresipi-hono`; website and email-li
 ## Setup
 
 ```sh
-cp .env.example .env        # release: API_BASE_URL=https://api.bukuresipi.com
-cp .env.example .env.dev    # debug: API_BASE_URL=http://10.0.2.2:8787 (Android emulator -> wrangler dev)
+cp .env.example .env        # API_BASE_URL=https://api.bukuresipi.com (every build, debug included)
 flutter pub get
 dart run build_runner build # envied -> lib/core/env/env.g.dart; re-run after editing .env*
 flutter run
@@ -34,7 +33,27 @@ database (drift) is not added yet; add it with the first offline feature.
 Source: `assets/brand/` (from the website logo, `bukuresipi-astro/public/favicon.svg`): `icon.png` (iOS + legacy
 Android), `adaptive.png` (Android adaptive foreground on pandan), `mark.png` (splash). After changing them:
 `dart run flutter_launcher_icons && dart run flutter_native_splash:create`. Config is in `pubspec.yaml`.
-No flavors yet: debug = `.env.dev`, release = `.env`.
+No flavors yet: every build uses `.env` (production API).
+
+## Share to Bukuresipi
+
+`features/shares`: the OS share sheet (receive_sharing_intent) -> `ShareIntake` (takes the first https link out of
+shared text, or the image; ignores our own bukuresipi.com links) -> `POST /api/v1/shares` once signed in (a share made
+while signed out waits for sign-in) -> `/share` screen polls `GET /api/v1/shares/:id` until the post is read.
+
+- **Android**: done (`SEND` text/plain + image/* filters in AndroidManifest.xml, `singleTask`).
+- **iOS**: needs a Share Extension target, which only Xcode + your Apple team can set up. In Xcode (`ios/Runner.xcworkspace`):
+  1. File > New > Target > Share Extension, name `Share Extension`, bundle id `com.bukuresipi.ShareExtension`,
+     deployment target = Runner's. Do not activate the scheme.
+  2. Runner and Share Extension targets > Signing & Capabilities > + App Groups > `group.com.bukuresipi`.
+  3. Replace `ios/Share Extension/ShareViewController.swift` with:
+     `import receive_sharing_intent` / `class ShareViewController: RSIShareViewController {}`
+  4. `ios/Share Extension/Info.plist`: add `AppGroupId` = `$(CUSTOM_GROUP_ID)` and the `NSExtensionActivationRule`
+     (links + 1 image) from the receive_sharing_intent README; Runner `Info.plist`: `AppGroupId` and the
+     `CFBundleURLTypes` entry `ShareMedia-$(PRODUCT_BUNDLE_IDENTIFIER)`.
+  5. Podfile: add the `Share Extension` target (`inherit! :search_paths`), set `CUSTOM_GROUP_ID = group.com.bukuresipi`
+     in both targets' build settings, then `cd ios && pod install`.
+  Full steps: https://pub.dev/packages/receive_sharing_intent (iOS section).
 
 ## Email links
 

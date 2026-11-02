@@ -15,6 +15,11 @@ import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/shares/data/plugin_incoming_shares.dart';
+import 'features/shares/data/webview_caption_reader.dart';
+import 'features/shares/data/share_repository_impl.dart';
+import 'features/shares/domain/share_repository.dart';
+import 'features/shares/presentation/share_intake.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,22 +28,41 @@ Future<void> main() async {
   final tokens = SecureTokenStore();
   await tokens.load();
 
-  final api = ApiClient(baseUrl: Env.apiBaseUrl, tokens: tokens, appVersion: info.version);
-  final AuthRepository authRepo = AuthRepositoryImpl(AuthApi(api.dio), tokens, prefs);
+  final api = ApiClient(
+    baseUrl: Env.apiBaseUrl,
+    tokens: tokens,
+    appVersion: info.version,
+  );
+  final AuthRepository authRepo = AuthRepositoryImpl(
+    AuthApi(api.dio),
+    tokens,
+    prefs,
+  );
   final auth = AuthController(authRepo);
   final update = UpdateGate();
   api
     ..onSessionEnded = auth.sessionEnded
     ..onUpdateRequired = update.markRequired;
   auth.restore();
+  final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
+  final shares = ShareIntake(
+    PluginIncomingShares(),
+    shareRepo,
+    auth,
+    WebViewCaptionReader(),
+  ); // started by the app, once the router exists
 
-  runApp(MultiProvider(
-    providers: [
-      Provider<ApiClient>.value(value: api),
-      ChangeNotifierProvider.value(value: auth),
-      ChangeNotifierProvider.value(value: update),
-      ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
-    ],
-    child: const BukuresipiApp(),
-  ));
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<ApiClient>.value(value: api),
+        ChangeNotifierProvider.value(value: auth),
+        ChangeNotifierProvider.value(value: update),
+        Provider<ShareRepository>.value(value: shareRepo),
+        ChangeNotifierProvider.value(value: shares),
+        ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
+      ],
+      child: const BukuresipiApp(),
+    ),
+  );
 }

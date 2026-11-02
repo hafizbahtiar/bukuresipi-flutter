@@ -29,7 +29,10 @@ class _LoginPageState extends State<LoginPage> {
       _error = null;
     });
     try {
-      await context.read<AuthController>().login(_email.text, _password.text); // router moves on
+      await context.read<AuthController>().login(
+        _email.text,
+        _password.text,
+      ); // router moves on
     } catch (e) {
       if (mounted) setState(() => _error = errorText(l, e));
     } finally {
@@ -55,29 +58,48 @@ class _LoginPageState extends State<LoginPage> {
         Form(
           key: _form,
           child: AutofillGroup(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              TextFormField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                decoration: InputDecoration(labelText: l.email),
-                validator: (v) => emailError(l, v),
-              ),
-              const SizedBox(height: 16),
-              // Login only checks that something was typed: the server decides, and old passwords may predate rules.
-              PasswordField(
-                controller: _password,
-                label: l.password,
-                validator: (v) => (v ?? '').isEmpty ? l.errInvalidCredentials : null,
-                onSubmitted: (_) => _submit(),
-              ),
-              Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => context.push('/forgot'), child: Text(l.toForgot))),
-              const SizedBox(height: 8),
-              BusyButton(label: l.loginButton, busy: _busy, onPressed: _submit),
-              FormMessage(_error),
-              const SizedBox(height: 16),
-              TextButton(onPressed: () => context.go('/register'), child: Text(l.toRegister)),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                  decoration: InputDecoration(labelText: l.email),
+                  validator: (v) => emailError(l, v),
+                ),
+                const SizedBox(height: 16),
+                // Login only checks that something was typed: the server decides, and old passwords may predate rules.
+                PasswordField(
+                  controller: _password,
+                  label: l.password,
+                  validator: (v) =>
+                      (v ?? '').isEmpty ? l.errInvalidCredentials : null,
+                  onSubmitted: (_) => _submit(),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.push('/forgot'),
+                    child: Text(l.toForgot),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                BusyButton(
+                  label: l.loginButton,
+                  busy: _busy,
+                  onPressed: _submit,
+                ),
+                FormMessage(_error),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => context.go('/register'),
+                  child: Text(l.toRegister),
+                ),
+              ],
+            ),
           ),
         ),
       ],

@@ -22,7 +22,9 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   User? get cachedUser {
     final raw = _prefs.getString(_userKey);
-    return raw == null ? null : userFromJson(jsonDecode(raw) as Map<String, dynamic>);
+    return raw == null
+        ? null
+        : userFromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
   Future<T> _call<T>(Future<T> Function() fn) async {
@@ -44,19 +46,30 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<User> me() => _call(() async => _remember((await _api.me())['user'] as Map<String, dynamic>));
+  Future<User> me() => _call(
+    () async => _remember((await _api.me())['user'] as Map<String, dynamic>),
+  );
 
   @override
-  Future<User> login(String email, String password) => _call(() async => _signedIn(await _api.login(email.trim(), password)));
+  Future<User> login(String email, String password) =>
+      _call(() async => _signedIn(await _api.login(email.trim(), password)));
 
   @override
-  Future<User> register({required String email, required String password, String? name, required String lang}) =>
-      _call(() async => _signedIn(await _api.register({
-            'email': email.trim(),
-            'password': password,
-            if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-            'lang': lang,
-          })));
+  Future<User> register({
+    required String email,
+    required String password,
+    String? name,
+    required String lang,
+  }) => _call(
+    () async => _signedIn(
+      await _api.register({
+        'email': email.trim(),
+        'password': password,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+        'lang': lang,
+      }),
+    ),
+  );
 
   @override
   Future<void> logout() async {
@@ -76,27 +89,32 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> verifyEmail(String token) => _call(() => _api.verifyEmail(token));
+  Future<void> verifyEmail(String token) =>
+      _call(() => _api.verifyEmail(token));
 
   @override
   Future<void> resendVerification() => _call(_api.resendVerification);
 
   @override
-  Future<void> forgotPassword(String email) => _call(() => _api.forgotPassword(email.trim()));
+  Future<void> forgotPassword(String email) =>
+      _call(() => _api.forgotPassword(email.trim()));
 
   @override
-  Future<void> resetPassword(String token, String password) => _call(() => _api.resetPassword(token, password));
+  Future<void> resetPassword(String token, String password) =>
+      _call(() => _api.resetPassword(token, password));
 
   @override
-  Future<void> changePassword(String current, String next) =>
-      _call(() async => _tokens.save(Tokens.fromJson(await _api.changePassword(current, next))));
+  Future<void> changePassword(String current, String next) => _call(
+    () async =>
+        _tokens.save(Tokens.fromJson(await _api.changePassword(current, next))),
+  );
 }
 
 User userFromJson(Map<String, dynamic> j) => User(
-      id: j['id'] as String,
-      email: j['email'] as String,
-      name: j['name'] as String?,
-      role: j['role'] as String,
-      lang: j['lang'] as String,
-      emailVerified: j['emailVerified'] as bool,
-    );
+  id: j['id'] as String,
+  email: j['email'] as String,
+  name: j['name'] as String?,
+  role: j['role'] as String,
+  lang: j['lang'] as String,
+  emailVerified: j['emailVerified'] as bool,
+);

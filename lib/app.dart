@@ -8,6 +8,7 @@ import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/shares/presentation/share_intake.dart';
 import 'l10n/gen/app_localizations.dart';
 
 class BukuresipiApp extends StatefulWidget {
@@ -18,7 +19,19 @@ class BukuresipiApp extends StatefulWidget {
 }
 
 class _BukuresipiAppState extends State<BukuresipiApp> {
-  late final GoRouter _router = buildRouter(context.read<AuthController>(), context.read<UpdateGate>());
+  late final GoRouter _router = buildRouter(
+    context.read<AuthController>(),
+    context.read<UpdateGate>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // Shares can arrive before the first frame (app opened from the share sheet): start once the router exists.
+    final shares = context.read<ShareIntake>();
+    shares.onShow = () => _router.go('/share');
+    shares.start();
+  }
 
   @override
   void dispose() {
@@ -28,18 +41,18 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp.router(
-        title: 'Bukuresipi',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        locale: context.watch<LocaleController>().locale,
-        supportedLocales: LocaleController.supported,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        routerConfig: _router,
-      );
+    title: 'Bukuresipi',
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    locale: context.watch<LocaleController>().locale,
+    supportedLocales: LocaleController.supported,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    routerConfig: _router,
+  );
 }

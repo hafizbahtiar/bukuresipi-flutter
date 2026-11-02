@@ -20,6 +20,8 @@ dependencies:
   intl: ^0.20.3
   flutter_localizations:
     sdk: flutter
+  receive_sharing_intent: ^1.9.0
+  flutter_inappwebview: 6.2.0-beta.3
 
 dev_dependencies:
   flutter_test:
@@ -32,6 +34,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/brand/icon.png
 
 # App icon + native splash from assets/brand (the website logo, bukuresipi-astro/public/favicon.svg).
 # Regenerate: dart run flutter_launcher_icons && dart run flutter_native_splash:create

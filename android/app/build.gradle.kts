@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.bukuresipi"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37 // receive_sharing_intent 1.9 needs 37; flutter.compileSdkVersion is 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

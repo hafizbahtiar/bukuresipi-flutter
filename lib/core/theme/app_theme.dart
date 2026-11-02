@@ -9,7 +9,10 @@ abstract final class AppTheme {
   static ThemeData dark() => _build(Brightness.dark);
 
   static ThemeData _build(Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(seedColor: pandan, brightness: brightness);
+    final scheme = ColorScheme.fromSeed(
+      seedColor: pandan,
+      brightness: brightness,
+    );
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
     return base.copyWith(
       textTheme: GoogleFonts.familjenGroteskTextTheme(base.textTheme),
@@ -21,7 +24,9 @@ abstract final class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
