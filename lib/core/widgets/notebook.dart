@@ -168,22 +168,26 @@ class ActionDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nb = Notebook.of(context);
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Material(
-        color: nb.paper,
-        elevation: 3,
-        shadowColor: nb.ink.withValues(alpha: 0.3),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: nb.line),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Row(
-          children: [
-            for (final a in actions) Expanded(child: _DockButton(action: a)),
-          ],
+    // A Scaffold's bottom bar stays under the keyboard: lift the dock above it.
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Material(
+          color: nb.paper,
+          elevation: 3,
+          shadowColor: nb.ink.withValues(alpha: 0.3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: nb.line),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Row(
+            children: [
+              for (final a in actions) Expanded(child: _DockButton(action: a)),
+            ],
+          ),
         ),
       ),
     );
