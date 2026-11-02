@@ -21,7 +21,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    context.read<PlacesController>().load();
+    // After the first frame: load() notifies at once (spinner), which is not allowed while this page is building.
+    final places = context.read<PlacesController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) => places.load());
   }
 
   @override
