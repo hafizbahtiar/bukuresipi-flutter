@@ -32,14 +32,25 @@ class PlacesListPage extends StatelessWidget {
             style: Notebook.of(context).hand.copyWith(fontSize: 22),
           ),
         ),
-      for (final _ in shared.failed)
+      for (final s in shared.failed)
         NotebookRow(
           mark: Icon(
             Icons.error_outline,
             size: 18,
             color: Notebook.of(context).margin,
           ),
-          child: Text(l.shareFailed),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l.shareFailed),
+              // The server's code (unreadable, ai_failed, quota...): what to look up in the logs.
+              Text(
+                s.reason,
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: Notebook.of(context).inkSoft),
+              ),
+            ],
+          ),
         ),
     ];
 
