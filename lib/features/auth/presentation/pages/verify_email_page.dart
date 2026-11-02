@@ -51,7 +51,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       showBack: false,
       children: [
         if (!_done && _error == null) ...[
-          const Center(child: CircularProgressIndicator()),
+          const Center(child: CircularProgressIndicator.adaptive()),
           const SizedBox(height: 16),
           Text(l.verifyWorking, textAlign: TextAlign.center),
         ],

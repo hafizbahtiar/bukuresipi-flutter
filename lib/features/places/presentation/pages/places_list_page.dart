@@ -25,7 +25,7 @@ class PlacesListPage extends StatelessWidget {
         NotebookRow(
           mark: const SizedBox.square(
             dimension: 14,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator.adaptive(strokeWidth: 2),
           ),
           child: Text(
             l.shareReadingLine,
@@ -59,7 +59,7 @@ class PlacesListPage extends StatelessWidget {
       lines = const [
         Padding(
           padding: EdgeInsets.all(48),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator.adaptive()),
         ),
       ];
     } else if (list.isEmpty && places.error != null) {

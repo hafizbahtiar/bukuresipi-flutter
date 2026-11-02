@@ -112,7 +112,7 @@ void main() {
     await t.tap(find.byTooltip('Remove from my book'));
     await t.pumpAndSettle();
     expect(repo.removed, isEmpty);
-    await t.tap(find.widgetWithText(TextButton, 'Remove'));
+    await t.tap(find.widgetWithText(FilledButton, 'Remove'));
     await t.pumpAndSettle();
     expect(repo.removed, ['a']);
     expect(places.places, isEmpty);
@@ -140,7 +140,7 @@ void main() {
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
     await t.tap(find.byTooltip('Delete branch'));
     await t.pumpAndSettle();
-    await t.tap(find.widgetWithText(TextButton, 'Delete'));
+    await t.tap(find.widgetWithText(FilledButton, 'Delete'));
     await t.pumpAndSettle();
     expect(repo.deletedBranches, ['b-1']);
   });
@@ -165,14 +165,19 @@ void main() {
       repo = FakePlaces();
       shared = [
         const Share(id: 's1', status: 'processing', kind: 'unknown'),
-        const Share(id: 's2', status: 'failed', kind: 'unknown', error: 'ai_failed'),
+        const Share(
+          id: 's2',
+          status: 'failed',
+          kind: 'unknown',
+          error: 'ai_failed',
+        ),
       ];
       await pump(t, const PlacesListPage());
       await t.pump();
       expect(find.text('Reading a post you shared…'), findsOneWidget);
       expect(find.textContaining('could not read this post'), findsOneWidget);
-    // Why, for whoever is looking into it.
-    expect(find.textContaining('ai_failed'), findsOneWidget);
+      // Why, for whoever is looking into it.
+      expect(find.textContaining('ai_failed'), findsOneWidget);
       shared = [];
     },
   );
@@ -193,15 +198,23 @@ void main() {
     },
   );
 
-  testWidgets('with the keyboard open the dock sits above it (Save note stays in reach)', (t) async {
-    t.view.physicalSize = const Size(1080, 2280);
-    t.view.devicePixelRatio = 3;
-    addTearDown(t.view.reset);
-    repo = FakePlaces()..places = [place(id: 'a')];
-    await pump(t, const PlaceDetailPage(id: 'a'));
-    t.view.viewInsets = const FakeViewPadding(bottom: 900); // 300 logical px of keyboard
-    await t.pumpAndSettle();
-    final screen = 2280 / 3;
-    expect(t.getBottomLeft(find.byTooltip('Save note')).dy, lessThanOrEqualTo(screen - 300));
-  });
+  testWidgets(
+    'with the keyboard open the dock sits above it (Save note stays in reach)',
+    (t) async {
+      t.view.physicalSize = const Size(1080, 2280);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      t.view.viewInsets = const FakeViewPadding(
+        bottom: 900,
+      ); // 300 logical px of keyboard
+      await t.pumpAndSettle();
+      final screen = 2280 / 3;
+      expect(
+        t.getBottomLeft(find.byTooltip('Save note')).dy,
+        lessThanOrEqualTo(screen - 300),
+      );
+    },
+  );
 }

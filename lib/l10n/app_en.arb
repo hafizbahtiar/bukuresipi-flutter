@@ -208,5 +208,8 @@
   "shareSavedLeaving": "Saved. It will be in your book in a minute.",
   "shareReadingLine": "Reading a post you shared…",
   "northUp": "North up",
-  "openPlace": "Open"
+  "openPlace": "Open",
+  "ok": "OK",
+  "signOutTitle": "Sign out?",
+  "signOutConfirm": "You will need your email and password to sign in again."
 }

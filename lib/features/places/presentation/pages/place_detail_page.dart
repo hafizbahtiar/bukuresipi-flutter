@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -198,28 +199,14 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
   }
 }
 
-Future<bool> _confirm(
-  BuildContext context,
-  String question,
-  String action,
-) async =>
-    await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Text(question),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(AppLocalizations.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(action),
-          ),
-        ],
-      ),
-    ) ??
-    false;
+/// Removing or deleting: the red dialog.
+Future<bool> _confirm(BuildContext context, String question, String action) =>
+    showNotebookDialog(
+      context,
+      message: question,
+      tone: DialogTone.danger,
+      confirmLabel: action,
+    );
 
 class _BranchRow extends StatelessWidget {
   const _BranchRow({
