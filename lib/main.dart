@@ -15,6 +15,8 @@ import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/owner/data/owner_repository_impl.dart';
+import 'features/owner/domain/owner_repository.dart';
 import 'features/places/data/places_repository_impl.dart';
 import 'features/places/presentation/places_controller.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
@@ -67,6 +69,7 @@ Future<void> main() async {
         Provider<ShareRepository>.value(value: shareRepo),
         ChangeNotifierProvider.value(value: shares),
         ChangeNotifierProvider.value(value: places),
+        Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
       ],
       child: const BukuresipiApp(),

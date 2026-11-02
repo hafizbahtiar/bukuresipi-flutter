@@ -33,7 +33,7 @@ Order = build order. Bottom navigation: Book, Map; Account is the person icon in
 
 ## Owner pages (role `owner`; the API must also check `requireRole('owner')`)
 
-None of these have API endpoints yet. Smallest useful set, in order:
+Built: 1, 2 (meters are edited on the overview), 4 and 5. Smallest useful set, in order:
 
 1. **Overview** `/owner`: users total / new this week, shares today, failures (gaps) today, metered usage vs caps this
    month (`system_subscription` meters: AI, search, geocoding, email). One `GET /api/v1/owner/stats`.

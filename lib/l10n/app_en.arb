@@ -39,7 +39,6 @@
   "changePasswordDone": "Password changed. Other devices have been signed out.",
   "language": "Language",
   "ownerTitle": "Owner",
-  "ownerSoon": "Owner tools (users, AI settings, usage) are planned. See docs/plan-pages.md.",
   "signOut": "Sign out",
   "homeTitle": "My book",
   "homeEmpty": "Share a TikTok, Instagram, Facebook or YouTube post to Bukuresipi to save your first recipe or place to eat.",
@@ -111,5 +110,40 @@
   "cancel": "Cancel",
   "remove": "Remove",
   "placeGone": "This place is no longer in your book.",
-  "openFailed": "Could not open the link."
+  "openFailed": "Could not open the link.",
+  "ownerUsers": "Users",
+  "ownerNewThisWeek": "New this week",
+  "ownerSharesToday": "Shares today",
+  "ownerFailedToday": "Failed today",
+  "ownerMeters": "Usage this month",
+  "ownerMetersHelp": "When a service reaches its cap or is off, its calls are refused until next month.",
+  "ownerMeterOff": "Off",
+  "ownerMeterCap": "Monthly cap",
+  "ownerMeterActive": "On",
+  "ownerFailedShares": "Failed shares",
+  "ownerSearchEmail": "Search by email",
+  "ownerNoUsers": "No users found.",
+  "ownerUnverified": "Not verified",
+  "ownerShareCount": "{count, plural, =0{No shares} =1{1 share} other{{count} shares}}",
+  "ownerEndSessions": "Sign out everywhere",
+  "ownerEndSessionsConfirm": "Sign {email} out on every device? They can sign in again.",
+  "ownerSignOut": "Sign out",
+  "ownerSessionsEnded": "Signed out everywhere.",
+  "ownerNoFailed": "No failed shares.",
+  "ownerLoadFailed": "Could not load.",
+  "save": "Save",
+  "@ownerShareCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@ownerEndSessionsConfirm": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -11,7 +11,9 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/verify_email_page.dart';
 import '../../features/home/presentation/home_page.dart';
-import '../../features/owner/presentation/owner_page.dart';
+import '../../features/owner/presentation/pages/owner_page.dart';
+import '../../features/owner/presentation/pages/owner_shares_page.dart';
+import '../../features/owner/presentation/pages/owner_users_page.dart';
 import '../../features/shares/presentation/share_page.dart';
 import '../network/update_gate.dart';
 import '../widgets/system_pages.dart';
@@ -87,7 +89,14 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
         path: '/places/:id',
         builder: (_, state) => PlaceDetailPage(id: state.pathParameters['id']!),
       ),
-      GoRoute(path: '/owner', builder: (_, _) => const OwnerPage()),
+      GoRoute(
+        path: '/owner',
+        builder: (_, _) => const OwnerPage(),
+        routes: [
+          GoRoute(path: 'users', builder: (_, _) => const OwnerUsersPage()),
+          GoRoute(path: 'shares', builder: (_, _) => const OwnerSharesPage()),
+        ],
+      ),
     ],
   );
 }
