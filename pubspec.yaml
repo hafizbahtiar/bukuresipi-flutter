@@ -32,6 +32,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/brand/icon.png
 
 # App icon + native splash from assets/brand (the website logo, bukuresipi-astro/public/favicon.svg).
 # Regenerate: dart run flutter_launcher_icons && dart run flutter_native_splash:create

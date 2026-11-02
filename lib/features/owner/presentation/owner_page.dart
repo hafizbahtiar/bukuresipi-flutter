@@ -11,7 +11,10 @@ class OwnerPage extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.ownerTitle)),
-      body: Padding(padding: const EdgeInsets.all(24), child: Text(l.ownerSoon)),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(l.ownerSoon),
+      ),
     );
   }
 }

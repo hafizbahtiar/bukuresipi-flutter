@@ -5,8 +5,7 @@ The Bukuresipi app (Android + iOS). API: `bukuresipi-hono`; website and email-li
 ## Setup
 
 ```sh
-cp .env.example .env        # release: API_BASE_URL=https://api.bukuresipi.com
-cp .env.example .env.dev    # debug: API_BASE_URL=http://10.0.2.2:8787 (Android emulator -> wrangler dev)
+cp .env.example .env        # API_BASE_URL=https://api.bukuresipi.com (every build, debug included)
 flutter pub get
 dart run build_runner build # envied -> lib/core/env/env.g.dart; re-run after editing .env*
 flutter run
@@ -34,7 +33,7 @@ database (drift) is not added yet; add it with the first offline feature.
 Source: `assets/brand/` (from the website logo, `bukuresipi-astro/public/favicon.svg`): `icon.png` (iOS + legacy
 Android), `adaptive.png` (Android adaptive foreground on pandan), `mark.png` (splash). After changing them:
 `dart run flutter_launcher_icons && dart run flutter_native_splash:create`. Config is in `pubspec.yaml`.
-No flavors yet: debug = `.env.dev`, release = `.env`.
+No flavors yet: every build uses `.env` (production API).
 
 ## Email links
 

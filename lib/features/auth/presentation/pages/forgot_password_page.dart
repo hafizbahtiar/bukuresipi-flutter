@@ -55,19 +55,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         else
           Form(
             key: _form,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              TextFormField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                decoration: InputDecoration(labelText: l.email),
-                validator: (v) => emailError(l, v),
-                onFieldSubmitted: (_) => _submit(),
-              ),
-              const SizedBox(height: 24),
-              BusyButton(label: l.forgotButton, busy: _busy, onPressed: _submit),
-              FormMessage(_error),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                  decoration: InputDecoration(labelText: l.email),
+                  validator: (v) => emailError(l, v),
+                  onFieldSubmitted: (_) => _submit(),
+                ),
+                const SizedBox(height: 24),
+                BusyButton(
+                  label: l.forgotButton,
+                  busy: _busy,
+                  onPressed: _submit,
+                ),
+                FormMessage(_error),
+              ],
+            ),
           ),
       ],
     );

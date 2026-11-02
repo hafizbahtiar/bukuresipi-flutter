@@ -10,9 +10,9 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-        backgroundColor: AppTheme.pandan,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
-      );
+    backgroundColor: AppTheme.pandan,
+    body: Center(child: CircularProgressIndicator(color: Colors.white)),
+  );
 }
 
 /// The API answered 426: this app version is retired.
@@ -26,13 +26,24 @@ class UpdateRequiredPage extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.system_update_outlined, size: 48, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(l.updateTitle, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(l.updateText),
-          ]),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.system_update_outlined,
+                size: 48,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l.updateTitle,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(l.updateText),
+            ],
+          ),
         ),
       ),
     );

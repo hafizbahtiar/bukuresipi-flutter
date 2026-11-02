@@ -16,7 +16,9 @@ import '../widgets/system_pages.dart';
 
 /// Screens anyone may open, signed in or not. Email links (App Links) land on /auth/* and /en/auth/*.
 bool isPublic(String path) =>
-    const {'/login', '/register', '/forgot'}.contains(path) || path.startsWith('/auth/') || path.startsWith('/en/auth/');
+    const {'/login', '/register', '/forgot'}.contains(path) ||
+    path.startsWith('/auth/') ||
+    path.startsWith('/en/auth/');
 
 /// Where to send the user, or null to stay. Pure, so it is unit-tested without widgets.
 String? redirectFor(String path, AuthController auth, UpdateGate update) {
@@ -27,8 +29,12 @@ String? redirectFor(String path, AuthController auth, UpdateGate update) {
     case AuthStatus.signedOut:
       return isPublic(path) ? null : '/login';
     case AuthStatus.signedIn:
-      if (const {'/login', '/register', '/splash', '/update'}.contains(path)) return '/';
-      if (path.startsWith('/owner') && !(auth.user?.isOwner ?? false)) return '/';
+      if (const {'/login', '/register', '/splash', '/update'}.contains(path)) {
+        return '/';
+      }
+      if (path.startsWith('/owner') && !(auth.user?.isOwner ?? false)) {
+        return '/';
+      }
       return null;
   }
 }
@@ -36,10 +42,20 @@ String? redirectFor(String path, AuthController auth, UpdateGate update) {
 GoRouter buildRouter(AuthController auth, UpdateGate update) {
   // Website paths for email links, in both languages: /auth/reset and /en/auth/reset open the same screen.
   List<GoRoute> linkRoutes(String prefix) => [
-        GoRoute(path: '$prefix/auth/verify', builder: (_, s) => VerifyEmailPage(token: s.uri.queryParameters['token'])),
-        GoRoute(path: '$prefix/auth/reset', builder: (_, s) => ResetPasswordPage(token: s.uri.queryParameters['token'])),
-        GoRoute(path: '$prefix/auth/forgot', builder: (_, _) => const ForgotPasswordPage()),
-      ];
+    GoRoute(
+      path: '$prefix/auth/verify',
+      builder: (_, s) => VerifyEmailPage(token: s.uri.queryParameters['token']),
+    ),
+    GoRoute(
+      path: '$prefix/auth/reset',
+      builder: (_, s) =>
+          ResetPasswordPage(token: s.uri.queryParameters['token']),
+    ),
+    GoRoute(
+      path: '$prefix/auth/forgot',
+      builder: (_, _) => const ForgotPasswordPage(),
+    ),
+  ];
 
   return GoRouter(
     initialLocation: '/',
@@ -54,9 +70,16 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
       GoRoute(path: '/forgot', builder: (_, _) => const ForgotPasswordPage()),
       ...linkRoutes(''),
       ...linkRoutes('/en'),
-      GoRoute(path: '/account', builder: (_, _) => const AccountPage(), routes: [
-        GoRoute(path: 'password', builder: (_, _) => const ChangePasswordPage()),
-      ]),
+      GoRoute(
+        path: '/account',
+        builder: (_, _) => const AccountPage(),
+        routes: [
+          GoRoute(
+            path: 'password',
+            builder: (_, _) => const ChangePasswordPage(),
+          ),
+        ],
+      ),
       GoRoute(path: '/owner', builder: (_, _) => const OwnerPage()),
     ],
   );

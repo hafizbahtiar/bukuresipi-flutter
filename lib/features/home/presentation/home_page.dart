@@ -13,12 +13,22 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l.homeTitle),
-        actions: [IconButton(tooltip: l.accountTitle, icon: const Icon(Icons.person_outline), onPressed: () => context.push('/account'))],
+        actions: [
+          IconButton(
+            tooltip: l.accountTitle,
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push('/account'),
+          ),
+        ],
       ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(l.homeEmpty, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
+          child: Text(
+            l.homeEmpty,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
         ),
       ),
     );

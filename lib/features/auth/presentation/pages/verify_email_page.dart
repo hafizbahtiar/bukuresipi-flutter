@@ -30,7 +30,9 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
 
   Future<void> _verify() async {
     final l = AppLocalizations.of(context);
-    if ((widget.token ?? '').isEmpty) return setState(() => _error = l.errInvalidToken);
+    if ((widget.token ?? '').isEmpty) {
+      return setState(() => _error = l.errInvalidToken);
+    }
     try {
       await context.read<AuthController>().verifyEmail(widget.token!);
       if (mounted) setState(() => _done = true);
@@ -42,7 +44,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final signedIn = context.watch<AuthController>().status == AuthStatus.signedIn;
+    final signedIn =
+        context.watch<AuthController>().status == AuthStatus.signedIn;
     return AuthScaffold(
       title: l.verifyTitle,
       showBack: false,

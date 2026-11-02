@@ -15,20 +15,42 @@ class FakeAdapter implements HttpClientAdapter {
   final requests = <RequestOptions>[];
 
   @override
-  Future<ResponseBody> fetch(RequestOptions o, Stream<Uint8List>? body, Future<void>? cancel) async {
+  Future<ResponseBody> fetch(
+    RequestOptions o,
+    Stream<Uint8List>? body,
+    Future<void>? cancel,
+  ) async {
     requests.add(o);
     final (status, data) = await handler(o);
-    return ResponseBody.fromString(data == null ? '' : jsonEncode(data), status, headers: {
-      Headers.contentTypeHeader: [Headers.jsonContentType],
-    });
+    return ResponseBody.fromString(
+      data == null ? '' : jsonEncode(data),
+      status,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
   }
 
   @override
   void close({bool force = false}) {}
 }
 
-const testUser = User(id: 'u-1', email: 'a@example.com', name: 'Ali', role: 'user', lang: 'ms', emailVerified: false);
-const userJson = {'id': 'u-1', 'email': 'a@example.com', 'name': 'Ali', 'role': 'user', 'lang': 'ms', 'emailVerified': false};
+const testUser = User(
+  id: 'u-1',
+  email: 'a@example.com',
+  name: 'Ali',
+  role: 'user',
+  lang: 'ms',
+  emailVerified: false,
+);
+const userJson = {
+  'id': 'u-1',
+  'email': 'a@example.com',
+  'name': 'Ali',
+  'role': 'user',
+  'lang': 'ms',
+  'emailVerified': false,
+};
 
 /// AuthRepository with scripted answers.
 class FakeAuthRepository implements AuthRepository {
@@ -37,6 +59,7 @@ class FakeAuthRepository implements AuthRepository {
   Object? meResult = testUser; // a User, or an ApiException to throw
   Object? loginError;
   int clears = 0;
+  final registered = <String>[];
 
   @override
   bool get hasSession => session;
@@ -44,7 +67,8 @@ class FakeAuthRepository implements AuthRepository {
   User? get cachedUser => cached;
 
   @override
-  Future<User> me() async => meResult is ApiException ? throw meResult! : meResult as User;
+  Future<User> me() async =>
+      meResult is ApiException ? throw meResult! : meResult as User;
   @override
   Future<User> login(String email, String password) async {
     if (loginError != null) throw loginError!;
@@ -53,7 +77,16 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<User> register({required String email, required String password, String? name, required String lang}) async => testUser;
+  Future<User> register({
+    required String email,
+    required String password,
+    String? name,
+    required String lang,
+  }) async {
+    registered.add(email);
+    return testUser;
+  }
+
   @override
   Future<void> logout() => clearLocal();
   @override

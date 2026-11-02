@@ -6,8 +6,10 @@ class Tokens {
   final String access;
   final String refresh;
 
-  factory Tokens.fromJson(Map<String, dynamic> json) =>
-      Tokens(access: json['accessToken'] as String, refresh: json['refreshToken'] as String);
+  factory Tokens.fromJson(Map<String, dynamic> json) => Tokens(
+    access: json['accessToken'] as String,
+    refresh: json['refreshToken'] as String,
+  );
 }
 
 /// The signed-in session's tokens. Kept in memory after [load] so a request never waits on the keystore.
@@ -20,7 +22,8 @@ abstract interface class TokenStore {
 
 /// Keychain (iOS) / Keystore-backed encrypted storage (Android).
 class SecureTokenStore implements TokenStore {
-  SecureTokenStore([FlutterSecureStorage? storage]) : _storage = storage ?? const FlutterSecureStorage();
+  SecureTokenStore([FlutterSecureStorage? storage])
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
   Tokens? _current;
@@ -34,7 +37,9 @@ class SecureTokenStore implements TokenStore {
   Future<void> load() async {
     final access = await _storage.read(key: _access);
     final refresh = await _storage.read(key: _refresh);
-    _current = access != null && refresh != null ? Tokens(access: access, refresh: refresh) : null;
+    _current = access != null && refresh != null
+        ? Tokens(access: access, refresh: refresh)
+        : null;
   }
 
   @override
