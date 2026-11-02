@@ -80,7 +80,7 @@ class ShareIntake extends ChangeNotifier {
   ShareState _state = const ShareIdle();
   ShareState get state => _state;
 
-  Incoming? _pending; // not sent yet (signed out, or sending)
+  final List<Incoming> _queue = [];
   Incoming? _last; // for retry
   bool _sending = false;
 
@@ -107,25 +107,34 @@ class ShareIntake extends ChangeNotifier {
   void _accept(List<Incoming> items) {
     if (items.isEmpty) return;
     _source.reset();
-    final item = items.first;
-    log('share in: ${item.kind.name} ${item.value ?? ''}');
-    switch (item.kind) {
-      case IncomingKind.url:
-        // Android reports our own App Links (email links) here: those are routes, not shares.
-        final uri = Uri.tryParse(item.value!);
-        if (uri == null || _ownHosts.contains(uri.host)) return;
-        _pending = item;
-      case IncomingKind.text:
-        final link = firstLink(item.value!);
-        if (link == null) log('share: no https link in the text');
-        if (link == null) return _set(const ShareFailed('no_link'), show: true);
-        log('share: link $link');
-        _pending = Incoming.url(link);
-      case IncomingKind.image:
-        _pending = item;
-      case IncomingKind.unsupported:
-        return _set(const ShareFailed('unsupported'), show: true);
+    var queued = false;
+    for (final item in items) {
+      log('share in: ${item.kind.name} ${item.value ?? ''}');
+      switch (item.kind) {
+        case IncomingKind.url:
+          // Android reports our own App Links (email links) here: those are routes, not shares.
+          final uri = Uri.tryParse(item.value!);
+          if (uri == null || _ownHosts.contains(uri.host)) continue;
+          _queue.add(item);
+          queued = true;
+        case IncomingKind.text:
+          final link = firstLink(item.value!);
+          if (link == null) {
+            log('share: no https link in the text');
+            _set(const ShareFailed('no_link'), show: true);
+            continue;
+          }
+          log('share: link $link');
+          _queue.add(Incoming.url(link));
+          queued = true;
+        case IncomingKind.image:
+          _queue.add(item);
+          queued = true;
+        case IncomingKind.unsupported:
+          _set(const ShareFailed('unsupported'), show: true);
+      }
     }
+    if (!queued) return;
     onShow?.call();
     _maybeSend();
   }
@@ -133,21 +142,20 @@ class ShareIntake extends ChangeNotifier {
   /// Send again after a network error.
   void retry() {
     if (_last == null || _sending) return;
-    _pending = _last;
+    _queue.insert(0, _last!);
     _maybeSend();
   }
 
   void dismiss() => _set(const ShareIdle());
 
   Future<void> _maybeSend() async {
-    final item = _pending;
-    if (item == null || _sending) return;
+    if (_queue.isEmpty || _sending) return;
     if (_auth.status != AuthStatus.signedIn) {
       if (_state is! ShareWaitingForLogin) _set(const ShareWaitingForLogin());
       return;
     }
     _sending = true;
-    _pending = null;
+    final item = _queue.removeAt(0);
     _last = item;
     _set(const ShareSending());
     try {
@@ -172,6 +180,10 @@ class ShareIntake extends ChangeNotifier {
       _set(ShareFailed(ApiException.from(e).code), show: true);
     } finally {
       _sending = false;
+      // A second share may have arrived while this one was sending: send it too.
+      if (_queue.isNotEmpty && _auth.status == AuthStatus.signedIn) {
+        unawaited(_maybeSend());
+      }
     }
   }
 
