@@ -80,6 +80,8 @@ void main() {
         ],
       );
       expect(adapter.requests.first.data, {'lat': 3.2, 'lng': 101.69});
+    // The server may search the web and ask the AI: longer than the usual 30 s wait.
+    expect(adapter.requests[1].receiveTimeout, const Duration(seconds: 90));
     },
   );
 
