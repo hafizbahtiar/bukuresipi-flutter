@@ -29,6 +29,13 @@ flutter test
 No use-case classes and no DI container: a repository method is the use case, Provider is the container. Local
 database (drift) is not added yet; add it with the first offline feature.
 
+## Icon and splash
+
+Source: `assets/brand/` (from the website logo, `bukuresipi-astro/public/favicon.svg`): `icon.png` (iOS + legacy
+Android), `adaptive.png` (Android adaptive foreground on pandan), `mark.png` (splash). After changing them:
+`dart run flutter_launcher_icons && dart run flutter_native_splash:create`. Config is in `pubspec.yaml`.
+No flavors yet: debug = `.env.dev`, release = `.env`.
+
 ## Email links
 
 Verify/reset emails link to `https://bukuresipi.com/auth/...` (and `/en/auth/...`). With the app installed these open

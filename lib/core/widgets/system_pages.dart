@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
+import '../theme/app_theme.dart';
 
-/// While the session is being restored at launch.
+/// While the session is being restored at launch. Same color as the native splash (pubspec flutter_native_splash),
+/// so the hand-over does not flash.
 class SplashPage extends StatelessWidget {
   const SplashPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext context) => const Scaffold(
+        backgroundColor: AppTheme.pandan,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
 }
 
 /// The API answered 426: this app version is retired.
