@@ -1,0 +1,86 @@
+import 'package:flutter/foundation.dart';
+
+import '../../../core/network/api_exception.dart';
+import '../domain/auth_repository.dart';
+import '../domain/user.dart';
+
+enum AuthStatus { unknown, signedOut, signedIn }
+
+/// Session state for the whole app (the router listens to it). Actions throw ApiException; screens show the code.
+class AuthController extends ChangeNotifier {
+  AuthController(this._repo);
+
+  final AuthRepository _repo;
+  AuthStatus _status = AuthStatus.unknown;
+  User? _user;
+
+  AuthStatus get status => _status;
+  User? get user => _user;
+
+  void _set(AuthStatus status, User? user) {
+    _status = status;
+    _user = user;
+    notifyListeners();
+  }
+
+  /// At launch: open signed in from the saved user at once, then confirm with the API.
+  Future<void> restore() async {
+    if (!_repo.hasSession) return _set(AuthStatus.signedOut, null);
+    final cached = _repo.cachedUser;
+    if (cached != null) _set(AuthStatus.signedIn, cached);
+    try {
+      _set(AuthStatus.signedIn, await _repo.me());
+    } on ApiException catch (e) {
+      if (e.status == 401) {
+        await _repo.clearLocal();
+        _set(AuthStatus.signedOut, null);
+      } else if (cached == null) {
+        _set(AuthStatus.signedOut, null); // offline with nothing saved: sign in again later
+      }
+    }
+  }
+
+  Future<void> login(String email, String password) async => _set(AuthStatus.signedIn, await _repo.login(email, password));
+
+  Future<void> register({required String email, required String password, String? name, required String lang}) async =>
+      _set(AuthStatus.signedIn, await _repo.register(email: email, password: password, name: name, lang: lang));
+
+  Future<void> logout() async {
+    await _repo.logout();
+    _set(AuthStatus.signedOut, null);
+  }
+
+  /// The API ended the session (refresh rejected, or a password reset). Tokens are already gone or about to be.
+  Future<void> sessionEnded() async {
+    await _repo.clearLocal();
+    if (_status != AuthStatus.signedOut) _set(AuthStatus.signedOut, null);
+  }
+
+  Future<void> refreshUser() async {
+    if (_status == AuthStatus.signedIn) _set(AuthStatus.signedIn, await _repo.me());
+  }
+
+  Future<void> verifyEmail(String token) async {
+    await _repo.verifyEmail(token);
+    if (_status == AuthStatus.signedIn) await refreshUser();
+  }
+
+  Future<void> resendVerification() async {
+    try {
+      await _repo.resendVerification();
+    } on ApiException catch (e) {
+      if (e.code == 'already_verified') await refreshUser();
+      rethrow;
+    }
+  }
+
+  Future<void> forgotPassword(String email) => _repo.forgotPassword(email);
+
+  /// The API ends every session on reset, including this device's.
+  Future<void> resetPassword(String token, String password) async {
+    await _repo.resetPassword(token, password);
+    await sessionEnded();
+  }
+
+  Future<void> changePassword(String current, String next) => _repo.changePassword(current, next);
+}
