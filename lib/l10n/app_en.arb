@@ -145,5 +145,52 @@
         "type": "String"
       }
     }
+  },
+  "navAccount": "Account",
+  "findLocation": "Find location",
+  "setOnMap": "Set on map",
+  "findingLocation": "Looking for it…",
+  "locationFound": "Found it. It is on your map now.",
+  "locationNotFound": "Not found. You can set it on the map yourself.",
+  "pinPickTitle": "Where is it?",
+  "pinPickHint": "Move the map until the pin sits on the place.",
+  "pinSave": "Save this spot",
+  "pinSaved": "Saved. Thanks, others will see it too.",
+  "myLocation": "My location",
+  "locationDenied": "Location is off for Bukuresipi. Move the map by hand instead.",
+  "pinnedByUser": "Pinned by a user, not checked yet",
+  "deleteBranch": "Delete branch",
+  "deleteBranchConfirm": "Delete {label} for every user? This cannot be undone.",
+  "delete": "Delete",
+  "unpinnedCount": "{count, plural, =1{1 place is not on the map yet} other{{count} places are not on the map yet}}",
+  "ownerNewSuffix": "{count} new this week",
+  "ownerJoined": "Joined {date}",
+  "@deleteBranchConfirm": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@unpinnedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@ownerNewSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@ownerJoined": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   }
 }

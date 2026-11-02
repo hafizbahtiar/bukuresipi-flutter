@@ -64,6 +64,7 @@ class Branch {
     this.state,
     this.lat,
     this.lng,
+    this.pinSource,
   });
 
   final String id;
@@ -73,6 +74,12 @@ class Branch {
   final String? state;
   final double? lat;
   final double? lng;
+
+  /// 'osm' | 'nominatim' | 'photon' | 'maps_link' | 'user' | null (no pin).
+  final String? pinSource;
+
+  /// Set by hand in the app: shown, but not verified yet.
+  bool get pinnedByUser => pinSource == 'user';
 
   bool get hasPin => lat != null && lng != null;
 

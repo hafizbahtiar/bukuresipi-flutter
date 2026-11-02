@@ -38,6 +38,26 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<void> setPin(String branchId, double lat, double lng) => _call(
+    () => _dio.put<void>(
+      '/places/branches/$branchId/pin',
+      data: {'lat': lat, 'lng': lng},
+    ),
+  );
+
+  @override
+  Future<bool> locate(String branchId) => _call(() async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/places/branches/$branchId/locate',
+    );
+    return res.data!['found'] == true;
+  });
+
+  @override
+  Future<void> deleteBranch(String branchId) =>
+      _call(() => _dio.delete<void>('/places/branches/$branchId'));
+
+  @override
   Future<void> remove(String id) =>
       _call(() => _dio.delete<void>('/places/$id'));
 }
@@ -69,6 +89,7 @@ Place placeFromJson(Map<String, dynamic> j) {
           state: b['state'] as String?,
           lat: _num(b['lat']),
           lng: _num(b['lng']),
+          pinSource: b['pinSource'] as String?,
         ),
     ],
   );

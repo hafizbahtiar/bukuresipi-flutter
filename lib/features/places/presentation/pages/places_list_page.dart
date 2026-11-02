@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
-import '../../../auth/presentation/widgets/auth_widgets.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
 
-/// The Book tab: everything the user saved, newest first.
+/// The Book tab: a notebook page, one saved place per line, newest first.
 class PlacesListPage extends StatelessWidget {
   const PlacesListPage({super.key});
 
@@ -17,46 +18,48 @@ class PlacesListPage extends StatelessWidget {
     final places = context.watch<PlacesController>();
     final list = places.places;
 
-    final Widget body;
+    final List<Widget> lines;
     if (!places.loaded) {
-      body = const Center(child: CircularProgressIndicator());
+      lines = const [
+        Padding(
+          padding: EdgeInsets.all(48),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
     } else if (list.isEmpty && places.error != null) {
-      body = _Centered(
-        text: l.placesLoadFailed,
-        action: TextButton(onPressed: places.load, child: Text(l.tryAgain)),
-      );
+      lines = [
+        _Note(text: l.placesLoadFailed),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(left: notebookGutter + 2),
+            child: TextButton(onPressed: places.load, child: Text(l.tryAgain)),
+          ),
+        ),
+      ];
     } else if (list.isEmpty) {
-      body = _Centered(text: l.homeEmpty, icon: Icons.ios_share);
+      lines = [_Note(text: l.homeEmpty)];
     } else {
-      body = ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: list.length,
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
-        itemBuilder: (context, i) => PlaceTile(place: list[i]),
-      );
+      lines = [for (final p in list) PlaceTile(place: p)];
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.homeTitle),
-        actions: const [AccountButton()],
-      ),
-      body: RefreshIndicator(
-        onRefresh: places.load,
-        // A scrollable child even when empty, so pull-to-refresh works there too.
-        child: body is ListView
-            ? body
-            : LayoutBuilder(
-                builder: (context, box) => SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: SizedBox(height: box.maxHeight, child: body),
-                ),
-              ),
+      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.homeTitle)),
+      body: NotebookPage(
+        child: RefreshIndicator(
+          onRefresh: places.load,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 24),
+            children: lines,
+          ),
+        ),
       ),
     );
   }
 }
 
+/// One saved place on its line: a mark in the margin (pinned or not), the name, then where it is.
 class PlaceTile extends StatelessWidget {
   const PlaceTile({super.key, required this.place});
 
@@ -65,61 +68,49 @@ class PlaceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final c = Theme.of(context).colorScheme;
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
     final branch = place.savedBranch;
     final pinned = place.pins.isNotEmpty;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: CircleAvatar(
-        backgroundColor: pinned
-            ? c.primaryContainer
-            : c.surfaceContainerHighest,
-        child: Icon(
-          pinned ? Icons.restaurant : Icons.location_off_outlined,
-          color: pinned ? c.onPrimaryContainer : c.onSurfaceVariant,
-        ),
-      ),
-      title: Text(
-        place.restaurant.name,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        pinned ? (branch?.where ?? branch?.label ?? '') : l.noPin,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: const Icon(Icons.chevron_right),
+    final where = pinned ? (branch?.where ?? branch?.label) : l.noPin;
+    return NotebookRow(
+      mark: PinMark(pinned: pinned),
       onTap: () => context.push('/places/${place.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            place.restaurant.name,
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          if (where != null && where.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                where,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _Centered extends StatelessWidget {
-  const _Centered({required this.text, this.icon, this.action});
+/// A line of guidance written on the page.
+class _Note extends StatelessWidget {
+  const _Note({required this.text});
 
   final String text;
-  final IconData? icon;
-  final Widget? action;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-          ],
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          if (action != null) ...[const SizedBox(height: 8), action!],
-        ],
-      ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 24, 24, 8),
+    child: Text(
+      text,
+      style: Notebook.of(context).hand.copyWith(fontSize: 24, height: 1.25),
     ),
   );
 }

@@ -81,7 +81,7 @@ class _OwnerSharesPageState extends State<OwnerSharesPage> {
                     ),
                     subtitle: Text(
                       [
-                        '${m.formatShortDate(at)} ${m.formatTimeOfDay(TimeOfDay.fromDateTime(at))}  ·  ${s.platform ?? s.input}  ·  ${s.kind}',
+                        '${m.formatShortDate(at)} ${m.formatTimeOfDay(TimeOfDay.fromDateTime(at))}, ${s.platform ?? s.input}, ${s.kind}',
                         ?s.sourceUrl,
                         ?s.caption,
                       ].join('\n'),

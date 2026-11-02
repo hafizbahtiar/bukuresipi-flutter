@@ -32,6 +32,7 @@ const placeJson = {
       'state': null,
       'lat': 3.1579,
       'lng': 101.7123,
+      'pinSource': 'user',
     },
   ],
 };
@@ -61,6 +62,7 @@ Place place({
       label: '$name Ampang',
       lat: lat,
       lng: lat == null ? null : 101.7,
+      pinSource: lat == null ? null : 'osm',
     ),
   ],
 );
@@ -82,6 +84,25 @@ class FakePlaces implements PlacesRepository {
     if (error != null) throw error!;
     notes[id] = note;
   }
+
+  final pins = <(String, double, double)>[];
+  final located = <String>[];
+  final deletedBranches = <String>[];
+  bool locateFinds = true;
+
+  @override
+  Future<void> setPin(String branchId, double lat, double lng) async =>
+      pins.add((branchId, lat, lng));
+
+  @override
+  Future<bool> locate(String branchId) async {
+    located.add(branchId);
+    return locateFinds;
+  }
+
+  @override
+  Future<void> deleteBranch(String branchId) async =>
+      deletedBranches.add(branchId);
 
   @override
   Future<void> remove(String id) async {

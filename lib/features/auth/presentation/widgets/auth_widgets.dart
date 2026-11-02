@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/gen/app_localizations.dart';
 
@@ -191,17 +190,5 @@ class BusyButton extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2.4),
           )
         : Text(label),
-  );
-}
-
-/// App-bar shortcut to the account page, on every main tab.
-class AccountButton extends StatelessWidget {
-  const AccountButton({super.key});
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: AppLocalizations.of(context).accountTitle,
-    icon: const Icon(Icons.person_outline),
-    onPressed: () => context.push('/account'),
   );
 }
