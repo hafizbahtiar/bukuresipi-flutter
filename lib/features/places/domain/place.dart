@@ -75,7 +75,7 @@ class Branch {
   final double? lat;
   final double? lng;
 
-  /// 'osm' | 'nominatim' | 'photon' | 'maps_link' | 'user' | null (no pin).
+  /// 'osm' | 'nominatim' | 'photon' | 'overture' | 'maps_link' | 'web' | 'user' | null (no pin).
   final String? pinSource;
 
   /// Set by hand in the app: shown, but not verified yet.

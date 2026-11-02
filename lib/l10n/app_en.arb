@@ -412,5 +412,6 @@
   "ownerPerDay": "a day",
   "@ownerPerDay": {},
   "ownerPerMonth": "a month",
-  "@ownerPerMonth": {}
+  "@ownerPerMonth": {},
+  "dataCredits": "Map data © OpenStreetMap contributors. Place data © Overture Maps Foundation."
 }

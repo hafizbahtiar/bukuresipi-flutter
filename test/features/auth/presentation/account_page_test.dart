@@ -72,4 +72,10 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.clears, 1);
   });
+
+  testWidgets('the account page credits the map and place data', (t) async {
+    await pump(t);
+    expect(find.textContaining('© Overture Maps Foundation'), findsOneWidget);
+    expect(find.textContaining('© OpenStreetMap contributors'), findsOneWidget);
+  });
 }
