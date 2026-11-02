@@ -84,9 +84,7 @@ void main() {
 
   test('retry POSTs and dismiss DELETEs the share', () async {
     final repo = make(
-      (o) => o.method == 'POST'
-          ? (202, {'status': 'pending'})
-          : (204, null),
+      (o) => o.method == 'POST' ? (202, {'status': 'pending'}) : (204, null),
     );
     await repo.retry('s-1');
     await repo.dismiss('s-1');

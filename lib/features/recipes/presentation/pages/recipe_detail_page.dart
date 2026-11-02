@@ -61,7 +61,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       );
     }
     if (recipe == null) {
-      final gone = _error is ApiException && (_error as ApiException).status == 404;
+      final gone =
+          _error is ApiException && (_error as ApiException).status == 404;
       return Scaffold(
         appBar: AppBar(),
         body: Center(
@@ -101,12 +102,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           ),
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                notebookGutter + 10,
-                4,
-                20,
-                0,
-              ),
+              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
               child: Text(
                 recipe.name,
                 style: text.headlineSmall?.copyWith(

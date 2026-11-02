@@ -18,12 +18,7 @@ const recipeDetailJson = {
   'missing': ['steps'],
   'createdAt': '2026-11-02 12:00:00',
   'ingredients': [
-    {
-      'name': 'Ayam',
-      'rawText': '500g ayam',
-      'quantity': '500',
-      'unit': 'g',
-    },
+    {'name': 'Ayam', 'rawText': '500g ayam', 'quantity': '500', 'unit': 'g'},
     {
       'name': null,
       'rawText': 'sedikit bahan rahsia',
