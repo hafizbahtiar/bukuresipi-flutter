@@ -127,21 +127,24 @@ void main() {
     expect(shown, isNotEmpty);
   });
 
-  test('two shares arriving while the first is sending are both sent', () async {
-    final intake = await start();
-    final gate = Completer<void>();
-    shares.gate = gate;
-    await share([const Incoming.text('https://www.tiktok.com/@a/video/1')]);
-    expect(shares.sent, isEmpty);
-    await share([const Incoming.text('https://www.tiktok.com/@a/video/2')]);
-    gate.complete();
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-    expect(shares.sent, [
-      'link:https://www.tiktok.com/@a/video/1',
-      'link:https://www.tiktok.com/@a/video/2',
-    ]);
-    expect(intake.state, isA<ShareAccepted>());
-  });
+  test(
+    'two shares arriving while the first is sending are both sent',
+    () async {
+      final intake = await start();
+      final gate = Completer<void>();
+      shares.gate = gate;
+      await share([const Incoming.text('https://www.tiktok.com/@a/video/1')]);
+      expect(shares.sent, isEmpty);
+      await share([const Incoming.text('https://www.tiktok.com/@a/video/2')]);
+      gate.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(shares.sent, [
+        'link:https://www.tiktok.com/@a/video/1',
+        'link:https://www.tiktok.com/@a/video/2',
+      ]);
+      expect(intake.state, isA<ShareAccepted>());
+    },
+  );
 
   test('a shared image is uploaded', () async {
     await start();

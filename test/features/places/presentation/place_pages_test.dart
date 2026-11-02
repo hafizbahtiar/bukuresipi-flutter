@@ -22,12 +22,13 @@ void main() {
   late FakePlaces repo;
   late PlacesController places;
   late FakeShares fakeShares;
+  late FakeRecipes fakeRecipes;
   var shared = <Share>[];
 
   Future<void> pump(WidgetTester t, Widget page, {String role = 'user'}) async {
     places = PlacesController(repo);
     await places.load();
-    final recipes = RecipesController(FakeRecipes());
+    final recipes = RecipesController(fakeRecipes = FakeRecipes());
     await recipes.load();
     final auth = AuthController(
       FakeAuthRepository()
@@ -82,6 +83,17 @@ void main() {
     expect(find.text('Kedai Kopi Ah Seng'), findsOneWidget);
     expect(find.text('Mee Rebus Haji'), findsOneWidget);
     expect(find.text('Location not found yet'), findsOneWidget);
+  });
+
+  testWidgets('pulling the book down reloads places, recipes and shares', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a', name: 'Kedai Kopi Ah Seng')];
+    await pump(t, const PlacesListPage());
+    fakeRecipes.recipes = [recipe(id: 'r1', name: 'Ayam Masak Merah')];
+    await t.fling(find.text('Kedai Kopi Ah Seng'), const Offset(0, 400), 1000);
+    await t.pumpAndSettle();
+    expect(find.text('Ayam Masak Merah'), findsOneWidget);
   });
 
   testWidgets('an empty book tells the user how to add to it', (t) async {

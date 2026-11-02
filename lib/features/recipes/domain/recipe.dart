@@ -56,10 +56,10 @@ class RecipeIngredient {
 
   /// "500 g", or null when the post gave no amount.
   String? get amount {
-    final parts = [quantity, unit]
-        .whereType<String>()
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
+    final parts = [
+      quantity,
+      unit,
+    ].whereType<String>().where((s) => s.trim().isNotEmpty).toList();
     return parts.isEmpty ? null : parts.join(' ');
   }
 }

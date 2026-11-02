@@ -19,18 +19,18 @@ Widget app({
   required List<SingleChildWidget> providers,
   required Widget home,
 }) => MultiProvider(
-      providers: providers,
-      child: MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('en'), Locale('ms')],
-        home: home,
-      ),
-    );
+  providers: providers,
+  child: MaterialApp(
+    locale: const Locale('en'),
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+    ],
+    supportedLocales: const [Locale('en'), Locale('ms')],
+    home: home,
+  ),
+);
 
 void main() {
   testWidgets('the book lists recipes under the places', (t) async {

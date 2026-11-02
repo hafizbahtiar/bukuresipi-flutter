@@ -71,10 +71,7 @@ class PlacesListPage extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: const EdgeInsets.only(left: notebookGutter + 2),
-            child: TextButton(
-              onPressed: recipes.load,
-              child: Text(l.tryAgain),
-            ),
+            child: TextButton(onPressed: recipes.load, child: Text(l.tryAgain)),
           ),
         ),
       ];
@@ -114,7 +111,9 @@ class PlacesListPage extends StatelessWidget {
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.homeTitle)),
       body: NotebookPage(
         child: RefreshIndicator(
-          onRefresh: places.load,
+          // Everything on the page: a new recipe or a cleared share shows without a restart.
+          onRefresh: () =>
+              Future.wait([places.load(), recipes.load(), shared.load()]),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
@@ -187,9 +186,8 @@ class _FailedShareState extends State<_FailedShare> {
           // The server's code (unreadable, ai_failed, quota...): what to look up in the logs.
           Text(
             widget.share.reason,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: nb.inkSoft),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: nb.inkSoft),
           ),
           const SizedBox(height: 4),
           Wrap(
@@ -200,7 +198,9 @@ class _FailedShareState extends State<_FailedShare> {
                 icon: _busy
                     ? const SizedBox.square(
                         dimension: 16,
-                        child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       )
                     : const Icon(Icons.refresh, size: 18),
                 label: Text(l.tryAgain),
