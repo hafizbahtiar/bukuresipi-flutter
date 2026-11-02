@@ -22,14 +22,16 @@ class PlacesRepositoryImpl implements PlacesRepository {
   @override
   Future<List<Place>> list() => _call(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/places')).data!;
+    final rows = data['places'] as List;
     final places = <Place>[];
-    for (final j in data['places'] as List) {
+    for (final j in rows) {
       try {
         places.add(placeFromJson(j as Map<String, dynamic>));
       } catch (e) {
-        log('places: skipped a row the app cannot read ($e)');
+        log('places: skipped row: $e; row=${logJson(j)}');
       }
     }
+    log('places: ${places.length}/${rows.length} rows loaded');
     return places..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   });
 
