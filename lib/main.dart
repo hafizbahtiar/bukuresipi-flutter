@@ -15,6 +15,8 @@ import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/places/data/places_repository_impl.dart';
+import 'features/places/presentation/places_controller.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
 import 'features/shares/data/webview_caption_reader.dart';
 import 'features/shares/data/share_repository_impl.dart';
@@ -44,6 +46,10 @@ Future<void> main() async {
     ..onSessionEnded = auth.sessionEnded
     ..onUpdateRequired = update.markRequired;
   auth.restore();
+  final places = PlacesController(PlacesRepositoryImpl(api.dio));
+  auth.addListener(() {
+    if (auth.status == AuthStatus.signedOut) places.clear();
+  });
   final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
   final shares = ShareIntake(
     PluginIncomingShares(),
@@ -60,6 +66,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: update),
         Provider<ShareRepository>.value(value: shareRepo),
         ChangeNotifierProvider.value(value: shares),
+        ChangeNotifierProvider.value(value: places),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
       ],
       child: const BukuresipiApp(),
