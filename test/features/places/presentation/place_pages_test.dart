@@ -190,4 +190,16 @@ void main() {
       expect(repo.notes, {'a': 'Order the ayam goreng'});
     },
   );
+
+  testWidgets('with the keyboard open the dock sits above it (Save note stays in reach)', (t) async {
+    t.view.physicalSize = const Size(1080, 2280);
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    t.view.viewInsets = const FakeViewPadding(bottom: 900); // 300 logical px of keyboard
+    await t.pumpAndSettle();
+    final screen = 2280 / 3;
+    expect(t.getBottomLeft(find.byTooltip('Save note')).dy, lessThanOrEqualTo(screen - 300));
+  });
 }
