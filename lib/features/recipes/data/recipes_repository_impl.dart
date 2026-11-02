@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
 import '../domain/recipe.dart';
@@ -21,10 +22,14 @@ class RecipesRepositoryImpl implements RecipesRepository {
   @override
   Future<List<Recipe>> list() => _call(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/recipes')).data!;
-    final recipes = [
-      for (final j in data['recipes'] as List)
-        recipeFromJson(j as Map<String, dynamic>),
-    ];
+    final recipes = <Recipe>[];
+    for (final j in data['recipes'] as List) {
+      try {
+        recipes.add(recipeFromJson(j as Map<String, dynamic>));
+      } catch (e) {
+        log('recipes: skipped a row the app cannot read ($e)');
+      }
+    }
     return recipes..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   });
 
@@ -35,8 +40,9 @@ class RecipesRepositoryImpl implements RecipesRepository {
   });
 }
 
-List<String> _missing(Object? v) =>
-    [...((v as List?) ?? const []).cast<String>()];
+List<String> _missing(Object? v) => [
+  ...((v as List?) ?? const []).cast<String>(),
+];
 
 Recipe recipeFromJson(Map<String, dynamic> j) => Recipe(
   id: j['id'] as String,
@@ -55,8 +61,8 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
   sourceUrl: j['sourceUrl'] as String?,
   missing: _missing(j['missing']),
   ingredients: [
-    for (final i in (j['ingredients'] as List? ?? const [])
-        .cast<Map<String, dynamic>>())
+    for (final i
+        in (j['ingredients'] as List? ?? const []).cast<Map<String, dynamic>>())
       RecipeIngredient(
         name: i['name'] as String?,
         rawText: i['rawText'] as String?,
@@ -65,8 +71,8 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
       ),
   ],
   steps: [
-    for (final s in (j['steps'] as List? ?? const [])
-        .cast<Map<String, dynamic>>())
+    for (final s
+        in (j['steps'] as List? ?? const []).cast<Map<String, dynamic>>())
       RecipeStep(
         stepNo: (s['stepNo'] as num).toInt(),
         instruction: s['instruction'] as String,

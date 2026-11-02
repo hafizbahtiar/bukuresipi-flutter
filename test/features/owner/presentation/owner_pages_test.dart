@@ -46,15 +46,21 @@ void main() {
     },
   );
 
-  testWidgets('a meter\'s cap is changed from its dialog', (t) async {
+  testWidgets('a meter is edited in a notebook sheet, cap and period', (
+    t,
+  ) async {
     await pump(t, const OwnerPage());
     await t.tap(find.text('Nominatim'));
     await t.pumpAndSettle();
+    expect(find.text('Cap applies per'), findsOneWidget);
     await t.enterText(find.byType(TextField), '500');
+    await t.pump();
+    await t.tap(find.text('Day'));
+    await t.pump();
     await t.tap(find.text('Save'));
     await t.pumpAndSettle();
-    expect(repo.meterUpdates, [('geo:nominatim', 500, true)]);
-    expect(find.text('90 / 500 a month'), findsOneWidget);
+    expect(repo.meterUpdates, [('geo:nominatim', 500, 'day', true)]);
+    expect(find.text('90 / 500 a day'), findsOneWidget);
   });
 
   testWidgets('users are searched, and ending a user\'s sessions asks first', (

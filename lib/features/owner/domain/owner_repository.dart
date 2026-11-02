@@ -4,8 +4,13 @@ import 'owner.dart';
 abstract interface class OwnerRepository {
   Future<OwnerStats> getStats();
 
-  /// Only the given fields change.
-  Future<Meter> updateMeter(String code, {int? cap, bool? active});
+  /// Only the given fields change. [period] is 'day' or 'month'.
+  Future<Meter> updateMeter(
+    String code, {
+    int? cap,
+    String? period,
+    bool? active,
+  });
 
   /// Newest first; [query] matches part of the email.
   Future<List<OwnerUser>> listUsers({String? query});

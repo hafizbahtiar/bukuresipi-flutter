@@ -43,14 +43,18 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<Meter> updateMeter(String code, {int? cap, bool? active}) =>
-      _call(() async {
-        final res = await _dio.patch<Map<String, dynamic>>(
-          '/owner/meters/${Uri.encodeComponent(code)}',
-          data: {'cap': ?cap, 'active': ?active},
-        );
-        return _meter(res.data!);
-      });
+  Future<Meter> updateMeter(
+    String code, {
+    int? cap,
+    String? period,
+    bool? active,
+  }) => _call(() async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/owner/meters/${Uri.encodeComponent(code)}',
+      data: {'cap': ?cap, 'period': ?period, 'active': ?active},
+    );
+    return _meter(res.data!);
+  });
 
   @override
   Future<List<OwnerUser>> listUsers({String? query}) => _call(() async {

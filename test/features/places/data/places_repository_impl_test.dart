@@ -85,6 +85,21 @@ void main() {
     },
   );
 
+  test('one unreadable row does not take the whole list down', () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          'places': [
+            placeJson,
+            {'id': 'broken'},
+          ],
+        },
+      ),
+    );
+    expect((await repo.list()).map((p) => p.id), ['p-1']);
+  });
+
   test('a branch pinned by hand says so', () async {
     final repo = make(
       (_) => (

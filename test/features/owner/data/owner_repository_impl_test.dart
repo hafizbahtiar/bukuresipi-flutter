@@ -63,10 +63,10 @@ void main() {
           },
         ),
       );
-      final m = await repo.updateMeter('geo:nominatim', cap: 50);
+      final m = await repo.updateMeter('geo:nominatim', cap: 50, period: 'day');
       expect(adapter.requests.single.method, 'PATCH');
       expect(adapter.requests.single.path, '/owner/meters/geo%3Anominatim');
-      expect(adapter.requests.single.data, {'cap': 50});
+      expect(adapter.requests.single.data, {'cap': 50, 'period': 'day'});
       expect([m.cap, m.active], [50, false]);
     },
   );
