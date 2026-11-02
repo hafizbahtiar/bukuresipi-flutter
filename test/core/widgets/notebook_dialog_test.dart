@@ -41,6 +41,7 @@ void main() {
       final show = await pump(t);
       final yes = show(DialogTone.danger, confirm: 'Remove');
       await t.pumpAndSettle();
+      expect(find.text('MEMO'), findsOneWidget);
       expect(find.text('Remove?'), findsOneWidget);
       expect(find.text('It goes for good.'), findsOneWidget);
       await t.tap(find.text('Remove'));
