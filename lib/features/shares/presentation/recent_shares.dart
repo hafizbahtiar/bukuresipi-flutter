@@ -52,6 +52,19 @@ class RecentShares extends ChangeNotifier {
     if (reading.isNotEmpty) _next = Timer(every, load);
   }
 
+  /// Throws ApiException; the row shows it.
+  Future<void> retry(String id) async {
+    await _repo.retry(id);
+    await load();
+  }
+
+  /// Throws ApiException; the row shows it.
+  Future<void> dismiss(String id) async {
+    await _repo.dismiss(id);
+    _shares = _shares.where((s) => s.id != id).toList();
+    notifyListeners();
+  }
+
   void clear() {
     _next?.cancel();
     _shares = const [];

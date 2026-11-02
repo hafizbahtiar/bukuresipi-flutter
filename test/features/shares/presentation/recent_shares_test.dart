@@ -29,6 +29,22 @@ void main() {
     recent.dispose();
   });
 
+  test('a failed share can be retried and dismissed', () async {
+    final repo = FakeShares()..recentList = [s('a', 'failed')];
+    final recent = RecentShares(repo, onFinished: () async {});
+    await recent.load();
+    expect(recent.failed.map((x) => x.id), ['a']);
+
+    await recent.retry('a');
+    expect(repo.retried, ['a']);
+    expect(repo.recentReads, 2);
+
+    await recent.dismiss('a');
+    expect(repo.dismissed, ['a']);
+    expect(recent.failed, isEmpty);
+    recent.dispose();
+  });
+
   test('a post the API could not read counts as failed', () async {
     final repo = FakeShares()
       ..recentList = [

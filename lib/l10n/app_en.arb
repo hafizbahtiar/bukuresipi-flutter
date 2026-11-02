@@ -154,6 +154,8 @@
   "@shareNothingFound": {},
   "shareFailed": "We could not read this post. Try sharing a screenshot of it instead.",
   "@shareFailed": {},
+  "shareDismissConfirm": "Remove this post from your list? It was not saved.",
+  "@shareDismissConfirm": {},
   "shareStillWorking": "Still working on it. It will appear in your book when it is ready.",
   "@shareStillWorking": {},
   "shareNone": "Nothing to show. Share a post from TikTok, Instagram, Facebook or YouTube to Bukuresipi.",

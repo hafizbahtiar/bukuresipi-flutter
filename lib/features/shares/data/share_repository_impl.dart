@@ -80,6 +80,14 @@ class ShareRepositoryImpl implements ShareRepository {
   });
 
   @override
+  Future<void> retry(String id) =>
+      _call(() => _dio.post<void>('/shares/$id/retry'));
+
+  @override
+  Future<void> dismiss(String id) =>
+      _call(() => _dio.delete<void>('/shares/$id'));
+
+  @override
   Future<List<Share>> recent() => _call(() async {
     final j = (await _dio.get<Map<String, dynamic>>('/shares')).data!;
     final rows = j['shares'] as List;

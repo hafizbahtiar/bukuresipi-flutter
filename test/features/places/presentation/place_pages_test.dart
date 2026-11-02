@@ -21,6 +21,7 @@ import '../../recipes/recipes_fixtures.dart';
 void main() {
   late FakePlaces repo;
   late PlacesController places;
+  late FakeShares fakeShares;
   var shared = <Share>[];
 
   Future<void> pump(WidgetTester t, Widget page, {String role = 'user'}) async {
@@ -49,7 +50,7 @@ void main() {
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider(
             create: (_) => RecentShares(
-              FakeShares()..recentList = shared,
+              fakeShares = FakeShares()..recentList = shared,
               onFinished: () async {},
             )..load(),
           ),
@@ -87,6 +88,35 @@ void main() {
     repo = FakePlaces();
     await pump(t, const PlacesListPage());
     expect(find.textContaining('Share a TikTok'), findsOneWidget);
+  });
+
+  testWidgets('an unreadable share can be retried or removed', (t) async {
+    repo = FakePlaces();
+    shared = [
+      Share(
+        id: 's1',
+        status: 'done',
+        kind: 'other',
+        gaps: const ['unreadable'],
+      ),
+    ];
+    await pump(t, const PlacesListPage());
+    expect(find.text('Try again'), findsOneWidget);
+
+    await t.tap(find.text('Try again'));
+    await t.pumpAndSettle();
+    expect(fakeShares.retried, ['s1']);
+
+    await t.tap(find.text('Remove'));
+    await t.pumpAndSettle();
+    expect(
+      find.textContaining('Remove this post from your list'),
+      findsOneWidget,
+    );
+    await t.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await t.pumpAndSettle();
+    expect(fakeShares.dismissed, ['s1']);
+    expect(find.text('Remove'), findsNothing);
   });
 
   testWidgets(
