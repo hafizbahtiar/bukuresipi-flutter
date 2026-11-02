@@ -1,14 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/log.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
-import '../domain/share.dart';
-import '../domain/share_repository.dart';
+import 'recent_shares.dart';
 import 'share_intake.dart';
 
 String shareErrorText(AppLocalizations l, String code) => switch (code) {
@@ -23,7 +22,10 @@ String shareErrorText(AppLocalizations l, String code) => switch (code) {
 
 /// What happened to the post the user just shared into the app.
 class SharePage extends StatelessWidget {
-  const SharePage({super.key});
+  const SharePage({super.key, this.leave});
+
+  /// After a share is accepted. Default: close the app, back to TikTok or wherever the share came from.
+  final VoidCallback? leave;
 
   @override
   Widget build(BuildContext context) {
@@ -34,11 +36,20 @@ class SharePage extends StatelessWidget {
       context.go('/');
     }
 
+    void leaveApp() {
+      close();
+      context.read<RecentShares>().load();
+      SystemNavigator.pop(); // Android: back to the source app; iOS ignores it and the book is shown
+    }
+
     final body = switch (intake.state) {
       ShareIdle() => _Message(text: l.shareNone),
       ShareWaitingForLogin() => _Message(text: l.shareWaitingLogin),
       ShareSending() => _Message(text: l.shareSending, busy: true),
-      ShareAccepted(:final id) => _Progress(key: ValueKey(id), id: id),
+      ShareAccepted(:final id) => _Saved(
+        key: ValueKey(id),
+        leave: leave ?? leaveApp,
+      ),
       final ShareFailed f => _Message(
         text: shareErrorText(l, f.code),
         icon: Icons.error_outline,
@@ -66,48 +77,24 @@ class SharePage extends StatelessWidget {
   }
 }
 
-/// Polls the share now and every 3 s until the API has read it (or 3 minutes pass: it keeps going on the server).
-class _Progress extends StatefulWidget {
-  const _Progress({super.key, required this.id});
+/// The server has the post and reads it on its own: say so, then go back to the app the post came from. The book
+/// shows it as "reading" until it is done.
+class _Saved extends StatefulWidget {
+  const _Saved({super.key, required this.leave});
 
-  final String id;
+  final VoidCallback leave;
 
   @override
-  State<_Progress> createState() => _ProgressState();
+  State<_Saved> createState() => _SavedState();
 }
 
-class _ProgressState extends State<_Progress> {
-  static const _every = Duration(seconds: 3);
-  static const _maxPolls = 60;
+class _SavedState extends State<_Saved> {
   Timer? _timer;
-  Share? _share;
-  int _polls = 0;
 
   @override
   void initState() {
     super.initState();
-    _poll(); // a link shared before comes back done at once
-    _timer = Timer.periodic(_every, (_) => _poll());
-  }
-
-  Future<void> _poll() async {
-    if (++_polls > _maxPolls) return _stop();
-    try {
-      final s = await context.read<ShareRepository>().get(widget.id);
-      log(
-        'share ${s.id}: ${s.status}, kind ${s.kind}, gaps ${s.gaps}${s.error == null ? '' : ', error ${s.error}'}',
-      );
-      if (!mounted) return;
-      setState(() => _share = s);
-      if (s.isFinished) _stop();
-    } catch (_) {
-      // Offline for a moment: the next tick tries again.
-    }
-  }
-
-  void _stop() {
-    _timer?.cancel();
-    if (mounted) setState(() {});
+    _timer = Timer(const Duration(milliseconds: 1500), widget.leave);
   }
 
   @override
@@ -117,29 +104,10 @@ class _ProgressState extends State<_Progress> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final s = _share;
-    if (s == null || !s.isFinished) {
-      return _polls > _maxPolls
-          ? _Message(text: l.shareStillWorking)
-          : _Message(text: l.shareReading, busy: true);
-    }
-    if (s.status == 'failed' || s.gaps.contains('unreadable')) {
-      return _Message(text: l.shareFailed, icon: Icons.error_outline);
-    }
-    return switch (s.kind) {
-      'restaurant' => _Message(
-        text: l.shareSavedPlace,
-        icon: Icons.check_circle_outline,
-      ),
-      'recipe' => _Message(
-        text: l.shareRecipeSoon,
-        icon: Icons.menu_book_outlined,
-      ),
-      _ => _Message(text: l.shareNothingFound, icon: Icons.search_off),
-    };
-  }
+  Widget build(BuildContext context) => _Message(
+    text: AppLocalizations.of(context).shareSavedLeaving,
+    icon: Icons.check_circle_outline,
+  );
 }
 
 class _Message extends StatelessWidget {

@@ -9,12 +9,17 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:bukuresipi_flutter/features/shares/domain/share.dart';
+import 'package:bukuresipi_flutter/features/shares/presentation/recent_shares.dart';
+
 import '../../../fakes.dart';
+import '../../shares/presentation/share_intake_test.dart' show FakeShares;
 import '../places_fixtures.dart';
 
 void main() {
   late FakePlaces repo;
   late PlacesController places;
+  var shared = <Share>[];
 
   Future<void> pump(WidgetTester t, Widget page, {String role = 'user'}) async {
     places = PlacesController(repo);
@@ -37,6 +42,12 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: places),
           ChangeNotifierProvider.value(value: auth),
+          ChangeNotifierProvider(
+            create: (_) => RecentShares(
+              FakeShares()..recentList = shared,
+              onFinished: () async {},
+            )..load(),
+          ),
         ],
         child: MaterialApp(
           locale: const Locale('en'),
@@ -152,4 +163,20 @@ void main() {
     expect(repo.tidied, [places.byId('a')!.restaurant.id]);
     expect(find.text('Branches checked: 1 merged, 1 removed.'), findsOneWidget);
   });
+
+  testWidgets(
+    'the book shows a post still being read, and one that could not be read',
+    (t) async {
+      repo = FakePlaces();
+      shared = [
+        const Share(id: 's1', status: 'processing', kind: 'unknown'),
+        const Share(id: 's2', status: 'failed', kind: 'unknown'),
+      ];
+      await pump(t, const PlacesListPage());
+      await t.pump();
+      expect(find.text('Reading a post you shared…'), findsOneWidget);
+      expect(find.textContaining('could not read this post'), findsOneWidget);
+      shared = [];
+    },
+  );
 }

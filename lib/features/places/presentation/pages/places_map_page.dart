@@ -10,6 +10,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../widgets/north_button.dart';
 import '../widgets/unpinned_actions.dart';
 import 'places_list_page.dart';
 
@@ -32,7 +33,7 @@ LatLngBounds? pinBounds(List<Place> places) {
   return LatLngBounds(southwest: LatLng(s, w), northeast: LatLng(n, e));
 }
 
-/// The Map tab: one pin per branch with coordinates (rotate with two fingers; the compass points north again).
+/// The Map tab: one pin per branch with coordinates (rotate with two fingers; the north button turns it back).
 /// Places without a pin are listed from the slip at the bottom, each with "Find location" / "Set on map".
 class PlacesMapPage extends StatefulWidget {
   const PlacesMapPage({super.key});
@@ -60,7 +61,7 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
   }
 
   void _created(MapLibreMapController c) {
-    _map = c..onCircleTapped.add(_tapped);
+    setState(() => _map = c..onCircleTapped.add(_tapped));
   }
 
   Future<void> _styleLoaded() async {
@@ -210,15 +211,23 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
             onMapCreated: _created,
             onStyleLoadedCallback: _styleLoaded,
             tiltGesturesEnabled: false,
-            compassEnabled: true,
-            compassViewPosition: CompassViewPosition.topRight,
-            compassViewMargins: const Point(12, 12),
+            compassEnabled: false, // our own north button: always there, on the notebook's paper
+            trackCameraPosition: true,
             logoEnabled: false,
             // The credit OpenStreetMap needs stays, as a faint "i" in the corner.
             attributionButtonPosition: AttributionButtonPosition.topLeft,
             attributionButtonMargins: const Point(8, 8),
             attributionButtonColor: nb.ink.withValues(alpha: 0.3),
           ),
+          if (_map != null)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: NorthButton(
+                map: _map!,
+                tooltip: AppLocalizations.of(context).northUp,
+              ),
+            ),
           if (places.loaded && places.pinned.isEmpty)
             Positioned(
               left: 16,

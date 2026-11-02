@@ -68,15 +68,25 @@ class ShareRepositoryImpl implements ShareRepository {
   }
 
   @override
-  Future<Share> get(String id) => _call(() async {
-    final j = (await _dio.get<Map<String, dynamic>>('/shares/$id')).data!;
-    return Share(
-      id: j['id'] as String,
-      status: j['status'] as String,
-      kind: j['kind'] as String,
-      restaurantId: j['restaurantId'] as String?,
-      gaps: [...(j['gaps'] as List? ?? const []).cast<String>()],
-      error: j['error'] as String?,
-    );
+  Future<Share> get(String id) => _call(
+    () async =>
+        _share((await _dio.get<Map<String, dynamic>>('/shares/$id')).data!),
+  );
+
+  @override
+  Future<List<Share>> recent() => _call(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/shares')).data!;
+    return [
+      for (final s in j['shares'] as List) _share(s as Map<String, dynamic>),
+    ];
   });
+
+  static Share _share(Map<String, dynamic> j) => Share(
+    id: j['id'] as String,
+    status: j['status'] as String,
+    kind: j['kind'] as String,
+    restaurantId: j['restaurantId'] as String?,
+    gaps: [...(j['gaps'] as List? ?? const []).cast<String>()],
+    error: j['error'] as String?,
+  );
 }

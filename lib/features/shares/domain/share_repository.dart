@@ -10,4 +10,7 @@ abstract interface class ShareRepository {
   Future<String> submitImage(String path);
 
   Future<Share> get(String id);
+
+  /// The user's shares from the last 24 h, newest first.
+  Future<List<Share>> recent();
 }

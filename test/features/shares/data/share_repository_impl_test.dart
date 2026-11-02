@@ -81,4 +81,40 @@ void main() {
       ['done', 'restaurant', 'r-1', true],
     );
   });
+
+  test('recent: the last day of shares, as the book shows them', () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          'shares': [
+            {
+              'id': 's-2',
+              'status': 'processing',
+              'kind': 'unknown',
+              'restaurantId': null,
+              'gaps': [],
+              'error': null,
+              'platform': 'tiktok',
+            },
+            {
+              'id': 's-1',
+              'status': 'done',
+              'kind': 'other',
+              'restaurantId': null,
+              'gaps': ['unreadable'],
+              'error': null,
+              'platform': 'tiktok',
+            },
+          ],
+        },
+      ),
+    );
+    final list = await repo.recent();
+    expect(adapter.requests.single.path, '/shares');
+    expect(
+      [for (final s in list) (s.id, s.isFinished, s.couldNotRead)],
+      [('s-2', false, false), ('s-1', true, true)],
+    );
+  });
 }

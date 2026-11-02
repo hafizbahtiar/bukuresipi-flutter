@@ -9,6 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../places_controller.dart';
+import '../widgets/north_button.dart';
 import 'places_map_page.dart';
 
 /// Set a branch's pin by hand: move the map under a fixed pin, or jump to where you stand. One pin per user per
@@ -112,17 +113,24 @@ class _PinPickerPageState extends State<PinPickerPage> {
                   initialCameraPosition: _start(
                     context.read<PlacesController>(),
                   ),
-                  onMapCreated: (c) => _map = c,
+                  onMapCreated: (c) => setState(() => _map = c),
                   trackCameraPosition: true,
                   tiltGesturesEnabled: false,
-                  compassEnabled: true,
-                  compassViewPosition: CompassViewPosition.topRight,
-                  compassViewMargins: const Point(12, 12),
+                  compassEnabled: false,
                   logoEnabled: false,
                   attributionButtonPosition: AttributionButtonPosition.topLeft,
                   attributionButtonMargins: const Point(8, 8),
                   attributionButtonColor: nb.ink.withValues(alpha: 0.3),
                 ),
+                if (_map != null)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: NorthButton(
+                      map: _map!,
+                      tooltip: AppLocalizations.of(context).northUp,
+                    ),
+                  ),
                 // The fixed pin: its tip marks the map's centre.
                 IgnorePointer(
                   child: Transform.translate(

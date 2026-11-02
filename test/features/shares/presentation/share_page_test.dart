@@ -1,6 +1,5 @@
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
-import 'package:bukuresipi_flutter/features/shares/domain/share.dart';
 import 'package:bukuresipi_flutter/features/shares/domain/share_repository.dart';
 import 'package:bukuresipi_flutter/features/shares/presentation/share_intake.dart';
 import 'package:bukuresipi_flutter/features/shares/presentation/share_page.dart';
@@ -13,28 +12,15 @@ import 'package:provider/provider.dart';
 import '../../../fakes.dart';
 import 'share_intake_test.dart' show FakeCaptions, FakeIncoming, FakeShares;
 
-class PollingShares extends FakeShares {
-  int reads = 0;
-  @override
-  Future<Share> get(String id) async => Share(
-    id: id,
-    status: ++reads < 2 ? 'processing' : 'done',
-    kind: 'restaurant',
-    restaurantId: 'r-1',
-  );
-}
-
-class UnreadableShares extends FakeShares {
-  @override
-  Future<Share> get(String id) async =>
-      Share(id: id, status: 'done', kind: 'other', gaps: const ['unreadable']);
-}
-
 void main() {
+  var left = 0;
+  void leave() => left++;
+
   Future<(ShareIntake, FakeIncoming)> pump(
     WidgetTester t,
     FakeShares shares,
   ) async {
+    left = 0;
     final incoming = FakeIncoming();
     final auth = AuthController(FakeAuthRepository()..session = true);
     await auth.restore();
@@ -46,33 +32,36 @@ void main() {
           Provider<ShareRepository>.value(value: shares),
           ChangeNotifierProvider.value(value: intake),
         ],
-        child: const MaterialApp(
-          locale: Locale('en'),
-          localizationsDelegates: [
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
           ],
-          supportedLocales: [Locale('en'), Locale('ms')],
-          home: SharePage(),
+          supportedLocales: const [Locale('en'), Locale('ms')],
+          home: SharePage(leave: leave),
         ),
       ),
     );
     return (intake, incoming);
   }
 
-  testWidgets('an accepted share is polled until it is read', (t) async {
-    final (_, incoming) = await pump(t, PollingShares());
-    incoming.controller.add([
-      const Incoming.text('https://www.tiktok.com/@a/video/1'),
-    ]);
-    await t.pump();
-    await t.pump();
-    expect(find.textContaining('Reading the post'), findsOneWidget);
-    await t.pump(const Duration(seconds: 3));
-    await t.pump();
-    expect(find.text('Saved to your places.'), findsOneWidget);
-  });
+  testWidgets(
+    'an accepted share says saved, then goes back to the app it came from',
+    (t) async {
+      final (_, incoming) = await pump(t, FakeShares());
+      incoming.controller.add([
+        const Incoming.text('https://www.tiktok.com/@a/video/1'),
+      ]);
+      await t.pump();
+      await t.pump();
+      expect(find.textContaining('in your book in a minute'), findsOneWidget);
+      expect(left, 0);
+      await t.pump(const Duration(seconds: 2));
+      expect(left, 1);
+    },
+  );
 
   testWidgets('a refused share says why', (t) async {
     final (_, incoming) = await pump(
@@ -86,17 +75,4 @@ void main() {
     await t.pump();
     expect(find.textContaining('Stories disappear'), findsOneWidget);
   });
-
-  testWidgets(
-    'a post the API could not read says so and suggests a screenshot',
-    (t) async {
-      final (_, incoming) = await pump(t, UnreadableShares());
-      incoming.controller.add([
-        const Incoming.text('https://vt.tiktok.com/ZS1/'),
-      ]);
-      await t.pump();
-      await t.pump();
-      expect(find.textContaining('Try sharing a screenshot'), findsOneWidget);
-    },
-  );
 }

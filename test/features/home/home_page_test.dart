@@ -9,7 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:bukuresipi_flutter/features/shares/presentation/recent_shares.dart';
+
 import '../../fakes.dart';
+import '../shares/presentation/share_intake_test.dart' show FakeShares;
 
 import '../places/places_fixtures.dart';
 
@@ -30,6 +33,9 @@ void main() {
             create: (_) => AuthController(FakeAuthRepository()),
           ),
           ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
+          ChangeNotifierProvider(
+            create: (_) => RecentShares(FakeShares(), onFinished: () async {}),
+          ),
         ],
         child: const MaterialApp(
           locale: Locale('en'),
