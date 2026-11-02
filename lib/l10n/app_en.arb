@@ -192,5 +192,17 @@
         "type": "String"
       }
     }
+  },
+  "checkBranches": "Check branches",
+  "branchesChecked": "Branches checked: {merged} merged, {removed} removed.",
+  "@branchesChecked": {
+    "placeholders": {
+      "merged": {
+        "type": "int"
+      },
+      "removed": {
+        "type": "int"
+      }
+    }
   }
 }

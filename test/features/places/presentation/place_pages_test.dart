@@ -138,4 +138,18 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.deletedBranches, ['b-1']);
   });
+
+  testWidgets('the owner can check a restaurant\'s branches; users cannot', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    expect(find.text('Check branches'), findsNothing);
+
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.text('Check branches'));
+    await t.pumpAndSettle();
+    expect(repo.tidied, [places.byId('a')!.restaurant.id]);
+    expect(find.text('Branches checked: 1 merged, 1 removed.'), findsOneWidget);
+  });
 }

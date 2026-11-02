@@ -150,5 +150,7 @@
   "delete": "Padam",
   "unpinnedCount": "{count, plural, =1{1 tempat belum ada di peta} other{{count} tempat belum ada di peta}}",
   "ownerNewSuffix": "{count} baru minggu ini",
-  "ownerJoined": "Daftar {date}"
+  "ownerJoined": "Daftar {date}",
+  "checkBranches": "Semak cawangan",
+  "branchesChecked": "Cawangan disemak: {merged} digabung, {removed} dibuang."
 }

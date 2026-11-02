@@ -56,6 +56,20 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<({int merged, int removed})> tidyBranches(String restaurantId) =>
+      _call(() async {
+        final res = await _dio.post<Map<String, dynamic>>(
+          '/places/restaurants/$restaurantId/tidy',
+          // Clef compares the branches one by one on the server.
+          options: Options(receiveTimeout: const Duration(seconds: 90)),
+        );
+        return (
+          merged: res.data!['merged'] as int,
+          removed: res.data!['removed'] as int,
+        );
+      });
+
+  @override
   Future<void> deleteBranch(String branchId) =>
       _call(() => _dio.delete<void>('/places/branches/$branchId'));
 
