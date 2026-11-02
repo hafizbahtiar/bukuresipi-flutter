@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../domain/share.dart';
 import '../domain/share_repository.dart';
@@ -68,17 +69,30 @@ class ShareRepositoryImpl implements ShareRepository {
   }
 
   @override
-  Future<Share> get(String id) => _call(
-    () async =>
-        _share((await _dio.get<Map<String, dynamic>>('/shares/$id')).data!),
-  );
+  Future<Share> get(String id) => _call(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/shares/$id')).data!;
+    try {
+      return _share(j);
+    } catch (e) {
+      log('shares: cannot read $id: $e; row=${logJson(j)}');
+      rethrow;
+    }
+  });
 
   @override
   Future<List<Share>> recent() => _call(() async {
     final j = (await _dio.get<Map<String, dynamic>>('/shares')).data!;
-    return [
-      for (final s in j['shares'] as List) _share(s as Map<String, dynamic>),
-    ];
+    final rows = j['shares'] as List;
+    final shares = <Share>[];
+    for (final s in rows) {
+      try {
+        shares.add(_share(s as Map<String, dynamic>));
+      } catch (e) {
+        log('shares: skipped row: $e; row=${logJson(s)}');
+      }
+    }
+    log('shares: ${shares.length}/${rows.length} recent rows loaded');
+    return shares;
   });
 
   static Share _share(Map<String, dynamic> j) => Share(

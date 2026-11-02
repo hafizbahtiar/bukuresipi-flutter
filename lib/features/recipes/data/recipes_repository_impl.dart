@@ -22,14 +22,16 @@ class RecipesRepositoryImpl implements RecipesRepository {
   @override
   Future<List<Recipe>> list() => _call(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/recipes')).data!;
+    final rows = data['recipes'] as List;
     final recipes = <Recipe>[];
-    for (final j in data['recipes'] as List) {
+    for (final j in rows) {
       try {
         recipes.add(recipeFromJson(j as Map<String, dynamic>));
       } catch (e) {
-        log('recipes: skipped a row the app cannot read ($e)');
+        log('recipes: skipped row: $e; row=${logJson(j)}');
       }
     }
+    log('recipes: ${recipes.length}/${rows.length} rows loaded');
     return recipes..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   });
 
