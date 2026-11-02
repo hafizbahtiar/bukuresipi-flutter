@@ -52,3 +52,9 @@ app.*.map.json
 .env.dev
 lib/core/env/env.g.dart
 lib/l10n/gen/
+
+# Android + iOS only: Flutter tooling may regenerate these, never commit them.
+/linux/
+/macos/
+/windows/
+/web/
