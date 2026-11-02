@@ -54,7 +54,7 @@ void main() {
     await t.tap(find.text('Save'));
     await t.pumpAndSettle();
     expect(repo.meterUpdates, [('geo:nominatim', 500, true)]);
-    expect(find.text('90 / 500'), findsOneWidget);
+    expect(find.text('90 / 500 a month'), findsOneWidget);
   });
 
   testWidgets('users are searched, and ending a user\'s sessions asks first', (
