@@ -1,0 +1,78 @@
+import 'package:dio/dio.dart';
+
+import '../../../core/network/api_exception.dart';
+import '../domain/place.dart';
+import '../domain/places_repository.dart';
+
+class PlacesRepositoryImpl implements PlacesRepository {
+  PlacesRepositoryImpl(this._dio);
+
+  final Dio _dio;
+
+  Future<T> _call<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } catch (e) {
+      throw ApiException.from(e);
+    }
+  }
+
+  @override
+  Future<List<Place>> list() => _call(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/places')).data!;
+    final places = [
+      for (final j in data['places'] as List)
+        placeFromJson(j as Map<String, dynamic>),
+    ];
+    return places..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  });
+
+  @override
+  Future<void> updateNote(String id, String? note) => _call(() async {
+    final trimmed = note?.trim();
+    await _dio.patch<void>(
+      '/places/$id',
+      data: {'note': trimmed == null || trimmed.isEmpty ? null : trimmed},
+    );
+  });
+
+  @override
+  Future<void> remove(String id) =>
+      _call(() => _dio.delete<void>('/places/$id'));
+}
+
+/// D1 datetimes are UTC without a zone ("2026-11-02 12:00:00").
+DateTime _utc(String s) =>
+    DateTime.parse(s.contains('T') ? s : '${s.replaceFirst(' ', 'T')}Z');
+
+double? _num(Object? v) => v is num ? v.toDouble() : null;
+
+Place placeFromJson(Map<String, dynamic> j) {
+  final r = j['restaurant'] as Map<String, dynamic>;
+  return Place(
+    id: j['id'] as String,
+    note: j['note'] as String?,
+    createdAt: _utc(j['createdAt'] as String),
+    branchId: j['branchId'] as String?,
+    restaurant: PlaceRestaurant(
+      id: r['id'] as String,
+      name: r['name'] as String,
+      cuisine: r['cuisine'] as String?,
+      halalClaim: r['halalClaim'] as String?,
+      halalQuote: r['halalQuote'] as String?,
+      halalSourceUrl: r['halalSourceUrl'] as String?,
+    ),
+    branches: [
+      for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())
+        Branch(
+          id: b['id'] as String,
+          label: b['label'] as String?,
+          address: b['address'] as String?,
+          city: b['city'] as String?,
+          state: b['state'] as String?,
+          lat: _num(b['lat']),
+          lng: _num(b['lng']),
+        ),
+    ],
+  );
+}
