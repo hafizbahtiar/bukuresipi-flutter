@@ -31,6 +31,15 @@ void main() {
     });
   });
 
+  test(
+    'the caption read on the phone goes along, capped at 4000 characters',
+    () async {
+      final repo = make((_) => (202, {'id': 's-1', 'status': 'pending'}));
+      await repo.submitLink('https://vt.tiktok.com/ZS1/', caption: 'a' * 5000);
+      expect((adapter.requests.single.data as Map)['caption'], hasLength(4000));
+    },
+  );
+
   test('an image is posted as multipart field "image" with its type', () async {
     final file = File('${Directory.systemTemp.createTempSync().path}/shot.PNG')
       ..writeAsBytesSync([0x89, 0x50, 0x4e, 0x47]);

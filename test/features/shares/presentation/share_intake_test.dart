@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
+import 'package:bukuresipi_flutter/features/shares/domain/caption_reader.dart';
 import 'package:bukuresipi_flutter/features/shares/domain/share.dart';
 import 'package:bukuresipi_flutter/features/shares/domain/share_repository.dart';
 import 'package:bukuresipi_flutter/features/shares/presentation/share_intake.dart';
@@ -11,12 +12,14 @@ import '../../../fakes.dart';
 
 class FakeShares implements ShareRepository {
   final sent = <String>[];
+  final captions = <String?>[];
   Object? error;
 
   @override
-  Future<String> submitLink(String url) async {
+  Future<String> submitLink(String url, {String? caption}) async {
     if (error != null) throw error!;
     sent.add('link:$url');
+    captions.add(caption);
     return 'share-1';
   }
 
@@ -29,6 +32,17 @@ class FakeShares implements ShareRepository {
 
   @override
   Future<Share> get(String id) async => throw UnimplementedError();
+}
+
+class FakeCaptions implements CaptionReader {
+  String? caption;
+  final asked = <String>[];
+
+  @override
+  Future<String?> read(String url) async {
+    asked.add(url);
+    return caption;
+  }
 }
 
 class FakeIncoming implements IncomingShares {
@@ -56,6 +70,7 @@ void main() {
 
   late FakeShares shares;
   late FakeIncoming incoming;
+  late FakeCaptions captions;
   late FakeAuthRepository authRepo;
   late AuthController auth;
   late List<String> shown;
@@ -63,11 +78,12 @@ void main() {
   Future<ShareIntake> start({bool signedIn = true}) async {
     shares = FakeShares();
     incoming = FakeIncoming();
+    captions = FakeCaptions();
     authRepo = FakeAuthRepository()..session = signedIn;
     auth = AuthController(authRepo);
     await auth.restore();
     shown = [];
-    final intake = ShareIntake(incoming, shares, auth)
+    final intake = ShareIntake(incoming, shares, auth, captions)
       ..onShow = () => shown.add('show');
     await intake.start();
     return intake;
@@ -138,5 +154,30 @@ void main() {
       intake.state,
       isA<ShareFailed>().having((s) => s.code, 'code', 'daily_limit'),
     );
+  });
+
+  test('a TikTok link goes out with the caption read on the phone', () async {
+    await start();
+    captions.caption = 'Resepi ayam masak merah';
+    await share([const Incoming.text('https://vt.tiktok.com/ZS1/')]);
+    expect(captions.asked, ['https://vt.tiktok.com/ZS1/']);
+    expect(shares.captions, ['Resepi ayam masak merah']);
+  });
+
+  test(
+    'other links are sent as they are (no page load on the phone)',
+    () async {
+      await start();
+      await share([const Incoming.text('https://www.youtube.com/watch?v=1')]);
+      expect(captions.asked, isEmpty);
+      expect(shares.captions, [null]);
+    },
+  );
+
+  test('a caption the phone could not read still sends the link', () async {
+    await start();
+    await share([const Incoming.text('https://www.tiktok.com/@a/video/1')]);
+    expect(shares.sent, ['link:https://www.tiktok.com/@a/video/1']);
+    expect(shares.captions, [null]);
   });
 }

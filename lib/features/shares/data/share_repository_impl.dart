@@ -29,14 +29,20 @@ class ShareRepositoryImpl implements ShareRepository {
   }
 
   @override
-  Future<String> submitLink(String url) => _call(
-    () async =>
-        (await _dio.post<Map<String, dynamic>>(
-              '/shares',
-              data: {'url': url},
-            )).data!['id']
-            as String,
-  );
+  Future<String> submitLink(String url, {String? caption}) => _call(() async {
+    final body = {
+      'url': url,
+      if (caption != null && caption.trim().isNotEmpty)
+        'caption': caption.trim().length > 4000
+            ? caption.trim().substring(0, 4000)
+            : caption.trim(),
+    };
+    return (await _dio.post<Map<String, dynamic>>(
+          '/shares',
+          data: body,
+        )).data!['id']
+        as String;
+  });
 
   @override
   Future<String> submitImage(String path) async {
