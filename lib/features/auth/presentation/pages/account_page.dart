@@ -17,7 +17,8 @@ class AccountPage extends StatefulWidget {
 class _AccountPageState extends State<AccountPage> {
   bool _sending = false;
 
-  void _snack(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _resend() async {
     final l = AppLocalizations.of(context);
@@ -44,21 +45,38 @@ class _AccountPageState extends State<AccountPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l.accountTitle)),
       body: RefreshIndicator(
-        onRefresh: () => auth.refreshUser().catchError((Object e) => _snack(errorText(l, e))),
+        onRefresh: () => auth.refreshUser().catchError(
+          (Object e) => _snack(errorText(l, e)),
+        ),
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
             ListTile(
-              leading: CircleAvatar(child: Text((user.name ?? user.email).characters.first.toUpperCase())),
+              leading: CircleAvatar(
+                child: Text(
+                  (user.name ?? user.email).characters.first.toUpperCase(),
+                ),
+              ),
               title: Text(user.name ?? user.email),
               subtitle: user.name == null ? null : Text(user.email),
             ),
             ListTile(
-              leading: Icon(user.emailVerified ? Icons.verified_outlined : Icons.mark_email_unread_outlined,
-                  color: user.emailVerified ? c.primary : c.error),
-              title: Text(user.emailVerified ? l.emailVerified : l.emailNotVerified),
+              leading: Icon(
+                user.emailVerified
+                    ? Icons.verified_outlined
+                    : Icons.mark_email_unread_outlined,
+                color: user.emailVerified ? c.primary : c.error,
+              ),
+              title: Text(
+                user.emailVerified ? l.emailVerified : l.emailNotVerified,
+              ),
               subtitle: user.emailVerified ? null : Text(l.resendVerification),
-              trailing: _sending ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)) : null,
+              trailing: _sending
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : null,
               onTap: user.emailVerified || _sending ? null : _resend,
             ),
             const Divider(),
@@ -71,7 +89,10 @@ class _AccountPageState extends State<AccountPage> {
               leading: const Icon(Icons.translate),
               title: Text(l.language),
               trailing: SegmentedButton<String>(
-                segments: const [ButtonSegment(value: 'ms', label: Text('BM')), ButtonSegment(value: 'en', label: Text('EN'))],
+                segments: const [
+                  ButtonSegment(value: 'ms', label: Text('BM')),
+                  ButtonSegment(value: 'en', label: Text('EN')),
+                ],
                 selected: {locale.lang},
                 onSelectionChanged: (s) => locale.setLang(s.first),
                 showSelectedIcon: false,

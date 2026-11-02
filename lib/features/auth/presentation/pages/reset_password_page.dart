@@ -6,6 +6,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/new_password_fields.dart';
 
 /// Opened from the reset email (App Link https://bukuresipi.com/auth/reset?token=...).
 class ResetPasswordPage extends StatefulWidget {
@@ -20,6 +21,7 @@ class ResetPasswordPage extends StatefulWidget {
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _form = GlobalKey<FormState>();
   final _password = TextEditingController();
+  final _confirm = TextEditingController();
   bool _busy = false;
   bool _done = false;
   bool _dead = false; // link expired / used / missing
@@ -39,7 +41,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       _error = null;
     });
     try {
-      await context.read<AuthController>().resetPassword(widget.token!, _password.text);
+      await context.read<AuthController>().resetPassword(
+        widget.token!,
+        _password.text,
+      );
       if (mounted) setState(() => _done = true);
     } catch (e) {
       if (!mounted) return;
@@ -53,6 +58,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   void dispose() {
     _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
@@ -66,27 +72,38 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         if (_done) ...[
           FormMessage(l.resetDone, success: true),
           const SizedBox(height: 24),
-          FilledButton(onPressed: () => context.go('/login'), child: Text(l.toLoginButton)),
+          FilledButton(
+            onPressed: () => context.go('/login'),
+            child: Text(l.toLoginButton),
+          ),
         ] else if (_dead) ...[
           FormMessage(l.errInvalidToken),
           const SizedBox(height: 24),
-          FilledButton(onPressed: () => context.go('/forgot'), child: Text(l.requestNewLink)),
+          FilledButton(
+            onPressed: () => context.go('/forgot'),
+            child: Text(l.requestNewLink),
+          ),
         ] else
           Form(
             key: _form,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              PasswordField(
-                controller: _password,
-                label: l.newPassword,
-                helper: l.passwordHint,
-                newPassword: true,
-                validator: (v) => passwordError(l, v),
-                onSubmitted: (_) => _submit(),
-              ),
-              const SizedBox(height: 24),
-              BusyButton(label: l.resetButton, busy: _busy, onPressed: _submit),
-              FormMessage(_error),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                NewPasswordFields(
+                  password: _password,
+                  confirm: _confirm,
+                  label: l.newPassword,
+                  onSubmitted: _submit,
+                ),
+                const SizedBox(height: 24),
+                BusyButton(
+                  label: l.resetButton,
+                  busy: _busy,
+                  onPressed: _submit,
+                ),
+                FormMessage(_error),
+              ],
+            ),
           ),
       ],
     );

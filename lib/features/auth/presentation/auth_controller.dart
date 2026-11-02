@@ -35,15 +35,31 @@ class AuthController extends ChangeNotifier {
         await _repo.clearLocal();
         _set(AuthStatus.signedOut, null);
       } else if (cached == null) {
-        _set(AuthStatus.signedOut, null); // offline with nothing saved: sign in again later
+        _set(
+          AuthStatus.signedOut,
+          null,
+        ); // offline with nothing saved: sign in again later
       }
     }
   }
 
-  Future<void> login(String email, String password) async => _set(AuthStatus.signedIn, await _repo.login(email, password));
+  Future<void> login(String email, String password) async =>
+      _set(AuthStatus.signedIn, await _repo.login(email, password));
 
-  Future<void> register({required String email, required String password, String? name, required String lang}) async =>
-      _set(AuthStatus.signedIn, await _repo.register(email: email, password: password, name: name, lang: lang));
+  Future<void> register({
+    required String email,
+    required String password,
+    String? name,
+    required String lang,
+  }) async => _set(
+    AuthStatus.signedIn,
+    await _repo.register(
+      email: email,
+      password: password,
+      name: name,
+      lang: lang,
+    ),
+  );
 
   Future<void> logout() async {
     await _repo.logout();
@@ -57,7 +73,9 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> refreshUser() async {
-    if (_status == AuthStatus.signedIn) _set(AuthStatus.signedIn, await _repo.me());
+    if (_status == AuthStatus.signedIn) {
+      _set(AuthStatus.signedIn, await _repo.me());
+    }
   }
 
   Future<void> verifyEmail(String token) async {
@@ -82,5 +100,6 @@ class AuthController extends ChangeNotifier {
     await sessionEnded();
   }
 
-  Future<void> changePassword(String current, String next) => _repo.changePassword(current, next);
+  Future<void> changePassword(String current, String next) =>
+      _repo.changePassword(current, next);
 }

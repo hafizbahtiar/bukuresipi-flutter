@@ -18,7 +18,10 @@ class BukuresipiApp extends StatefulWidget {
 }
 
 class _BukuresipiAppState extends State<BukuresipiApp> {
-  late final GoRouter _router = buildRouter(context.read<AuthController>(), context.read<UpdateGate>());
+  late final GoRouter _router = buildRouter(
+    context.read<AuthController>(),
+    context.read<UpdateGate>(),
+  );
 
   @override
   void dispose() {
@@ -28,18 +31,18 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp.router(
-        title: 'Bukuresipi',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        locale: context.watch<LocaleController>().locale,
-        supportedLocales: LocaleController.supported,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        routerConfig: _router,
-      );
+    title: 'Bukuresipi',
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    locale: context.watch<LocaleController>().locale,
+    supportedLocales: LocaleController.supported,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    routerConfig: _router,
+  );
 }

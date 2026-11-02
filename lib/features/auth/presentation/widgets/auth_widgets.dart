@@ -4,7 +4,13 @@ import '../../../../l10n/gen/app_localizations.dart';
 
 /// Centered, scrollable, max 440 wide: every auth screen.
 class AuthScaffold extends StatelessWidget {
-  const AuthScaffold({super.key, required this.title, this.subtitle, required this.children, this.showBack = true});
+  const AuthScaffold({
+    super.key,
+    required this.title,
+    this.subtitle,
+    required this.children,
+    this.showBack = true,
+  });
 
   final String title;
   final String? subtitle;
@@ -25,10 +31,33 @@ class AuthScaffold extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(title, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.asset(
+                        'assets/brand/icon.png',
+                        width: 56,
+                        height: 56,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    title,
+                    style: text.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 8),
-                    Text(subtitle!, style: text.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    Text(
+                      subtitle!,
+                      style: text.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                   const SizedBox(height: 28),
                   ...children,
@@ -43,7 +72,16 @@ class AuthScaffold extends StatelessWidget {
 }
 
 class PasswordField extends StatefulWidget {
-  const PasswordField({super.key, required this.controller, required this.label, this.validator, this.helper, this.newPassword = false, this.onSubmitted});
+  const PasswordField({
+    super.key,
+    required this.controller,
+    required this.label,
+    this.validator,
+    this.helper,
+    this.newPassword = false,
+    this.onSubmitted,
+    this.textInputAction,
+  });
 
   final TextEditingController controller;
   final String label;
@@ -51,6 +89,7 @@ class PasswordField extends StatefulWidget {
   final String? Function(String?)? validator;
   final bool newPassword;
   final void Function(String)? onSubmitted;
+  final TextInputAction? textInputAction;
 
   @override
   State<PasswordField> createState() => _PasswordFieldState();
@@ -65,7 +104,12 @@ class _PasswordFieldState extends State<PasswordField> {
     return TextFormField(
       controller: widget.controller,
       obscureText: _hidden,
-      autofillHints: [widget.newPassword ? AutofillHints.newPassword : AutofillHints.password],
+      autocorrect: false,
+      enableSuggestions: false,
+      textInputAction: widget.textInputAction,
+      autofillHints: [
+        widget.newPassword ? AutofillHints.newPassword : AutofillHints.password,
+      ],
       validator: widget.validator,
       onFieldSubmitted: widget.onSubmitted,
       decoration: InputDecoration(
@@ -73,7 +117,9 @@ class _PasswordFieldState extends State<PasswordField> {
         helperText: widget.helper,
         suffixIcon: IconButton(
           tooltip: _hidden ? l.showPassword : l.hidePassword,
-          icon: Icon(_hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+          icon: Icon(
+            _hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          ),
           onPressed: () => setState(() => _hidden = !_hidden),
         ),
       ),
@@ -99,14 +145,37 @@ class FormMessage extends StatelessWidget {
         color: success ? c.primaryContainer : c.errorContainer,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(text!, style: TextStyle(color: success ? c.onPrimaryContainer : c.onErrorContainer)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            success ? Icons.check_circle_outline : Icons.error_outline,
+            size: 20,
+            color: success ? c.onPrimaryContainer : c.onErrorContainer,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text!,
+              style: TextStyle(
+                color: success ? c.onPrimaryContainer : c.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 /// A full-width button that shows a spinner while [busy].
 class BusyButton extends StatelessWidget {
-  const BusyButton({super.key, required this.label, required this.busy, required this.onPressed});
+  const BusyButton({
+    super.key,
+    required this.label,
+    required this.busy,
+    required this.onPressed,
+  });
 
   final String label;
   final bool busy;
@@ -114,7 +183,12 @@ class BusyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FilledButton(
-        onPressed: busy ? null : onPressed,
-        child: busy ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4)) : Text(label),
-      );
+    onPressed: busy ? null : onPressed,
+    child: busy
+        ? const SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(strokeWidth: 2.4),
+          )
+        : Text(label),
+  );
 }

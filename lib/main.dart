@@ -23,8 +23,16 @@ Future<void> main() async {
   final tokens = SecureTokenStore();
   await tokens.load();
 
-  final api = ApiClient(baseUrl: Env.apiBaseUrl, tokens: tokens, appVersion: info.version);
-  final AuthRepository authRepo = AuthRepositoryImpl(AuthApi(api.dio), tokens, prefs);
+  final api = ApiClient(
+    baseUrl: Env.apiBaseUrl,
+    tokens: tokens,
+    appVersion: info.version,
+  );
+  final AuthRepository authRepo = AuthRepositoryImpl(
+    AuthApi(api.dio),
+    tokens,
+    prefs,
+  );
   final auth = AuthController(authRepo);
   final update = UpdateGate();
   api
@@ -32,13 +40,15 @@ Future<void> main() async {
     ..onUpdateRequired = update.markRequired;
   auth.restore();
 
-  runApp(MultiProvider(
-    providers: [
-      Provider<ApiClient>.value(value: api),
-      ChangeNotifierProvider.value(value: auth),
-      ChangeNotifierProvider.value(value: update),
-      ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
-    ],
-    child: const BukuresipiApp(),
-  ));
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<ApiClient>.value(value: api),
+        ChangeNotifierProvider.value(value: auth),
+        ChangeNotifierProvider.value(value: update),
+        ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
+      ],
+      child: const BukuresipiApp(),
+    ),
+  );
 }

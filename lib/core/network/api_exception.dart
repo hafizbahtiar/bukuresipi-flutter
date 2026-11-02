@@ -17,7 +17,9 @@ class ApiException implements Exception {
       final res = error.response;
       if (res == null) return const ApiException(network);
       final data = res.data;
-      final code = data is Map && data['error'] is String ? data['error'] as String : unknown;
+      final code = data is Map && data['error'] is String
+          ? data['error'] as String
+          : unknown;
       return ApiException(code, status: res.statusCode);
     }
     return const ApiException(unknown);

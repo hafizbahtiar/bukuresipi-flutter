@@ -11,7 +11,12 @@ abstract interface class AuthRepository {
 
   Future<User> me();
   Future<User> login(String email, String password);
-  Future<User> register({required String email, required String password, String? name, required String lang});
+  Future<User> register({
+    required String email,
+    required String password,
+    String? name,
+    required String lang,
+  });
 
   /// Ends this device's session on the server (best effort) and always locally.
   Future<void> logout();
