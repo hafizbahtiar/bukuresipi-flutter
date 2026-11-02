@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../domain/caption_reader.dart';
 import '../domain/share_repository.dart';
 
 enum IncomingKind { text, image, url, unsupported }
@@ -65,11 +66,12 @@ String? firstLink(String text) {
 
 /// Takes what the user shares into the app and sends it to the API once they are signed in.
 class ShareIntake extends ChangeNotifier {
-  ShareIntake(this._source, this._repo, this._auth);
+  ShareIntake(this._source, this._repo, this._auth, this._captions);
 
   final IncomingShares _source;
   final ShareRepository _repo;
   final AuthController _auth;
+  final CaptionReader _captions;
   StreamSubscription<List<Incoming>>? _sub;
 
   /// Set by the app: open the share screen.
@@ -83,6 +85,12 @@ class ShareIntake extends ChangeNotifier {
   bool _sending = false;
 
   static const _ownHosts = {'bukuresipi.com', 'www.bukuresipi.com'};
+
+  /// Sites whose caption the API cannot read (TikTok's oEmbed gives none): read on the phone first.
+  static bool _readOnPhone(String url) {
+    final host = Uri.tryParse(url)?.host ?? '';
+    return host == 'tiktok.com' || host.endsWith('.tiktok.com');
+  }
 
   Future<void> start() async {
     _auth.addListener(_maybeSend);
@@ -143,9 +151,20 @@ class ShareIntake extends ChangeNotifier {
     _last = item;
     _set(const ShareSending());
     try {
-      final id = item.kind == IncomingKind.image
-          ? await _repo.submitImage(item.value!)
-          : await _repo.submitLink(item.value!);
+      final String id;
+      if (item.kind == IncomingKind.image) {
+        id = await _repo.submitImage(item.value!);
+      } else {
+        final caption = _readOnPhone(item.value!)
+            ? await _captions.read(item.value!).catchError((_) => null)
+            : null;
+        if (_readOnPhone(item.value!)) {
+          log(
+            'share: caption read on the phone, ${caption?.length ?? 0} chars',
+          );
+        }
+        id = await _repo.submitLink(item.value!, caption: caption);
+      }
       log('share: accepted, id $id');
       _set(ShareAccepted(id), show: true);
     } catch (e) {

@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import '../../../fakes.dart';
-import 'share_intake_test.dart' show FakeIncoming, FakeShares;
+import 'share_intake_test.dart' show FakeCaptions, FakeIncoming, FakeShares;
 
 class PollingShares extends FakeShares {
   int reads = 0;
@@ -38,7 +38,7 @@ void main() {
     final incoming = FakeIncoming();
     final auth = AuthController(FakeAuthRepository()..session = true);
     await auth.restore();
-    final intake = ShareIntake(incoming, shares, auth);
+    final intake = ShareIntake(incoming, shares, auth, FakeCaptions());
     await intake.start();
     await t.pumpWidget(
       MultiProvider(

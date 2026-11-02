@@ -16,6 +16,7 @@ import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
+import 'features/shares/data/webview_caption_reader.dart';
 import 'features/shares/data/share_repository_impl.dart';
 import 'features/shares/domain/share_repository.dart';
 import 'features/shares/presentation/share_intake.dart';
@@ -48,6 +49,7 @@ Future<void> main() async {
     PluginIncomingShares(),
     shareRepo,
     auth,
+    WebViewCaptionReader(),
   ); // started by the app, once the router exists
 
   runApp(
