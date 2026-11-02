@@ -68,5 +68,7 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-	</dict>
+		<key>NSLocationWhenInUseUsageDescription</key>
+	<string>To set a place on the map where you are standing.</string>
+</dict>
 </plist>

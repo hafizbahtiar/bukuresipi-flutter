@@ -32,6 +32,15 @@ class FakeShares implements ShareRepository {
 
   @override
   Future<Share> get(String id) async => throw UnimplementedError();
+
+  List<Share> recentList = [];
+  int recentReads = 0;
+
+  @override
+  Future<List<Share>> recent() async {
+    recentReads++;
+    return recentList;
+  }
 }
 
 class FakeCaptions implements CaptionReader {

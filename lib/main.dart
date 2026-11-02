@@ -15,10 +15,15 @@ import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/owner/data/owner_repository_impl.dart';
+import 'features/owner/domain/owner_repository.dart';
+import 'features/places/data/places_repository_impl.dart';
+import 'features/places/presentation/places_controller.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
 import 'features/shares/data/webview_caption_reader.dart';
 import 'features/shares/data/share_repository_impl.dart';
 import 'features/shares/domain/share_repository.dart';
+import 'features/shares/presentation/recent_shares.dart';
 import 'features/shares/presentation/share_intake.dart';
 
 Future<void> main() async {
@@ -44,7 +49,15 @@ Future<void> main() async {
     ..onSessionEnded = auth.sessionEnded
     ..onUpdateRequired = update.markRequired;
   auth.restore();
+  final places = PlacesController(PlacesRepositoryImpl(api.dio));
+  auth.addListener(() {
+    if (auth.status == AuthStatus.signedOut) places.clear();
+  });
   final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
+  final recent = RecentShares(shareRepo, onFinished: places.load);
+  auth.addListener(() {
+    if (auth.status == AuthStatus.signedOut) recent.clear();
+  });
   final shares = ShareIntake(
     PluginIncomingShares(),
     shareRepo,
@@ -60,6 +73,9 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: update),
         Provider<ShareRepository>.value(value: shareRepo),
         ChangeNotifierProvider.value(value: shares),
+        ChangeNotifierProvider.value(value: places),
+        ChangeNotifierProvider.value(value: recent),
+        Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
       ],
       child: const BukuresipiApp(),
