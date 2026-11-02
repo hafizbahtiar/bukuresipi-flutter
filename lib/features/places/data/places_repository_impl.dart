@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/db_time.dart';
 import '../domain/place.dart';
 import '../domain/places_repository.dart';
 
@@ -41,10 +42,6 @@ class PlacesRepositoryImpl implements PlacesRepository {
       _call(() => _dio.delete<void>('/places/$id'));
 }
 
-/// D1 datetimes are UTC without a zone ("2026-11-02 12:00:00").
-DateTime _utc(String s) =>
-    DateTime.parse(s.contains('T') ? s : '${s.replaceFirst(' ', 'T')}Z');
-
 double? _num(Object? v) => v is num ? v.toDouble() : null;
 
 Place placeFromJson(Map<String, dynamic> j) {
@@ -52,7 +49,7 @@ Place placeFromJson(Map<String, dynamic> j) {
   return Place(
     id: j['id'] as String,
     note: j['note'] as String?,
-    createdAt: _utc(j['createdAt'] as String),
+    createdAt: dbTime(j['createdAt'] as String),
     branchId: j['branchId'] as String?,
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
