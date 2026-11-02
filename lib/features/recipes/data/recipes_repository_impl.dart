@@ -1,0 +1,75 @@
+import 'package:dio/dio.dart';
+
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/db_time.dart';
+import '../domain/recipe.dart';
+import '../domain/recipes_repository.dart';
+
+class RecipesRepositoryImpl implements RecipesRepository {
+  RecipesRepositoryImpl(this._dio);
+
+  final Dio _dio;
+
+  Future<T> _call<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } catch (e) {
+      throw ApiException.from(e);
+    }
+  }
+
+  @override
+  Future<List<Recipe>> list() => _call(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/recipes')).data!;
+    final recipes = [
+      for (final j in data['recipes'] as List)
+        recipeFromJson(j as Map<String, dynamic>),
+    ];
+    return recipes..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  });
+
+  @override
+  Future<RecipeDetail> get(String id) => _call(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/recipes/$id')).data!;
+    return recipeDetailFromJson(data);
+  });
+}
+
+List<String> _missing(Object? v) =>
+    [...((v as List?) ?? const []).cast<String>()];
+
+Recipe recipeFromJson(Map<String, dynamic> j) => Recipe(
+  id: j['id'] as String,
+  name: j['name'] as String,
+  createdAt: dbTime(j['createdAt'] as String),
+  sourceUrl: j['sourceUrl'] as String?,
+  missing: _missing(j['missing']),
+  ingredientCount: (j['ingredientCount'] as num?)?.toInt() ?? 0,
+  stepCount: (j['stepCount'] as num?)?.toInt() ?? 0,
+);
+
+RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
+  id: j['id'] as String,
+  name: j['name'] as String,
+  createdAt: dbTime(j['createdAt'] as String),
+  sourceUrl: j['sourceUrl'] as String?,
+  missing: _missing(j['missing']),
+  ingredients: [
+    for (final i in (j['ingredients'] as List? ?? const [])
+        .cast<Map<String, dynamic>>())
+      RecipeIngredient(
+        name: i['name'] as String?,
+        rawText: i['rawText'] as String?,
+        quantity: i['quantity'] as String?,
+        unit: i['unit'] as String?,
+      ),
+  ],
+  steps: [
+    for (final s in (j['steps'] as List? ?? const [])
+        .cast<Map<String, dynamic>>())
+      RecipeStep(
+        stepNo: (s['stepNo'] as num).toInt(),
+        instruction: s['instruction'] as String,
+      ),
+  ],
+);

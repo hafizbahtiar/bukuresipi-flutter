@@ -222,6 +222,42 @@
   "@placeGone": {},
   "openFailed": "Could not open the link.",
   "@openFailed": {},
+  "recipesHeading": "Recipes",
+  "@recipesHeading": {},
+  "recipesLoadFailed": "Could not load your recipes.",
+  "@recipesLoadFailed": {},
+  "recipeIngredients": "Ingredients",
+  "@recipeIngredients": {},
+  "recipeSteps": "Steps",
+  "@recipeSteps": {},
+  "recipeIncomplete": "Not everything was found",
+  "@recipeIncomplete": {},
+  "recipeMissingName": "dish name",
+  "@recipeMissingName": {},
+  "recipeMissingIngredients": "ingredients",
+  "@recipeMissingIngredients": {},
+  "recipeMissingSteps": "steps",
+  "@recipeMissingSteps": {},
+  "recipeOpenSource": "Open video",
+  "@recipeOpenSource": {},
+  "recipeGone": "This recipe is no longer in your book.",
+  "@recipeGone": {},
+  "recipeIngredientCount": "{count, plural, =1{1 ingredient} other{{count} ingredients}}",
+  "@recipeIngredientCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeStepCount": "{count, plural, =1{1 step} other{{count} steps}}",
+  "@recipeStepCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ownerUsers": "Users",
   "@ownerUsers": {},
   "ownerNewThisWeek": "New this week",

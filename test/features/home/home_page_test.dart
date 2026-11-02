@@ -2,6 +2,7 @@ import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/home_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -15,6 +16,7 @@ import '../../fakes.dart';
 import '../shares/presentation/share_intake_test.dart' show FakeShares;
 
 import '../places/places_fixtures.dart';
+import '../recipes/recipes_fixtures.dart';
 
 void main() {
   testWidgets('opening home loads the places without notifying during build', (
@@ -29,6 +31,9 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: places),
+          ChangeNotifierProvider(
+            create: (_) => RecipesController(FakeRecipes()),
+          ),
           ChangeNotifierProvider(
             create: (_) => AuthController(FakeAuthRepository()),
           ),
