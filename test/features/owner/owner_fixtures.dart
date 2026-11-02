@@ -31,14 +31,19 @@ class FakeOwner implements OwnerRepository {
   List<FailedShare> shares = [];
   final queries = <String?>[];
   final loggedOut = <String>[];
-  final meterUpdates = <(String, int?, bool?)>[];
+  final meterUpdates = <(String, int?, String?, bool?)>[];
 
   @override
   Future<OwnerStats> getStats() async => stats;
 
   @override
-  Future<Meter> updateMeter(String code, {int? cap, bool? active}) async {
-    meterUpdates.add((code, cap, active));
+  Future<Meter> updateMeter(
+    String code, {
+    int? cap,
+    String? period,
+    bool? active,
+  }) async {
+    meterUpdates.add((code, cap, period, active));
     final m = stats.meters.firstWhere((m) => m.code == code);
     return Meter(
       code: code,
@@ -46,6 +51,7 @@ class FakeOwner implements OwnerRepository {
       used: m.used,
       cap: cap ?? m.cap,
       active: active ?? m.active,
+      period: period ?? m.period,
     );
   }
 

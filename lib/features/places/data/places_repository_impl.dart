@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
 import '../domain/place.dart';
@@ -21,10 +22,14 @@ class PlacesRepositoryImpl implements PlacesRepository {
   @override
   Future<List<Place>> list() => _call(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/places')).data!;
-    final places = [
-      for (final j in data['places'] as List)
-        placeFromJson(j as Map<String, dynamic>),
-    ];
+    final places = <Place>[];
+    for (final j in data['places'] as List) {
+      try {
+        places.add(placeFromJson(j as Map<String, dynamic>));
+      } catch (e) {
+        log('places: skipped a row the app cannot read ($e)');
+      }
+    }
     return places..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   });
 

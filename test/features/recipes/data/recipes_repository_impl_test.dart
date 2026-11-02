@@ -21,28 +21,49 @@ void main() {
     return RecipesRepositoryImpl(api.dio);
   }
 
-  test('list reads recipes newest first with counts and missing flags', () async {
-    final older = {
-      ...recipeJson,
-      'id': 'r-0',
-      'createdAt': '2026-11-01 08:00:00',
-      'missing': ['steps'],
-    };
+  test(
+    'list reads recipes newest first with counts and missing flags',
+    () async {
+      final older = {
+        ...recipeJson,
+        'id': 'r-0',
+        'createdAt': '2026-11-01 08:00:00',
+        'missing': ['steps'],
+      };
+      final repo = make(
+        (_) => (
+          200,
+          {
+            'recipes': [older, recipeJson],
+          },
+        ),
+      );
+      final recipes = await repo.list();
+      expect(adapter.requests.single.path, '/recipes');
+      expect(recipes.map((r) => r.id), ['r-1', 'r-0']);
+      expect(recipes.map((r) => r.missing), [
+        [],
+        ['steps'],
+      ]);
+      expect(recipes.first.ingredientCount, 2);
+      expect(recipes.first.stepCount, 2);
+      expect(recipes.first.createdAt.isUtc, isTrue);
+    },
+  );
+
+  test('one unreadable recipe does not take the list down', () async {
     final repo = make(
       (_) => (
         200,
         {
-          'recipes': [older, recipeJson],
+          'recipes': [
+            recipeJson,
+            {'id': 'broken'},
+          ],
         },
       ),
     );
-    final recipes = await repo.list();
-    expect(adapter.requests.single.path, '/recipes');
-    expect(recipes.map((r) => r.id), ['r-1', 'r-0']);
-    expect(recipes.map((r) => r.missing), [[], ['steps']]);
-    expect(recipes.first.ingredientCount, 2);
-    expect(recipes.first.stepCount, 2);
-    expect(recipes.first.createdAt.isUtc, isTrue);
+    expect((await repo.list()).map((r) => r.id), ['r-1']);
   });
 
   test('get reads the ingredients and steps', () async {
@@ -60,9 +81,7 @@ void main() {
     final repo = make((_) => (404, {'error': 'not_found'}));
     await expectLater(
       repo.get('r-1'),
-      throwsA(
-        isA<ApiException>().having((e) => e.code, 'code', 'not_found'),
-      ),
+      throwsA(isA<ApiException>().having((e) => e.code, 'code', 'not_found')),
     );
   });
 }
