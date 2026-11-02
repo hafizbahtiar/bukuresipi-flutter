@@ -130,7 +130,7 @@ class _Message extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (busy)
-          const CircularProgressIndicator()
+          const CircularProgressIndicator.adaptive()
         else if (icon != null)
           Icon(icon, size: 48, color: c.primary),
         const SizedBox(height: 20),

@@ -76,7 +76,7 @@ void main() {
     await t.tap(find.text('Sign out everywhere'));
     await t.pumpAndSettle();
     expect(repo.loggedOut, isEmpty);
-    await t.tap(find.widgetWithText(TextButton, 'Sign out'));
+    await t.tap(find.widgetWithText(FilledButton, 'Sign out'));
     await t.pumpAndSettle();
     expect(repo.loggedOut, ['u-ali@b.c']);
   });

@@ -12,11 +12,13 @@ import '../../../fakes.dart';
 
 void main() {
   late LocaleController locale;
+  late FakeAuthRepository repo;
 
   Future<void> pump(WidgetTester t) async {
     SharedPreferences.setMockInitialValues({});
     locale = LocaleController(await SharedPreferences.getInstance());
-    final auth = AuthController(FakeAuthRepository()..session = true);
+    repo = FakeAuthRepository()..session = true;
+    final auth = AuthController(repo);
     await auth.restore();
     await t.pumpWidget(
       MultiProvider(
@@ -56,4 +58,18 @@ void main() {
       expect(locale.lang, 'ms');
     },
   );
+
+  testWidgets('sign out asks first', (t) async {
+    await pump(t);
+    await t.tap(find.text('Sign out'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Cancel'));
+    await t.pumpAndSettle();
+    expect(repo.clears, 0);
+    await t.tap(find.text('Sign out'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Sign out'));
+    await t.pumpAndSettle();
+    expect(repo.clears, 1);
+  });
 }

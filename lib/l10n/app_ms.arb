@@ -156,5 +156,8 @@
   "shareSavedLeaving": "Disimpan. Ia akan ada dalam buku anda sebentar lagi.",
   "shareReadingLine": "Sedang membaca hantaran yang anda kongsi…",
   "northUp": "Utara ke atas",
-  "openPlace": "Buka"
+  "openPlace": "Buka",
+  "ok": "OK",
+  "signOutTitle": "Log keluar?",
+  "signOutConfirm": "Anda perlu emel dan kata laluan untuk log masuk semula."
 }
