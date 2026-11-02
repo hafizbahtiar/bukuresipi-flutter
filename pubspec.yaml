@@ -20,6 +20,7 @@ dependencies:
   intl: ^0.20.3
   flutter_localizations:
     sdk: flutter
+  receive_sharing_intent: ^1.9.0
 
 dev_dependencies:
   flutter_test:

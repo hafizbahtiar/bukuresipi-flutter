@@ -11,6 +11,7 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/verify_email_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/owner/presentation/owner_page.dart';
+import '../../features/shares/presentation/share_page.dart';
 import '../network/update_gate.dart';
 import '../widgets/system_pages.dart';
 
@@ -80,6 +81,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
           ),
         ],
       ),
+      GoRoute(path: '/share', builder: (_, _) => const SharePage()),
       GoRoute(path: '/owner', builder: (_, _) => const OwnerPage()),
     ],
   );

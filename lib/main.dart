@@ -15,6 +15,10 @@ import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/shares/data/plugin_incoming_shares.dart';
+import 'features/shares/data/share_repository_impl.dart';
+import 'features/shares/domain/share_repository.dart';
+import 'features/shares/presentation/share_intake.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +43,12 @@ Future<void> main() async {
     ..onSessionEnded = auth.sessionEnded
     ..onUpdateRequired = update.markRequired;
   auth.restore();
+  final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
+  final shares = ShareIntake(
+    PluginIncomingShares(),
+    shareRepo,
+    auth,
+  ); // started by the app, once the router exists
 
   runApp(
     MultiProvider(
@@ -46,6 +56,8 @@ Future<void> main() async {
         Provider<ApiClient>.value(value: api),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: update),
+        Provider<ShareRepository>.value(value: shareRepo),
+        ChangeNotifierProvider.value(value: shares),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
       ],
       child: const BukuresipiApp(),
