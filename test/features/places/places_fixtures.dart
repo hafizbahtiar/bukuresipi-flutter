@@ -88,6 +88,14 @@ class FakePlaces implements PlacesRepository {
   final pins = <(String, double, double)>[];
   final located = <String>[];
   final deletedBranches = <String>[];
+  final tidied = <String>[];
+
+  @override
+  Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
+    tidied.add(restaurantId);
+    return (merged: 1, removed: 1);
+  }
+
   bool locateFinds = true;
 
   @override

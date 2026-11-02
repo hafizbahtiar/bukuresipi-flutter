@@ -80,6 +80,13 @@ class PlacesController extends ChangeNotifier {
   }
 
   /// Owner only. Throws ApiException.
+  Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
+    final done = await _repo.tidyBranches(restaurantId);
+    await load();
+    return done;
+  }
+
+  /// Owner only. Throws ApiException.
   Future<void> deleteBranch(String branchId) async {
     await _repo.deleteBranch(branchId);
     await load();

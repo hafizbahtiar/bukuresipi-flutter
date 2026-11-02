@@ -86,7 +86,10 @@ class PlaceDetailPage extends StatelessWidget {
                 ],
               ),
             ),
-            _Heading(l.branchesTitle),
+            _Heading(
+              l.branchesTitle,
+              action: owner ? _CheckBranches(restaurantId: r.id) : null,
+            ),
             for (final b in branches)
               _BranchRow(
                 place: place,
@@ -165,18 +168,71 @@ Future<bool> _confirm(
     false;
 
 class _Heading extends StatelessWidget {
-  const _Heading(this.text);
+  const _Heading(this.text, {this.action});
 
   final String text;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 28, 20, 6),
-    child: Text(
-      text,
-      style: Theme.of(context).textTheme.titleMedium
-          ?.copyWith(fontWeight: FontWeight.w700),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        ?action,
+      ],
     ),
+  );
+}
+
+/// Owner: merge this restaurant's branches that are the same shop, drop empty ones (on the server, with Clef).
+class _CheckBranches extends StatefulWidget {
+  const _CheckBranches({required this.restaurantId});
+
+  final String restaurantId;
+
+  @override
+  State<_CheckBranches> createState() => _CheckBranchesState();
+}
+
+class _CheckBranchesState extends State<_CheckBranches> {
+  bool _busy = false;
+
+  Future<void> _check() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      final done = await context.read<PlacesController>().tidyBranches(
+        widget.restaurantId,
+      );
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.branchesChecked(done.merged, done.removed))),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+    onPressed: _busy ? null : _check,
+    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+    icon: _busy
+        ? const SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : const Icon(Icons.merge_type, size: 18),
+    label: Text(AppLocalizations.of(context).checkBranches),
   );
 }
 

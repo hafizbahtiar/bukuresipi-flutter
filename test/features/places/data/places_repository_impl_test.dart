@@ -80,8 +80,8 @@ void main() {
         ],
       );
       expect(adapter.requests.first.data, {'lat': 3.2, 'lng': 101.69});
-    // The server may search the web and ask the AI: longer than the usual 30 s wait.
-    expect(adapter.requests[1].receiveTimeout, const Duration(seconds: 90));
+      // The server may search the web and ask the AI: longer than the usual 30 s wait.
+      expect(adapter.requests[1].receiveTimeout, const Duration(seconds: 90));
     },
   );
 
@@ -97,4 +97,17 @@ void main() {
     final b = (await repo.list()).single.branches.last;
     expect([b.pinSource, b.pinnedByUser], ['user', isTrue]);
   });
+
+  test(
+    'Check branches: POST the restaurant, read what was merged and removed',
+    () async {
+      final repo = make((_) => (200, {'merged': 2, 'removed': 1}));
+      expect(await repo.tidyBranches('r-1'), (merged: 2, removed: 1));
+      expect(adapter.requests.single.path, '/places/restaurants/r-1/tidy');
+      expect(
+        adapter.requests.single.receiveTimeout,
+        const Duration(seconds: 90),
+      );
+    },
+  );
 }

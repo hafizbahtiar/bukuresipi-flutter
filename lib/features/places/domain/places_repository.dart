@@ -14,6 +14,9 @@ abstract interface class PlacesRepository {
   /// Looks an unpinned branch up again on the server. true = it has a pin now.
   Future<bool> locate(String branchId);
 
+  /// Owner only: merges branches that are the same shop and drops empty ones, for every user.
+  Future<({int merged, int removed})> tidyBranches(String restaurantId);
+
   /// Owner only: removes the branch for every user.
   Future<void> deleteBranch(String branchId);
 
