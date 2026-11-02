@@ -45,4 +45,24 @@ void main() {
     expect(c.places, isEmpty);
     expect(c.loaded, isFalse);
   });
+
+  test(
+    'setting a pin, finding a location or deleting a branch reloads the places',
+    () async {
+      final repo = FakePlaces()..places = [place(id: 'a', lat: null)];
+      final c = PlacesController(repo);
+      await c.load();
+      repo.places = [place(id: 'a')];
+      await c.setPin('b-1', 3.1, 101.7);
+      expect(c.pinned.map((p) => p.id), ['a']);
+      expect(await c.locate('b-1'), isTrue);
+      repo.places = [];
+      await c.deleteBranch('b-1');
+      expect(c.places, isEmpty);
+      expect(
+        [repo.pins.single.$1, repo.located.single, repo.deletedBranches.single],
+        ['b-1', 'b-1', 'b-1'],
+      );
+    },
+  );
 }

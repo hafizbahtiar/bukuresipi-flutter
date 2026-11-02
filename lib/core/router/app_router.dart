@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/places/presentation/pages/pin_picker_page.dart';
 import '../../features/places/presentation/pages/place_detail_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/pages/account_page.dart';
@@ -74,20 +75,23 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
       GoRoute(path: '/forgot', builder: (_, _) => const ForgotPasswordPage()),
       ...linkRoutes(''),
       ...linkRoutes('/en'),
+      GoRoute(path: '/account', builder: (_, _) => const AccountPage()),
+      // Top level, not nested under /account: Account is also a home tab, so pushing this must add one page only.
       GoRoute(
-        path: '/account',
-        builder: (_, _) => const AccountPage(),
-        routes: [
-          GoRoute(
-            path: 'password',
-            builder: (_, _) => const ChangePasswordPage(),
-          ),
-        ],
+        path: '/account/password',
+        builder: (_, _) => const ChangePasswordPage(),
       ),
       GoRoute(path: '/share', builder: (_, _) => const SharePage()),
       GoRoute(
         path: '/places/:id',
         builder: (_, state) => PlaceDetailPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/places/:id/pin/:branchId',
+        builder: (_, state) => PinPickerPage(
+          placeId: state.pathParameters['id']!,
+          branchId: state.pathParameters['branchId']!,
+        ),
       ),
       GoRoute(
         path: '/owner',

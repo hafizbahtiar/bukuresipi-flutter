@@ -1,16 +1,22 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../l10n/gen/app_localizations.dart';
-import '../../../auth/presentation/widgets/auth_widgets.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/notebook.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../widgets/unpinned_actions.dart';
 import 'places_list_page.dart';
 
 /// OpenFreeMap: free vector tiles, no key, no request cap; its style carries the OpenStreetMap attribution.
 const _style = 'https://tiles.openfreemap.org/styles/liberty';
-const _malaysia = CameraPosition(target: LatLng(4.2, 102.0), zoom: 4.6);
+const malaysiaCamera = CameraPosition(target: LatLng(4.2, 102.0), zoom: 4.6);
+const mapStyle = _style;
 
 /// The box around every pinned branch; null when nothing has a pin.
 LatLngBounds? pinBounds(List<Place> places) {
@@ -26,7 +32,8 @@ LatLngBounds? pinBounds(List<Place> places) {
   return LatLngBounds(southwest: LatLng(s, w), northeast: LatLng(n, e));
 }
 
-/// The Map tab: one pin per branch with coordinates. Places without one are listed from the card at the bottom.
+/// The Map tab: one pin per branch with coordinates (rotate with two fingers; the compass points north again).
+/// Places without a pin are listed from the slip at the bottom, each with "Find location" / "Set on map".
 class PlacesMapPage extends StatefulWidget {
   const PlacesMapPage({super.key});
 
@@ -61,27 +68,33 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
     await _draw(fit: true);
   }
 
-  /// Redraws every pin (a handful per user: no diffing needed).
+  String _hex(Color c) =>
+      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+
+  /// Redraws every pin (a handful per user: no diffing needed). A hand-set pin has a kunyit ring: not checked yet.
   Future<void> _draw({bool fit = false}) async {
     final map = _map;
-    if (map == null || !_styled) return;
+    if (map == null || !_styled || !mounted) return;
+    final nb = Notebook.of(context);
     final places = _places.pinned;
     await map.clearCircles();
+    final pins = [
+      for (final p in places)
+        for (final b in p.pins) (p, b),
+    ];
     await map.addCircles(
       [
-        for (final p in places)
-          for (final b in p.pins)
-            CircleOptions(
-              geometry: LatLng(b.lat!, b.lng!),
-              circleRadius: 8,
-              circleColor: '#2F6B3B',
-              circleStrokeWidth: 2.5,
-              circleStrokeColor: '#FFFFFF',
-            ),
+        for (final (_, b) in pins)
+          CircleOptions(
+            geometry: LatLng(b.lat!, b.lng!),
+            circleRadius: 8,
+            circleColor: _hex(nb.pandan),
+            circleStrokeWidth: 3,
+            circleStrokeColor: b.pinnedByUser ? _hex(nb.kunyit) : '#FFFFFF',
+          ),
       ],
       [
-        for (final p in places)
-          for (final _ in p.pins) {'place': p.id},
+        for (final (p, _) in pins) {'place': p.id},
       ],
     );
     if (!fit) return;
@@ -94,7 +107,7 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
           : CameraUpdate.newLatLngBounds(
               box,
               left: 48,
-              top: 48,
+              top: 64,
               right: 48,
               bottom: 120,
             ),
@@ -116,7 +129,7 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
     );
   }
 
-  void _showUnpinned(List<Place> unpinned) {
+  void _showUnpinned() {
     final l = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
@@ -125,20 +138,56 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
       builder: (context) => SafeArea(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.75,
           ),
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  l.unpinnedHelp,
-                  style: Theme.of(context).textTheme.bodyMedium,
+          // Rebuilds as places get pinned: a found place leaves this list.
+          child: Consumer<PlacesController>(
+            builder: (context, places, _) {
+              final text = Theme.of(context).textTheme;
+              return NotebookPage(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        notebookGutter + 10,
+                        0,
+                        20,
+                        12,
+                      ),
+                      child: Text(
+                        l.unpinnedHelp,
+                        style: text.bodyMedium?.copyWith(
+                          color: Notebook.of(context).inkSoft,
+                        ),
+                      ),
+                    ),
+                    for (final p in places.unpinned)
+                      NotebookRow(
+                        mark: const PinMark(pinned: false),
+                        onTap: () => context.push('/places/${p.id}'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.restaurant.name,
+                              style: text.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (p.savedBranch case final b?) ...[
+                              if (b.label != null &&
+                                  b.label != p.restaurant.name)
+                                Text(b.label!, style: text.bodySmall),
+                              UnpinnedActions(place: p, branch: b),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              for (final p in unpinned) PlaceTile(place: p),
-            ],
+              );
+            },
           ),
         ),
       ),
@@ -148,44 +197,57 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
     final places = context.watch<PlacesController>();
-    final unpinned = places.unpinned;
+    final unpinned = places.unpinned.length;
     return Scaffold(
-      appBar: AppBar(title: Text(l.navMap), actions: const [AccountButton()]),
+      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.navMap)),
       body: Stack(
         children: [
           MapLibreMap(
-            styleString: _style,
-            initialCameraPosition: _malaysia,
+            styleString: mapStyle,
+            initialCameraPosition: malaysiaCamera,
             onMapCreated: _created,
             onStyleLoadedCallback: _styleLoaded,
-            rotateGesturesEnabled: false,
             tiltGesturesEnabled: false,
-            compassEnabled: false,
-            attributionButtonPosition: AttributionButtonPosition.topRight,
+            compassEnabled: true,
+            compassViewPosition: CompassViewPosition.topRight,
+            compassViewMargins: const Point(12, 12),
+            logoEnabled: false,
+            // The credit OpenStreetMap needs stays, as a faint "i" in the corner.
+            attributionButtonPosition: AttributionButtonPosition.topLeft,
+            attributionButtonMargins: const Point(8, 8),
+            attributionButtonColor: nb.ink.withValues(alpha: 0.3),
           ),
           if (places.loaded && places.pinned.isEmpty)
             Positioned(
               left: 16,
               right: 16,
-              top: 16,
-              child: _Note(text: l.mapEmpty),
+              top: 48,
+              child: _Slip(
+                child: Text(l.mapEmpty, textAlign: TextAlign.center),
+              ),
             ),
-          if (unpinned.isNotEmpty)
+          if (unpinned > 0)
             Positioned(
               left: 16,
               right: 16,
               bottom: 16,
               child: SafeArea(
-                child: Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.location_off_outlined),
-                    title: Text(l.unpinnedTitle),
-                    trailing: CircleAvatar(
-                      radius: 14,
-                      child: Text('${unpinned.length}'),
-                    ),
-                    onTap: () => _showUnpinned(unpinned),
+                child: _Slip(
+                  onTap: _showUnpinned,
+                  child: Row(
+                    children: [
+                      const PinMark(pinned: false),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          l.unpinnedCount(unpinned),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Icon(Icons.expand_less, color: nb.inkSoft),
+                    ],
                   ),
                 ),
               ),
@@ -196,16 +258,32 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
   }
 }
 
-class _Note extends StatelessWidget {
-  const _Note({required this.text});
+/// A slip of paper laid on the map.
+class _Slip extends StatelessWidget {
+  const _Slip({required this.child, this.onTap});
 
-  final String text;
+  final Widget child;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Text(text, textAlign: TextAlign.center),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return Material(
+      color: nb.paper,
+      elevation: 2,
+      shadowColor: nb.ink.withValues(alpha: 0.25),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: BorderSide(color: nb.line),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: child,
+        ),
+      ),
+    );
+  }
 }

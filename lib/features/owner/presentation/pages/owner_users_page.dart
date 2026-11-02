@@ -164,19 +164,19 @@ class _UserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final locale = Localizations.localeOf(context).toLanguageTag();
     final joined = MaterialLocalizations.of(context)
         .formatMediumDate(user.createdAt.toLocal());
     return ListTile(
       title: Text(user.email),
       subtitle: Text(
         [
-          joined,
-          l.ownerShareCount(user.shares),
-          if (!user.verified) l.ownerUnverified,
-          if (user.role == 'owner') l.ownerTitle,
-        ].join('  ·  '),
-        key: ValueKey(locale),
+          l.ownerJoined(joined),
+          [
+            l.ownerShareCount(user.shares),
+            if (!user.verified) l.ownerUnverified,
+            if (user.role == 'owner') l.ownerTitle,
+          ].join(', '),
+        ].join('\n'),
       ),
       trailing: user.verified
           ? null

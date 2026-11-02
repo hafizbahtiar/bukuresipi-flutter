@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/settings/locale_controller.dart';
+import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
@@ -43,7 +44,7 @@ class _AccountPageState extends State<AccountPage> {
     final c = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.accountTitle)),
+      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.accountTitle)),
       body: RefreshIndicator(
         onRefresh: () => auth.refreshUser().catchError(
           (Object e) => _snack(errorText(l, e)),

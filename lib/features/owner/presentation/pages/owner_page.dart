@@ -7,6 +7,8 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/notebook.dart';
 import '../load_view.dart';
 
 /// Owner overview: counts, and each outside service's use this month against its cap (tap to change it).
@@ -71,107 +73,104 @@ class _OwnerPageState extends State<OwnerPage> {
     final l = AppLocalizations.of(context);
     final s = _stats;
     return Scaffold(
-      appBar: AppBar(title: Text(l.ownerTitle)),
+      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.ownerTitle)),
       body: LoadView(
         loading: _loading,
         error: _error,
         onReload: _load,
         child: s == null
             ? null
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                children: [
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.9,
-                    children: [
-                      _Count(label: l.ownerUsers, value: s.usersTotal),
-                      _Count(
-                        label: l.ownerNewThisWeek,
-                        value: s.usersNewThisWeek,
-                      ),
-                      _Count(label: l.ownerSharesToday, value: s.sharesToday),
-                      _Count(
-                        label: l.ownerFailedToday,
-                        value: s.failedToday,
-                        warn: s.failedToday > 0,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.people_outline),
-                    title: Text(l.ownerUsers),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/owner/users'),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.report_outlined),
-                    title: Text(l.ownerFailedShares),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/owner/shares'),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l.ownerMeters,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 8),
-                    child: Text(
-                      l.ownerMetersHelp,
-                      style: Theme.of(context).textTheme.bodySmall,
+            : NotebookPage(
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 32),
+                  children: [
+                    _Ledger(
+                      label: l.ownerUsers,
+                      value: s.usersTotal,
+                      note: l.ownerNewSuffix(s.usersNewThisWeek),
+                      onTap: () => context.push('/owner/users'),
                     ),
-                  ),
-                  for (final m in s.meters)
-                    _MeterTile(meter: m, onTap: () => _edit(m)),
-                ],
+                    _Ledger(label: l.ownerSharesToday, value: s.sharesToday),
+                    _Ledger(
+                      label: l.ownerFailedToday,
+                      value: s.failedToday,
+                      warn: s.failedToday > 0,
+                      onTap: () => context.push('/owner/shares'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        notebookGutter + 10,
+                        28,
+                        20,
+                        4,
+                      ),
+                      child: Text(
+                        l.ownerMeters,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        notebookGutter + 10,
+                        0,
+                        20,
+                        8,
+                      ),
+                      child: Text(
+                        l.ownerMetersHelp,
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: Notebook.of(context).inkSoft),
+                      ),
+                    ),
+                    for (final m in s.meters)
+                      _MeterTile(meter: m, onTap: () => _edit(m)),
+                  ],
+                ),
               ),
       ),
     );
   }
 }
 
-class _Count extends StatelessWidget {
-  const _Count({required this.label, required this.value, this.warn = false});
+/// One line of the owner's ledger: what, then the number at the right edge.
+class _Ledger extends StatelessWidget {
+  const _Ledger({
+    required this.label,
+    required this.value,
+    this.note,
+    this.warn = false,
+    this.onTap,
+  });
 
   final String label;
   final int value;
+  final String? note;
   final bool warn;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final c = Theme.of(context).colorScheme;
+    final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: warn ? c.errorContainer : c.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+    return NotebookRow(
+      onTap: onTap,
+      mark: onTap == null
+          ? null
+          : Icon(Icons.arrow_outward, size: 16, color: nb.inkSoft),
+      trailing: Text(
+        '$value',
+        style: text.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: warn ? nb.margin : nb.ink,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: text.bodySmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            '$value',
-            style: text.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: warn ? c.onErrorContainer : null,
-            ),
-          ),
+          Text(label, style: text.titleMedium),
+          if (note != null)
+            Text(note!, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
         ],
       ),
     );
@@ -187,46 +186,44 @@ class _MeterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final c = Theme.of(context).colorScheme;
+    final nb = Notebook.of(context);
     final high = meter.share >= 0.9;
-    return InkWell(
+    return NotebookRow(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    meter.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  meter.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                Text(
-                  meter.active
-                      ? '${meter.used} / ${meter.monthlyCap}'
-                      : l.ownerMeterOff,
-                  style: TextStyle(
-                    color: !meter.active || high ? c.error : c.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: meter.active ? meter.share : 0,
-                minHeight: 6,
-                color: high ? c.error : c.primary,
-                backgroundColor: c.surfaceContainerHighest,
               ),
+              const SizedBox(width: 12),
+              Text(
+                meter.active
+                    ? '${meter.used} / ${meter.monthlyCap}'
+                    : l.ownerMeterOff,
+                style: TextStyle(
+                  color: !meter.active || high ? nb.margin : nb.inkSoft,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: meter.active ? meter.share : 0,
+              minHeight: 4,
+              color: high ? nb.margin : nb.pandan,
+              backgroundColor: nb.mist,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

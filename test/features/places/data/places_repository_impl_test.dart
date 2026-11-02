@@ -60,4 +60,39 @@ void main() {
       ['DELETE', '/places/p-1'],
     );
   });
+
+  test(
+    'pins: PUT the user pin, POST find location, DELETE a branch (owner)',
+    () async {
+      final repo = make(
+        (o) =>
+            o.path.endsWith('/locate') ? (200, {'found': true}) : (204, null),
+      );
+      await repo.setPin('b-1', 3.2, 101.69);
+      expect(await repo.locate('b-1'), isTrue);
+      await repo.deleteBranch('b-1');
+      expect(
+        [for (final r in adapter.requests) '${r.method} ${r.path}'],
+        [
+          'PUT /places/branches/b-1/pin',
+          'POST /places/branches/b-1/locate',
+          'DELETE /places/branches/b-1',
+        ],
+      );
+      expect(adapter.requests.first.data, {'lat': 3.2, 'lng': 101.69});
+    },
+  );
+
+  test('a branch pinned by hand says so', () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          'places': [placeJson],
+        },
+      ),
+    );
+    final b = (await repo.list()).single.branches.last;
+    expect([b.pinSource, b.pinnedByUser], ['user', isTrue]);
+  });
 }

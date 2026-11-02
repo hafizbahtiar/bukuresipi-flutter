@@ -66,6 +66,25 @@ class PlacesController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Throws ApiException. The branch's pin is the server's call (earliest hand pin), so reload.
+  Future<void> setPin(String branchId, double lat, double lng) async {
+    await _repo.setPin(branchId, lat, lng);
+    await load();
+  }
+
+  /// true = found and pinned. Throws ApiException.
+  Future<bool> locate(String branchId) async {
+    final found = await _repo.locate(branchId);
+    if (found) await load();
+    return found;
+  }
+
+  /// Owner only. Throws ApiException.
+  Future<void> deleteBranch(String branchId) async {
+    await _repo.deleteBranch(branchId);
+    await load();
+  }
+
   /// Throws ApiException; the screen shows it.
   Future<void> remove(String id) async {
     await _repo.remove(id);
