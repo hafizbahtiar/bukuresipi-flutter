@@ -19,6 +19,7 @@ import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
 import '../../features/shares/presentation/share_page.dart';
 import '../network/update_gate.dart';
 import '../widgets/system_pages.dart';
+import 'unfocus_on_navigation.dart';
 
 /// Screens anyone may open, signed in or not. Email links (App Links) land on /auth/* and /en/auth/*.
 bool isPublic(String path) =>
@@ -65,6 +66,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
 
   return GoRouter(
     initialLocation: '/',
+    observers: [UnfocusOnNavigation()],
     refreshListenable: Listenable.merge([auth, update]),
     redirect: (_, state) => redirectFor(state.uri.path, auth, update),
     routes: [

@@ -97,6 +97,7 @@ abstract final class AppTheme {
         ),
         filled: true,
         fillColor: nb.paper,
+        errorMaxLines: 2,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(

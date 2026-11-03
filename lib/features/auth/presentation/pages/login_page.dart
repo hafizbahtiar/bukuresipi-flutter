@@ -193,6 +193,7 @@ class _CoverFieldState extends State<_CoverField> {
           decoration: InputDecoration(
             isDense: true,
             filled: false,
+            errorMaxLines: 2,
             contentPadding: const EdgeInsets.only(top: 6, bottom: 8),
             border: UnderlineInputBorder(borderSide: underline),
             enabledBorder: UnderlineInputBorder(borderSide: underline),

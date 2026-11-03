@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../l10n/gen/app_localizations.dart';
@@ -47,10 +48,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    void toLogin() {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/login');
+      }
+    }
+
     return AuthCover(
       kicker: l.forgotTitle,
       subtitle: _done ? null : l.forgotText,
       showBack: true,
+      onBack: toLogin,
+      footer: CoverLink(
+        label: l.toLoginButton,
+        onPressed: toLogin,
+        icon: Icons.arrow_back,
+        iconBefore: true,
+      ),
       children: [
         if (_done)
           FormMessage(l.forgotDone, success: true)

@@ -18,6 +18,7 @@ class AuthCover extends StatelessWidget {
     this.top,
     this.showBack = false,
     this.bottomAligned = false,
+    this.onBack,
   });
 
   /// The action, printed on the small sticker ("LOG MASUK", "DAFTAR AKAUN"...).
@@ -33,6 +34,9 @@ class AuthCover extends StatelessWidget {
   /// Puts the label at the bottom of the cover (thumb reach) when the page is shorter than the screen.
   final bool bottomAligned;
 
+  /// Overrides what the back arrow does (a deep-linked page has nothing to pop).
+  final VoidCallback? onBack;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -45,6 +49,7 @@ class AuthCover extends StatelessWidget {
     final labelTheme = base.copyWith(
       inputDecorationTheme: InputDecorationTheme(
         filled: false,
+        errorMaxLines: 2,
         border: UnderlineInputBorder(
           borderSide: BorderSide(color: Notebook.light.rule, width: 1.2),
         ),
@@ -107,10 +112,12 @@ class AuthCover extends StatelessWidget {
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
       ),
-      child: Scaffold(
-        backgroundColor: AppTheme.pandan,
-        body: Stack(
+      child: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: Stack(
+          fit: StackFit.expand,
           children: [
+            const Positioned.fill(child: ColoredBox(color: AppTheme.pandan)),
             const Positioned.fill(child: CustomPaint(painter: _CoverTexture())),
             const Positioned(
               left: 0,
@@ -126,93 +133,101 @@ class AuthCover extends StatelessWidget {
               width: 9,
               child: _PageEdge(),
             ),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) => SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(48, 26, 28, 24),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: 430,
-                      minHeight: bottomAligned
-                          ? max(0.0, constraints.maxHeight - 50)
-                          : 0.0,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: bottomAligned
-                          ? MainAxisAlignment.end
-                          : MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (top != null) ...[top!, const SizedBox(height: 28)],
-                        SizedBox(
-                          height: 40,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            alignment: Alignment.center,
-                            children: [
-                              if (showBack)
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: IconButton(
-                                    tooltip: MaterialLocalizations.of(context)
-                                        .backButtonTooltip,
-                                    onPressed: () =>
-                                        Navigator.maybePop(context),
-                                    icon: const Icon(Icons.arrow_back),
-                                    color: Notebook.light.paper,
-                                    iconSize: 20,
-                                    visualDensity: VisualDensity.compact,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints.tightFor(
-                                      width: 40,
-                                      height: 40,
-                                    ),
-                                  ),
-                                ),
-                              _KickerLabel(text: kicker.toUpperCase()),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _NameLabel(
-                          child: Theme(
-                            data: labelTheme,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+            Scaffold(
+              backgroundColor: Colors.transparent,
+              body: SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(48, 26, 28, 24),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: 430,
+                        minHeight: bottomAligned
+                            ? max(0.0, constraints.maxHeight - 50)
+                            : 0.0,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: bottomAligned
+                            ? MainAxisAlignment.end
+                            : MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (top != null) ...[
+                            top!,
+                            const SizedBox(height: 28),
+                          ],
+                          SizedBox(
+                            height: 40,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
                               children: [
-                                Text(
-                                  l.appName,
-                                  textAlign: TextAlign.center,
-                                  style: hand,
-                                ),
-                                if (subtitle != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    subtitle!,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      height: 1.35,
-                                      color: Notebook.light.inkSoft,
+                                if (showBack)
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: IconButton(
+                                      tooltip: MaterialLocalizations.of(context)
+                                          .backButtonTooltip,
+                                      onPressed:
+                                          onBack ??
+                                          () => Navigator.maybePop(context),
+                                      icon: const Icon(Icons.arrow_back),
+                                      color: Notebook.light.paper,
+                                      iconSize: 20,
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.zero,
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 40,
+                                            height: 40,
+                                          ),
                                     ),
                                   ),
-                                ],
-                                const SizedBox(height: 16),
-                                Container(
-                                  height: 1,
-                                  color: Notebook.light.rule,
-                                ),
-                                const SizedBox(height: 14),
-                                ...children,
+                                _KickerLabel(text: kicker.toUpperCase()),
                               ],
                             ),
                           ),
-                        ),
-                        if (footer != null) ...[
-                          const SizedBox(height: 18),
-                          footer!,
+                          const SizedBox(height: 16),
+                          _NameLabel(
+                            child: Theme(
+                              data: labelTheme,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    l.appName,
+                                    textAlign: TextAlign.center,
+                                    style: hand,
+                                  ),
+                                  if (subtitle != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      subtitle!,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        height: 1.35,
+                                        color: Notebook.light.inkSoft,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    height: 1,
+                                    color: Notebook.light.rule,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ...children,
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (footer != null) ...[
+                            const SizedBox(height: 18),
+                            footer!,
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -277,10 +292,20 @@ class CoverBrand extends StatelessWidget {
 
 /// A line printed on the cover, below the label. Plain text, not a button: the whole line is the tap target.
 class CoverLink extends StatefulWidget {
-  const CoverLink({super.key, required this.label, required this.onPressed});
+  const CoverLink({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon = Icons.arrow_forward,
+    this.iconBefore = false,
+  });
 
   final String label;
   final VoidCallback onPressed;
+  final IconData icon;
+
+  /// A back link ("Sign in") puts its arrow before the words, pointing the way back.
+  final bool iconBefore;
 
   @override
   State<CoverLink> createState() => _CoverLinkState();
@@ -311,6 +336,10 @@ class _CoverLinkState extends State<CoverLink> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                if (widget.iconBefore) ...[
+                  Icon(widget.icon, size: 16, color: Notebook.light.kunyit),
+                  const SizedBox(width: 6),
+                ],
                 Flexible(
                   child: Text(
                     widget.label,
@@ -324,12 +353,10 @@ class _CoverLinkState extends State<CoverLink> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.arrow_forward,
-                  size: 16,
-                  color: Notebook.light.kunyit,
-                ),
+                if (!widget.iconBefore) ...[
+                  const SizedBox(width: 6),
+                  Icon(widget.icon, size: 16, color: Notebook.light.kunyit),
+                ],
               ],
             ),
           ),

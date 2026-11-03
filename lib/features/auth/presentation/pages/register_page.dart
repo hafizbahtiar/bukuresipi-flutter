@@ -59,14 +59,22 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    void toLogin() {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/login');
+      }
+    }
+
     return AuthCover(
       kicker: l.registerTitle,
       subtitle: l.registerSubtitle,
       footer: CoverLink(
         label: l.toLogin,
-        // Back to the login it came from, so the page flips backward; opened directly, there is none.
-        onPressed: () =>
-            context.canPop() ? context.pop() : context.go('/login'),
+        onPressed: toLogin,
+        icon: Icons.arrow_back,
+        iconBefore: true,
       ),
       children: [
         Form(
