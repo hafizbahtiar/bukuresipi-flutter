@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
+import '../widgets/auth_cover.dart';
 import '../widgets/auth_widgets.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -46,9 +47,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return AuthScaffold(
-      title: l.forgotTitle,
+    return AuthCover(
+      kicker: l.forgotTitle,
       subtitle: _done ? null : l.forgotText,
+      showBack: true,
       children: [
         if (_done)
           FormMessage(l.forgotDone, success: true)

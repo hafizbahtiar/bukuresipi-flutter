@@ -6,6 +6,7 @@ import '../../../../core/settings/locale_controller.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
+import '../widgets/auth_cover.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/new_password_fields.dart';
 
@@ -58,10 +59,15 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return AuthScaffold(
-      title: l.registerTitle,
+    return AuthCover(
+      kicker: l.registerTitle,
       subtitle: l.registerSubtitle,
-      showBack: false,
+      footer: CoverLink(
+        label: l.toLogin,
+        // Back to the login it came from, so the page flips backward; opened directly, there is none.
+        onPressed: () =>
+            context.canPop() ? context.pop() : context.go('/login'),
+      ),
       children: [
         Form(
           key: _form,
@@ -104,11 +110,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   onPressed: _submit,
                 ),
                 FormMessage(_error),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => context.go('/login'),
-                  child: Text(l.toLogin),
-                ),
               ],
             ),
           ),

@@ -5,6 +5,7 @@ import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -77,5 +78,69 @@ void main() {
     await t.enterText(field('Confirm password'), 'Password1!');
     await submit(t);
     expect(repo.registered, ['a@example.com']);
+  });
+
+  group('back to sign in', () {
+    Future<GoRouter> pumpRouted(
+      WidgetTester t, {
+      required bool fromLogin,
+    }) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final router = GoRouter(
+        initialLocation: fromLogin ? '/login' : '/register',
+        routes: [
+          GoRoute(path: '/login', builder: (_, _) => const Text('login page')),
+          GoRoute(path: '/register', builder: (_, _) => const RegisterPage()),
+        ],
+      );
+      await t.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (_) => AuthController(FakeAuthRepository()),
+            ),
+            ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('ms')],
+          ),
+        ),
+      );
+      if (fromLogin) {
+        router.push('/register');
+        await t.pumpAndSettle();
+      }
+      return router;
+    }
+
+    Future<void> tapSignIn(WidgetTester t) async {
+      final link = find.text('Already have an account? Sign in');
+      await t.ensureVisible(link);
+      await t.tap(link);
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('came from login: goes back to it, flipping backward', (
+      t,
+    ) async {
+      final router = await pumpRouted(t, fromLogin: true);
+      await tapSignIn(t);
+      expect(find.text('login page'), findsOneWidget);
+      expect(router.canPop(), isFalse, reason: 'popped, not stacked');
+    });
+
+    testWidgets('opened directly: still reaches login', (t) async {
+      await pumpRouted(t, fromLogin: false);
+      await tapSignIn(t);
+      expect(find.text('login page'), findsOneWidget);
+    });
   });
 }

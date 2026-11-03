@@ -48,16 +48,16 @@ String? redirectFor(String path, AuthController auth, UpdateGate update) {
 GoRouter buildRouter(AuthController auth, UpdateGate update) {
   // Website paths for email links, in both languages: /auth/reset and /en/auth/reset open the same screen.
   List<GoRoute> linkRoutes(String prefix) => [
-    GoRoute(
+    _page(
       path: '$prefix/auth/verify',
       builder: (_, s) => VerifyEmailPage(token: s.uri.queryParameters['token']),
     ),
-    GoRoute(
+    _page(
       path: '$prefix/auth/reset',
       builder: (_, s) =>
           ResetPasswordPage(token: s.uri.queryParameters['token']),
     ),
-    GoRoute(
+    _page(
       path: '$prefix/auth/forgot',
       builder: (_, _) => const ForgotPasswordPage(),
     ),
@@ -68,45 +68,62 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
     refreshListenable: Listenable.merge([auth, update]),
     redirect: (_, state) => redirectFor(state.uri.path, auth, update),
     routes: [
-      GoRoute(path: '/', builder: (_, _) => const HomePage()),
-      GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
-      GoRoute(path: '/update', builder: (_, _) => const UpdateRequiredPage()),
-      GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
-      GoRoute(path: '/register', builder: (_, _) => const RegisterPage()),
-      GoRoute(path: '/forgot', builder: (_, _) => const ForgotPasswordPage()),
+      _page(path: '/', builder: (_, _) => const HomePage()),
+      _page(path: '/splash', builder: (_, _) => const SplashPage()),
+      _page(path: '/update', builder: (_, _) => const UpdateRequiredPage()),
+      _page(path: '/login', builder: (_, _) => const LoginPage()),
+      _page(path: '/register', builder: (_, _) => const RegisterPage()),
+      _page(path: '/forgot', builder: (_, _) => const ForgotPasswordPage()),
       ...linkRoutes(''),
       ...linkRoutes('/en'),
-      GoRoute(path: '/account', builder: (_, _) => const AccountPage()),
+      _page(path: '/account', builder: (_, _) => const AccountPage()),
       // Top level, not nested under /account: Account is also a home tab, so pushing this must add one page only.
-      GoRoute(
+      _page(
         path: '/account/password',
         builder: (_, _) => const ChangePasswordPage(),
       ),
-      GoRoute(path: '/share', builder: (_, _) => const SharePage()),
-      GoRoute(
+      _page(path: '/share', builder: (_, _) => const SharePage()),
+      _page(
         path: '/places/:id',
         builder: (_, state) => PlaceDetailPage(id: state.pathParameters['id']!),
       ),
-      GoRoute(
+      _page(
         path: '/recipes/:id',
         builder: (_, state) =>
             RecipeDetailPage(id: state.pathParameters['id']!),
       ),
-      GoRoute(
+      _page(
         path: '/places/:id/pin/:branchId',
         builder: (_, state) => PinPickerPage(
           placeId: state.pathParameters['id']!,
           branchId: state.pathParameters['branchId']!,
         ),
       ),
-      GoRoute(
+      _page(
         path: '/owner',
         builder: (_, _) => const OwnerPage(),
         routes: [
-          GoRoute(path: 'users', builder: (_, _) => const OwnerUsersPage()),
-          GoRoute(path: 'shares', builder: (_, _) => const OwnerSharesPage()),
+          _page(path: 'users', builder: (_, _) => const OwnerUsersPage()),
+          _page(path: 'shares', builder: (_, _) => const OwnerSharesPage()),
         ],
       ),
     ],
   );
 }
+
+// go_router 18 recognises MaterialApp only from package:material_ui, not this app's flutter/material one, so its
+// default pages have no transition. Building flutter MaterialPages here lets the theme's book page turn run.
+GoRoute _page({
+  required String path,
+  required GoRouterWidgetBuilder builder,
+  List<RouteBase> routes = const [],
+}) => GoRoute(
+  path: path,
+  routes: routes,
+  pageBuilder: (context, state) => MaterialPage<void>(
+    key: state.pageKey,
+    name: state.name ?? state.path,
+    restorationId: state.pageKey.value,
+    child: builder(context, state),
+  ),
+);
