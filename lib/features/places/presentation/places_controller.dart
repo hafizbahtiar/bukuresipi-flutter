@@ -118,6 +118,10 @@ class PlacesController extends ChangeNotifier {
     await load();
   }
 
+  /// Owner only. Throws ApiException; the edit sheet shows the draft for review.
+  Future<BranchSuggestion> suggestBranch(String branchId) =>
+      _repo.suggestBranch(branchId);
+
   /// Throws ApiException; the screen shows it.
   Future<void> remove(String id) async {
     await _repo.remove(id);

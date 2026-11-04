@@ -108,6 +108,31 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
+  Future<BranchSuggestion> suggestBranch(String branchId) => _call(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/branches/$branchId/suggest',
+      // Geocoding + the AI can take longer than the usual 30 s.
+      options: Options(receiveTimeout: const Duration(seconds: 120)),
+    )).data!;
+    final d = j['draft'] as Map<String, dynamic>;
+    return BranchSuggestion(
+      draft: BranchDraft(
+        label: d['label'] as String?,
+        address: d['address'] as String?,
+        city: d['city'] as String?,
+        state: d['state'] as String?,
+        lat: (d['lat'] as num?)?.toDouble(),
+        lng: (d['lng'] as num?)?.toDouble(),
+      ),
+      sources: ((j['sources'] as List?) ?? const []).cast<String>(),
+      aiUsed: j['aiUsed'] as bool? ?? false,
+      changed: j['changed'] as bool? ?? false,
+      summary: j['summary'] as String?,
+      warnings: ((j['warnings'] as List?) ?? const []).cast<String>(),
+    );
+  });
+
+  @override
   Future<void> remove(String id) =>
       _call(() => _dio.delete<void>('/places/$id'));
 

@@ -156,6 +156,41 @@ void main() {
     expect([b.pinSource, b.pinnedByUser], ['user', isTrue]);
   });
 
+  test('owner AI draft: POST and parse the branch suggestion', () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          'draft': {
+            'label': 'AI Branch',
+            'address': 'Jalan AI',
+            'city': 'Bangi',
+            'state': 'Selangor',
+            'lat': 2.99,
+            'lng': 101.79,
+          },
+          'sources': ['nominatim'],
+          'aiUsed': true,
+          'changed': true,
+          'summary': 'Cleaned from the map.',
+          'warnings': <String>[],
+        },
+      ),
+    );
+    final s = await repo.suggestBranch('b-1');
+    expect(adapter.requests.single.method, 'POST');
+    expect(adapter.requests.single.path, '/places/branches/b-1/suggest');
+    expect(
+      adapter.requests.single.receiveTimeout,
+      const Duration(seconds: 120),
+    );
+    expect(s.draft.label, 'AI Branch');
+    expect(s.draft.lat, 2.99);
+    expect(s.sources, ['nominatim']);
+    expect(s.aiUsed, true);
+    expect(s.changed, true);
+  });
+
   test('owner branch edit: PATCH text and optional coordinates', () async {
     final repo = make((_) => (200, {}));
     await repo.updateBranch(

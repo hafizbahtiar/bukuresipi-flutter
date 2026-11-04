@@ -180,21 +180,18 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
                   style: text.labelLarge?.copyWith(color: nb.inkSoft),
                 ),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    ChoiceChip(
-                      label: Text(l.reportRestaurant),
-                      selected: _restaurant,
-                      onSelected: (_) => _selectRestaurant(),
+                NotebookSegmented<String>(
+                  selected: _restaurant ? 'restaurant' : _branchId,
+                  onChanged: (value) => value == 'restaurant'
+                      ? _selectRestaurant()
+                      : _selectBranch(value),
+                  segments: [
+                    NotebookSegment(
+                      value: 'restaurant',
+                      label: l.reportRestaurant,
                     ),
                     for (final b in widget.subject.branches)
-                      ChoiceChip(
-                        label: Text(b.title),
-                        selected: !_restaurant && _branchId == b.id,
-                        onSelected: (_) => _selectBranch(b.id),
-                      ),
+                      NotebookSegment(value: b.id, label: b.title),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -203,19 +200,18 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
                   style: text.labelLarge?.copyWith(color: nb.inkSoft),
                 ),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
+                NotebookSegmented<ReportField>(
+                  selected: _field,
+                  onChanged: (field) => setState(() {
+                    _field = field;
+                    _picked = null;
+                    _value.clear();
+                  }),
+                  segments: [
                     for (final field in _fields)
-                      ChoiceChip(
-                        label: Text(_fieldLabel(l, field)),
-                        selected: _field == field,
-                        onSelected: (_) => setState(() {
-                          _field = field;
-                          _picked = null;
-                          _value.clear();
-                        }),
+                      NotebookSegment(
+                        value: field,
+                        label: _fieldLabel(l, field),
                       ),
                   ],
                 ),

@@ -1,5 +1,7 @@
+import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +45,32 @@ void main() {
       expect(find.text('12'), findsOneWidget);
       expect(find.text('Nominatim'), findsOneWidget);
       expect(find.text('90 / 100 a month'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'reports is a notebook page with an open and closed empty state',
+    (t) async {
+      repo.tickets = [];
+      await pump(t, const OwnerReportsPage());
+      expect(find.byType(NotebookPage), findsOneWidget);
+      expect(find.byType(NotebookTitle), findsOneWidget);
+      expect(find.byType(NotebookSegmented<String>), findsOneWidget);
+      expect(find.text('Reports'), findsOneWidget);
+      expect(find.text('No reports.'), findsOneWidget);
+      expect(find.text('Community reports will show up here.'), findsOneWidget);
+      expect(repo.reportQueries, ['open', 'closed']);
+
+      await t.tap(find.text('Closed'));
+      await t.pumpAndSettle();
+      // Switching tabs uses the cached list: no spinner and no new request.
+      expect(repo.reportQueries, ['open', 'closed']);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('No closed reports.'), findsOneWidget);
+      expect(
+        find.text('Applied and rejected tickets will show up here.'),
+        findsOneWidget,
+      );
     },
   );
 

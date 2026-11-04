@@ -143,4 +143,22 @@ void main() {
       expect(find.text('login page'), findsOneWidget);
     });
   });
+
+  testWidgets(
+    'on a 360 px phone the strength meter fits while typing a password',
+    (t) async {
+      t.view.physicalSize = const Size(1080, 1800);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      await pump(t);
+      final password = find.byType(EditableText, skipOffstage: false).at(2);
+      await t.ensureVisible(password);
+      await t.enterText(
+        password,
+        'abcDEF12',
+      ); // threw "RenderFlex overflowed by 29 pixels" before
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+    },
+  );
 }

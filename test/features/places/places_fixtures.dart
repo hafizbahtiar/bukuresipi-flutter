@@ -177,6 +177,13 @@ class FakePlaces implements PlacesRepository {
           BranchEditScope scope,
         })
       >[];
+  final suggested = <String>[];
+  BranchSuggestion suggestion = const BranchSuggestion(
+    draft: BranchDraft(),
+    sources: [],
+    aiUsed: false,
+    changed: false,
+  );
 
   @override
   Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
@@ -222,6 +229,13 @@ class FakePlaces implements PlacesRepository {
       lng: lng,
       scope: scope,
     ));
+  }
+
+  @override
+  Future<BranchSuggestion> suggestBranch(String branchId) async {
+    if (error != null) throw error!;
+    suggested.add(branchId);
+    return suggestion;
   }
 
   @override

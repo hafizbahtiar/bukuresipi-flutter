@@ -26,12 +26,16 @@ class BranchEditSheet extends StatefulWidget {
     required this.branch,
     required this.canEditShared,
     required this.onSave,
+    this.onSuggest,
   });
 
   final String placeId;
   final Branch branch;
   final bool canEditShared;
   final Future<void> Function(BranchEdit edit, BranchEditScope scope) onSave;
+
+  /// Owner only: returns a draft to review; it is never saved by this callback.
+  final Future<BranchSuggestion> Function()? onSuggest;
 
   @override
   State<BranchEditSheet> createState() => _BranchEditSheetState();
@@ -55,6 +59,10 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
       : BranchEditScope.personal;
   bool _pinChanged = false;
   bool _saving = false;
+  bool _suggesting = false;
+  BranchSuggestion? _suggestion;
+  final _labelAnchor = GlobalKey();
+  final _aiFields = <String>{};
 
   @override
   void initState() {
@@ -120,6 +128,60 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     if (picked == null || !mounted) return;
     _latText.text = picked.latitude.toStringAsFixed(6);
     _lngText.text = picked.longitude.toStringAsFixed(6);
+  }
+
+  Future<void> _suggest() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _suggesting = true);
+    try {
+      final suggestion = await widget.onSuggest!();
+      if (!mounted) return;
+      setState(() {
+        _suggestion = suggestion;
+        _aiFields.clear();
+        if (suggestion.draft.label case final label?) {
+          _label.text = label;
+          _aiFields.add('label');
+        }
+        if (suggestion.draft.address case final address?) {
+          _address.text = address;
+          _aiFields.add('address');
+        }
+        if (suggestion.draft.city case final city?) {
+          _city.text = city;
+          _aiFields.add('city');
+        }
+        if (suggestion.draft.state case final state?) {
+          _state.text = state;
+          _aiFields.add('state');
+        }
+        if (suggestion.draft.lat case final lat?
+            when lat != widget.branch.lat) {
+          _latText.text = lat.toStringAsFixed(6);
+          _aiFields.add('location');
+        }
+        if (suggestion.draft.lng case final lng?
+            when lng != widget.branch.lng) {
+          _lngText.text = lng.toStringAsFixed(6);
+          _aiFields.add('location');
+        }
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final anchor = _labelAnchor.currentContext;
+        if (anchor == null || !mounted) return;
+        Scrollable.ensureVisible(
+          anchor,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          alignment: 0.08,
+        );
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _suggesting = false);
+    }
   }
 
   Future<void> _save() async {
@@ -191,20 +253,17 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                       style: text.bodySmall?.copyWith(color: nb.inkSoft),
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: Text(l.branchScopeMine),
-                          selected: _scope == BranchEditScope.personal,
-                          onSelected: (_) =>
-                              setState(() => _scope = BranchEditScope.personal),
+                    NotebookSegmented<BranchEditScope>(
+                      selected: _scope,
+                      onChanged: (scope) => setState(() => _scope = scope),
+                      segments: [
+                        NotebookSegment(
+                          value: BranchEditScope.personal,
+                          label: l.branchScopeMine,
                         ),
-                        ChoiceChip(
-                          label: Text(l.branchScopeEveryone),
-                          selected: _scope == BranchEditScope.shared,
-                          onSelected: (_) =>
-                              setState(() => _scope = BranchEditScope.shared),
+                        NotebookSegment(
+                          value: BranchEditScope.shared,
+                          label: l.branchScopeEveryone,
                         ),
                       ],
                     ),
@@ -216,16 +275,45 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                         : l.branchPersonalOnly,
                     style: text.bodySmall?.copyWith(color: nb.inkSoft),
                   ),
+                  const SizedBox(height: 8),
+                  if (widget.canEditShared && widget.onSuggest != null) ...[
+                    if (_suggesting)
+                      const _AiLoading()
+                    else ...[
+                      if (_suggestion case final suggestion?)
+                        _DraftBanner(
+                          suggestion: suggestion,
+                          branch: widget.branch,
+                        ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: _saving ? null : _suggest,
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          label: Text(
+                            _suggestion == null
+                                ? l.aiSuggest
+                                : l.aiSuggestAgain,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 16),
-                  _field(
-                    key: const ValueKey('branch-label'),
-                    controller: _label,
-                    label: l.branchLabel,
+                  KeyedSubtree(
+                    key: _labelAnchor,
+                    child: _field(
+                      key: const ValueKey('branch-label'),
+                      controller: _label,
+                      label: l.branchLabel,
+                      ai: _aiFields.contains('label'),
+                    ),
                   ),
                   _field(
                     key: const ValueKey('branch-address'),
                     controller: _address,
                     label: l.branchAddress,
+                    ai: _aiFields.contains('address'),
                   ),
                   Row(
                     children: [
@@ -234,6 +322,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                           key: const ValueKey('branch-city'),
                           controller: _city,
                           label: l.branchCity,
+                          ai: _aiFields.contains('city'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -242,6 +331,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                           key: const ValueKey('branch-state'),
                           controller: _state,
                           label: l.branchState,
+                          ai: _aiFields.contains('state'),
                         ),
                       ),
                     ],
@@ -265,6 +355,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                             signed: true,
                           ),
                           errorText: latError,
+                          ai: _aiFields.contains('location'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -278,6 +369,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                             signed: true,
                           ),
                           errorText: lngError,
+                          ai: _aiFields.contains('location'),
                         ),
                       ),
                     ],
@@ -334,6 +426,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     required String label,
     TextInputType? keyboardType,
     String? errorText,
+    bool ai = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextField(
@@ -343,7 +436,235 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
       textCapitalization: keyboardType == null
           ? TextCapitalization.sentences
           : TextCapitalization.none,
-      decoration: InputDecoration(labelText: label, errorText: errorText),
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: errorText,
+        suffixIcon: ai
+            ? const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: _AiBadge(),
+              )
+            : null,
+        suffixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 0),
+      ),
     ),
   );
+}
+
+class _DraftBanner extends StatelessWidget {
+  const _DraftBanner({required this.suggestion, required this.branch});
+
+  final BranchSuggestion suggestion;
+  final Branch branch;
+
+  String? _coords(double? lat, double? lng) => lat == null || lng == null
+      ? null
+      : '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final small = text.bodySmall?.copyWith(color: nb.inkSoft);
+    final draft = suggestion.draft;
+    final rows = <(String, String?, String?)>[
+      (l.branchLabel, branch.label, draft.label),
+      (l.branchAddress, branch.address, draft.address),
+      (l.branchCity, branch.city, draft.city),
+      (l.branchState, branch.state, draft.state),
+      (
+        l.branchLocation,
+        _coords(branch.lat, branch.lng),
+        _coords(draft.lat, draft.lng),
+      ),
+    ].where((row) => row.$3 != null && row.$3!.trim().isNotEmpty).toList();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 16, color: nb.pandanDeep),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  suggestion.aiUsed ? l.aiDraftTitle : l.aiDraftFromMap,
+                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          if (suggestion.sources.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.aiDraftSources(suggestion.sources.join(', ')),
+                style: small,
+              ),
+            ),
+          if (suggestion.summary case final summary? when summary.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(summary, style: small),
+            ),
+          if (rows.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(l.aiDraftApplied, style: small),
+            for (final row in rows)
+              _DraftField(label: row.$1, current: row.$2, suggested: row.$3!),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(l.aiDraftNoFields, style: small),
+            ),
+          if (!suggestion.changed)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(l.aiDraftNoInfo, style: small),
+            ),
+          for (final warning in suggestion.warnings)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text('• $warning', style: small),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DraftField extends StatelessWidget {
+  const _DraftField({
+    required this.label,
+    required this.current,
+    required this.suggested,
+  });
+
+  final String label;
+  final String? current;
+  final String suggested;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final small = text.bodySmall?.copyWith(color: nb.inkSoft);
+    final same = current == suggested;
+    return Padding(
+      padding: const EdgeInsets.only(top: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                label,
+                style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 6),
+              const _AiBadge(),
+              if (same)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Text('· ${l.aiDraftSame}', style: small),
+                ),
+            ],
+          ),
+          if (!same && current != null)
+            Text(
+              current!,
+              style: small?.copyWith(decoration: TextDecoration.lineThrough),
+            ),
+          Text(
+            suggested,
+            style: text.bodySmall?.copyWith(
+              color: nb.ink,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiBadge extends StatelessWidget {
+  const _AiBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: nb.pandanDeep.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        'AI',
+        style: nb.hand.copyWith(fontSize: 15, height: 1, color: nb.pandanDeep),
+      ),
+    );
+  }
+}
+
+class _AiLoading extends StatelessWidget {
+  const _AiLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: nb.pandanDeep),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.aiSuggestBusy,
+                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              minHeight: 3,
+              color: nb.pandanDeep,
+              backgroundColor: nb.line,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            l.aiSuggestDetail,
+            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          ),
+        ],
+      ),
+    );
+  }
 }

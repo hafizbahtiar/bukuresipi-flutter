@@ -61,6 +61,7 @@ class _NearbySheetState extends State<NearbySheet> {
           lng: p.lng,
         ),
         canEditShared: owner,
+        onSuggest: owner ? () => places.suggestBranch(p.branchId) : null,
         onSave: (edit, scope) => places.updateBranch(
           p.branchId,
           label: edit.label,

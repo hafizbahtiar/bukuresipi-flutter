@@ -1,6 +1,43 @@
 /// Whether a branch edit is private to the caller or changes the shared branch (owner only).
 enum BranchEditScope { personal, shared }
 
+/// An owner-only AI/map suggestion. It is a draft: the owner reviews it before saving.
+class BranchDraft {
+  const BranchDraft({
+    this.label,
+    this.address,
+    this.city,
+    this.state,
+    this.lat,
+    this.lng,
+  });
+
+  final String? label;
+  final String? address;
+  final String? city;
+  final String? state;
+  final double? lat;
+  final double? lng;
+}
+
+class BranchSuggestion {
+  const BranchSuggestion({
+    required this.draft,
+    required this.sources,
+    required this.aiUsed,
+    required this.changed,
+    this.summary,
+    this.warnings = const [],
+  });
+
+  final BranchDraft draft;
+  final List<String> sources;
+  final bool aiUsed;
+  final bool changed;
+  final String? summary;
+  final List<String> warnings;
+}
+
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
 class Place {
   const Place({

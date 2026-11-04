@@ -757,6 +757,9 @@ class _PinSheet extends StatelessWidget {
         placeId: place.id,
         branch: b,
         canEditShared: owner,
+        onSuggest: owner
+            ? () => context.read<PlacesController>().suggestBranch(b.id)
+            : null,
         onSave: (edit, scope) => context.read<PlacesController>().updateBranch(
           b.id,
           label: edit.label,

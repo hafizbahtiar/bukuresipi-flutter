@@ -168,58 +168,66 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
         ],
       ),
       body: NotebookPage(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: ActionDock.clearance),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    r.name,
-                    style: text.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      height: 1.15,
-                    ),
-                  ),
-                  if (r.cuisine != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        r.cuisine!,
-                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+        // Builder: bottomRoom needs the body's context (it holds the keyboard + dock height).
+        child: Builder(
+          builder: (context) => ListView(
+            padding: EdgeInsets.only(bottom: ActionDock.bottomRoom(context)),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 10,
+                  4,
+                  20,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.name,
+                      style: text.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
                       ),
                     ),
-                  if (place.sourceUrl case final url?)
-                    TextButton.icon(
-                      onPressed: () =>
-                          openLink(context, url, failed: l.openFailed),
-                      icon: const Icon(Icons.open_in_new, size: 16),
-                      label: Text(l.openYourPost),
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
+                    if (r.cuisine != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          r.cuisine!,
+                          style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                        ),
                       ),
-                    ),
-                ],
+                    if (place.sourceUrl case final url?)
+                      TextButton.icon(
+                        onPressed: () =>
+                            openLink(context, url, failed: l.openFailed),
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: Text(l.openYourPost),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            NotebookHeading(l.branchesTitle),
-            for (final b in branches)
-              _BranchRow(
-                place: place,
-                branch: b,
-                fromPost: b == branch && place.branchId != null,
-                owner: owner,
-              ),
-            if (r.halalClaim != null && r.halalQuote != null) ...[
-              NotebookHeading(l.halalTitle),
-              _HalalQuote(restaurant: r),
+              NotebookHeading(l.branchesTitle),
+              for (final b in branches)
+                _BranchRow(
+                  place: place,
+                  branch: b,
+                  fromPost: b == branch && place.branchId != null,
+                  owner: owner,
+                ),
+              if (r.halalClaim != null && r.halalQuote != null) ...[
+                NotebookHeading(l.halalTitle),
+                _HalalQuote(restaurant: r),
+              ],
+              NotebookHeading(l.noteTitle),
+              _NoteField(controller: _note),
             ],
-            NotebookHeading(l.noteTitle),
-            _NoteField(controller: _note),
-          ],
+          ),
         ),
       ),
     );
@@ -254,6 +262,9 @@ class _BranchRow extends StatelessWidget {
       placeId: place.id,
       branch: branch,
       canEditShared: owner,
+      onSuggest: owner
+          ? () => context.read<PlacesController>().suggestBranch(branch.id)
+          : null,
       onSave: (edit, scope) => context.read<PlacesController>().updateBranch(
         branch.id,
         label: edit.label,
@@ -400,6 +411,14 @@ class _NoteField extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 0),
       child: TextField(
         controller: controller,
+        // Scroll the note above the dock and keyboard, not just into the body (which runs under them). Flutter
+        // reveals the caret's line; + 60 keeps the line under it and the 500 counter in sight too.
+        scrollPadding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          ActionDock.bottomRoom(context) + 60,
+        ),
         maxLength: 500,
         minLines: 2,
         maxLines: 6,

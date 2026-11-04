@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
@@ -242,6 +243,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Only you will see these changes.'), findsOneWidget);
     expect(find.text('Who sees this edit?'), findsNothing);
+    expect(find.text('Suggest with AI'), findsNothing);
 
     await t.enterText(find.byKey(const ValueKey('branch-label')), 'My Kedai');
     final save = find.widgetWithText(FilledButton, 'Save');
@@ -271,6 +273,65 @@ void main() {
     await t.pumpAndSettle();
 
     expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+  });
+
+  testWidgets('the owner reviews an AI draft before saving it', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    repo.suggestion = const BranchSuggestion(
+      draft: BranchDraft(
+        label: 'AI Label',
+        address: 'AI Address',
+        city: 'AI City',
+        state: 'Selangor',
+        lat: 2.991234,
+        lng: 101.791234,
+      ),
+      sources: ['nominatim'],
+      aiUsed: true,
+      changed: true,
+      summary: 'Cleaned from the map.',
+    );
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+
+    final suggest = find.text('Suggest with AI');
+    await t.ensureVisible(suggest);
+    await t.tap(suggest);
+    await t.pumpAndSettle();
+
+    expect(repo.suggested, ['b-1']);
+    expect(find.text('AI draft — review before saving'), findsOneWidget);
+    expect(find.text('Source: nominatim'), findsOneWidget);
+    expect(
+      find.text('Filled into the fields below — review before saving.'),
+      findsOneWidget,
+    );
+    expect(find.text('AI'), findsWidgets);
+    expect(
+      t
+          .widget<TextField>(find.byKey(const ValueKey('branch-label')))
+          .controller!
+          .text,
+      'AI Label',
+    );
+    expect(
+      t
+          .widget<TextField>(find.byKey(const ValueKey('branch-lat')))
+          .controller!
+          .text,
+      '2.991234',
+    );
+
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.label, 'AI Label');
+    expect(repo.branchUpdates.single.lat, 2.991234);
+    expect(repo.branchUpdates.single.lng, 101.791234);
+    expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
   });
 
   testWidgets('the owner can type coordinates instead of using the map', (
@@ -366,6 +427,39 @@ void main() {
         t.getBottomLeft(find.byTooltip('Save note')).dy,
         lessThanOrEqualTo(screen - 300),
       );
+    },
+  );
+
+  testWidgets(
+    'typing a note with the keyboard open: the note shows above the keyboard and the dock',
+    (t) async {
+      t.view.physicalSize = const Size(
+        1080,
+        1800,
+      ); // a short phone: the note starts below the fold
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      await t.scrollUntilVisible(
+        find.byType(TextField),
+        200,
+      ); // the user scrolls down to the note
+      await t.showKeyboard(find.byType(TextField));
+      t.view.viewInsets = const FakeViewPadding(
+        bottom: 900,
+      ); // 300 logical px of keyboard
+      await t.pumpAndSettle();
+      await t.enterText(find.byType(TextField), 'Sedap, datang lagi');
+      await t.pumpAndSettle();
+      final dockTop = t.getTopLeft(find.byType(ActionDock)).dy;
+      final field = t.getRect(find.byType(TextField));
+      expect(
+        field.bottom,
+        lessThanOrEqualTo(dockTop),
+        reason: 'the note is under the dock or keyboard',
+      );
+      expect(field.top, greaterThanOrEqualTo(0));
     },
   );
 }

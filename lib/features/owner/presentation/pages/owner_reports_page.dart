@@ -20,9 +20,12 @@ class OwnerReportsPage extends StatefulWidget {
 
 class _OwnerReportsPageState extends State<OwnerReportsPage> {
   String _status = 'open';
-  List<ReportTicket>? _tickets;
+  // Both tabs are loaded together; switching is instant and does not flash the page.
+  Map<String, List<ReportTicket>>? _reports;
   Object? _error;
   bool _loading = true;
+
+  List<ReportTicket>? get _tickets => _reports?[_status];
 
   @override
   void initState() {
@@ -31,14 +34,16 @@ class _OwnerReportsPageState extends State<OwnerReportsPage> {
   }
 
   Future<void> _load() async {
+    final repo = context.read<OwnerRepository>();
     setState(() => _loading = true);
     try {
-      final reports = await context.read<OwnerRepository>().reports(
-        status: _status,
-      );
+      final results = await Future.wait([
+        repo.reports(status: 'open'),
+        repo.reports(status: 'closed'),
+      ]);
       if (mounted) {
         setState(() {
-          _tickets = reports;
+          _reports = {'open': results[0], 'closed': results[1]};
           _error = null;
         });
       }
@@ -51,11 +56,7 @@ class _OwnerReportsPageState extends State<OwnerReportsPage> {
 
   void _switch(String status) {
     if (status == _status) return;
-    setState(() {
-      _status = status;
-      _tickets = null;
-    });
-    _load();
+    setState(() => _status = status);
   }
 
   Future<void> _resolve(ReportTicket ticket, bool apply) async {
@@ -101,68 +102,101 @@ class _OwnerReportsPageState extends State<OwnerReportsPage> {
     final text = Theme.of(context).textTheme;
     final tickets = _tickets;
     return Scaffold(
-      appBar: AppBar(title: Text(l.ownerReports)),
+      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.ownerReports)),
       body: LoadView(
         loading: _loading,
         error: _error,
         onReload: _load,
         child: tickets == null
             ? null
-            : ListView(
-                padding: const EdgeInsets.only(bottom: 24),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      notebookGutter + 10,
-                      8,
-                      20,
-                      12,
-                    ),
-                    child: Text(
-                      l.ownerReportsHelp,
-                      style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: Text(l.ownerReportOpen),
-                          selected: _status == 'open',
-                          onSelected: (_) => _switch('open'),
-                        ),
-                        ChoiceChip(
-                          label: Text(l.ownerReportClosed),
-                          selected: _status == 'closed',
-                          onSelected: (_) => _switch('closed'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (tickets.isEmpty)
+            : NotebookPage(
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: [
                     Padding(
-                      padding: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.fromLTRB(
+                        notebookGutter + 10,
+                        8,
+                        20,
+                        12,
+                      ),
                       child: Text(
-                        l.ownerReportEmpty,
-                        textAlign: TextAlign.center,
+                        l.ownerReportsHelp,
+                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                       ),
-                    )
-                  else
-                    for (final ticket in tickets)
-                      _TicketRow(
-                        ticket: ticket,
-                        fieldLabel: _fieldLabel(l, ticket.field),
-                        onApply: _status == 'open'
-                            ? () => _resolve(ticket, true)
-                            : null,
-                        onReject: _status == 'open'
-                            ? () => _resolve(ticket, false)
-                            : null,
+                    ),
+                    NotebookRow(
+                      mark: Icon(Icons.swap_horiz, size: 18, color: nb.inkSoft),
+                      child: NotebookSegmented<String>(
+                        selected: _status,
+                        onChanged: _switch,
+                        segments: [
+                          NotebookSegment(
+                            value: 'open',
+                            label: l.ownerReportOpen,
+                          ),
+                          NotebookSegment(
+                            value: 'closed',
+                            label: l.ownerReportClosed,
+                          ),
+                        ],
                       ),
-                ],
+                    ),
+                    if (tickets.isEmpty)
+                      _Empty(status: _status)
+                    else
+                      for (final ticket in tickets)
+                        _TicketRow(
+                          ticket: ticket,
+                          fieldLabel: _fieldLabel(l, ticket.field),
+                          onApply: _status == 'open'
+                              ? () => _resolve(ticket, true)
+                              : null,
+                          onReject: _status == 'open'
+                              ? () => _resolve(ticket, false)
+                              : null,
+                        ),
+                  ],
+                ),
               ),
+      ),
+    );
+  }
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final open = status == 'open';
+    return NotebookRow(
+      minHeight: 132,
+      mark: Icon(
+        open ? Icons.check_circle_outline : Icons.inventory_2_outlined,
+        size: 22,
+        color: open ? nb.pandan : nb.inkSoft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            open ? l.ownerReportEmpty : l.ownerReportEmptyClosed,
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            open ? l.ownerReportEmptyHint : l.ownerReportEmptyClosedHint,
+            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          ),
+        ],
       ),
     );
   }

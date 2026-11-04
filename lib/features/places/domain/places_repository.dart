@@ -35,6 +35,9 @@ abstract interface class PlacesRepository {
     BranchEditScope scope = BranchEditScope.personal,
   });
 
+  /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
+  Future<BranchSuggestion> suggestBranch(String branchId);
+
   /// Takes the place off this user's map (the restaurant stays for others).
   Future<void> remove(String id);
 
