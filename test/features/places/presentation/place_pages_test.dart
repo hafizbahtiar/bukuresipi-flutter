@@ -2,6 +2,7 @@ import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -273,6 +274,28 @@ void main() {
     await t.pumpAndSettle();
 
     expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+  });
+
+  testWidgets('a saved branch can be rated from its row', (t) async {
+    repo = FakePlaces()
+      ..places = [
+        place(
+          id: 'a',
+          rating: const RatingSummary(average: 4.3, count: 7, canRate: true),
+        ),
+      ]
+      ..ratingResult = const RatingSummary(
+        average: 4.3,
+        count: 7,
+        mine: 4,
+        canRate: true,
+      );
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.byKey(const ValueKey('rating-star-4')));
+    await t.pumpAndSettle();
+
+    expect(repo.ratingCalls, [('b-1', 4)]);
+    expect(find.text('Your rating: 4'), findsOneWidget);
   });
 
   testWidgets('the owner reviews an AI draft before saving it', (t) async {

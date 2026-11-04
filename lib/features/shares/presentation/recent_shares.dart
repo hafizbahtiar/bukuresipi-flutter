@@ -20,6 +20,7 @@ class RecentShares extends ChangeNotifier {
   final Duration every;
   List<Share> _shares = const [];
   Timer? _next;
+  int _generation = 0;
   String _logged = '';
 
   List<Share> get reading => [
@@ -34,8 +35,13 @@ class RecentShares extends ChangeNotifier {
   Future<void> load() async {
     _next?.cancel();
     final wasReading = {for (final s in reading) s.id};
+    final generation = _generation;
     try {
-      _shares = await _repo.recent();
+      final shares = await _repo.recent();
+      if (generation != _generation) {
+        return; // signed out meanwhile: no data, no next poll
+      }
+      _shares = shares;
       // `flutter run` console: each share's state, once per change (polling repeats the same list).
       final now = [
         for (final s in _shares)
@@ -45,6 +51,7 @@ class RecentShares extends ChangeNotifier {
     } catch (_) {
       // Offline for a moment: the next load tries again.
     }
+    if (generation != _generation) return;
     notifyListeners();
     if (_shares.any((s) => s.isFinished && wasReading.contains(s.id))) {
       await onFinished();
@@ -66,6 +73,7 @@ class RecentShares extends ChangeNotifier {
   }
 
   void clear() {
+    _generation++;
     _next?.cancel();
     _shares = const [];
     notifyListeners();

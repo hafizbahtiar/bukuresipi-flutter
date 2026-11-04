@@ -1,7 +1,9 @@
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
+import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_review_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -73,6 +75,35 @@ void main() {
       );
     },
   );
+
+  testWidgets('review reports show the review and hide it after confirmation', (
+    t,
+  ) async {
+    repo.reviewReportGroups = [
+      ReviewReportGroup(
+        reviewId: 'r-1',
+        stars: 1,
+        text: 'Review yang salah.',
+        author: 'Aina',
+        hidden: false,
+        createdAt: DateTime.utc(2026, 11, 4),
+        count: 2,
+        reasons: const ['spam', 'offensive'],
+        latestNote: 'Spam',
+        updatedAt: DateTime.utc(2026, 11, 4),
+      ),
+    ];
+    await pump(t, const OwnerReviewReportsPage());
+    expect(find.text('Review yang salah.'), findsOneWidget);
+    expect(find.text('Aina'), findsOneWidget);
+    expect(find.text('2 reports'), findsOneWidget);
+
+    await t.tap(find.text('Hide review'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Hide review').last);
+    await t.pumpAndSettle();
+    expect(repo.reviewResolved, [('r-1', true)]);
+  });
 
   testWidgets('a meter is edited in a notebook sheet, cap and period', (
     t,

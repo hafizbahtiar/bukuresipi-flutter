@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../l10n/gen/app_localizations.dart';
-import '../../auth/presentation/auth_text.dart';
+import '../../features/auth/presentation/auth_text.dart';
+import '../../l10n/gen/app_localizations.dart';
 
-/// Owner pages: spinner, then [child], or the error with "Try again". Pull down to reload.
+/// A page that loads once: spinner, then [child], or the error with "Try again". Pull down to reload.
 class LoadView extends StatelessWidget {
   const LoadView({
     super.key,

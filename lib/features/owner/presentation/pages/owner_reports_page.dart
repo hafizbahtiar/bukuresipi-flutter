@@ -8,7 +8,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
-import '../load_view.dart';
+import '../../../../core/widgets/load_view.dart';
 
 /// Owner: community reports as open/closed tickets. Applying or rejecting always closes the ticket.
 class OwnerReportsPage extends StatefulWidget {

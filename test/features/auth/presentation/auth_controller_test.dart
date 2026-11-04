@@ -53,4 +53,13 @@ void main() {
       expect(repo.session, isFalse);
     },
   );
+
+  test('a verified email is not reported as failed when the profile refresh is offline', () async {
+    final repo = FakeAuthRepository()..session = true;
+    final c = AuthController(repo);
+    await c.restore();
+    repo.meResult = const ApiException(ApiException.network);
+    await c.verifyEmail('token'); // must not throw: the link is single-use
+    expect(c.status, AuthStatus.signedIn);
+  });
 }

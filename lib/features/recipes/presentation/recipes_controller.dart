@@ -11,6 +11,7 @@ class RecipesController extends ChangeNotifier {
   final RecipesRepository _repo;
   List<Recipe> _recipes = const [];
   bool _loading = false;
+  int _generation = 0;
   bool _loaded = false;
   String? _error;
 
@@ -26,6 +27,8 @@ class RecipesController extends ChangeNotifier {
   Recipe? byId(String id) => _recipes.where((r) => r.id == id).firstOrNull;
 
   void clear() {
+    _generation++; // a load still in flight belongs to the previous user: drop its answer
+    _loading = false;
     _recipes = const [];
     _loaded = false;
     _error = null;
@@ -34,17 +37,23 @@ class RecipesController extends ChangeNotifier {
 
   Future<void> load() async {
     if (_loading) return;
+    final generation = _generation;
     _loading = true;
     notifyListeners();
     try {
-      _recipes = await _repo.list();
+      final list = await _repo.list();
+      if (generation != _generation) return;
+      _recipes = list;
       _error = null;
     } on ApiException catch (e) {
+      if (generation != _generation) return;
       _error = e.code;
     } finally {
-      _loading = false;
-      _loaded = true;
-      notifyListeners();
+      if (generation == _generation) {
+        _loading = false;
+        _loaded = true;
+        notifyListeners();
+      }
     }
   }
 

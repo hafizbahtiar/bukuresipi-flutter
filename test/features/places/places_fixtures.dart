@@ -1,7 +1,9 @@
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/places_repository.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/domain/report.dart';
+import 'package:bukuresipi_flutter/features/places/domain/review.dart';
 
 const placeJson = {
   'id': 'p-1',
@@ -46,6 +48,7 @@ Place place({
   double? lat = 3.1579,
   String? halal = 'says_halal',
   String? sourceUrl,
+  RatingSummary? rating,
 }) => Place(
   id: id,
   sourceUrl: sourceUrl,
@@ -68,6 +71,7 @@ Place place({
       lat: lat,
       lng: lat == null ? null : 101.7,
       pinSource: lat == null ? null : 'osm',
+      rating: rating ?? const RatingSummary(),
     ),
   ],
 );
@@ -97,6 +101,7 @@ NearbyBranch nearbyBranch({
   int distanceM = 2400,
   bool saved = false,
   String? placeId,
+  RatingSummary? rating,
 }) => NearbyBranch(
   branchId: branchId,
   restaurantId: 'r-1',
@@ -112,6 +117,7 @@ NearbyBranch nearbyBranch({
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',
   saved: saved,
   placeId: placeId,
+  rating: rating ?? const RatingSummary(),
 );
 
 class FakePlaces implements PlacesRepository {
@@ -178,6 +184,17 @@ class FakePlaces implements PlacesRepository {
         })
       >[];
   final suggested = <String>[];
+  final ratingCalls = <(String, int?)>[];
+  RatingSummary ratingResult = const RatingSummary();
+  Object? ratingError;
+  final reviewSaves = <(String, int, String)>[];
+  final reviewRemoves = <String>[];
+  final reviewVotes = <(String, ReviewVote?)>[];
+  final reviewReports = <(String, ReviewReason, String?)>[];
+  ReviewPage? reviewPage;
+  ReviewVotes voteResult = const ReviewVotes();
+  Review? savedReview;
+  Object? reviewError;
   BranchSuggestion suggestion = const BranchSuggestion(
     draft: BranchDraft(),
     sources: [],
@@ -236,6 +253,67 @@ class FakePlaces implements PlacesRepository {
     if (error != null) throw error!;
     suggested.add(branchId);
     return suggestion;
+  }
+
+  @override
+  Future<RatingSummary> rateBranch(String branchId, int stars) async {
+    if (ratingError != null) throw ratingError!;
+    ratingCalls.add((branchId, stars));
+    return ratingResult;
+  }
+
+  @override
+  Future<RatingSummary> clearRating(String branchId) async {
+    if (ratingError != null) throw ratingError!;
+    ratingCalls.add((branchId, null));
+    return ratingResult;
+  }
+
+  @override
+  Future<({RatingSummary rating, Review? review})> saveReview(
+    String branchId,
+    int stars,
+    String text,
+  ) async {
+    if (reviewError != null) throw reviewError!;
+    reviewSaves.add((branchId, stars, text));
+    return (rating: ratingResult, review: savedReview);
+  }
+
+  @override
+  Future<RatingSummary> removeReview(String branchId) async {
+    if (reviewError != null) throw reviewError!;
+    reviewRemoves.add(branchId);
+    return ratingResult;
+  }
+
+  @override
+  Future<ReviewPage> reviews(String branchId, {int offset = 0}) async {
+    if (reviewError != null) throw reviewError!;
+    return reviewPage ??
+        ReviewPage(
+          branchId: branchId,
+          branchName: 'Kedai',
+          rating: ratingResult,
+          reviews: const [],
+        );
+  }
+
+  @override
+  Future<ReviewVotes> voteReview(String reviewId, ReviewVote? vote) async {
+    if (reviewError != null) throw reviewError!;
+    reviewVotes.add((reviewId, vote));
+    return voteResult;
+  }
+
+  @override
+  Future<void> reportReview(
+    String reviewId,
+    ReviewReason reason,
+    String? note,
+  ) async {
+    if (reviewError != null) throw reviewError!;
+    reviewReports.add((reviewId, reason, note));
   }
 
   @override

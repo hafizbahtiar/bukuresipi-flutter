@@ -7,6 +7,7 @@ class OwnerStats {
     required this.meters,
     this.reportsOpen = 0,
     this.reportsReady = 0,
+    this.reviewReportsOpen = 0,
   });
 
   final int usersTotal;
@@ -20,6 +21,7 @@ class OwnerStats {
   /// Community report tickets: open, and open ones that reached the threshold.
   final int reportsOpen;
   final int reportsReady;
+  final int reviewReportsOpen;
 
   OwnerStats withMeter(Meter m) => OwnerStats(
     usersTotal: usersTotal,
@@ -29,7 +31,34 @@ class OwnerStats {
     meters: [for (final x in meters) x.code == m.code ? m : x],
     reportsOpen: reportsOpen,
     reportsReady: reportsReady,
+    reviewReportsOpen: reviewReportsOpen,
   );
+}
+
+class ReviewReportGroup {
+  const ReviewReportGroup({
+    required this.reviewId,
+    required this.stars,
+    required this.text,
+    required this.author,
+    required this.hidden,
+    required this.createdAt,
+    required this.count,
+    required this.reasons,
+    required this.updatedAt,
+    this.latestNote,
+  });
+
+  final String reviewId;
+  final int stars;
+  final String text;
+  final String author;
+  final bool hidden;
+  final DateTime createdAt;
+  final int count;
+  final List<String> reasons;
+  final String? latestNote;
+  final DateTime updatedAt;
 }
 
 class ReportValue {

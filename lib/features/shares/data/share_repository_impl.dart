@@ -21,16 +21,8 @@ class ShareRepositoryImpl implements ShareRepository {
   };
   static const maxImageBytes = 5 * 1024 * 1024;
 
-  Future<T> _call<T>(Future<T> Function() fn) async {
-    try {
-      return await fn();
-    } catch (e) {
-      throw ApiException.from(e);
-    }
-  }
-
   @override
-  Future<String> submitLink(String url, {String? caption}) => _call(() async {
+  Future<String> submitLink(String url, {String? caption}) => apiCall(() async {
     final body = {
       'url': url,
       if (caption != null && caption.trim().isNotEmpty)
@@ -53,7 +45,7 @@ class ShareRepositoryImpl implements ShareRepository {
     if (await file.length() > maxImageBytes) {
       throw const ApiException('invalid_image');
     }
-    return _call(() async {
+    return apiCall(() async {
       final form = FormData.fromMap({
         'image': await MultipartFile.fromFile(
           path,
@@ -69,7 +61,7 @@ class ShareRepositoryImpl implements ShareRepository {
   }
 
   @override
-  Future<Share> get(String id) => _call(() async {
+  Future<Share> get(String id) => apiCall(() async {
     final j = (await _dio.get<Map<String, dynamic>>('/shares/$id')).data!;
     try {
       return _share(j);
@@ -81,14 +73,14 @@ class ShareRepositoryImpl implements ShareRepository {
 
   @override
   Future<void> retry(String id) =>
-      _call(() => _dio.post<void>('/shares/$id/retry'));
+      apiCall(() => _dio.post<void>('/shares/$id/retry'));
 
   @override
   Future<void> dismiss(String id) =>
-      _call(() => _dio.delete<void>('/shares/$id'));
+      apiCall(() => _dio.delete<void>('/shares/$id'));
 
   @override
-  Future<List<Share>> recent() => _call(() async {
+  Future<List<Share>> recent() => apiCall(() async {
     final j = (await _dio.get<Map<String, dynamic>>('/shares')).data!;
     final rows = j['shares'] as List;
     final shares = <Share>[];

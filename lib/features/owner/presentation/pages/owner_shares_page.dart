@@ -5,7 +5,7 @@ import '../../../../core/open_link.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
-import '../load_view.dart';
+import '../../../../core/widgets/load_view.dart';
 
 /// Owner: shares the pipeline could not finish or read, to tune readers and thresholds. Read only.
 class OwnerSharesPage extends StatefulWidget {

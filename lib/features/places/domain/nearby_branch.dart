@@ -1,3 +1,5 @@
+import 'rating.dart';
+
 /// A pinned branch near the map camera, from GET /places/nearby.
 class NearbyBranch {
   const NearbyBranch({
@@ -15,6 +17,7 @@ class NearbyBranch {
     this.halalQuote,
     this.halalSourceUrl,
     this.placeId,
+    this.rating = const RatingSummary(),
   });
 
   final String branchId;
@@ -39,23 +42,31 @@ class NearbyBranch {
   /// The caller's user_place public id when [saved].
   final String? placeId;
 
-  NearbyBranch copyWith({bool? saved, String? placeId, int? distanceM}) =>
-      NearbyBranch(
-        branchId: branchId,
-        restaurantId: restaurantId,
-        name: name,
-        label: label,
-        address: address,
-        lat: lat,
-        lng: lng,
-        distanceM: distanceM ?? this.distanceM,
-        cuisine: cuisine,
-        halalClaim: halalClaim,
-        halalQuote: halalQuote,
-        halalSourceUrl: halalSourceUrl,
-        saved: saved ?? this.saved,
-        placeId: placeId ?? this.placeId,
-      );
+  /// Community stars for this canonical branch; `canRate` is decided by the server.
+  final RatingSummary rating;
+
+  NearbyBranch copyWith({
+    bool? saved,
+    String? placeId,
+    int? distanceM,
+    RatingSummary? rating,
+  }) => NearbyBranch(
+    branchId: branchId,
+    restaurantId: restaurantId,
+    name: name,
+    label: label,
+    address: address,
+    lat: lat,
+    lng: lng,
+    distanceM: distanceM ?? this.distanceM,
+    cuisine: cuisine,
+    halalClaim: halalClaim,
+    halalQuote: halalQuote,
+    halalSourceUrl: halalSourceUrl,
+    saved: saved ?? this.saved,
+    placeId: placeId ?? this.placeId,
+    rating: rating ?? this.rating,
+  );
 }
 
 /// "350 m" under a kilometre, "2.4 km" above.

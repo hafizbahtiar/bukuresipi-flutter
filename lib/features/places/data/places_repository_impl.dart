@@ -6,23 +6,17 @@ import '../../../core/network/db_time.dart';
 import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
 import '../domain/places_repository.dart';
+import '../domain/rating.dart';
 import '../domain/report.dart';
+import '../domain/review.dart';
 
 class PlacesRepositoryImpl implements PlacesRepository {
   PlacesRepositoryImpl(this._dio);
 
   final Dio _dio;
 
-  Future<T> _call<T>(Future<T> Function() fn) async {
-    try {
-      return await fn();
-    } catch (e) {
-      throw ApiException.from(e);
-    }
-  }
-
   @override
-  Future<List<Place>> list() => _call(() async {
+  Future<List<Place>> list() => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/places')).data!;
     final rows = data['places'] as List;
     final places = <Place>[];
@@ -38,7 +32,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
-  Future<void> updateNote(String id, String? note) => _call(() async {
+  Future<void> updateNote(String id, String? note) => apiCall(() async {
     final trimmed = note?.trim();
     await _dio.patch<void>(
       '/places/$id',
@@ -47,7 +41,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
-  Future<void> setPin(String branchId, double lat, double lng) => _call(
+  Future<void> setPin(String branchId, double lat, double lng) => apiCall(
     () => _dio.put<void>(
       '/places/branches/$branchId/pin',
       data: {'lat': lat, 'lng': lng},
@@ -55,7 +49,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
-  Future<bool> locate(String branchId) => _call(() async {
+  Future<bool> locate(String branchId) => apiCall(() async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/locate',
       // The server may search the web and ask the AI: longer than the usual 30 s.
@@ -66,7 +60,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
 
   @override
   Future<({int merged, int removed})> tidyBranches(String restaurantId) =>
-      _call(() async {
+      apiCall(() async {
         final res = await _dio.post<Map<String, dynamic>>(
           '/places/restaurants/$restaurantId/tidy',
           // Clef compares the branches one by one on the server.
@@ -80,7 +74,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
 
   @override
   Future<void> deleteBranch(String branchId) =>
-      _call(() => _dio.delete<void>('/places/branches/$branchId'));
+      apiCall(() => _dio.delete<void>('/places/branches/$branchId'));
 
   @override
   Future<void> updateBranch(
@@ -92,7 +86,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
     double? lat,
     double? lng,
     BranchEditScope scope = BranchEditScope.personal,
-  }) => _call(
+  }) => apiCall(
     () => _dio.patch<void>(
       '/places/branches/$branchId',
       data: {
@@ -108,7 +102,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
-  Future<BranchSuggestion> suggestBranch(String branchId) => _call(() async {
+  Future<BranchSuggestion> suggestBranch(String branchId) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/suggest',
       // Geocoding + the AI can take longer than the usual 30 s.
@@ -134,24 +128,104 @@ class PlacesRepositoryImpl implements PlacesRepository {
 
   @override
   Future<void> remove(String id) =>
-      _call(() => _dio.delete<void>('/places/$id'));
+      apiCall(() => _dio.delete<void>('/places/$id'));
 
   @override
-  Future<List<NearbyBranch>> nearby(double lat, double lng, double km) => _call(
-    () async {
-      final data = (await _dio.get<Map<String, dynamic>>(
-        '/places/nearby',
-        queryParameters: {'lat': lat, 'lng': lng, 'km': km},
-      )).data!;
-      return [
-        for (final j in (data['branches'] as List).cast<Map<String, dynamic>>())
-          nearbyBranchFromJson(j),
-      ];
-    },
+  Future<List<NearbyBranch>> nearby(double lat, double lng, double km) =>
+      apiCall(() async {
+        final data = (await _dio.get<Map<String, dynamic>>(
+          '/places/nearby',
+          queryParameters: {'lat': lat, 'lng': lng, 'km': km},
+        )).data!;
+        return [
+          for (final j
+              in (data['branches'] as List).cast<Map<String, dynamic>>())
+            nearbyBranchFromJson(j),
+        ];
+      });
+
+  @override
+  Future<RatingSummary> rateBranch(String branchId, int stars) =>
+      apiCall(() async {
+        final data = (await _dio.put<Map<String, dynamic>>(
+          '/places/branches/$branchId/rating',
+          data: {'stars': stars},
+        )).data!;
+        return ratingFromJson(data['rating']);
+      });
+
+  @override
+  Future<RatingSummary> clearRating(String branchId) => apiCall(() async {
+    final data = (await _dio.delete<Map<String, dynamic>>(
+      '/places/branches/$branchId/rating',
+    )).data!;
+    return ratingFromJson(data['rating']);
+  });
+
+  @override
+  Future<({RatingSummary rating, Review? review})> saveReview(
+    String branchId,
+    int stars,
+    String text,
+  ) => apiCall(() async {
+    final data = (await _dio.put<Map<String, dynamic>>(
+      '/places/branches/$branchId/review',
+      data: {'stars': stars, 'text': text},
+    )).data!;
+    return (
+      rating: ratingFromJson(data['rating']),
+      review: data['review'] == null
+          ? null
+          : reviewFromJson(data['review'] as Map<String, dynamic>),
+    );
+  });
+
+  @override
+  Future<RatingSummary> removeReview(String branchId) => apiCall(() async {
+    final data = (await _dio.delete<Map<String, dynamic>>(
+      '/places/branches/$branchId/review',
+    )).data!;
+    return ratingFromJson(data['rating']);
+  });
+
+  @override
+  Future<ReviewPage> reviews(String branchId, {int offset = 0}) =>
+      apiCall(() async {
+        final data = (await _dio.get<Map<String, dynamic>>(
+          '/places/branches/$branchId/reviews',
+          queryParameters: {'offset': offset},
+        )).data!;
+        return reviewPageFromJson(data);
+      });
+
+  @override
+  Future<ReviewVotes> voteReview(String reviewId, ReviewVote? vote) =>
+      apiCall(() async {
+        final data = vote == null
+            ? (await _dio.delete<Map<String, dynamic>>(
+                '/places/reviews/$reviewId/vote',
+              )).data!
+            : (await _dio.put<Map<String, dynamic>>(
+                '/places/reviews/$reviewId/vote',
+                data: {'vote': vote.wire},
+              )).data!;
+        return reviewVotesFromJson(data['votes']);
+      });
+
+  @override
+  Future<void> reportReview(
+    String reviewId,
+    ReviewReason reason,
+    String? note,
+  ) => apiCall(
+    () => _dio.post<void>(
+      '/places/reviews/$reviewId/report',
+      data: {'reason': reason.wire, 'note': ?note},
+    ),
   );
 
   @override
-  Future<void> report(ReportDraft draft) => _call(
+  Future<void> report(ReportDraft draft) => apiCall(
     () => _dio.post<void>(
       '/places/reports',
       data: {
@@ -166,7 +240,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
-  Future<Place> saveBranch(String branchId) => _call(() async {
+  Future<Place> saveBranch(String branchId) => apiCall(() async {
     final data = (await _dio.post<Map<String, dynamic>>(
       '/places',
       data: {'branchId': branchId},
@@ -192,7 +266,45 @@ NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   halalSourceUrl: j['halalSourceUrl'] as String?,
   saved: j['saved'] as bool,
   placeId: j['placeId'] as String?,
+  rating: ratingFromJson(j['rating']),
 );
+
+ReviewVotes reviewVotesFromJson(Object? json) {
+  if (json is! Map<String, dynamic>) return const ReviewVotes();
+  return ReviewVotes(
+    up: (json['up'] as num?)?.toInt() ?? 0,
+    down: (json['down'] as num?)?.toInt() ?? 0,
+    mine: ReviewVote.fromWire(json['mine']),
+  );
+}
+
+Review reviewFromJson(Map<String, dynamic> j) => Review(
+  id: j['id'] as String,
+  stars: (j['stars'] as num).toInt(),
+  text: j['text'] as String,
+  author: j['author'] as String,
+  mine: j['mine'] as bool? ?? false,
+  hidden: j['hidden'] as bool? ?? false,
+  createdAt: dbTime(j['createdAt'] as String),
+  updatedAt: dbTime(j['updatedAt'] as String),
+  votes: reviewVotesFromJson(j['votes']),
+  reported: j['reported'] as bool? ?? false,
+);
+
+ReviewPage reviewPageFromJson(Map<String, dynamic> j) {
+  final branch = j['branch'] as Map<String, dynamic>;
+  return ReviewPage(
+    branchId: branch['id'] as String,
+    branchName: branch['name'] as String,
+    branchLabel: branch['label'] as String?,
+    rating: ratingFromJson(branch['rating']),
+    reviews: [
+      for (final r in (j['reviews'] as List).cast<Map<String, dynamic>>())
+        reviewFromJson(r),
+    ],
+    nextOffset: (j['nextOffset'] as num?)?.toInt(),
+  );
+}
 
 Place placeFromJson(Map<String, dynamic> j) {
   final r = j['restaurant'] as Map<String, dynamic>;
@@ -221,6 +333,7 @@ Place placeFromJson(Map<String, dynamic> j) {
           lat: _num(b['lat']),
           lng: _num(b['lng']),
           pinSource: b['pinSource'] as String?,
+          rating: ratingFromJson(b['rating']),
         ),
     ],
   );

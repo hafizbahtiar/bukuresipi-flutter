@@ -19,6 +19,7 @@ import '../widgets/location_button.dart';
 import '../widgets/branch_edit_sheet.dart';
 import '../widgets/nearby_carousel.dart';
 import '../widgets/nearby_sheet.dart';
+import '../widgets/notebook_rating.dart';
 import '../widgets/north_button.dart';
 import '../widgets/unpinned_actions.dart';
 import '../widgets/view_mode_button.dart';
@@ -516,14 +517,31 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       builder: (context) => NearbySheet(
         place: place,
         onEdited: _loadNearby,
+        onRate: (stars) async {
+          final rating = await places.setRating(place.branchId, stars);
+          if (mounted) {
+            setState(() {
+              _nearby = [
+                for (final n in _nearby)
+                  n.branchId == place.branchId ? n.copyWith(rating: rating) : n,
+              ];
+            });
+          }
+          return rating;
+        },
         onSave: () async {
           final saved = await places.saveBranch(place.branchId);
           if (!mounted) return;
+          // The saved place carries the branch's fresh rating: canRate is true now for a verified saver.
+          final rating = saved.branches
+              .where((b) => b.id == place.branchId)
+              .firstOrNull
+              ?.rating;
           setState(() {
             _nearby = [
               for (final n in _nearby)
                 n.branchId == place.branchId
-                    ? n.copyWith(saved: true, placeId: saved.id)
+                    ? n.copyWith(saved: true, placeId: saved.id, rating: rating)
                     : n,
             ];
           });
@@ -594,7 +612,17 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final unpinned = places.unpinned.length;
     final showNearby = _nearby.isNotEmpty;
     return Scaffold(
-      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.navMap)),
+      appBar: AppBar(
+        toolbarHeight: 76,
+        title: NotebookTitle(l.navMap),
+        actions: [
+          IconButton(
+            tooltip: l.creditsTitle,
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => context.push('/credits'),
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           MapLibreMap(
@@ -824,6 +852,24 @@ class _PinSheet extends StatelessWidget {
                     l.pinnedByOwner,
                     style: text.bodySmall?.copyWith(color: nb.inkSoft),
                   ),
+                Consumer<PlacesController>(
+                  builder: (context, places, _) {
+                    final live =
+                        places
+                            .byId(place.id)
+                            ?.branches
+                            .where((x) => x.id == b.id)
+                            .firstOrNull ??
+                        b;
+                    return NotebookRating(
+                      rating: live.rating,
+                      onRate: (stars) => places.setRating(b.id, stars),
+                      onReviews: () =>
+                          context.push('/branches/${b.id}/reviews'),
+                      hint: live.rating.canRate ? null : l.ratingVerifyEmail,
+                    );
+                  },
+                ),
               ],
             ),
           ),

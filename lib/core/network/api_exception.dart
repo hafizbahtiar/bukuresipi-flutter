@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../log.dart';
+
 /// Any failed API call. [code] is the API's `error` field (`invalid_credentials`, `rate_limited`, ...), or
 /// `network` (no response) / `unknown`. Screens map codes to text; nothing else inspects Dio errors.
 class ApiException implements Exception {
@@ -22,9 +24,20 @@ class ApiException implements Exception {
           : unknown;
       return ApiException(code, status: res.statusCode);
     }
+    // Not an HTTP failure: usually a response the parser did not expect. Say so in debug builds.
+    log('unexpected error: $error');
     return const ApiException(unknown);
   }
 
   @override
   String toString() => 'ApiException($code, $status)';
+}
+
+/// Runs an API call: any failure comes out as an [ApiException].
+Future<T> apiCall<T>(Future<T> Function() fn) async {
+  try {
+    return await fn();
+  } catch (e) {
+    throw ApiException.from(e);
+  }
 }

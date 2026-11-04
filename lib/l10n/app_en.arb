@@ -527,6 +527,146 @@
   "@reportFieldCuisine": {},
   "reportChooseLocation": "Choose the correct point on the map.",
   "@reportChooseLocation": {},
+  "ratingNone": "No ratings yet.",
+  "@ratingNone": {},
+  "ratingCount": "{count} ratings",
+  "@ratingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingNotEnough": "Not enough ratings yet.",
+  "@ratingNotEnough": {},
+  "ratingAverage": "{average} · {count} ratings",
+  "@ratingAverage": {
+    "placeholders": {
+      "average": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingYours": "Your rating: {stars}",
+  "@ratingYours": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingSaveFirst": "Save this place to rate it.",
+  "@ratingSaveFirst": {},
+  "ratingVerifyEmail": "Verify your email to rate.",
+  "@ratingVerifyEmail": {},
+  "ratingRemoved": "Rating removed.",
+  "@ratingRemoved": {},
+  "ratingUndo": "Undo",
+  "@ratingUndo": {},
+  "ratingStarLabel": "Give {stars} stars",
+  "@ratingStarLabel": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingNotSaved": "Save this place before rating it.",
+  "@ratingNotSaved": {},
+  "ratingGone": "This branch was updated.",
+  "@ratingGone": {},
+  "removePlaceWithRatings": "Your ratings for this place will also be removed.",
+  "@removePlaceWithRatings": {},
+  "reviewsTitle": "Reviews",
+  "@reviewsTitle": {},
+  "reviewsCount": "{count} reviews",
+  "@reviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsEmpty": "No reviews yet. Be the first.",
+  "@reviewsEmpty": {},
+  "loadMore": "Load more",
+  "reviewWrite": "Write a review",
+  "@reviewWrite": {},
+  "reviewEdit": "Edit your review",
+  "@reviewEdit": {},
+  "reviewRemove": "Remove review",
+  "@reviewRemove": {},
+  "reviewRemoveConfirm": "Remove your review text? Your star rating stays.",
+  "@reviewRemoveConfirm": {},
+  "reviewRemoveRatingConfirm": "This removes your rating, review and its votes. Continue?",
+  "@reviewRemoveRatingConfirm": {},
+  "reviewTextHint": "Share what was good or not (optional).",
+  "@reviewTextHint": {},
+  "reviewSaved": "Review saved.",
+  "@reviewSaved": {},
+  "reviewRemoved": "Review removed.",
+  "@reviewRemoved": {},
+  "reviewHidden": "Hidden by moderation",
+  "@reviewHidden": {},
+  "reviewLike": "Helpful",
+  "@reviewLike": {},
+  "reviewDislike": "Not helpful",
+  "@reviewDislike": {},
+  "reviewReport": "Report review",
+  "@reviewReport": {},
+  "reviewReported": "Reported",
+  "@reviewReported": {},
+  "reviewReportTitle": "Why report this review?",
+  "@reviewReportTitle": {},
+  "reviewReportReason": "Reason",
+  "@reviewReportReason": {},
+  "reviewReportSpam": "Spam",
+  "@reviewReportSpam": {},
+  "reviewReportOffensive": "Offensive",
+  "@reviewReportOffensive": {},
+  "reviewReportWrong": "Wrong information",
+  "@reviewReportWrong": {},
+  "reviewReportOther": "Other",
+  "@reviewReportOther": {},
+  "reviewReportNote": "Note (optional)",
+  "@reviewReportNote": {},
+  "reviewReportSent": "Report sent.",
+  "@reviewReportSent": {},
+  "reviewNotSaved": "Save this place before reviewing it.",
+  "@reviewNotSaved": {},
+  "reviewVerifyEmail": "Verify your email to review.",
+  "@reviewVerifyEmail": {},
+  "ownerReviewReports": "Review reports",
+  "@ownerReviewReports": {},
+  "ownerReviewReportsEmpty": "No review reports.",
+  "@ownerReviewReportsEmpty": {},
+  "ownerReviewHide": "Hide review",
+  "@ownerReviewHide": {},
+  "ownerReviewKeep": "Keep review",
+  "@ownerReviewKeep": {},
+  "ownerReviewHidden": "Hidden",
+  "ownerReviewHideConfirm": "Hide this review from public view? The rating stays.",
+  "ownerReviewKeepConfirm": "Keep this review visible and close the reports?",
+  "@ownerReviewHidden": {},
+  "ownerReviewReportCount": "{count} reports",
+  "@ownerReviewReportCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerReviewReportReasons": "Reasons: {reasons}",
+  "@ownerReviewReportReasons": {
+    "placeholders": {
+      "reasons": {
+        "type": "String"
+      }
+    }
+  },
   "deleteBranch": "Delete branch",
   "@deleteBranch": {},
   "deleteBranchConfirm": "Delete {label} for every user? This cannot be undone.",
@@ -599,5 +739,61 @@
   "ownerPerMonth": "a month",
   "@ownerPerMonth": {},
   "dataCredits": "Map data © OpenStreetMap contributors. Place data © Overture Maps Foundation.",
-  "@dataCredits": {}
+  "@dataCredits": {},
+  "creditsTitle": "Credits",
+  "@creditsTitle": {},
+  "creditsIntro": "The map and place data come from these open sources.",
+  "@creditsIntro": {},
+  "creditsMap": "Map",
+  "@creditsMap": {},
+  "creditsPlaces": "Place data",
+  "@creditsPlaces": {},
+  "creditsTypography": "Type",
+  "@creditsTypography": {},
+  "creditsApp": "App",
+  "@creditsApp": {},
+  "creditsOpenFreeMap": "OpenFreeMap",
+  "@creditsOpenFreeMap": {},
+  "creditsOpenFreeMapDetail": "Map tiles and the Liberty style.",
+  "@creditsOpenFreeMapDetail": {},
+  "creditsOpenMapTiles": "OpenMapTiles",
+  "@creditsOpenMapTiles": {},
+  "creditsOpenMapTilesDetail": "Map data schema.",
+  "@creditsOpenMapTilesDetail": {},
+  "creditsOsm": "OpenStreetMap contributors",
+  "@creditsOsm": {},
+  "creditsOsmDetail": "Map data, ODbL.",
+  "@creditsOsmDetail": {},
+  "creditsMapLibre": "MapLibre",
+  "@creditsMapLibre": {},
+  "creditsMapLibreDetail": "Map renderer, BSD.",
+  "@creditsMapLibreDetail": {},
+  "creditsOverture": "Overture Maps",
+  "@creditsOverture": {},
+  "creditsOvertureDetail": "Place data, CDLA-Permissive-2.0.",
+  "@creditsOvertureDetail": {},
+  "creditsNominatim": "Nominatim",
+  "@creditsNominatim": {},
+  "creditsNominatimDetail": "Geocoding from OpenStreetMap.",
+  "@creditsNominatimDetail": {},
+  "creditsPhoton": "Photon",
+  "@creditsPhoton": {},
+  "creditsPhotonDetail": "Geocoding.",
+  "@creditsPhotonDetail": {},
+  "creditsHere": "HERE",
+  "@creditsHere": {},
+  "creditsHereDetail": "Geocoding when enabled.",
+  "@creditsHereDetail": {},
+  "creditsParallel": "Parallel",
+  "@creditsParallel": {},
+  "creditsParallelDetail": "Web search for branch addresses.",
+  "@creditsParallelDetail": {},
+  "creditsFonts": "Google Fonts",
+  "@creditsFonts": {},
+  "creditsFontsDetail": "Familjen Grotesk and Caveat, SIL Open Font License.",
+  "@creditsFontsDetail": {},
+  "creditsFlutter": "Flutter",
+  "@creditsFlutter": {},
+  "creditsFlutterDetail": "App framework, BSD.",
+  "@creditsFlutterDetail": {}
 }

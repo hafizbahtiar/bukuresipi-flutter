@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/places/presentation/pages/pin_picker_page.dart';
 import '../../features/places/presentation/pages/place_detail_page.dart';
+import '../../features/places/presentation/pages/reviews_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/pages/account_page.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
@@ -11,9 +12,11 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/verify_email_page.dart';
+import '../../features/credits/presentation/pages/credits_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_reports_page.dart';
+import '../../features/owner/presentation/pages/owner_review_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_shares_page.dart';
 import '../../features/owner/presentation/pages/owner_users_page.dart';
 import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
@@ -80,6 +83,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
       ...linkRoutes(''),
       ...linkRoutes('/en'),
       _page(path: '/account', builder: (_, _) => const AccountPage()),
+      _page(path: '/credits', builder: (_, _) => const CreditsPage()),
       // Top level, not nested under /account: Account is also a home tab, so pushing this must add one page only.
       _page(
         path: '/account/password',
@@ -96,6 +100,11 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
             RecipeDetailPage(id: state.pathParameters['id']!),
       ),
       _page(
+        path: '/branches/:id/reviews',
+        builder: (_, state) =>
+            ReviewsPage(branchId: state.pathParameters['id']!),
+      ),
+      _page(
         path: '/places/:id/pin/:branchId',
         builder: (_, state) => PinPickerPage(
           placeId: state.pathParameters['id']!,
@@ -109,6 +118,10 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
           _page(path: 'users', builder: (_, _) => const OwnerUsersPage()),
           _page(path: 'shares', builder: (_, _) => const OwnerSharesPage()),
           _page(path: 'reports', builder: (_, _) => const OwnerReportsPage()),
+          _page(
+            path: 'review-reports',
+            builder: (_, _) => const OwnerReviewReportsPage(),
+          ),
         ],
       ),
     ],

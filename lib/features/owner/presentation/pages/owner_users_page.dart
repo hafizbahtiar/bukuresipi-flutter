@@ -6,7 +6,7 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
-import '../load_view.dart';
+import '../../../../core/widgets/load_view.dart';
 
 /// Owner: users, newest first, searchable by email. The one action is ending a user's sessions.
 class OwnerUsersPage extends StatefulWidget {

@@ -1,3 +1,5 @@
+import 'rating.dart';
+
 /// Whether a branch edit is private to the caller or changes the shared branch (owner only).
 enum BranchEditScope { personal, shared }
 
@@ -69,13 +71,16 @@ class Place {
   /// Branches with coordinates. A branch that did not geocode has none: no pin beats a wrong pin.
   List<Branch> get pins => branches.where((b) => b.hasPin).toList();
 
-  Place copyWith({String? note}) => Place(
+  static const _keep = Object();
+
+  // `note: null` must clear the note, so "not passed" is a sentinel, not null.
+  Place copyWith({Object? note = _keep, List<Branch>? branches}) => Place(
     id: id,
-    note: note,
+    note: identical(note, _keep) ? this.note : note as String?,
     createdAt: createdAt,
     branchId: branchId,
     restaurant: restaurant,
-    branches: branches,
+    branches: branches ?? this.branches,
     sourceUrl: sourceUrl,
   );
 }
@@ -110,6 +115,7 @@ class Branch {
     this.lat,
     this.lng,
     this.pinSource,
+    this.rating = const RatingSummary(),
   });
 
   final String id;
@@ -122,6 +128,21 @@ class Branch {
 
   /// 'osm' | 'nominatim' | 'photon' | 'overture' | 'here' | 'maps_link' | 'web' | 'user' | 'owner' | null.
   final String? pinSource;
+
+  /// Community stars for this canonical branch; `canRate` is decided by the server.
+  final RatingSummary rating;
+
+  Branch copyWith({RatingSummary? rating}) => Branch(
+    id: id,
+    label: label,
+    address: address,
+    city: city,
+    state: state,
+    lat: lat,
+    lng: lng,
+    pinSource: pinSource,
+    rating: rating ?? this.rating,
+  );
 
   /// Set by hand in the app: shown, but not verified yet.
   bool get pinnedByUser => pinSource == 'user';

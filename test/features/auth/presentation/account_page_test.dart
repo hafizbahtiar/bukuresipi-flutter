@@ -73,9 +73,8 @@ void main() {
     expect(repo.clears, 1);
   });
 
-  testWidgets('the account page credits the map and place data', (t) async {
+  testWidgets('the account page links to the credits', (t) async {
     await pump(t);
-    expect(find.textContaining('© Overture Maps Foundation'), findsOneWidget);
-    expect(find.textContaining('© OpenStreetMap contributors'), findsOneWidget);
+    expect(find.text('Credits'), findsOneWidget);
   });
 }

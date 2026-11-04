@@ -4,7 +4,9 @@ import '../../../core/network/api_exception.dart';
 import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
 import '../domain/places_repository.dart';
+import '../domain/rating.dart';
 import '../domain/report.dart';
+import '../domain/review.dart';
 
 /// The user's places for the Book list, the map and the detail page. Kept after a failed reload (shown with [error]).
 class PlacesController extends ChangeNotifier {
@@ -13,6 +15,7 @@ class PlacesController extends ChangeNotifier {
   final PlacesRepository _repo;
   List<Place> _places = const [];
   bool _loading = false;
+  int _generation = 0;
   bool _loaded = false;
   String? _error;
 
@@ -31,6 +34,8 @@ class PlacesController extends ChangeNotifier {
 
   /// Sign-out: the next user must never see these.
   void clear() {
+    _generation++; // a load still in flight belongs to the previous user: drop its answer
+    _loading = false;
     _places = const [];
     _loaded = false;
     _error = null;
@@ -39,17 +44,23 @@ class PlacesController extends ChangeNotifier {
 
   Future<void> load() async {
     if (_loading) return;
+    final generation = _generation;
     _loading = true;
     notifyListeners();
     try {
-      _places = await _repo.list();
+      final list = await _repo.list();
+      if (generation != _generation) return;
+      _places = list;
       _error = null;
     } on ApiException catch (e) {
+      if (generation != _generation) return;
       _error = e.code;
     } finally {
-      _loading = false;
-      _loaded = true;
-      notifyListeners();
+      if (generation == _generation) {
+        _loading = false;
+        _loaded = true;
+        notifyListeners();
+      }
     }
   }
 
@@ -121,6 +132,62 @@ class PlacesController extends ChangeNotifier {
   /// Owner only. Throws ApiException; the edit sheet shows the draft for review.
   Future<BranchSuggestion> suggestBranch(String branchId) =>
       _repo.suggestBranch(branchId);
+
+  /// Rates or clears (`stars == null`) a branch, then replaces its summary in memory without a full reload.
+  Future<RatingSummary> setRating(String branchId, int? stars) async {
+    try {
+      final rating = stars == null
+          ? await _repo.clearRating(branchId)
+          : await _repo.rateBranch(branchId, stars);
+      _replaceRating(branchId, rating);
+      return rating;
+    } on ApiException catch (e) {
+      // The branch was merged/deleted, or the caller unsaved elsewhere: refresh the truth.
+      if (e.code == 'not_saved' || e.code == 'not_found') await load();
+      rethrow;
+    }
+  }
+
+  void _replaceRating(String branchId, RatingSummary rating) {
+    _places = [
+      for (final place in _places)
+        place.copyWith(
+          branches: [
+            for (final branch in place.branches)
+              branch.id == branchId ? branch.copyWith(rating: rating) : branch,
+          ],
+        ),
+    ];
+    notifyListeners();
+  }
+
+  Future<({RatingSummary rating, Review? review})> saveReview(
+    String branchId,
+    int stars,
+    String text,
+  ) async {
+    final result = await _repo.saveReview(branchId, stars, text);
+    _replaceRating(branchId, result.rating);
+    return result;
+  }
+
+  Future<RatingSummary> removeReview(String branchId) async {
+    final rating = await _repo.removeReview(branchId);
+    _replaceRating(branchId, rating);
+    return rating;
+  }
+
+  Future<ReviewPage> reviews(String branchId, {int offset = 0}) =>
+      _repo.reviews(branchId, offset: offset);
+
+  Future<ReviewVotes> voteReview(String reviewId, ReviewVote? vote) =>
+      _repo.voteReview(reviewId, vote);
+
+  Future<void> reportReview(
+    String reviewId,
+    ReviewReason reason,
+    String? note,
+  ) => _repo.reportReview(reviewId, reason, note);
 
   /// Throws ApiException; the screen shows it.
   Future<void> remove(String id) async {

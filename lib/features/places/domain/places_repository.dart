@@ -1,6 +1,8 @@
 import 'nearby_branch.dart';
 import 'place.dart';
+import 'rating.dart';
 import 'report.dart';
+import 'review.dart';
 
 /// The user's saved places. Every method throws ApiException (core/network) on failure.
 abstract interface class PlacesRepository {
@@ -37,6 +39,28 @@ abstract interface class PlacesRepository {
 
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
   Future<BranchSuggestion> suggestBranch(String branchId);
+
+  /// Community rating; the response is the branch's fresh summary.
+  Future<RatingSummary> rateBranch(String branchId, int stars);
+
+  /// Removes the caller's rating; the response is the fresh summary.
+  Future<RatingSummary> clearRating(String branchId);
+
+  /// Writes/edits the optional review text with the caller's stars.
+  Future<({RatingSummary rating, Review? review})> saveReview(
+    String branchId,
+    int stars,
+    String text,
+  );
+
+  /// Removes only the review text; the rating stays.
+  Future<RatingSummary> removeReview(String branchId);
+
+  Future<ReviewPage> reviews(String branchId, {int offset = 0});
+
+  Future<ReviewVotes> voteReview(String reviewId, ReviewVote? vote);
+
+  Future<void> reportReview(String reviewId, ReviewReason reason, String? note);
 
   /// Takes the place off this user's map (the restaurant stays for others).
   Future<void> remove(String id);

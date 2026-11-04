@@ -20,8 +20,11 @@ class AccountPage extends StatefulWidget {
 class _AccountPageState extends State<AccountPage> {
   bool _sending = false;
 
-  void _snack(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  // Called after awaits: the page may be gone by then.
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
 
   Future<void> _resend() async {
     final l = AppLocalizations.of(context);
@@ -130,6 +133,11 @@ class _AccountPageState extends State<AccountPage> {
                   child: Text(l.ownerTitle),
                 ),
               NotebookRow(
+                mark: mark(Icons.info_outline),
+                onTap: () => context.push('/credits'),
+                child: Text(l.creditsTitle),
+              ),
+              NotebookRow(
                 mark: mark(Icons.logout, nb.margin),
                 onTap: () async {
                   final yes = await showNotebookDialog(
@@ -147,20 +155,6 @@ class _AccountPageState extends State<AccountPage> {
                     color: nb.margin,
                     fontWeight: FontWeight.w600,
                   ),
-                ),
-              ),
-              // Pins come from these open datasets; their licences ask for the credit.
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  24,
-                  20,
-                  16,
-                ),
-                child: Text(
-                  l.dataCredits,
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: nb.inkSoft),
                 ),
               ),
             ],

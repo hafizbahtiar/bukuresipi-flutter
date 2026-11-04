@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
@@ -12,6 +13,7 @@ import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
 import '../widgets/branch_edit_sheet.dart';
+import '../widgets/notebook_rating.dart';
 import '../widgets/place_report_sheet.dart';
 import '../widgets/unpinned_actions.dart';
 
@@ -45,8 +47,11 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     super.dispose();
   }
 
-  void _snack(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  // Called after awaits: the page may be gone by then.
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
 
   Future<void> _saveNote(Place place) async {
     final l = AppLocalizations.of(context);
@@ -90,7 +95,11 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     final l = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
     final places = context.read<PlacesController>();
-    if (!await _confirm(context, l.removeConfirm, l.remove)) return;
+    final hasRating = place.branches.any((b) => b.rating.mine != null);
+    final question = hasRating
+        ? '${l.removeConfirm}\n\n${l.removePlaceWithRatings}'
+        : l.removeConfirm;
+    if (!await _confirm(context, question, l.remove)) return;
     try {
       await places.remove(place.id);
       await navigator.maybePop();
@@ -335,6 +344,16 @@ class _BranchRow extends StatelessWidget {
           ),
           for (final n in notes)
             Text(n, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: NotebookRating(
+              rating: branch.rating,
+              onRate: (stars) =>
+                  context.read<PlacesController>().setRating(branch.id, stars),
+              onReviews: () => context.push('/branches/${branch.id}/reviews'),
+              hint: branch.rating.canRate ? null : l.ratingVerifyEmail,
+            ),
+          ),
           if (!branch.hasPin)
             Padding(
               padding: const EdgeInsets.only(top: 2),

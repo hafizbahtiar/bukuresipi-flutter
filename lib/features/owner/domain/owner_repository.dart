@@ -31,4 +31,11 @@ abstract interface class OwnerRepository {
     required String field,
     required bool apply,
   });
+
+  Future<List<ReviewReportGroup>> reviewReports();
+
+  Future<void> resolveReviewReport({
+    required String reviewId,
+    required bool hide,
+  });
 }

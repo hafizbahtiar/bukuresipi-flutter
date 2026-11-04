@@ -35,11 +35,16 @@ class SecureTokenStore implements TokenStore {
 
   @override
   Future<void> load() async {
-    final access = await _storage.read(key: _access);
-    final refresh = await _storage.read(key: _refresh);
-    _current = access != null && refresh != null
-        ? Tokens(access: access, refresh: refresh)
-        : null;
+    try {
+      final access = await _storage.read(key: _access);
+      final refresh = await _storage.read(key: _refresh);
+      _current = access != null && refresh != null
+          ? Tokens(access: access, refresh: refresh)
+          : null;
+    } catch (_) {
+      // Keystore cannot decrypt (data restored without its key): sign in again instead of failing every launch.
+      await clear().catchError((_) {});
+    }
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
@@ -9,9 +10,11 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/nearby_branch.dart';
 import '../../domain/place.dart';
+import '../../domain/rating.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
 import 'branch_edit_sheet.dart';
+import 'notebook_rating.dart';
 import 'place_report_sheet.dart';
 
 /// A nearby branch on a notebook sheet: where it is, how far, the post's halal claim, and Save.
@@ -21,6 +24,7 @@ class NearbySheet extends StatefulWidget {
     required this.place,
     required this.onSave,
     this.onEdited,
+    this.onRate,
   });
 
   final NearbyBranch place;
@@ -28,6 +32,9 @@ class NearbySheet extends StatefulWidget {
 
   /// Called after a branch edit so the map can reload its nearby list.
   final Future<void> Function()? onEdited;
+
+  /// The map can update its nearby row with the returned summary.
+  final Future<RatingSummary> Function(int? stars)? onRate;
 
   @override
   State<NearbySheet> createState() => _NearbySheetState();
@@ -106,77 +113,114 @@ class _NearbySheetState extends State<NearbySheet> {
       p.label,
       p.address,
     ].whereType<String>().where((s) => s.trim().isNotEmpty).toList();
-    return ListView(
-      shrinkWrap: true,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
-          child: Text(
-            p.name,
-            style: text.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              height: 1.15,
-            ),
-          ),
-        ),
-        NotebookRow(
-          mark: Icon(Icons.place_outlined, size: 20, color: nb.pandanDeep),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
             children: [
-              for (final line in where)
-                Text(
-                  line,
-                  style: text.bodyLarge?.copyWith(
-                    fontWeight: line == p.label
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                    color: line == p.label ? null : nb.inkSoft,
-                  ),
-                ),
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 10,
+                  0,
+                  20,
+                  8,
+                ),
                 child: Text(
-                  distanceText(p.distanceM),
-                  style: text.bodyMedium?.copyWith(
-                    color: nb.pandanDeep,
-                    fontWeight: FontWeight.w600,
+                  p.name,
+                  style: text.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
                   ),
                 ),
               ),
+              NotebookRow(
+                mark: Icon(
+                  Icons.place_outlined,
+                  size: 20,
+                  color: nb.pandanDeep,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final line in where)
+                      Text(
+                        line,
+                        style: text.bodyLarge?.copyWith(
+                          fontWeight: line == p.label
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: line == p.label ? null : nb.inkSoft,
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        distanceText(p.distanceM),
+                        style: text.bodyMedium?.copyWith(
+                          color: nb.pandanDeep,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              NotebookRow(
+                mark: Icon(
+                  Icons.star_outline_rounded,
+                  size: 20,
+                  color: nb.kunyit,
+                ),
+                child: NotebookRating(
+                  rating: p.rating,
+                  onRate:
+                      widget.onRate ??
+                      (stars) => context.read<PlacesController>().setRating(
+                        p.branchId,
+                        stars,
+                      ),
+                  onReviews: () =>
+                      context.push('/branches/${p.branchId}/reviews'),
+                  hint: p.saved ? l.ratingVerifyEmail : l.ratingSaveFirst,
+                ),
+              ),
+              if (p.halalClaim != null && p.halalQuote != null) ...[
+                NotebookHeading(l.halalTitle),
+                NotebookRow(
+                  mark: Icon(Icons.info_outline, size: 18, color: nb.kunyit),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '“${p.halalQuote}”',
+                        style: text.bodyLarge?.copyWith(
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      if (p.halalSourceUrl case final url?)
+                        TextButton.icon(
+                          onPressed: () =>
+                              openLink(context, url, failed: l.openFailed),
+                          icon: const Icon(Icons.open_in_new, size: 16),
+                          label: Text(l.halalSource),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      Text(
+                        l.halalNotCert,
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-        if (p.halalClaim != null && p.halalQuote != null) ...[
-          NotebookHeading(l.halalTitle),
-          NotebookRow(
-            mark: Icon(Icons.info_outline, size: 18, color: nb.kunyit),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '“${p.halalQuote}”',
-                  style: text.bodyLarge?.copyWith(fontStyle: FontStyle.italic),
-                ),
-                if (p.halalSourceUrl case final url?)
-                  TextButton.icon(
-                    onPressed: () =>
-                        openLink(context, url, failed: l.openFailed),
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    label: Text(l.halalSource),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                Text(
-                  l.halalNotCert,
-                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                ),
-              ],
-            ),
-          ),
-        ],
         Align(
           alignment: Alignment.centerRight,
           child: Padding(

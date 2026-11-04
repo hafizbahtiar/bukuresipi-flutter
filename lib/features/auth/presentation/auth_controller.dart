@@ -80,7 +80,10 @@ class AuthController extends ChangeNotifier {
 
   Future<void> verifyEmail(String token) async {
     await _repo.verifyEmail(token);
-    if (_status == AuthStatus.signedIn) await refreshUser();
+    // Verified already (the link is spent): a failed profile refresh must not turn that into an error.
+    if (_status == AuthStatus.signedIn) {
+      await refreshUser().catchError((Object _) {});
+    }
   }
 
   Future<void> resendVerification() async {

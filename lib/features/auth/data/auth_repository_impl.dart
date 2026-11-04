@@ -27,14 +27,6 @@ class AuthRepositoryImpl implements AuthRepository {
         : userFromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
-  Future<T> _call<T>(Future<T> Function() fn) async {
-    try {
-      return await fn();
-    } catch (e) {
-      throw ApiException.from(e);
-    }
-  }
-
   Future<User> _signedIn(Map<String, dynamic> body) async {
     await _tokens.save(Tokens.fromJson(body));
     return _remember(body['user'] as Map<String, dynamic>);
@@ -46,13 +38,13 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<User> me() => _call(
+  Future<User> me() => apiCall(
     () async => _remember((await _api.me())['user'] as Map<String, dynamic>),
   );
 
   @override
   Future<User> login(String email, String password) =>
-      _call(() async => _signedIn(await _api.login(email.trim(), password)));
+      apiCall(() async => _signedIn(await _api.login(email.trim(), password)));
 
   @override
   Future<User> register({
@@ -60,7 +52,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     String? name,
     required String lang,
-  }) => _call(
+  }) => apiCall(
     () async => _signedIn(
       await _api.register({
         'email': email.trim(),
@@ -90,21 +82,21 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> verifyEmail(String token) =>
-      _call(() => _api.verifyEmail(token));
+      apiCall(() => _api.verifyEmail(token));
 
   @override
-  Future<void> resendVerification() => _call(_api.resendVerification);
+  Future<void> resendVerification() => apiCall(_api.resendVerification);
 
   @override
   Future<void> forgotPassword(String email) =>
-      _call(() => _api.forgotPassword(email.trim()));
+      apiCall(() => _api.forgotPassword(email.trim()));
 
   @override
   Future<void> resetPassword(String token, String password) =>
-      _call(() => _api.resetPassword(token, password));
+      apiCall(() => _api.resetPassword(token, password));
 
   @override
-  Future<void> changePassword(String current, String next) => _call(
+  Future<void> changePassword(String current, String next) => apiCall(
     () async =>
         _tokens.save(Tokens.fromJson(await _api.changePassword(current, next))),
   );

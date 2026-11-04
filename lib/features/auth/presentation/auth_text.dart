@@ -29,6 +29,8 @@ String errorText(
     'email_unavailable' => l.errEmailUnavailable,
     'already_verified' => l.errAlreadyVerified,
     'daily_limit' => l.errReportDailyLimit,
+    'not_saved' => l.ratingNotSaved,
+    'email_unverified' => l.ratingVerifyEmail,
     'invalid_input' => l.errInvalidEmail,
     ApiException.network => l.errNetwork,
     _ => l.errUnknown,

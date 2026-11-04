@@ -11,16 +11,8 @@ class RecipesRepositoryImpl implements RecipesRepository {
 
   final Dio _dio;
 
-  Future<T> _call<T>(Future<T> Function() fn) async {
-    try {
-      return await fn();
-    } catch (e) {
-      throw ApiException.from(e);
-    }
-  }
-
   @override
-  Future<List<Recipe>> list() => _call(() async {
+  Future<List<Recipe>> list() => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/recipes')).data!;
     final rows = data['recipes'] as List;
     final recipes = <Recipe>[];
@@ -36,14 +28,14 @@ class RecipesRepositoryImpl implements RecipesRepository {
   });
 
   @override
-  Future<RecipeDetail> get(String id) => _call(() async {
+  Future<RecipeDetail> get(String id) => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/recipes/$id')).data!;
     return recipeDetailFromJson(data);
   });
 
   @override
   Future<void> delete(String id) =>
-      _call(() => _dio.delete<void>('/recipes/$id'));
+      apiCall(() => _dio.delete<void>('/recipes/$id'));
 }
 
 List<String> _missing(Object? v) => [

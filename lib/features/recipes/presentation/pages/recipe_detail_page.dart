@@ -51,8 +51,11 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     }
   }
 
-  void _snack(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  // Called after awaits: the page may be gone by then.
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
 
   Future<void> _remove(RecipeDetail recipe) async {
     final l = AppLocalizations.of(context);

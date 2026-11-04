@@ -1,6 +1,7 @@
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/nearby_sheet.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -83,6 +84,54 @@ void main() {
     expect(find.text('open'), findsOneWidget);
   });
 
+  testWidgets('a saved nearby branch can be rated from the sheet', (t) async {
+    final repo = FakePlaces()
+      ..ratingResult = const RatingSummary(
+        average: 4.3,
+        count: 7,
+        mine: 4,
+        canRate: true,
+      );
+    final controller = PlacesController(repo);
+    await controller.load();
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: controller)],
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showNotebookSheet<void>(
+                  context,
+                  builder: (_) => NearbySheet(
+                    place: nearbyBranch(
+                      saved: true,
+                      rating: const RatingSummary(
+                        average: 4.3,
+                        count: 7,
+                        canRate: true,
+                      ),
+                    ),
+                    onSave: () async {},
+                    onRate: (stars) => controller.setRating('b-1', stars),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('open'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('rating-star-4')));
+    await t.pumpAndSettle();
+
+    expect(repo.ratingCalls, [('b-1', 4)]);
+    expect(find.text('Your rating: 4'), findsOneWidget);
+  });
+
   testWidgets(
     'the nearby sheet shows the branch, distance and halal, then saves',
     (t) async {
@@ -121,6 +170,7 @@ void main() {
       expect(find.text('Jalan Telawi'), findsOneWidget);
       expect(find.text('2.4 km'), findsOneWidget);
       expect(find.textContaining('Halal ya'), findsOneWidget);
+      expect(find.text('Save this place to rate it.'), findsOneWidget);
 
       await t.tap(find.text('Save'));
       await t.pumpAndSettle();
