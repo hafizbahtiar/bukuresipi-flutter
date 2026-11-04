@@ -40,6 +40,10 @@ class RecipesRepositoryImpl implements RecipesRepository {
     final data = (await _dio.get<Map<String, dynamic>>('/recipes/$id')).data!;
     return recipeDetailFromJson(data);
   });
+
+  @override
+  Future<void> delete(String id) =>
+      _call(() => _dio.delete<void>('/recipes/$id'));
 }
 
 List<String> _missing(Object? v) => [

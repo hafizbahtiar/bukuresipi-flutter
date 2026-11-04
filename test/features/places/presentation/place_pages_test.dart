@@ -1,5 +1,6 @@
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
+import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -144,6 +145,21 @@ void main() {
     },
   );
 
+  testWidgets(
+    'the place links to the post the user shared, when there is one',
+    (t) async {
+      repo = FakePlaces()
+        ..places = [
+          place(id: 'a', sourceUrl: 'https://www.tiktok.com/@makan/video/2'),
+          place(id: 'b'),
+        ];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      expect(find.text('Open your post'), findsOneWidget);
+      await pump(t, const PlaceDetailPage(id: 'b'));
+      expect(find.text('Open your post'), findsNothing);
+    },
+  );
+
   testWidgets('no claim, no halal section', (t) async {
     repo = FakePlaces()..places = [place(id: 'a', halal: null)];
     await pump(t, const PlaceDetailPage(id: 'a'));
@@ -190,6 +206,94 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Delete'));
     await t.pumpAndSettle();
     expect(repo.deletedBranches, ['b-1']);
+  });
+
+  testWidgets('the owner edits a branch from the place page', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    expect(find.byTooltip('Edit branch'), findsOneWidget);
+
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.text('This branch is shared by every user.'), findsOneWidget);
+
+    await t.enterText(find.byKey(const ValueKey('branch-label')), 'Kedai Baru');
+    await t.enterText(
+      find.byKey(const ValueKey('branch-address')),
+      'Jalan Baru',
+    );
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.label, 'Kedai Baru');
+    expect(repo.branchUpdates.single.address, 'Jalan Baru');
+    expect(repo.branchUpdates.single.lat, isNull);
+    expect(repo.branchUpdates.single.lng, isNull);
+    expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
+  });
+
+  testWidgets('a user can edit a branch for themselves only', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.text('Only you will see these changes.'), findsOneWidget);
+    expect(find.text('Who sees this edit?'), findsNothing);
+
+    await t.enterText(find.byKey(const ValueKey('branch-label')), 'My Kedai');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.label, 'My Kedai');
+    expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+    expect(find.text('Saved for you.'), findsOneWidget);
+  });
+
+  testWidgets('the owner can choose Just me before saving', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.text('Who sees this edit?'), findsOneWidget);
+
+    await t.tap(find.text('Just me'));
+    await t.pumpAndSettle();
+    expect(find.text('Only you will see these changes.'), findsOneWidget);
+    await t.enterText(find.byKey(const ValueKey('branch-label')), 'Owner only');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+  });
+
+  testWidgets('the owner can type coordinates instead of using the map', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+
+    final lat = find.byKey(const ValueKey('branch-lat'));
+    final lng = find.byKey(const ValueKey('branch-lng'));
+    await t.ensureVisible(lat);
+    await t.enterText(lat, '2.991234');
+    await t.ensureVisible(lng);
+    await t.enterText(lng, '101.791234');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.lat, 2.991234);
+    expect(repo.branchUpdates.single.lng, 101.791234);
   });
 
   testWidgets('the owner can check a restaurant\'s branches; users cannot', (

@@ -50,4 +50,11 @@ class RecipesController extends ChangeNotifier {
 
   /// Throws ApiException; the detail page shows it.
   Future<RecipeDetail> detail(String id) => _repo.get(id);
+
+  /// Throws ApiException; the detail page shows it.
+  Future<void> remove(String id) async {
+    await _repo.delete(id);
+    _recipes = _recipes.where((r) => r.id != id).toList();
+    notifyListeners();
+  }
 }

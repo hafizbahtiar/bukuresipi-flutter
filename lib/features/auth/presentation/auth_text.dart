@@ -28,6 +28,7 @@ String errorText(
     'rate_limited' => l.errRateLimited,
     'email_unavailable' => l.errEmailUnavailable,
     'already_verified' => l.errAlreadyVerified,
+    'daily_limit' => l.errReportDailyLimit,
     'invalid_input' => l.errInvalidEmail,
     ApiException.network => l.errNetwork,
     _ => l.errUnknown,

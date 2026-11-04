@@ -29,9 +29,11 @@ class FakeOwner implements OwnerRepository {
   );
   List<OwnerUser> users = [];
   List<FailedShare> shares = [];
+  List<ReportTicket> tickets = [];
   final queries = <String?>[];
   final loggedOut = <String>[];
   final meterUpdates = <(String, int?, String?, bool?)>[];
+  final resolved = <(String, String, bool)>[];
 
   @override
   Future<OwnerStats> getStats() async => stats;
@@ -69,4 +71,18 @@ class FakeOwner implements OwnerRepository {
 
   @override
   Future<List<FailedShare>> failedShares() async => shares;
+
+  @override
+  Future<List<ReportTicket>> reports({String status = 'open'}) async =>
+      tickets.where((t) => t.status == status).toList();
+
+  @override
+  Future<void> resolveReport({
+    required String targetType,
+    required String targetId,
+    required String field,
+    required bool apply,
+  }) async {
+    resolved.add((targetId, field, apply));
+  }
 }

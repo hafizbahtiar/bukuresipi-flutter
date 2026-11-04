@@ -26,6 +26,15 @@ void main() {
     expect(controller.loaded, isTrue);
   });
 
+  test('remove deletes it and takes it off the list', () async {
+    final repo = FakeRecipes()..recipes = [recipe(id: 'a'), recipe(id: 'b')];
+    final controller = RecipesController(repo);
+    await controller.load();
+    await controller.remove('a');
+    expect(repo.deleted, ['a']);
+    expect(controller.recipes.map((r) => r.id), ['b']);
+  });
+
   test('clear empties the list for the next user', () async {
     final controller = RecipesController(FakeRecipes()..recipes = [recipe()]);
     await controller.load();

@@ -13,6 +13,7 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/verify_email_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
+import '../../features/owner/presentation/pages/owner_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_shares_page.dart';
 import '../../features/owner/presentation/pages/owner_users_page.dart';
 import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
@@ -107,6 +108,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
         routes: [
           _page(path: 'users', builder: (_, _) => const OwnerUsersPage()),
           _page(path: 'shares', builder: (_, _) => const OwnerSharesPage()),
+          _page(path: 'reports', builder: (_, _) => const OwnerReportsPage()),
         ],
       ),
     ],

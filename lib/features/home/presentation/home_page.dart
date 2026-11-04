@@ -57,7 +57,9 @@ class _HomePageState extends State<HomePage> {
         children: [
           const PlacesListPage(),
           // The map (a native view, network tiles) is built only once the tab is opened.
-          _mapOpened ? const PlacesMapPage() : const SizedBox.shrink(),
+          _mapOpened
+              ? PlacesMapPage(active: _tab == 1)
+              : const SizedBox.shrink(),
           const AccountPage(),
         ],
       ),

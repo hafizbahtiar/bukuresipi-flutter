@@ -40,6 +40,7 @@ void main() {
       expect(places.map((p) => p.id), ['p-1', 'p-0']);
       final p = places.first;
       expect(p.restaurant.name, 'Nasi Kandar Pelita');
+      expect(p.sourceUrl, 'https://www.tiktok.com/@makan/video/1');
       expect(p.savedBranch?.label, 'Pelita Jalan Ampang');
       expect(p.pins.map((b) => b.id), [
         'b-2',
@@ -47,6 +48,48 @@ void main() {
       expect(p.createdAt.isUtc, isTrue);
     },
   );
+
+  test('nearby sends the point and radius, and reads the branches', () async {
+    final repo = make(
+      (o) => o.path == '/places/nearby'
+          ? (
+              200,
+              {
+                'branches': [nearbyBranchJson],
+              },
+            )
+          : (200, {}),
+    );
+    final rows = await repo.nearby(3.15, 101.71, 5);
+    expect(adapter.requests.single.path, '/places/nearby');
+    expect(adapter.requests.single.queryParameters, {
+      'lat': 3.15,
+      'lng': 101.71,
+      'km': 5.0,
+    });
+    expect(rows.single.branchId, 'b-1');
+    expect(rows.single.distanceM, 2400);
+    expect(rows.single.saved, isFalse);
+  });
+
+  test('saveBranch POSTs the id and reads the place', () async {
+    final repo = make((_) => (200, placeJson));
+    final saved = await repo.saveBranch('b-2');
+    expect(
+      [
+        adapter.requests.single.method,
+        adapter.requests.single.path,
+        adapter.requests.single.data,
+      ],
+      [
+        'POST',
+        '/places',
+        {'branchId': 'b-2'},
+      ],
+    );
+    expect(saved.restaurant.name, 'Nasi Kandar Pelita');
+    expect(saved.branchId, 'b-2');
+  });
 
   test('note: PATCH with null for empty; remove: DELETE', () async {
     final repo = make((_) => (200, {'ok': true}));
@@ -111,6 +154,30 @@ void main() {
     );
     final b = (await repo.list()).single.branches.last;
     expect([b.pinSource, b.pinnedByUser], ['user', isTrue]);
+  });
+
+  test('owner branch edit: PATCH text and optional coordinates', () async {
+    final repo = make((_) => (200, {}));
+    await repo.updateBranch(
+      'b-1',
+      label: 'Kedai Baru',
+      address: null,
+      city: 'Bangi',
+      state: null,
+      lat: 2.99,
+      lng: 101.79,
+    );
+    final request = adapter.requests.single;
+    expect([request.method, request.path], ['PATCH', '/places/branches/b-1']);
+    expect(request.data, {
+      'label': 'Kedai Baru',
+      'address': null,
+      'city': 'Bangi',
+      'state': null,
+      'lat': 2.99,
+      'lng': 101.79,
+      'scope': 'self',
+    });
   });
 
   test(

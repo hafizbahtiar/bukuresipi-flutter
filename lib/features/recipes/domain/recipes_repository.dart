@@ -6,4 +6,7 @@ abstract interface class RecipesRepository {
   Future<List<Recipe>> list();
 
   Future<RecipeDetail> get(String id);
+
+  /// Takes the recipe off this user's book.
+  Future<void> delete(String id);
 }

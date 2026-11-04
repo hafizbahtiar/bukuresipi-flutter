@@ -5,6 +5,8 @@ class OwnerStats {
     required this.sharesToday,
     required this.failedToday,
     required this.meters,
+    this.reportsOpen = 0,
+    this.reportsReady = 0,
   });
 
   final int usersTotal;
@@ -15,13 +17,73 @@ class OwnerStats {
   final int failedToday;
   final List<Meter> meters;
 
+  /// Community report tickets: open, and open ones that reached the threshold.
+  final int reportsOpen;
+  final int reportsReady;
+
   OwnerStats withMeter(Meter m) => OwnerStats(
     usersTotal: usersTotal,
     usersNewThisWeek: usersNewThisWeek,
     sharesToday: sharesToday,
     failedToday: failedToday,
     meters: [for (final x in meters) x.code == m.code ? m : x],
+    reportsOpen: reportsOpen,
+    reportsReady: reportsReady,
   );
+}
+
+class ReportValue {
+  const ReportValue({this.lat, this.lng, this.value});
+
+  final double? lat;
+  final double? lng;
+  final String? value;
+
+  String get label {
+    if (lat != null && lng != null) {
+      return '${lat!.toStringAsFixed(6)}, ${lng!.toStringAsFixed(6)}';
+    }
+    return value ?? '—';
+  }
+}
+
+/// One owner report ticket: open, or closed as applied/rejected.
+class ReportTicket {
+  const ReportTicket({
+    required this.targetType,
+    required this.targetId,
+    required this.targetName,
+    required this.field,
+    required this.count,
+    required this.threshold,
+    required this.status,
+    required this.ready,
+    required this.updatedAt,
+    this.targetLabel,
+    this.current = const ReportValue(),
+    this.proposed,
+    this.latestNote,
+    this.verifiedAt,
+  });
+
+  final String targetType;
+  final String targetId;
+  final String targetName;
+  final String? targetLabel;
+  final String field;
+  final int count;
+  final int threshold;
+  final ReportValue current;
+  final ReportValue? proposed;
+  final String status;
+  final bool ready;
+  final String? latestNote;
+  final DateTime? verifiedAt;
+  final DateTime updatedAt;
+
+  String get title => targetLabel == null || targetLabel == targetName
+      ? targetName
+      : '$targetName · $targetLabel';
 }
 
 /// One outside service (system_subscription): calls this month vs. the cap. Off or at the cap = calls refused.

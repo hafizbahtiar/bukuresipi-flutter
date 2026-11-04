@@ -38,6 +38,37 @@ void main() {
     expect(c.byId('a')?.note, 'Order the ayam goreng');
   });
 
+  test(
+    'nearby passes the point through; saveBranch saves then reloads',
+    () async {
+      final repo = FakePlaces()..nearbyResults = [nearbyBranch()];
+      final c = PlacesController(repo);
+      await c.load();
+      final rows = await c.nearby(3.15, 101.71, 5);
+      expect(rows.single.branchId, 'b-1');
+      expect(repo.nearbyCalls.single, (3.15, 101.71, 5.0));
+
+      repo.places = [place(id: 'p')];
+      repo.saveBranchResult = place(id: 'p');
+      final saved = await c.saveBranch('b-1');
+      expect(saved.id, 'p');
+      expect(repo.savedBranches, ['b-1']);
+      expect(c.places.map((p) => p.id), ['p']);
+    },
+  );
+
+  test('owner branch edit saves then reloads the places', () async {
+    final repo = FakePlaces()..places = [place(id: 'a')];
+    final c = PlacesController(repo);
+    await c.load();
+    repo.places = [place(id: 'a', name: 'Kedai Baru')];
+    await c.updateBranch('b-1', label: 'Kedai Baru', lat: 2.99, lng: 101.79);
+    expect(repo.branchUpdates.single.id, 'b-1');
+    expect(repo.branchUpdates.single.label, 'Kedai Baru');
+    expect(repo.branchUpdates.single.lat, 2.99);
+    expect(c.places.single.restaurant.name, 'Kedai Baru');
+  });
+
   test('clear forgets the last user\'s places (sign-out)', () async {
     final c = PlacesController(FakePlaces()..places = [place(id: 'a')]);
     await c.load();

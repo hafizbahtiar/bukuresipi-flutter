@@ -98,6 +98,12 @@ class _OwnerPageState extends State<OwnerPage> {
                       warn: s.failedToday > 0,
                       onTap: () => context.push('/owner/shares'),
                     ),
+                    _Ledger(
+                      label: l.ownerReports,
+                      value: s.reportsOpen,
+                      note: l.ownerReportReadyCount(s.reportsReady),
+                      onTap: () => context.push('/owner/reports'),
+                    ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
                         notebookGutter + 10,

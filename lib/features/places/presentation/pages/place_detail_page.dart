@@ -9,7 +9,10 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/place.dart';
+import '../../domain/report.dart';
 import '../places_controller.dart';
+import '../widgets/branch_edit_sheet.dart';
+import '../widgets/place_report_sheet.dart';
 import '../widgets/unpinned_actions.dart';
 
 /// One saved place as a notebook page; its actions (directions, save note, check branches, remove) float in a dock.
@@ -74,6 +77,14 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
       if (mounted) setState(() => _checking = false);
     }
   }
+
+  Future<void> _report(Place place) => showNotebookSheet<void>(
+    context,
+    builder: (_) => PlaceReportSheet(
+      subject: ReportSubject.fromPlace(place),
+      onSubmit: (draft) => context.read<PlacesController>().report(draft),
+    ),
+  );
 
   Future<void> _remove(Place place) async {
     final l = AppLocalizations.of(context);
@@ -143,6 +154,11 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
               busy: _checking,
             ),
           DockAction(
+            icon: Icons.flag_outlined,
+            label: l.report,
+            onPressed: () => _report(place),
+          ),
+          DockAction(
             icon: Icons.delete_outline,
             label: l.remove,
             tooltip: l.removePlace,
@@ -173,6 +189,17 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                       child: Text(
                         r.cuisine!,
                         style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                      ),
+                    ),
+                  if (place.sourceUrl case final url?)
+                    TextButton.icon(
+                      onPressed: () =>
+                          openLink(context, url, failed: l.openFailed),
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: Text(l.openYourPost),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
                       ),
                     ),
                 ],
@@ -221,6 +248,25 @@ class _BranchRow extends StatelessWidget {
   final bool fromPost;
   final bool owner;
 
+  Future<void> _edit(BuildContext context) => showNotebookSheet<void>(
+    context,
+    builder: (_) => BranchEditSheet(
+      placeId: place.id,
+      branch: branch,
+      canEditShared: owner,
+      onSave: (edit, scope) => context.read<PlacesController>().updateBranch(
+        branch.id,
+        label: edit.label,
+        address: edit.address,
+        city: edit.city,
+        state: edit.state,
+        lat: edit.lat,
+        lng: edit.lng,
+        scope: scope,
+      ),
+    ),
+  );
+
   Future<void> _delete(BuildContext context) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -248,17 +294,27 @@ class _BranchRow extends StatelessWidget {
       ?branch.where,
       if (!branch.hasPin) l.noPin,
       if (branch.pinnedByUser) l.pinnedByUser,
+      if (branch.pinnedByOwner) l.pinnedByOwner,
       if (fromPost) l.fromYourPost,
     ];
     return NotebookRow(
       mark: PinMark(pinned: branch.hasPin),
-      trailing: owner
-          ? IconButton(
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: l.editBranch,
+            icon: Icon(Icons.edit_outlined, color: nb.inkSoft),
+            onPressed: () => _edit(context),
+          ),
+          if (owner)
+            IconButton(
               tooltip: l.deleteBranch,
               icon: Icon(Icons.delete_outline, color: nb.inkSoft),
               onPressed: () => _delete(context),
-            )
-          : null,
+            ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
