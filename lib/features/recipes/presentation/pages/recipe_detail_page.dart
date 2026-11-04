@@ -5,6 +5,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/recipe.dart';
@@ -50,6 +51,29 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     }
   }
 
+  void _snack(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _remove(RecipeDetail recipe) async {
+    final l = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final recipes = context.read<RecipesController>();
+    if (!await showNotebookDialog(
+      context,
+      message: l.recipeRemoveConfirm,
+      tone: DialogTone.danger,
+      confirmLabel: l.remove,
+    )) {
+      return;
+    }
+    try {
+      await recipes.remove(recipe.id);
+      await navigator.maybePop();
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -83,23 +107,26 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     return Scaffold(
       appBar: AppBar(),
       extendBody: true,
-      bottomNavigationBar: source == null
-          ? null
-          : ActionDock(
-              actions: [
-                DockAction(
-                  icon: Icons.open_in_new,
-                  label: l.recipeOpenSource,
-                  onPressed: () =>
-                      openLink(context, source, failed: l.openFailed),
-                ),
-              ],
+      bottomNavigationBar: ActionDock(
+        actions: [
+          if (source case final url?)
+            DockAction(
+              icon: Icons.open_in_new,
+              label: l.recipeOpenSource,
+              onPressed: () => openLink(context, url, failed: l.openFailed),
             ),
+          DockAction(
+            icon: Icons.delete_outline,
+            label: l.remove,
+            tooltip: l.recipeRemove,
+            danger: true,
+            onPressed: () => _remove(recipe),
+          ),
+        ],
+      ),
       body: NotebookPage(
         child: ListView(
-          padding: EdgeInsets.only(
-            bottom: source == null ? 24 : ActionDock.clearance,
-          ),
+          padding: const EdgeInsets.only(bottom: ActionDock.clearance),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
@@ -119,7 +146,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                 ),
               ),
-            NotebookHeading(l.recipeIngredients),
+            // No heading over an empty section: a post with no steps shows ingredients only.
+            if (recipe.ingredients.isNotEmpty)
+              NotebookHeading(l.recipeIngredients),
             for (final i in recipe.ingredients)
               NotebookRow(
                 mark: Container(
@@ -143,7 +172,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   ),
                 ),
               ),
-            NotebookHeading(l.recipeSteps),
+            if (recipe.steps.isNotEmpty) NotebookHeading(l.recipeSteps),
             for (final s in recipe.steps)
               NotebookRow(
                 mark: Text(

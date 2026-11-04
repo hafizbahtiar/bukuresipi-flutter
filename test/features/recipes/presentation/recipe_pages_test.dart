@@ -33,9 +33,18 @@ Widget app({
 );
 
 void main() {
-  testWidgets('the book lists recipes under the places', (t) async {
-    final places = PlacesController(FakePlaces());
-    final recipes = RecipesController(FakeRecipes()..recipes = [recipe()]);
+  testWidgets('the book lists places and recipes together, newest first', (
+    t,
+  ) async {
+    // Place from 2026-11-02 (fixture), recipe from the day after: the recipe comes first.
+    final places = PlacesController(FakePlaces()..places = [place(id: 'p')]);
+    final recipes = RecipesController(
+      FakeRecipes()
+        ..recipes = [
+          recipe(),
+          recipe(id: 'r-2', name: 'Ayam Rebus Pedas', stepCount: 0),
+        ],
+    );
     final recent = RecentShares(FakeShares(), onFinished: () async {});
     await places.load();
     await recipes.load();
@@ -52,9 +61,13 @@ void main() {
     );
     await t.pump();
 
-    expect(find.text('Recipes'), findsOneWidget);
-    expect(find.text('Nasi Lemak Ayam'), findsOneWidget);
+    expect(find.text('Recipes'), findsNothing, reason: 'no separate section');
+    expect(find.byIcon(Icons.storefront), findsOneWidget);
+    expect(find.byIcon(Icons.menu_book), findsNWidgets(2));
     expect(find.text('2 ingredients · 2 steps'), findsOneWidget);
+    expect(find.text('2 ingredients'), findsOneWidget, reason: 'no "0 steps"');
+    double y(String s) => t.getTopLeft(find.text(s)).dy;
+    expect(y('Nasi Lemak Ayam'), lessThan(y('Nasi Kandar Pelita')));
   });
 
   testWidgets('the recipe page shows its ingredients, steps and missing note', (
@@ -77,6 +90,79 @@ void main() {
     expect(find.textContaining('sedikit bahan rahsia'), findsOneWidget);
     expect(find.text('Goreng ayam hingga masak.'), findsOneWidget);
     expect(find.text('Open video'), findsOneWidget);
+  });
+
+  testWidgets('a recipe with no steps shows no Steps heading', (t) async {
+    final recipes = RecipesController(
+      FakeRecipes()..detailResult = recipeDetail(steps: const []),
+    );
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(find.text('Ingredients'), findsOneWidget);
+    expect(find.text('Steps'), findsNothing);
+  });
+
+  testWidgets('a recipe is removed only after confirming', (t) async {
+    final fake = FakeRecipes()
+      ..recipes = [recipe()]
+      ..detailResult = recipeDetail();
+    final recipes = RecipesController(fake);
+    await recipes.load();
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    await t.tap(find.byTooltip('Remove from my book'));
+    await t.pumpAndSettle();
+    expect(fake.deleted, isEmpty);
+    await t.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await t.pumpAndSettle();
+    expect(fake.deleted, ['r-1']);
+    expect(recipes.recipes, isEmpty);
+  });
+
+  testWidgets('a recipe load error shows a notice while places still list', (
+    t,
+  ) async {
+    final places = PlacesController(FakePlaces()..places = [place(id: 'p')]);
+    final fake = FakeRecipes()..error = const ApiException('network');
+    final recipes = RecipesController(fake);
+    final recent = RecentShares(FakeShares(), onFinished: () async {});
+    await places.load();
+    await recipes.load();
+
+    await t.pumpWidget(
+      app(
+        providers: [
+          ChangeNotifierProvider.value(value: places),
+          ChangeNotifierProvider.value(value: recipes),
+          ChangeNotifierProvider.value(value: recent),
+        ],
+        home: const PlacesListPage(),
+      ),
+    );
+    await t.pump();
+
+    expect(find.text('Nasi Kandar Pelita'), findsOneWidget);
+    expect(find.text('Could not load your recipes.'), findsOneWidget);
+
+    fake
+      ..error = null
+      ..recipes = [recipe()];
+    await t.tap(find.text('Try again'));
+    await t.pumpAndSettle();
+    expect(find.text('Could not load your recipes.'), findsNothing);
+    expect(find.text('Nasi Lemak Ayam'), findsOneWidget);
   });
 
   testWidgets('a recipe that is gone says so', (t) async {

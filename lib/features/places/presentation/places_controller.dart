@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
 import '../domain/places_repository.dart';
+import '../domain/report.dart';
 
 /// The user's places for the Book list, the map and the detail page. Kept after a failed reload (shown with [error]).
 class PlacesController extends ChangeNotifier {
@@ -92,10 +94,48 @@ class PlacesController extends ChangeNotifier {
     await load();
   }
 
+  /// Throws ApiException; reloads the places so the caller's screens see the personal or shared edit.
+  Future<void> updateBranch(
+    String branchId, {
+    String? label,
+    String? address,
+    String? city,
+    String? state,
+    double? lat,
+    double? lng,
+    BranchEditScope scope = BranchEditScope.personal,
+  }) async {
+    await _repo.updateBranch(
+      branchId,
+      label: label,
+      address: address,
+      city: city,
+      state: state,
+      lat: lat,
+      lng: lng,
+      scope: scope,
+    );
+    await load();
+  }
+
   /// Throws ApiException; the screen shows it.
   Future<void> remove(String id) async {
     await _repo.remove(id);
     _places = _places.where((p) => p.id != id).toList();
     notifyListeners();
   }
+
+  /// Throws ApiException; the map keeps its last result.
+  Future<List<NearbyBranch>> nearby(double lat, double lng, double km) =>
+      _repo.nearby(lat, lng, km);
+
+  /// Saves a branch's restaurant, then reloads the saved places for the map.
+  Future<Place> saveBranch(String branchId) async {
+    final place = await _repo.saveBranch(branchId);
+    await load();
+    return place;
+  }
+
+  /// Throws ApiException; the sheet shows it.
+  Future<void> report(ReportDraft draft) => _repo.report(draft);
 }

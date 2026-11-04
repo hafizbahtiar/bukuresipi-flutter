@@ -77,6 +77,15 @@ void main() {
     expect(detail.steps.single.instruction, 'Goreng ayam hingga masak.');
   });
 
+  test('delete removes the recipe', () async {
+    final repo = make((_) => (204, null));
+    await repo.delete('r-1');
+    expect(
+      [adapter.requests.single.method, adapter.requests.single.path],
+      ['DELETE', '/recipes/r-1'],
+    );
+  });
+
   test('a missing recipe is an ApiException with its code', () async {
     final repo = make((_) => (404, {'error': 'not_found'}));
     await expectLater(

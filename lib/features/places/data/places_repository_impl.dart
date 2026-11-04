@@ -3,8 +3,10 @@ import 'package:dio/dio.dart';
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
+import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
 import '../domain/places_repository.dart';
+import '../domain/report.dart';
 
 class PlacesRepositoryImpl implements PlacesRepository {
   PlacesRepositoryImpl(this._dio);
@@ -81,11 +83,91 @@ class PlacesRepositoryImpl implements PlacesRepository {
       _call(() => _dio.delete<void>('/places/branches/$branchId'));
 
   @override
+  Future<void> updateBranch(
+    String branchId, {
+    String? label,
+    String? address,
+    String? city,
+    String? state,
+    double? lat,
+    double? lng,
+    BranchEditScope scope = BranchEditScope.personal,
+  }) => _call(
+    () => _dio.patch<void>(
+      '/places/branches/$branchId',
+      data: {
+        'label': label,
+        'address': address,
+        'city': city,
+        'state': state,
+        'lat': ?lat,
+        'lng': ?lng,
+        'scope': scope == BranchEditScope.shared ? 'owner' : 'self',
+      },
+    ),
+  );
+
+  @override
   Future<void> remove(String id) =>
       _call(() => _dio.delete<void>('/places/$id'));
+
+  @override
+  Future<List<NearbyBranch>> nearby(double lat, double lng, double km) => _call(
+    () async {
+      final data = (await _dio.get<Map<String, dynamic>>(
+        '/places/nearby',
+        queryParameters: {'lat': lat, 'lng': lng, 'km': km},
+      )).data!;
+      return [
+        for (final j in (data['branches'] as List).cast<Map<String, dynamic>>())
+          nearbyBranchFromJson(j),
+      ];
+    },
+  );
+
+  @override
+  Future<void> report(ReportDraft draft) => _call(
+    () => _dio.post<void>(
+      '/places/reports',
+      data: {
+        'target': {'type': draft.target.name, 'id': draft.targetId},
+        'field': draft.field.name,
+        'lat': ?draft.lat,
+        'lng': ?draft.lng,
+        'value': ?draft.value,
+        'note': ?draft.note,
+      },
+    ),
+  );
+
+  @override
+  Future<Place> saveBranch(String branchId) => _call(() async {
+    final data = (await _dio.post<Map<String, dynamic>>(
+      '/places',
+      data: {'branchId': branchId},
+    )).data!;
+    return placeFromJson(data);
+  });
 }
 
 double? _num(Object? v) => v is num ? v.toDouble() : null;
+
+NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
+  branchId: j['branchId'] as String,
+  restaurantId: j['restaurantId'] as String,
+  name: j['name'] as String,
+  label: j['label'] as String?,
+  address: j['address'] as String?,
+  lat: (j['lat'] as num).toDouble(),
+  lng: (j['lng'] as num).toDouble(),
+  distanceM: (j['distanceM'] as num).toInt(),
+  cuisine: j['cuisine'] as String?,
+  halalClaim: j['halalClaim'] as String?,
+  halalQuote: j['halalQuote'] as String?,
+  halalSourceUrl: j['halalSourceUrl'] as String?,
+  saved: j['saved'] as bool,
+  placeId: j['placeId'] as String?,
+);
 
 Place placeFromJson(Map<String, dynamic> j) {
   final r = j['restaurant'] as Map<String, dynamic>;
@@ -94,6 +176,7 @@ Place placeFromJson(Map<String, dynamic> j) {
     note: j['note'] as String?,
     createdAt: dbTime(j['createdAt'] as String),
     branchId: j['branchId'] as String?,
+    sourceUrl: j['sourceUrl'] as String?,
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
       name: r['name'] as String,

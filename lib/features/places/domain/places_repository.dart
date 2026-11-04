@@ -1,4 +1,6 @@
+import 'nearby_branch.dart';
 import 'place.dart';
+import 'report.dart';
 
 /// The user's saved places. Every method throws ApiException (core/network) on failure.
 abstract interface class PlacesRepository {
@@ -20,6 +22,28 @@ abstract interface class PlacesRepository {
   /// Owner only: removes the branch for every user.
   Future<void> deleteBranch(String branchId);
 
+  /// Edits a branch. [scope] personal keeps it private; shared is owner-only and claims new coordinates
+  /// as 'owner'. Passing [lat]/[lng] moves the pin in that scope.
+  Future<void> updateBranch(
+    String branchId, {
+    String? label,
+    String? address,
+    String? city,
+    String? state,
+    double? lat,
+    double? lng,
+    BranchEditScope scope = BranchEditScope.personal,
+  });
+
   /// Takes the place off this user's map (the restaurant stays for others).
   Future<void> remove(String id);
+
+  /// Pinned branches within [km] of a point (the phone's fix), nearest first.
+  Future<List<NearbyBranch>> nearby(double lat, double lng, double km);
+
+  /// Saves an existing branch's restaurant to this user's map.
+  Future<Place> saveBranch(String branchId);
+
+  /// Community suggestion; saved as an open ticket for the owner to verify.
+  Future<void> report(ReportDraft draft);
 }

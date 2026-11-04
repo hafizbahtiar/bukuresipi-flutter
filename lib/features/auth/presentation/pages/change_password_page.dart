@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
+import '../widgets/auth_cover.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/new_password_fields.dart';
 
@@ -56,8 +58,24 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return AuthScaffold(
-      title: l.changePasswordTitle,
+    void toAccount() {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/account');
+      }
+    }
+
+    return AuthCover(
+      kicker: l.changePasswordTitle,
+      showBack: true,
+      onBack: toAccount,
+      footer: CoverLink(
+        label: l.backToAccount,
+        onPressed: toAccount,
+        icon: Icons.arrow_back,
+        iconBefore: true,
+      ),
       children: [
         if (_done)
           FormMessage(l.changePasswordDone, success: true)

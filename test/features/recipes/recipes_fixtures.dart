@@ -40,39 +40,42 @@ Recipe recipe({
 }) => Recipe(
   id: id,
   name: name,
-  createdAt: DateTime.utc(2026, 11, 2),
+  createdAt: DateTime.utc(2026, 11, 3),
   sourceUrl: 'https://www.tiktok.com/@makan/video/1',
   missing: missing,
   ingredientCount: ingredientCount,
   stepCount: stepCount,
 );
 
-RecipeDetail recipeDetail({List<String> missing = const ['steps']}) =>
-    RecipeDetail(
-      id: 'r-1',
-      name: 'Nasi Lemak Ayam',
-      createdAt: DateTime.utc(2026, 11, 2),
-      sourceUrl: 'https://www.tiktok.com/@makan/video/1',
-      missing: missing,
-      ingredients: const [
-        RecipeIngredient(
-          name: 'Ayam',
-          rawText: '500g ayam',
-          quantity: '500',
-          unit: 'g',
-        ),
-        RecipeIngredient(rawText: 'sedikit bahan rahsia'),
-      ],
-      steps: const [
-        RecipeStep(stepNo: 1, instruction: 'Goreng ayam hingga masak.'),
-      ],
-    );
+RecipeDetail recipeDetail({
+  List<String> missing = const ['steps'],
+  List<RecipeStep> steps = const [
+    RecipeStep(stepNo: 1, instruction: 'Goreng ayam hingga masak.'),
+  ],
+}) => RecipeDetail(
+  id: 'r-1',
+  name: 'Nasi Lemak Ayam',
+  createdAt: DateTime.utc(2026, 11, 2),
+  sourceUrl: 'https://www.tiktok.com/@makan/video/1',
+  missing: missing,
+  ingredients: const [
+    RecipeIngredient(
+      name: 'Ayam',
+      rawText: '500g ayam',
+      quantity: '500',
+      unit: 'g',
+    ),
+    RecipeIngredient(rawText: 'sedikit bahan rahsia'),
+  ],
+  steps: steps,
+);
 
 class FakeRecipes implements RecipesRepository {
   List<Recipe> recipes = [];
   RecipeDetail? detailResult;
   Object? error;
   Object? detailError;
+  final deleted = <String>[];
 
   @override
   Future<List<Recipe>> list() async {
@@ -84,5 +87,11 @@ class FakeRecipes implements RecipesRepository {
   Future<RecipeDetail> get(String id) async {
     if (detailError != null) throw detailError!;
     return detailResult!;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    if (error != null) throw error!;
+    deleted.add(id);
   }
 }

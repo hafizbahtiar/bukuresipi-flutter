@@ -20,4 +20,15 @@ abstract interface class OwnerRepository {
 
   /// Newest first.
   Future<List<FailedShare>> failedShares();
+
+  /// Community report tickets. [status] is 'open' or 'closed'.
+  Future<List<ReportTicket>> reports({String status = 'open'});
+
+  /// Applies or rejects the open ticket for one target + field. The ticket always closes.
+  Future<void> resolveReport({
+    required String targetType,
+    required String targetId,
+    required String field,
+    required bool apply,
+  });
 }

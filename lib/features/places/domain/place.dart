@@ -1,3 +1,6 @@
+/// Whether a branch edit is private to the caller or changes the shared branch (owner only).
+enum BranchEditScope { personal, shared }
+
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
 class Place {
   const Place({
@@ -7,6 +10,7 @@ class Place {
     required this.branchId,
     required this.restaurant,
     required this.branches,
+    this.sourceUrl,
   });
 
   final String id;
@@ -15,6 +19,9 @@ class Place {
 
   /// The branch the shared post was about, when known.
   final String? branchId;
+
+  /// The link the user shared; null for a screenshot.
+  final String? sourceUrl;
   final PlaceRestaurant restaurant;
   final List<Branch> branches;
 
@@ -32,6 +39,7 @@ class Place {
     branchId: branchId,
     restaurant: restaurant,
     branches: branches,
+    sourceUrl: sourceUrl,
   );
 }
 
@@ -75,11 +83,14 @@ class Branch {
   final double? lat;
   final double? lng;
 
-  /// 'osm' | 'nominatim' | 'photon' | 'overture' | 'maps_link' | 'web' | 'user' | null (no pin).
+  /// 'osm' | 'nominatim' | 'photon' | 'overture' | 'here' | 'maps_link' | 'web' | 'user' | 'owner' | null.
   final String? pinSource;
 
   /// Set by hand in the app: shown, but not verified yet.
   bool get pinnedByUser => pinSource == 'user';
+
+  /// Set by the owner: shared by everyone and not overwritten by a hand pin.
+  bool get pinnedByOwner => pinSource == 'owner';
 
   /// Google Maps search by coordinates (opens the Maps app when installed). null = no pin.
   String? get mapsUrl => hasPin

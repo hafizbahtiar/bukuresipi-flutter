@@ -30,12 +30,15 @@ class OwnerRepositoryImpl implements OwnerRepository {
   Future<OwnerStats> getStats() => _call(() async {
     final j = await _get('/owner/stats');
     final u = j['users'] as Map<String, dynamic>,
-        s = j['shares'] as Map<String, dynamic>;
+        s = j['shares'] as Map<String, dynamic>,
+        r = j['reports'] as Map<String, dynamic>?;
     return OwnerStats(
       usersTotal: u['total'] as int,
       usersNewThisWeek: u['newThisWeek'] as int,
       sharesToday: s['today'] as int,
       failedToday: s['failedToday'] as int,
+      reportsOpen: r?['open'] as int? ?? 0,
+      reportsReady: r?['ready'] as int? ?? 0,
       meters: [
         for (final m in j['meters'] as List) _meter(m as Map<String, dynamic>),
       ],
@@ -80,6 +83,33 @@ class OwnerRepositoryImpl implements OwnerRepository {
       _call(() => _dio.post<void>('/owner/users/$userId/logout'));
 
   @override
+  Future<List<ReportTicket>> reports({String status = 'open'}) =>
+      _call(() async {
+        final j = await _get('/owner/reports', {'status': status});
+        return [
+          for (final t in (j['reports'] as List).cast<Map<String, dynamic>>())
+            _ticket(t),
+        ];
+      });
+
+  @override
+  Future<void> resolveReport({
+    required String targetType,
+    required String targetId,
+    required String field,
+    required bool apply,
+  }) => _call(
+    () => _dio.post<void>(
+      '/owner/reports/resolve',
+      data: {
+        'target': {'type': targetType, 'id': targetId},
+        'field': field,
+        'action': apply ? 'apply' : 'reject',
+      },
+    ),
+  );
+
+  @override
   Future<List<FailedShare>> failedShares() => _call(() async {
     final j = await _get('/owner/shares');
     return [
@@ -98,6 +128,35 @@ class OwnerRepositoryImpl implements OwnerRepository {
         ),
     ];
   });
+}
+
+ReportTicket _ticket(Map<String, dynamic> j) {
+  final target = j['target'] as Map<String, dynamic>;
+  ReportValue value(Map<String, dynamic>? v) => ReportValue(
+    lat: (v?['lat'] as num?)?.toDouble(),
+    lng: (v?['lng'] as num?)?.toDouble(),
+    value: v?['value'] as String?,
+  );
+  return ReportTicket(
+    targetType: target['type'] as String,
+    targetId: target['id'] as String,
+    targetName: target['name'] as String,
+    targetLabel: target['label'] as String?,
+    field: j['field'] as String,
+    count: j['count'] as int,
+    threshold: j['threshold'] as int,
+    current: value(j['current'] as Map<String, dynamic>?),
+    proposed: j['proposed'] == null
+        ? null
+        : value(j['proposed'] as Map<String, dynamic>),
+    status: j['status'] as String,
+    ready: j['ready'] as bool,
+    latestNote: j['latestNote'] as String?,
+    verifiedAt: j['verifiedAt'] == null
+        ? null
+        : dbTime(j['verifiedAt'] as String),
+    updatedAt: dbTime(j['updatedAt'] as String),
+  );
 }
 
 Meter _meter(Map<String, dynamic> m) => Meter(

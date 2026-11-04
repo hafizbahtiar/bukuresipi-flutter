@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -9,14 +10,26 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
+import '../../../auth/presentation/auth_controller.dart';
+import '../../domain/nearby_branch.dart';
+import '../../domain/nearby_math.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../widgets/location_button.dart';
+import '../widgets/branch_edit_sheet.dart';
+import '../widgets/nearby_carousel.dart';
+import '../widgets/nearby_sheet.dart';
 import '../widgets/north_button.dart';
 import '../widgets/unpinned_actions.dart';
+import '../widgets/view_mode_button.dart';
+import '../location.dart';
 
 /// OpenFreeMap: free vector tiles, no key, no request cap; its style carries the OpenStreetMap attribution.
 const _style = 'https://tiles.openfreemap.org/styles/liberty';
 const malaysiaCamera = CameraPosition(target: LatLng(4.2, 102.0), zoom: 4.6);
+// The "you are here" dot. Drawn by us (not the native location component) so it appears as soon as
+// the permission result arrives, even when the map was created before permission was granted.
+const _hereColor = '#1E88E5';
 const mapStyle = _style;
 
 /// The box around every pinned branch; null when nothing has a pin.
@@ -33,31 +46,72 @@ LatLngBounds? pinBounds(List<Place> places) {
   return LatLngBounds(southwest: LatLng(s, w), northeast: LatLng(n, e));
 }
 
-/// The Map tab: one pin per branch with coordinates (rotate with two fingers; the north button turns it back).
-/// Places without a pin are listed from the slip at the bottom, each with "Find location" / "Set on map".
+/// The Map tab: one pin per branch with coordinates (two fingers rotate and tilt for 3D; the north button turns
+/// it back). Places without a pin are listed from the slip at the bottom, each with "Find location" / "Set on map".
 class PlacesMapPage extends StatefulWidget {
-  const PlacesMapPage({super.key});
+  const PlacesMapPage({super.key, this.active = true});
+
+  /// The Map tab is visible. Location tracking runs only while this and the app are active.
+  final bool active;
 
   @override
   State<PlacesMapPage> createState() => _PlacesMapPageState();
 }
 
-class _PlacesMapPageState extends State<PlacesMapPage> {
+class _PlacesMapPageState extends State<PlacesMapPage>
+    with WidgetsBindingObserver {
   MapLibreMapController? _map;
   bool _styled = false;
   late final PlacesController _places = context.read<PlacesController>();
+  List<NearbyBranch> _nearby = const [];
+  String? _selectedNearbyId;
+  LatLng? _here;
+  LatLng? _nearbyOrigin;
+  double _bearing = 0;
+  double _tilt = 0;
+  bool _locating = false;
+  bool _askingLocation = false;
+  bool _nearbyLoading = false;
+  bool _nearbyAgain = false;
+  bool _resumed = true;
+  int _generation = 0;
+  StreamSubscription<({double lat, double lng})>? _positionSub;
+  Circle? _hereHalo;
+  Circle? _hereDot;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _places.addListener(_draw);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _askLocationOnce());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _positionSub?.cancel();
     _places.removeListener(_draw);
     _map?.onCircleTapped.remove(_tapped);
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(PlacesMapPage old) {
+    super.didUpdateWidget(old);
+    if (!old.active && widget.active && _resumed) {
+      unawaited(_refreshLocation());
+    }
+    _syncLocationUpdates();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final resumed = state == AppLifecycleState.resumed;
+    if (resumed == _resumed) return;
+    _resumed = resumed;
+    _syncLocationUpdates();
+    if (resumed && widget.active) unawaited(_refreshLocation());
   }
 
   void _created(MapLibreMapController c) {
@@ -66,19 +120,281 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
 
   Future<void> _styleLoaded() async {
     _styled = true;
-    await _draw(fit: true);
+    await _draw(fit: _here == null);
+    if (_here case final here?) {
+      await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14));
+    }
+    _cameraIdle();
+  }
+
+  /// The one automatic ask when the map opens. A refusal just leaves the map as it was (no nag).
+  Future<void> _askLocationOnce() async {
+    if (_askingLocation) return;
+    _askingLocation = true;
+    try {
+      final here = await _currentLocation();
+      if (!mounted || here == null) return;
+      // Outside Malaysia the map stays on the saved places, as before.
+      if (!inMalaysia(here.latitude, here.longitude)) return;
+      setState(() => _here = here);
+      unawaited(_draw());
+      unawaited(_loadNearby());
+      _syncLocationUpdates();
+      await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14));
+      _cameraIdle();
+    } finally {
+      _askingLocation = false;
+    }
+  }
+
+  /// A fresh fix for resume/tab-open. The dot and nearby list follow; the camera is left where the user put it.
+  Future<void> _refreshLocation() async {
+    if (_askingLocation || _locating) return;
+    _askingLocation = true;
+    try {
+      final here = await _currentLocation();
+      if (!mounted || here == null) return;
+      if (!inMalaysia(here.latitude, here.longitude)) return;
+      setState(() => _here = here);
+      unawaited(_draw());
+      unawaited(_loadNearby());
+      _syncLocationUpdates();
+    } finally {
+      _askingLocation = false;
+    }
+  }
+
+  /// Foreground updates only: no stream while the Map tab or the app is inactive.
+  void _syncLocationUpdates() {
+    final shouldTrack = widget.active && _resumed;
+    if (shouldTrack && _positionSub == null) {
+      try {
+        _positionSub = positionUpdates().listen(
+          _onPosition,
+          onError: (_) {
+            _positionSub?.cancel();
+            _positionSub = null;
+          },
+          onDone: () => _positionSub = null,
+        );
+      } catch (_) {
+        _positionSub = null;
+      }
+    } else if (!shouldTrack) {
+      _positionSub?.cancel();
+      _positionSub = null;
+    }
+  }
+
+  void _onPosition(({double lat, double lng}) p) {
+    if (!mounted || !inMalaysia(p.lat, p.lng)) return;
+    final here = LatLng(p.lat, p.lng);
+    final previous = _here;
+    if (previous != null &&
+        distanceKm(
+                  previous.latitude,
+                  previous.longitude,
+                  here.latitude,
+                  here.longitude,
+                ) *
+                1000 <
+            10) {
+      return;
+    }
+    setState(() {
+      _here = here;
+      if (_nearby.isNotEmpty) {
+        _nearby = sortByDistanceFrom(_nearby, here.latitude, here.longitude);
+      }
+    });
+    // Move only the two location circles; a full circle redraw is for nearby/saved changes.
+    unawaited(_moveHereDot(here));
+    final origin = _nearbyOrigin;
+    final moved =
+        origin == null ||
+        distanceKm(
+              origin.latitude,
+              origin.longitude,
+              here.latitude,
+              here.longitude,
+            ) >=
+            0.2;
+    if (moved) unawaited(_loadNearby());
+  }
+
+  Future<LatLng?> _currentLocation() async {
+    final position = await currentPosition();
+    return position == null
+        ? null
+        : LatLng(position.latitude, position.longitude);
+  }
+
+  /// The button: recentre on the last fix, or ask again (and say why when refused).
+  Future<void> _myLocation() async {
+    if (_locating) return;
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _locating = true);
+    try {
+      // Always ask for a fresh fix; fall back to the last one only if the device cannot provide it.
+      final fresh = await _currentLocation();
+      if (!mounted) return;
+      final here = fresh ?? _here;
+      if (here == null) {
+        messenger.showSnackBar(SnackBar(content: Text(l.locationDenied)));
+        return;
+      }
+      if (fresh != null) {
+        setState(() => _here = fresh);
+        unawaited(_draw());
+        unawaited(_loadNearby());
+        _syncLocationUpdates();
+      }
+      await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 15));
+      _cameraIdle();
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  /// Camera idle: refresh the compass/tilt after a gesture. The camera is queried once here instead of
+  /// streaming every move to Dart (`trackCameraPosition: false`), which keeps gestures smooth.
+  void _cameraIdle() => unawaited(_onCameraIdle());
+
+  Future<void> _onCameraIdle() async {
+    final map = _map;
+    if (map == null || !_styled) return;
+    CameraPosition? camera;
+    try {
+      camera = await map.queryCameraPosition();
+    } catch (_) {
+      return;
+    }
+    if (!mounted || camera == null) return;
+    _setBearing(camera.bearing);
+    _setTilt(camera.tilt);
+  }
+
+  void _setBearing(double bearing) {
+    if (!mounted || (bearing - _bearing).abs() < 0.5) return;
+    setState(() => _bearing = bearing);
+  }
+
+  void _setTilt(double tilt) {
+    if (!mounted || (tilt - _tilt).abs() < 1) return;
+    setState(() => _tilt = tilt);
+  }
+
+  Future<void> _northUp() async {
+    final map = _map;
+    if (map == null) return;
+    await map.animateCamera(CameraUpdate.bearingTo(0));
+    if (mounted) setState(() => _bearing = 0);
+  }
+
+  /// Tilts the map between flat (2D) and 45 degrees (3D).
+  Future<void> _toggleTilt() async {
+    final map = _map;
+    if (map == null) return;
+    final threeD = _tilt > 1;
+    await map.animateCamera(CameraUpdate.tiltTo(threeD ? 0 : 45));
+    if (mounted) setState(() => _tilt = threeD ? 0 : 45);
+  }
+
+  /// Five kilometres around the phone's fix. Panning or zooming never changes this list.
+  static const _nearbyKm = 5.0;
+
+  Future<void> _loadNearby() async {
+    final here = _here;
+    if (here == null || !mounted) return;
+    // One request at a time; a move during the request queues exactly one more.
+    if (_nearbyLoading) {
+      _nearbyAgain = true;
+      return;
+    }
+    _nearbyLoading = true;
+    final generation = ++_generation;
+    try {
+      // The search point is the phone, not the camera.
+      final rows = await _places.nearby(
+        here.latitude,
+        here.longitude,
+        _nearbyKm,
+      );
+      final measured = sortByDistanceFrom(rows, here.latitude, here.longitude);
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _nearby = measured;
+        _nearbyOrigin = here;
+        if (_selectedNearbyId != null &&
+            !measured.any((p) => p.branchId == _selectedNearbyId)) {
+          _selectedNearbyId = null;
+        }
+      });
+      await _draw();
+    } catch (_) {
+      // Keep the last result: a failed nearby lookup must not empty the map.
+    } finally {
+      _nearbyLoading = false;
+      if (_nearbyAgain) {
+        _nearbyAgain = false;
+        if (mounted) unawaited(_loadNearby());
+      }
+    }
+  }
+
+  /// Moves the two "you are here" circles without clearing/rebuilding every annotation.
+  Future<void> _moveHereDot(LatLng here) async {
+    final map = _map;
+    final halo = _hereHalo;
+    final dot = _hereDot;
+    if (!mounted || map == null || !_styled || halo == null || dot == null) {
+      if (mounted) unawaited(_draw());
+      return;
+    }
+    try {
+      await map.updateCircle(halo, CircleOptions(geometry: here));
+      await map.updateCircle(dot, CircleOptions(geometry: here));
+    } catch (_) {
+      if (mounted) unawaited(_draw());
+    }
   }
 
   String _hex(Color c) =>
       '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
-  /// Redraws every pin (a handful per user: no diffing needed). A hand-set pin has a kunyit ring: not checked yet.
+  /// Redraws every pin (a handful per user: no diffing needed). Nearby branches are smaller and muted, under the
+  /// saved ones. A hand-set pin has a kunyit ring: not checked yet.
   Future<void> _draw({bool fit = false}) async {
     final map = _map;
     if (map == null || !_styled || !mounted) return;
     final nb = Notebook.of(context);
     final places = _places.pinned;
     await map.clearCircles();
+    _hereHalo = null;
+    _hereDot = null;
+    final nearby = [
+      for (final n in _nearby)
+        if (!n.saved) n,
+    ];
+    if (nearby.isNotEmpty) {
+      await map.addCircles(
+        [
+          for (final n in nearby)
+            CircleOptions(
+              geometry: LatLng(n.lat, n.lng),
+              circleRadius: 5,
+              circleColor: _hex(nb.inkSoft),
+              circleOpacity: 0.7,
+              circleStrokeWidth: 1,
+              circleStrokeColor: _hex(nb.paper),
+            ),
+        ],
+        [
+          for (final n in nearby) {'nearbyBranch': n.branchId},
+        ],
+      );
+    }
     final pins = [
       for (final p in places)
         for (final b in p.pins) (p, b),
@@ -98,6 +414,33 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
         for (final (p, b) in pins) {'place': p.id, 'branch': b.id},
       ],
     );
+    final here = _here;
+    if (here != null) {
+      final hereCircles = await map.addCircles(
+        [
+          CircleOptions(
+            geometry: here,
+            circleRadius: 14,
+            circleColor: _hereColor,
+            circleOpacity: 0.16,
+            circleStrokeWidth: 0,
+          ),
+          CircleOptions(
+            geometry: here,
+            circleRadius: 6.5,
+            circleColor: _hereColor,
+            circleStrokeWidth: 2.5,
+            circleStrokeColor: '#FFFFFF',
+          ),
+        ],
+        const [
+          {'here': true},
+          {'here': true},
+        ],
+      );
+      _hereHalo = hereCircles[0];
+      _hereDot = hereCircles[1];
+    }
     if (!fit) return;
     final box = pinBounds(places);
     if (box == null) return;
@@ -116,14 +459,77 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
   }
 
   void _tapped(Circle c) {
+    if (!mounted) return;
+    final nearbyBranch = c.data?['nearbyBranch'] as String?;
+    if (nearbyBranch != null) {
+      final nearby = _nearby
+          .where((n) => n.branchId == nearbyBranch)
+          .firstOrNull;
+      // A nearby circle selects its card and centres the map; tapping the card opens the sheet.
+      if (nearby != null) _focusNearby(nearby);
+      return;
+    }
     final place = _places.byId(c.data?['place'] as String? ?? '');
-    if (place == null || !mounted) return;
+    if (place == null) return;
     final branch =
         place.branches.where((b) => b.id == c.data?['branch']).firstOrNull ??
         place.savedBranch;
+    final nearby = _nearby.where((n) => n.branchId == branch?.id).firstOrNull;
+    if (nearby != null) {
+      setState(() => _selectedNearbyId = nearby.branchId);
+    }
     showNotebookSheet<void>(
       context,
       builder: (context) => _PinSheet(place: place, branch: branch),
+    );
+  }
+
+  /// Carousel snap / map tap: select the card and centre the map on that branch, keeping the 2D/3D angle.
+  void _focusNearby(NearbyBranch place) {
+    setState(() => _selectedNearbyId = place.branchId);
+    final map = _map;
+    if (map == null) return;
+    unawaited(
+      map.easeCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(place.lat, place.lng),
+            zoom: 15,
+            bearing: _bearing,
+            tilt: _tilt,
+          ),
+        ),
+        duration: const Duration(milliseconds: 900),
+        interpolation: CameraAnimationInterpolation.easeInOut,
+      ),
+    );
+  }
+
+  void _openNearby(NearbyBranch place) {
+    if (place.saved && place.placeId != null) {
+      context.push('/places/${place.placeId}');
+      return;
+    }
+    final places = context.read<PlacesController>();
+    showNotebookSheet<void>(
+      context,
+      builder: (context) => NearbySheet(
+        place: place,
+        onEdited: _loadNearby,
+        onSave: () async {
+          final saved = await places.saveBranch(place.branchId);
+          if (!mounted) return;
+          setState(() {
+            _nearby = [
+              for (final n in _nearby)
+                n.branchId == place.branchId
+                    ? n.copyWith(saved: true, placeId: saved.id)
+                    : n,
+            ];
+          });
+          await _draw();
+        },
+      ),
     );
   }
 
@@ -186,6 +592,7 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
     final nb = Notebook.of(context);
     final places = context.watch<PlacesController>();
     final unpinned = places.unpinned.length;
+    final showNearby = _nearby.isNotEmpty;
     return Scaffold(
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.navMap)),
       body: Stack(
@@ -195,9 +602,23 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
             initialCameraPosition: malaysiaCamera,
             onMapCreated: _created,
             onStyleLoadedCallback: _styleLoaded,
-            tiltGesturesEnabled: false,
+            onCameraIdle: _cameraIdle,
+            // Pan, pinch-zoom, two-finger rotate and two-finger tilt (3D) all on.
+            rotateGesturesEnabled: true,
+            scrollGesturesEnabled: true,
+            zoomGesturesEnabled: true,
+            tiltGesturesEnabled: true,
+            dragEnabled: true,
+            doubleClickZoomEnabled: true,
             compassEnabled: false, // our own north button: always there, on the notebook's paper
-            trackCameraPosition: true,
+            // No per-frame camera stream: the page queries the camera on idle (compass + tilt).
+            trackCameraPosition: false,
+            // The native location component is created before permission is granted and does not
+            // reliably start afterwards; _draw paints our own dot as soon as we have a fix.
+            myLocationEnabled: false,
+            // Only circles are used; the other annotation managers cost frame time for nothing.
+            annotationOrder: const [AnnotationType.circle],
+            annotationConsumeTapEvents: const [AnnotationType.circle],
             logoEnabled: false,
             // The credit OpenStreetMap needs stays, as a faint "i" in the corner.
             attributionButtonPosition: AttributionButtonPosition.topLeft,
@@ -208,12 +629,32 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
             Positioned(
               top: 12,
               right: 12,
-              child: NorthButton(
-                map: _map!,
-                tooltip: AppLocalizations.of(context).northUp,
+              child: Column(
+                children: [
+                  NorthButton(
+                    bearing: _bearing,
+                    tooltip: l.northUp,
+                    onPressed: _northUp,
+                  ),
+                  const SizedBox(height: 8),
+                  LocationButton(
+                    tooltip: l.myLocation,
+                    onPressed: _myLocation,
+                    busy: _locating,
+                  ),
+                  const SizedBox(height: 8),
+                  ViewModeButton(
+                    threeD: _tilt > 1,
+                    tooltip: _tilt > 1 ? l.view2d : l.view3d,
+                    onPressed: _toggleTilt,
+                  ),
+                ],
               ),
             ),
-          if (places.loaded && places.pinned.isEmpty)
+          if (places.loaded &&
+              places.pinned.isEmpty &&
+              _nearby.isEmpty &&
+              _here == null)
             Positioned(
               left: 16,
               right: 16,
@@ -226,7 +667,8 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
             Positioned(
               left: 16,
               right: 16,
-              bottom: 16,
+              // The nearby cards have the bottom; the unpinned slip sits just above them.
+              bottom: showNearby ? NearbyCarousel.height + 32 : 16,
               child: SafeArea(
                 child: _Slip(
                   onTap: _showUnpinned,
@@ -243,6 +685,23 @@ class _PlacesMapPageState extends State<PlacesMapPage> {
                       Icon(Icons.expand_less, color: nb.inkSoft),
                     ],
                   ),
+                ),
+              ),
+            ),
+          if (showNearby)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 16,
+              child: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                child: NearbyCarousel(
+                  places: _nearby,
+                  selectedBranchId: _selectedNearbyId,
+                  onTap: _openNearby,
+                  onSelected: _focusNearby,
                 ),
               ),
             ),
@@ -289,6 +748,30 @@ class _PinSheet extends StatelessWidget {
   final Place place;
   final Branch? branch;
 
+  Future<void> _edit(BuildContext context, Branch b) async {
+    final owner = context.read<AuthController>().user?.isOwner ?? false;
+    final navigator = Navigator.of(context);
+    final saved = await showNotebookSheet<bool>(
+      context,
+      builder: (_) => BranchEditSheet(
+        placeId: place.id,
+        branch: b,
+        canEditShared: owner,
+        onSave: (edit, scope) => context.read<PlacesController>().updateBranch(
+          b.id,
+          label: edit.label,
+          address: edit.address,
+          city: edit.city,
+          state: edit.state,
+          lat: edit.lat,
+          lng: edit.lng,
+          scope: scope,
+        ),
+      ),
+    );
+    if (saved == true && context.mounted) navigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -311,6 +794,11 @@ class _PinSheet extends StatelessWidget {
         if (b != null)
           NotebookRow(
             mark: PinMark(pinned: b.hasPin),
+            trailing: IconButton(
+              tooltip: l.editBranch,
+              icon: Icon(Icons.edit_outlined, color: nb.inkSoft),
+              onPressed: () => _edit(context, b),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -326,6 +814,11 @@ class _PinSheet extends StatelessWidget {
                 if (b.pinnedByUser)
                   Text(
                     l.pinnedByUser,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                if (b.pinnedByOwner)
+                  Text(
+                    l.pinnedByOwner,
                     style: text.bodySmall?.copyWith(color: nb.inkSoft),
                   ),
               ],
