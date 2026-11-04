@@ -50,6 +50,7 @@ class Place {
     required this.restaurant,
     required this.branches,
     this.sourceUrl,
+    this.shareId,
   });
 
   final String id;
@@ -61,6 +62,9 @@ class Place {
 
   /// The link the user shared; null for a screenshot.
   final String? sourceUrl;
+
+  /// The share behind this place: its screenshot or post thumbnail (ShareRepository.image).
+  final String? shareId;
   final PlaceRestaurant restaurant;
   final List<Branch> branches;
 
@@ -82,6 +86,7 @@ class Place {
     restaurant: restaurant,
     branches: branches ?? this.branches,
     sourceUrl: sourceUrl,
+    shareId: shareId,
   );
 }
 

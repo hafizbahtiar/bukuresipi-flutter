@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -74,6 +75,19 @@ class ShareRepositoryImpl implements ShareRepository {
   @override
   Future<void> retry(String id) =>
       apiCall(() => _dio.post<void>('/shares/$id/retry'));
+
+  @override
+  Future<Uint8List?> image(String id) => apiCall(() async {
+    // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
+    final res = await _dio.get<List<int>>(
+      '/shares/$id/image',
+      options: Options(
+        responseType: ResponseType.bytes,
+        validateStatus: (s) => s == 200 || s == 404,
+      ),
+    );
+    return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+  });
 
   @override
   Future<void> dismiss(String id) =>

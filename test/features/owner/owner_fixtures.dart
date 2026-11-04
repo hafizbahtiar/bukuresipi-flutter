@@ -37,6 +37,8 @@ class FakeOwner implements OwnerRepository {
   final resolved = <(String, String, bool)>[];
   final reviewResolved = <(String, bool)>[];
   List<ReviewReportGroup> reviewReportGroups = [];
+  List<RatingBurst> bursts = [];
+  final deletedRatings = <String>[];
 
   @override
   Future<OwnerStats> getStats() async => stats;
@@ -100,5 +102,16 @@ class FakeOwner implements OwnerRepository {
     required bool hide,
   }) async {
     reviewResolved.add((reviewId, hide));
+  }
+
+  @override
+  Future<List<RatingBurst>> ratingBursts() async => bursts;
+
+  @override
+  Future<void> deleteRating(String ratingId) async {
+    deletedRatings.add(ratingId);
+    for (final b in bursts) {
+      b.ratings.removeWhere((r) => r.id == ratingId);
+    }
   }
 }

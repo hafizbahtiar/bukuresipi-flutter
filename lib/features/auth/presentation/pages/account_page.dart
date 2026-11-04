@@ -137,6 +137,13 @@ class _AccountPageState extends State<AccountPage> {
                 onTap: () => context.push('/credits'),
                 child: Text(l.creditsTitle),
               ),
+              if (!user.isOwner)
+                NotebookRow(
+                  mark: mark(Icons.delete_forever_outlined, nb.margin),
+                  onTap: () => context.push('/auth/delete'),
+                  trailing: next,
+                  child: Text(l.deleteAccountTitle),
+                ),
               NotebookRow(
                 mark: mark(Icons.logout, nb.margin),
                 onTap: () async {

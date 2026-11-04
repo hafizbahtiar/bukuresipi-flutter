@@ -9,6 +9,7 @@ import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
@@ -207,6 +208,7 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                           style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                         ),
                       ),
+                    if (place.shareId case final id?) ShareImage(id),
                     if (place.sourceUrl case final url?)
                       TextButton.icon(
                         onPressed: () =>

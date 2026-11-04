@@ -334,5 +334,17 @@
   "creditsFonts": "Google Fonts",
   "creditsFontsDetail": "Familjen Grotesk dan Caveat, SIL Open Font License.",
   "creditsFlutter": "Flutter",
-  "creditsFlutterDetail": "Rangka aplikasi, BSD."
+  "creditsFlutterDetail": "Rangka aplikasi, BSD.",
+  "deleteAccountTitle": "Padam akaun",
+  "deleteAccountText": "Ini memadam akaun anda serta-merta dan tidak boleh dibatalkan: tempat dan resipi yang disimpan, perkongsian dan tangkapan skrin, penilaian dan ulasan, serta laporan anda. Restoran yang dikongsi oleh pengguna lain kekal.",
+  "deleteAccountButton": "Padam akaun saya",
+  "deleteAccountConfirm": "Padam akaun ini selama-lamanya?",
+  "deleteAccountDone": "Akaun anda telah dipadam. Terima kasih kerana menggunakan Bukuresipi.",
+  "errOwnerAccount": "Akaun pemilik tidak boleh dipadam.",
+  "ownerRatingBursts": "Lonjakan penilaian",
+  "ownerRatingBurstsEmpty": "Tiada penilaian luar biasa minggu ini.",
+  "ownerRatingBurstNew": "{count} penilaian daripada akaun baharu minggu ini",
+  "ownerRatingJoined": "Daftar {date}",
+  "ownerRatingDelete": "Padam penilaian",
+  "ownerRatingDeleteConfirm": "Padam penilaian dan ulasan ini selama-lamanya? Undi dan laporannya turut dipadam."
 }

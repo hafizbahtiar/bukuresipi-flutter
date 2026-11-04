@@ -314,6 +314,7 @@ Place placeFromJson(Map<String, dynamic> j) {
     createdAt: dbTime(j['createdAt'] as String),
     branchId: j['branchId'] as String?,
     sourceUrl: j['sourceUrl'] as String?,
+    shareId: j['shareId'] as String?,
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
       name: r['name'] as String,

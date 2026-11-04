@@ -100,6 +100,12 @@ class AuthRepositoryImpl implements AuthRepository {
     () async =>
         _tokens.save(Tokens.fromJson(await _api.changePassword(current, next))),
   );
+
+  @override
+  Future<void> deleteAccount(String email, String password) async {
+    await apiCall(() => _api.deleteAccount(email, password));
+    await clearLocal();
+  }
 }
 
 User userFromJson(Map<String, dynamic> j) => User(

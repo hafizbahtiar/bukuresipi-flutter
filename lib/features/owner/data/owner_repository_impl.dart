@@ -32,6 +32,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
       reportsOpen: r?['open'] as int? ?? 0,
       reportsReady: r?['ready'] as int? ?? 0,
       reviewReportsOpen: j['reviewReportsOpen'] as int? ?? 0,
+      ratingBursts: j['ratingBursts'] as int? ?? 0,
       meters: [
         for (final m in j['meters'] as List) _meter(m as Map<String, dynamic>),
       ],
@@ -123,6 +124,19 @@ class OwnerRepositoryImpl implements OwnerRepository {
   );
 
   @override
+  Future<List<RatingBurst>> ratingBursts() => apiCall(() async {
+    final j = await _get('/owner/rating-bursts');
+    return [
+      for (final b in (j['bursts'] as List).cast<Map<String, dynamic>>())
+        _burst(b),
+    ];
+  });
+
+  @override
+  Future<void> deleteRating(String ratingId) =>
+      apiCall(() => _dio.delete<void>('/owner/ratings/$ratingId'));
+
+  @override
   Future<List<FailedShare>> failedShares() => apiCall(() async {
     final j = await _get('/owner/shares');
     return [
@@ -197,3 +211,26 @@ Meter _meter(Map<String, dynamic> m) => Meter(
   active: m['active'] as bool,
   vendorUrl: m['vendorUrl'] as String?,
 );
+
+RatingBurst _burst(Map<String, dynamic> j) {
+  final branch = j['branch'] as Map<String, dynamic>;
+  return RatingBurst(
+    branchId: branch['id'] as String,
+    restaurant: branch['restaurant'] as String,
+    label: branch['label'] as String?,
+    newAccounts: (j['newAccounts'] as num).toInt(),
+    ratings: [
+      for (final r in (j['ratings'] as List).cast<Map<String, dynamic>>())
+        BurstRating(
+          id: r['id'] as String,
+          stars: (r['stars'] as num).toInt(),
+          text: r['text'] as String?,
+          hidden: r['hidden'] as bool? ?? false,
+          createdAt: dbTime(r['createdAt'] as String),
+          email: (r['user'] as Map)['email'] as String,
+          joinedAt: dbTime((r['user'] as Map)['createdAt'] as String),
+          emailVerified: (r['user'] as Map)['emailVerified'] as bool? ?? false,
+        ),
+    ],
+  );
+}

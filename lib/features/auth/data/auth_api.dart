@@ -33,6 +33,8 @@ class AuthApi {
       _post('/auth/resend-verification', null, auth: true);
   Future<void> forgotPassword(String email) =>
       _post('/auth/forgot-password', {'email': email});
+  Future<void> deleteAccount(String email, String password) =>
+      _post('/auth/delete-account', {'email': email, 'password': password});
   Future<void> resetPassword(String token, String password) =>
       _post('/auth/reset-password', {'token': token, 'password': password});
   Future<Map<String, dynamic>> changePassword(String current, String next) =>

@@ -8,6 +8,7 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
 
@@ -141,6 +142,16 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
               ),
             ),
+            if (recipe.shareId case final id?)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 10,
+                  0,
+                  20,
+                  0,
+                ),
+                child: ShareImage(id),
+              ),
             if (recipe.missing.isNotEmpty)
               NotebookRow(
                 mark: Icon(Icons.info_outline, size: 18, color: nb.margin),

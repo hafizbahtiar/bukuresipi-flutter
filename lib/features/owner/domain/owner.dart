@@ -8,6 +8,7 @@ class OwnerStats {
     this.reportsOpen = 0,
     this.reportsReady = 0,
     this.reviewReportsOpen = 0,
+    this.ratingBursts = 0,
   });
 
   final int usersTotal;
@@ -23,6 +24,9 @@ class OwnerStats {
   final int reportsReady;
   final int reviewReportsOpen;
 
+  /// Branches rated by several new accounts this week.
+  final int ratingBursts;
+
   OwnerStats withMeter(Meter m) => OwnerStats(
     usersTotal: usersTotal,
     usersNewThisWeek: usersNewThisWeek,
@@ -32,7 +36,48 @@ class OwnerStats {
     reportsOpen: reportsOpen,
     reportsReady: reportsReady,
     reviewReportsOpen: reviewReportsOpen,
+    ratingBursts: ratingBursts,
   );
+}
+
+/// A branch rated by several brand-new accounts in one week: maybe fake accounts. [ratings]: every rating on it this
+/// week, newest first.
+class RatingBurst {
+  const RatingBurst({
+    required this.branchId,
+    required this.restaurant,
+    this.label,
+    required this.newAccounts,
+    required this.ratings,
+  });
+
+  final String branchId;
+  final String restaurant;
+  final String? label;
+  final int newAccounts;
+  final List<BurstRating> ratings;
+}
+
+class BurstRating {
+  const BurstRating({
+    required this.id,
+    required this.stars,
+    this.text,
+    required this.hidden,
+    required this.createdAt,
+    required this.email,
+    required this.joinedAt,
+    required this.emailVerified,
+  });
+
+  final String id;
+  final int stars;
+  final String? text;
+  final bool hidden;
+  final DateTime createdAt;
+  final String email;
+  final DateTime joinedAt;
+  final bool emailVerified;
 }
 
 class ReviewReportGroup {

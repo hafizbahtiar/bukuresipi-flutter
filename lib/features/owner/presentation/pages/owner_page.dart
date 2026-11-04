@@ -109,6 +109,12 @@ class _OwnerPageState extends State<OwnerPage> {
                       value: s.reviewReportsOpen,
                       onTap: () => context.push('/owner/review-reports'),
                     ),
+                    _Ledger(
+                      label: l.ownerRatingBursts,
+                      value: s.ratingBursts,
+                      warn: s.ratingBursts > 0,
+                      onTap: () => context.push('/owner/rating-bursts'),
+                    ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
                         notebookGutter + 10,

@@ -7,6 +7,7 @@ import '../../features/places/presentation/pages/reviews_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/pages/account_page.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
+import '../../features/auth/presentation/pages/delete_account_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
@@ -16,6 +17,7 @@ import '../../features/credits/presentation/pages/credits_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_reports_page.dart';
+import '../../features/owner/presentation/pages/owner_rating_bursts_page.dart';
 import '../../features/owner/presentation/pages/owner_review_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_shares_page.dart';
 import '../../features/owner/presentation/pages/owner_users_page.dart';
@@ -65,6 +67,10 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
     _page(
       path: '$prefix/auth/forgot',
       builder: (_, _) => const ForgotPasswordPage(),
+    ),
+    _page(
+      path: '$prefix/auth/delete',
+      builder: (_, _) => const DeleteAccountPage(),
     ),
   ];
 
@@ -121,6 +127,10 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
           _page(
             path: 'review-reports',
             builder: (_, _) => const OwnerReviewReportsPage(),
+          ),
+          _page(
+            path: 'rating-bursts',
+            builder: (_, _) => const OwnerRatingBurstsPage(),
           ),
         ],
       ),

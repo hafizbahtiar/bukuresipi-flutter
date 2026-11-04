@@ -57,6 +57,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
   name: j['name'] as String,
   createdAt: dbTime(j['createdAt'] as String),
   sourceUrl: j['sourceUrl'] as String?,
+  shareId: j['shareId'] as String?,
   missing: _missing(j['missing']),
   ingredients: [
     for (final i

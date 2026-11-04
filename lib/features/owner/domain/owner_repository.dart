@@ -38,4 +38,9 @@ abstract interface class OwnerRepository {
     required String reviewId,
     required bool hide,
   });
+
+  Future<List<RatingBurst>> ratingBursts();
+
+  /// Deletes a rating and its review for good (its votes and reports too).
+  Future<void> deleteRating(String ratingId);
 }

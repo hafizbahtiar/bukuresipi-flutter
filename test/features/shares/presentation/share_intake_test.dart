@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
@@ -46,6 +47,10 @@ class FakeShares implements ShareRepository {
 
   @override
   Future<void> dismiss(String id) async => dismissed.add(id);
+
+  Uint8List? imageBytes;
+  @override
+  Future<Uint8List?> image(String id) async => imageBytes;
 
   @override
   Future<List<Share>> recent() async {

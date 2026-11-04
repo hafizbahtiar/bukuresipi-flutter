@@ -2,6 +2,7 @@ import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_review_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
@@ -144,5 +145,49 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Sign out'));
     await t.pumpAndSettle();
     expect(repo.loggedOut, ['u-ali@b.c']);
+  });
+
+  testWidgets(
+    'rating bursts list who rated; the owner deletes one after confirming',
+    (t) async {
+      repo.bursts = [
+        RatingBurst(
+          branchId: 'b1',
+          restaurant: 'Warung Uji',
+          label: 'Ampang',
+          newAccounts: 3,
+          ratings: [
+            BurstRating(
+              id: 'r1',
+              stars: 5,
+              text: 'Terbaik',
+              hidden: false,
+              createdAt: DateTime.utc(2026, 11, 4),
+              email: 'new1@b.c',
+              joinedAt: DateTime.utc(2026, 11, 3),
+              emailVerified: true,
+            ),
+          ],
+        ),
+      ];
+      await pump(t, const OwnerRatingBurstsPage());
+      expect(find.text('Warung Uji · Ampang'), findsOneWidget);
+      expect(
+        find.text('3 ratings from new accounts this week'),
+        findsOneWidget,
+      );
+      expect(find.text('new1@b.c'), findsOneWidget);
+      await t.tap(find.byTooltip('Delete rating'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Delete rating').last);
+      await t.pumpAndSettle();
+      expect(repo.deletedRatings, ['r1']);
+      expect(find.text('new1@b.c'), findsNothing);
+    },
+  );
+
+  testWidgets('no bursts: a calm empty state', (t) async {
+    await pump(t, const OwnerRatingBurstsPage());
+    expect(find.text('No unusual ratings this week.'), findsOneWidget);
   });
 }

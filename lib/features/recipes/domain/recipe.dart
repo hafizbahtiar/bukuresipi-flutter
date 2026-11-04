@@ -29,6 +29,7 @@ class RecipeDetail {
     required this.name,
     required this.createdAt,
     this.sourceUrl,
+    this.shareId,
     this.missing = const [],
     required this.ingredients,
     required this.steps,
@@ -38,6 +39,9 @@ class RecipeDetail {
   final String name;
   final DateTime createdAt;
   final String? sourceUrl;
+
+  /// The share it was imported from: its screenshot or post thumbnail (ShareRepository.image).
+  final String? shareId;
   final List<String> missing;
   final List<RecipeIngredient> ingredients;
   final List<RecipeStep> steps;
