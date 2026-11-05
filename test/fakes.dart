@@ -140,6 +140,30 @@ class FakeAuthRepository implements AuthRepository {
     return cached = testUser;
   }
 
+  User _with({required bool google}) => User(
+    id: testUser.id,
+    email: testUser.email,
+    name: testUser.name,
+    role: testUser.role,
+    lang: testUser.lang,
+    emailVerified: testUser.emailVerified,
+    hasPassword: (cached ?? testUser).hasPassword,
+    google: google,
+  );
+  Object? linkError;
+  @override
+  Future<User> linkGoogle(String idToken) async {
+    if (linkError != null) throw linkError!;
+    googleTokens.add('link:$idToken');
+    return cached = _with(google: true);
+  }
+
+  @override
+  Future<User> unlinkGoogle() async {
+    if (linkError != null) throw linkError!;
+    return cached = _with(google: false);
+  }
+
   @override
   Future<void> deleteAccountWithGoogle(String idToken) async {
     if (deleteError != null) throw deleteError!;

@@ -110,6 +110,12 @@ class AuthController extends ChangeNotifier {
   Future<void> loginWithGoogle(String idToken, String lang) async =>
       _set(AuthStatus.signedIn, await _repo.loginWithGoogle(idToken, lang));
 
+  Future<void> linkGoogle(String idToken) async =>
+      _set(AuthStatus.signedIn, await _repo.linkGoogle(idToken));
+
+  Future<void> unlinkGoogle() async =>
+      _set(AuthStatus.signedIn, await _repo.unlinkGoogle());
+
   Future<void> deleteAccountWithGoogle(String idToken) async {
     await _repo.deleteAccountWithGoogle(idToken);
     if (_status != AuthStatus.signedOut) _set(AuthStatus.signedOut, null);

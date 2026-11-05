@@ -24,6 +24,10 @@ abstract interface class AuthRepository {
   /// Signs in (or up) with a Google ID token; the API links or creates the account.
   Future<User> loginWithGoogle(String idToken, String lang);
 
+  /// Account > Google. Unlink needs a password (409 password_required otherwise).
+  Future<User> linkGoogle(String idToken);
+  Future<User> unlinkGoogle();
+
   /// Deletes a Google-only account (it has no password): a fresh Google ID token is the proof.
   Future<void> deleteAccountWithGoogle(String idToken);
 
