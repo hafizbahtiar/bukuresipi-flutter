@@ -141,8 +141,9 @@ class ShoppingController extends ChangeNotifier {
       text: text,
       done: false,
     );
-    final todo = _items.where((i) => !i.done).length;
-    _items = [..._items.take(todo), local, ..._items.skip(todo)];
+    // After the last line still to buy (a just-ticked line stays in place until the sync moves it).
+    final at = _items.lastIndexWhere((i) => !i.done) + 1;
+    _items = [..._items.take(at), local, ..._items.skip(at)];
     notifyListeners();
     final saved = await _save(
       () => _repo.addText(text, family: _family),

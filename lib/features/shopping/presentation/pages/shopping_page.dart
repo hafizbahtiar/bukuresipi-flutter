@@ -262,8 +262,9 @@ class _Appear extends StatefulWidget {
 }
 
 class _AppearState extends State<_Appear> with SingleTickerProviderStateMixin {
+  // A row rebuilt while still leaving (a remove that failed and came back) starts hidden, then grows back in.
   late final _c = AnimationController(vsync: this, duration: _Appear.duration)
-    ..forward();
+    ..animateTo(widget.visible ? 1 : 0);
   late final _curve = CurvedAnimation(
     parent: _c,
     curve: Curves.easeOutCubic,

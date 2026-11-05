@@ -61,4 +61,20 @@ void main() {
     expect(shopping.isLocal(saved), isFalse);
     expect(shopping.keyOf(saved), key);
   });
+
+  test(
+    'a failed tick or add is put back; the other lines stay as they are',
+    () async {
+      repo
+        ..gate = Completer()
+        ..saveError = const ApiException('network');
+      final tick = shopping.setDone('a', true);
+      final add = shopping.addText('Telur');
+      expect(shown(), [('Gula', true), ('Garam', false), ('Telur', false)]);
+      repo.gate!.complete();
+      await expectLater(tick, throwsA(isA<ApiException>()));
+      await expectLater(add, throwsA(isA<ApiException>()));
+      expect(shown(), [('Gula', false), ('Garam', false)]);
+    },
+  );
 }

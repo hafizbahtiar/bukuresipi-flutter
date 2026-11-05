@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/shopping/domain/shopping.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/pages/shopping_page.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/shopping_controller.dart';
@@ -119,18 +120,38 @@ void main() {
     },
   );
 
-  testWidgets('typing 2+ letters suggests catalogue names; tapping one adds it', (t) async {
-    await pump(t);
-    await t.enterText(find.byType(TextField), 'g');
-    await t.pump(const Duration(milliseconds: 350));
-    expect(find.text('Gula pasir'), findsNothing); // one letter: no lookup
-    await t.enterText(find.byType(TextField), 'gula');
-    await t.pump(const Duration(milliseconds: 350));
-    await t.pumpAndSettle();
-    expect(find.text('Gula melaka'), findsOneWidget);
-    await t.tap(find.text('Gula melaka'));
-    await t.pumpAndSettle();
-    expect(shopping.items.map((i) => i.text), contains('Gula melaka'));
-    expect(find.text('Gula pasir'), findsNothing); // suggestions cleared after adding
-  });
+  testWidgets(
+    'typing 2+ letters suggests catalogue names; tapping one adds it',
+    (t) async {
+      await pump(t);
+      await t.enterText(find.byType(TextField), 'g');
+      await t.pump(const Duration(milliseconds: 350));
+      expect(find.text('Gula pasir'), findsNothing); // one letter: no lookup
+      await t.enterText(find.byType(TextField), 'gula');
+      await t.pump(const Duration(milliseconds: 350));
+      await t.pumpAndSettle();
+      expect(find.text('Gula melaka'), findsOneWidget);
+      await t.tap(find.text('Gula melaka'));
+      await t.pumpAndSettle();
+      expect(shopping.items.map((i) => i.text), contains('Gula melaka'));
+      expect(
+        find.text('Gula pasir'),
+        findsNothing,
+      ); // suggestions cleared after adding
+    },
+  );
+
+  testWidgets(
+    'offline: a typed line says why it was not saved and goes back into the field',
+    (t) async {
+      await pump(t);
+      repo.saveError = const ApiException('network');
+      await t.enterText(find.byType(TextField), 'Telur');
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pumpAndSettle();
+      expect(find.textContaining('Could not reach Bukuresipi'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Telur'), findsOneWidget);
+      expect(shopping.items, isEmpty);
+    },
+  );
 }
