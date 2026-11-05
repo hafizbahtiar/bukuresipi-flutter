@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/log.dart';
 import '../../../../core/settings/locale_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
@@ -63,6 +64,7 @@ class _AccountPageState extends State<AccountPage> {
         final token = await google?.idToken();
         if (token == null) return; // closed the sheet
         await auth.linkGoogle(token);
+        log('google: linked');
         _snack(l.googleLinked);
       }
     } catch (e) {

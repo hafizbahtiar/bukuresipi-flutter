@@ -38,6 +38,7 @@ String errorText(
     'google_email_unverified' => l.errGoogleEmailUnverified,
     'google_account_mismatch' => l.errGoogleAccountMismatch,
     'google_unavailable' => l.errGoogleUnavailable,
+    'google_failed' => l.errGoogleFailed,
     'already_linked' => l.errAlreadyLinked,
     'google_in_use' => l.errGoogleInUse,
     'password_required' => l.errPasswordRequired,
