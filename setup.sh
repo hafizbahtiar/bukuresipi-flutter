@@ -7,12 +7,21 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Colours only on a terminal (none when piped or logged).
+if [ -t 1 ]; then
+  B=$'\e[1m' DIM=$'\e[2m' RED=$'\e[31m' GREEN=$'\e[32m' YELLOW=$'\e[33m' CYAN=$'\e[36m' R=$'\e[0m'
+else
+  B='' DIM='' RED='' GREEN='' YELLOW='' CYAN='' R=''
+fi
+step() { echo; echo "${CYAN}${B}==> $*${R}"; }
+fail() { echo "${RED}${B}✗ $*${R}" >&2; exit 1; }
+
 ask() { # ask <prompt> <option1> <option2> -> echoes the chosen option
   local answer
   while true; do
-    read -rp "$1 [$2/$3]: " answer
+    read -rp "${B}$1${R} ${DIM}[$2/$3]${R}: " answer
     case "$answer" in "$2" | "$3") echo "$answer"; return ;; esac
-    echo "Type $2 or $3." >&2
+    echo "${YELLOW}Type $2 or $3.${R}" >&2
   done
 }
 
@@ -26,23 +35,27 @@ suffix=$([ "$env" = dev ] && echo "-dev" || true)
 out="$type/bukuresipi-v$name($code)$suffix.$type"
 
 if [ "$env" = prod ] && [ ! -f android/key.properties ]; then
-  echo "android/key.properties is missing: a prod build needs the upload key." >&2
-  exit 1
+  fail "android/key.properties is missing: a prod build needs the upload key."
 fi
 
 echo
-echo "Will run: flutter clean, flutter pub get, pod install, then build $type ($env) -> $out"
-[ "$(ask "Proceed?" y n)" = y ] || { echo "Stopped."; exit 0; }
+echo "${B}Will run:${R} flutter clean, flutter pub get, pod install, then build ${B}$type${R} (${B}$env${R})"
+echo "${B}Output:${R}   ${GREEN}$out${R}"
+[ "$(ask "Proceed?" y n)" = y ] || { echo "${YELLOW}Stopped.${R}"; exit 0; }
 
+step "flutter clean"
 flutter clean
+step "flutter pub get"
 flutter pub get
+step "pod install"
 if command -v pod >/dev/null; then
   (cd ios && pod install)
 else
-  echo "pod not found: skipping pod install"
+  echo "${YELLOW}pod not found: skipping pod install${R}"
 fi
 
 mode=$([ "$env" = dev ] && echo debug || echo release)
+step "flutter build $type --$mode"
 if [ "$type" = apk ]; then
   flutter build apk "--$mode"
   built="build/app/outputs/flutter-apk/app-$mode.apk"
@@ -52,6 +65,6 @@ else
 fi
 
 mkdir -p "$type"
-cp "$built" "$out"
+cp "$built" "$out" || fail "build output not found: $built"
 echo
-echo "Done: $out"
+echo "${GREEN}${B}✓ Done:${R} ${GREEN}$out${R} ${DIM}($(du -h "$out" | cut -f1))${R}"

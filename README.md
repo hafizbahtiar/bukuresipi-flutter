@@ -12,6 +12,41 @@ flutter run
 flutter test
 ```
 
+## Release (Android)
+
+`./setup.sh` asks apk/aab and dev/prod, then cleans, builds and copies the file to `apk/` or `aab/` as
+`bukuresipi-v<version>(<code>).aab` (`-dev` for a debug build). Prod needs `android/key.properties` (upload key in
+`~/Documents/Keystore`). Raise `version:` in `pubspec.yaml` before every upload: the `+code` must go up each time.
+
+### Release notes (Play Console)
+
+Paste the whole block into "Release notes". Play keeps each language to 500 characters.
+
+#### 1.0.0 (1): first closed test
+
+```
+<ms-MY>
+Versi pertama Bukuresipi (ujian tertutup).
+• Kongsi pautan TikTok, Facebook, Instagram, YouTube, laman web atau tangkapan skrin: kami jadikan resipi atau simpan kedai makan.
+• Peta kedai simpanan anda dan kedai berdekatan.
+• Penilaian dan ulasan cawangan.
+• Buku keluarga: kongsi resipi dan senarai beli-belah (hingga 3 orang).
+• Notifikasi bila kongsian siap.
+• Log masuk dengan Google.
+Jumpa masalah? Beritahu kami. Terima kasih kerana menguji!
+</ms-MY>
+<en-US>
+The first Bukuresipi release (closed test).
+• Share a TikTok, Facebook, Instagram, YouTube or web link, or a screenshot: we turn it into a recipe or save the restaurant.
+• A map of your saved restaurants, and places nearby.
+• Branch ratings and reviews.
+• Family book: share recipes and a shopping list (up to 3 people).
+• A notification when your share is ready.
+• Sign in with Google.
+Found a problem? Tell us. Thanks for testing!
+</en-US>
+```
+
 ## Layout (feature-first, clean layers)
 
 - `lib/main.dart` - composition root: the only place concrete classes are built and wired (Provider).
