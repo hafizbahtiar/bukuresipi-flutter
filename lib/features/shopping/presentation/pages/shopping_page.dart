@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -23,8 +24,10 @@ class ShoppingPage extends StatefulWidget {
 
 class _ShoppingPageState extends State<ShoppingPage> {
   final _text = TextEditingController();
-  bool _adding = false;
   Timer? _debounce;
+
+  /// Row keys animating out (removed, or cleared as bought); the controller drops them once the animation ends.
+  final _leaving = <String>{};
   int _asked = 0;
 
   /// Catalogue ingredient names for what is being typed (2+ characters).
@@ -46,12 +49,19 @@ class _ShoppingPageState extends State<ShoppingPage> {
     }
     _debounce = Timer(const Duration(milliseconds: 300), () async {
       final asked = ++_asked;
-      final found = await context.read<ShoppingController>().suggest(q).catchError((_) => const <String>[]);
-      if (!mounted || asked != _asked || _text.text.trim() != q) return; // typed on meanwhile
-      setState(() => _suggestions = [
-        for (final s in found)
-          if (s.toLowerCase() != q.toLowerCase()) s,
-      ].take(5).toList());
+      final found = await context
+          .read<ShoppingController>()
+          .suggest(q)
+          .catchError((_) => const <String>[]);
+      if (!mounted || asked != _asked || _text.text.trim() != q) {
+        return; // typed on meanwhile
+      }
+      setState(
+        () => _suggestions = [
+          for (final s in found)
+            if (s.toLowerCase() != q.toLowerCase()) s,
+        ].take(5).toList(),
+      );
     });
   }
 
@@ -75,17 +85,39 @@ class _ShoppingPageState extends State<ShoppingPage> {
     }
   }
 
+  /// The line shows at once and the field is ready for the next one (the keyboard stays up); a failed save puts the
+  /// text back in the field.
   Future<void> _add() async {
     final text = _text.text.trim();
-    if (text.isEmpty || _adding) return;
-    setState(() => _adding = true);
+    if (text.isEmpty) return;
+    final shopping = context.read<ShoppingController>();
+    _text.clear();
+    _asked++; // a suggestion answer still on its way is for the old text
+    setState(() => _suggestions = const []);
     await _run(() async {
-      await context.read<ShoppingController>().addText(text);
-      _text.clear();
-      _asked++; // a suggestion answer still on its way is for the old text
-      _suggestions = const [];
+      try {
+        await shopping.addText(text);
+      } catch (_) {
+        if (mounted && _text.text.isEmpty) _text.text = text;
+        rethrow;
+      }
     });
-    if (mounted) setState(() => _adding = false);
+  }
+
+  void _toggle(ShoppingItem item) {
+    HapticFeedback.selectionClick();
+    _run(() => context.read<ShoppingController>().setDone(item.id, !item.done));
+  }
+
+  /// Animate the rows out first, then drop them (the animation is the wait, so it still feels instant).
+  Future<void> _leave(
+    Iterable<String> keys,
+    Future<void> Function() action,
+  ) async {
+    setState(() => _leaving.addAll(keys));
+    await Future<void>.delayed(_Appear.duration);
+    await _run(action);
+    if (mounted) setState(() => _leaving.removeAll(keys));
   }
 
   Future<void> _clearDone() async {
@@ -99,7 +131,10 @@ class _ShoppingPageState extends State<ShoppingPage> {
     )) {
       return;
     }
-    await _run(shopping.clearDone);
+    await _leave([
+      for (final i in shopping.items)
+        if (i.done) shopping.keyOf(i),
+    ], shopping.clearDone);
   }
 
   @override
@@ -111,7 +146,9 @@ class _ShoppingPageState extends State<ShoppingPage> {
     final inFamily = context.watch<FamilyController?>()?.inFamily ?? false;
     // Out of the family while on its list: back to the user's own.
     if (!inFamily && shopping.family) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => shopping.show(family: false));
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => shopping.show(family: false),
+      );
     }
     return Scaffold(
       appBar: AppBar(
@@ -135,10 +172,16 @@ class _ShoppingPageState extends State<ShoppingPage> {
             children: [
               if (inFamily)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
+                  padding: const EdgeInsets.fromLTRB(
+                    notebookGutter + 4,
+                    4,
+                    12,
+                    4,
+                  ),
                   child: NotebookSegmented<bool>(
                     selected: shopping.family,
-                    onChanged: (family) => _run(() => shopping.show(family: family)),
+                    onChanged: (family) =>
+                        _run(() => shopping.show(family: family)),
                     segments: [
                       NotebookSegment(value: false, label: l.shoppingMine),
                       NotebookSegment(value: true, label: l.shoppingFamily),
@@ -147,24 +190,17 @@ class _ShoppingPageState extends State<ShoppingPage> {
                 ),
               NotebookRow(
                 mark: Icon(Icons.add, size: 20, color: nb.inkSoft),
-                trailing: _adding
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator.adaptive(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : IconButton(
-                        tooltip: l.shoppingAdd,
-                        icon: const Icon(Icons.check),
-                        onPressed: _add,
-                      ),
+                trailing: IconButton(
+                  tooltip: l.shoppingAdd,
+                  icon: const Icon(Icons.check),
+                  onPressed: _add,
+                ),
                 child: TextField(
                   controller: _text,
                   maxLength: 200,
                   textInputAction: TextInputAction.done,
                   onChanged: _typed,
-                  onSubmitted: (_) => _add(),
+                  onEditingComplete: _add, // instead of onSubmitted: keeps the keyboard up for the next line
                   decoration: InputDecoration(
                     hintText: l.shoppingAddHint,
                     border: InputBorder.none,
@@ -176,7 +212,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
               for (final name in _suggestions)
                 NotebookRow(
                   mark: Icon(Icons.north_west, size: 16, color: nb.inkSoft),
-                  onTap: _adding ? null : () => _addSuggestion(name),
+                  onTap: () => _addSuggestion(name),
                   child: Text(name, style: TextStyle(color: nb.pandanDeep)),
                 ),
               if (shopping.error != null && items.isEmpty)
@@ -192,11 +228,17 @@ class _ShoppingPageState extends State<ShoppingPage> {
                   child: Text(l.shoppingEmpty),
                 ),
               for (final item in items)
-                _ItemRow(
-                  item: item,
-                  onToggle: () =>
-                      _run(() => shopping.setDone(item.id, !item.done)),
-                  onDelete: () => _run(() => shopping.remove(item.id)),
+                _Appear(
+                  key: ValueKey(shopping.keyOf(item)),
+                  visible: !_leaving.contains(shopping.keyOf(item)),
+                  child: _ItemRow(
+                    item: item,
+                    saving: shopping.isLocal(item),
+                    onToggle: () => _toggle(item),
+                    onDelete: () => _leave([
+                      shopping.keyOf(item),
+                    ], () => shopping.remove(item.id)),
+                  ),
                 ),
             ],
           ),
@@ -206,14 +248,63 @@ class _ShoppingPageState extends State<ShoppingPage> {
   }
 }
 
+/// A row that grows in when it first appears and shrinks away when [visible] turns false.
+class _Appear extends StatefulWidget {
+  const _Appear({super.key, required this.visible, required this.child});
+
+  static const duration = Duration(milliseconds: 220);
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  State<_Appear> createState() => _AppearState();
+}
+
+class _AppearState extends State<_Appear> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: _Appear.duration)
+    ..forward();
+  late final _curve = CurvedAnimation(
+    parent: _c,
+    curve: Curves.easeOutCubic,
+    reverseCurve: Curves.easeInCubic,
+  );
+
+  @override
+  void didUpdateWidget(_Appear old) {
+    super.didUpdateWidget(old);
+    if (widget.visible != old.visible) {
+      widget.visible ? _c.forward() : _c.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizeTransition(
+    sizeFactor: _curve,
+    alignment: Alignment.topCenter,
+    child: FadeTransition(opacity: _curve, child: widget.child),
+  );
+}
+
 class _ItemRow extends StatelessWidget {
   const _ItemRow({
     required this.item,
+    required this.saving,
     required this.onToggle,
     required this.onDelete,
   });
 
   final ShoppingItem item;
+
+  /// Just typed, not saved yet: shown faded, no tick or remove until it has an id.
+  final bool saving;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
 
@@ -226,29 +317,31 @@ class _ItemRow extends StatelessWidget {
     final products = item.products
         .map((p) => p.brand == null ? p.name : '${p.name} (${p.brand})')
         .join(', ');
-    return NotebookRow(
-      onTap: onToggle,
+    final row = NotebookRow(
+      onTap: saving ? null : onToggle,
       mark: Checkbox(
         value: item.done,
-        onChanged: (_) => onToggle(),
+        onChanged: saving ? null : (_) => onToggle(),
         visualDensity: VisualDensity.compact,
       ),
       trailing: IconButton(
         tooltip: l.remove,
         icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
-        onPressed: onDelete,
+        onPressed: saving ? null : onDelete,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            item.text,
-            style: item.done
-                ? TextStyle(
-                    color: nb.inkSoft,
-                    decoration: TextDecoration.lineThrough,
-                  )
-                : null,
+          // The tick fades the text and strikes it through in place; the row moves down once the save lands.
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 180),
+            style: DefaultTextStyle.of(context).style.copyWith(
+              color: item.done ? nb.inkSoft : null,
+              decoration: item.done
+                  ? TextDecoration.lineThrough
+                  : TextDecoration.none,
+            ),
+            child: Text(item.text),
           ),
           if (item.recipes.isNotEmpty && !item.done)
             InkWell(
@@ -287,6 +380,11 @@ class _ItemRow extends StatelessWidget {
             ),
         ],
       ),
+    );
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 180),
+      opacity: saving ? 0.55 : 1,
+      child: row,
     );
   }
 }

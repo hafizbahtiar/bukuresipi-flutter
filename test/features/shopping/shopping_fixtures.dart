@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/features/shopping/domain/shopping.dart';
 import 'package:bukuresipi_flutter/features/shopping/domain/shopping_repository.dart';
 
@@ -13,6 +15,16 @@ class FakeShopping implements ShoppingRepository {
   ];
 
   final lists = <bool>[];
+
+  /// When set, saves wait for it (the server is slow) and then throw [saveError] if that is set.
+  Completer<void>? gate;
+  Object? saveError;
+
+  Future<void> _slow() async {
+    await gate?.future;
+    if (saveError != null) throw saveError!;
+  }
+
   List<String> suggestions = const ['Gula pasir', 'Gula melaka'];
 
   @override
@@ -28,6 +40,7 @@ class FakeShopping implements ShoppingRepository {
 
   @override
   Future<List<ShoppingItem>> addText(String text, {bool family = false}) async {
+    await _slow();
     final item = ShoppingItem(id: 'i${_next++}', text: text, done: false);
     items = [...items, item];
     return [item];
@@ -59,6 +72,7 @@ class FakeShopping implements ShoppingRepository {
 
   @override
   Future<ShoppingItem> setDone(String id, bool done) async {
+    await _slow();
     final old = items.firstWhere((i) => i.id == id);
     final item = ShoppingItem(
       id: id,
@@ -73,8 +87,10 @@ class FakeShopping implements ShoppingRepository {
   }
 
   @override
-  Future<void> delete(String id) async =>
-      items = items.where((i) => i.id != id).toList();
+  Future<void> delete(String id) async {
+    await _slow();
+    items = items.where((i) => i.id != id).toList();
+  }
 
   @override
   Future<void> clearDone({bool family = false}) async =>

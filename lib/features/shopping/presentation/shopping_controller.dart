@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -24,6 +26,7 @@ class ShoppingController extends ChangeNotifier {
     if (family == _family) return;
     _family = family;
     _generation++; // the other list's answer must not land here
+    _pending = 0;
     _loading = false;
     _items = const [];
     _loaded = false;
@@ -46,6 +49,7 @@ class ShoppingController extends ChangeNotifier {
 
   void clear() {
     _generation++; // a load still in flight belongs to the previous user: drop its answer
+    _pending = 0;
     _loading = false;
     _loaded = false;
     _items = const [];
@@ -63,7 +67,10 @@ class ShoppingController extends ChangeNotifier {
     try {
       final items = await _repo.list(family: _family);
       if (generation != _generation) return;
-      _items = items;
+      if (_pending == 0) {
+        _items =
+            items; // else a save is still landing: its sync brings the list
+      }
       _error = null;
     } on ApiException catch (e) {
       if (generation != _generation) return;
@@ -77,10 +84,77 @@ class ShoppingController extends ChangeNotifier {
     }
   }
 
-  // The server's order (to buy first) is kept by reloading after changes that move lines.
+  // Changes show at once (optimistic) and are saved behind; a failed save puts that one change back and throws.
+  // While saves are in flight nothing reloads; when the last one lands, one quiet reload brings the server's sums
+  // and order (to buy first). So rows never jump under a finger ticking several lines.
+  int _pending = 0;
+  int _localIds = 0;
+  final _aliases = <String, String>{};
+
+  /// A stable key for a row: an added line keeps the key it had before the server gave it an id (no re-animation).
+  String keyOf(ShoppingItem item) => _aliases[item.id] ?? item.id;
+
+  /// A line typed here that the server has not saved yet: it cannot be ticked or removed until then.
+  bool isLocal(ShoppingItem item) => item.id.startsWith('local-');
+
+  Future<T> _save<T>(
+    Future<T> Function() call, {
+    required void Function() undo,
+  }) async {
+    final generation = _generation;
+    _pending++;
+    try {
+      return await call();
+    } catch (_) {
+      if (generation == _generation) {
+        undo();
+        notifyListeners();
+      }
+      rethrow;
+    } finally {
+      if (generation == _generation && --_pending == 0) unawaited(_sync());
+    }
+  }
+
+  Future<void> _sync() async {
+    final generation = _generation;
+    try {
+      final items = await _repo.list(family: _family);
+      if (generation != _generation || _pending > 0) {
+        return; // a newer change will sync again
+      }
+      _items = items;
+      _error = null;
+      notifyListeners();
+    } on ApiException {
+      // Kept as shown; the next pull-to-refresh or reload fixes it.
+    }
+  }
+
+  void _replace(String id, ShoppingItem Function(ShoppingItem) change) {
+    _items = [for (final i in _items) i.id == id ? change(i) : i];
+  }
+
   Future<void> addText(String text) async {
-    await _repo.addText(text, family: _family);
-    await load();
+    final local = ShoppingItem(
+      id: 'local-${_localIds++}',
+      text: text,
+      done: false,
+    );
+    final todo = _items.where((i) => !i.done).length;
+    _items = [..._items.take(todo), local, ..._items.skip(todo)];
+    notifyListeners();
+    final saved = await _save(
+      () => _repo.addText(text, family: _family),
+      undo: () => _items = _items.where((i) => i.id != local.id).toList(),
+    );
+    if (saved.isEmpty || !_items.any((i) => i.id == local.id)) return;
+    _aliases[saved.first.id] = local.id;
+    _items = [
+      for (final i in _items)
+        if (i.id == local.id) ...saved else i,
+    ];
+    notifyListeners();
   }
 
   /// How many lines were added (0 = all already on the list). [family] = to the family list.
@@ -95,14 +169,33 @@ class ShoppingController extends ChangeNotifier {
   Future<List<String>> suggest(String query) => _repo.suggest(query);
 
   Future<void> setDone(String id, bool done) async {
-    await _repo.setDone(id, done);
-    await load();
+    ShoppingItem flip(ShoppingItem i, bool d) => ShoppingItem(
+      id: i.id,
+      text: i.text,
+      done: d,
+      ingredient: i.ingredient,
+      recipes: i.recipes,
+      products: i.products,
+    );
+    _replace(id, (i) => flip(i, done));
+    notifyListeners();
+    await _save(
+      () => _repo.setDone(id, done),
+      undo: () => _replace(id, (i) => flip(i, !done)),
+    );
   }
 
   Future<void> remove(String id) async {
-    await _repo.delete(id);
-    _items = _items.where((i) => i.id != id).toList();
+    final index = _items.indexWhere((i) => i.id == id);
+    if (index < 0) return;
+    final item = _items[index];
+    _items = [..._items]..removeAt(index);
     notifyListeners();
+    await _save(
+      () => _repo.delete(id),
+      undo: () =>
+          _items = [..._items]..insert(index.clamp(0, _items.length), item),
+    );
   }
 
   /// Throws ApiException.
@@ -110,8 +203,12 @@ class ShoppingController extends ChangeNotifier {
       _repo.products(ingredient);
 
   Future<void> clearDone() async {
-    await _repo.clearDone(family: _family);
+    final done = _items.where((i) => i.done).toList();
     _items = _items.where((i) => !i.done).toList();
     notifyListeners();
+    await _save(
+      () => _repo.clearDone(family: _family),
+      undo: () => _items = [..._items, ...done],
+    );
   }
 }
