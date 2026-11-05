@@ -5,6 +5,8 @@
 #   prod = release build (upload key from android/key.properties)
 # Both use the same API: the app has one .env (production).
 set -euo pipefail
+# The braces make bash read the whole file before running, so editing it mid-run can't break a running build.
+{
 cd "$(dirname "$0")"
 
 # Colours only on a terminal (none when piped or logged).
@@ -78,3 +80,5 @@ mkdir -p "$type"
 cp "$built" "$out" || fail "build output not found: $built"
 echo
 echo "${GREEN}${B}✓ Done:${R} ${GREEN}$out${R} ${DIM}($(du -h "$out" | cut -f1))${R}"
+exit 0
+}
