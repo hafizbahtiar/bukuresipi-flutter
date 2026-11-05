@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -74,10 +72,9 @@ class _GoogleButtonState extends State<GoogleButton> {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox.square(
-                  dimension: 18,
-                  child: CustomPaint(painter: _GoogleG()),
-                ),
+                // Google's own "G" (the 2025 gradient), cut from its sign-in asset pack
+                // (developers.google.com/identity/branding-guidelines); 20 dp, as the guidelines say.
+                Image.asset('assets/brand/google_g.png', width: 20, height: 20),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
@@ -115,36 +112,4 @@ class _GoogleButtonState extends State<GoogleButton> {
       ],
     );
   }
-}
-
-/// The four-colour Google "G" (drawn, so no image asset or SVG package): blue, green, yellow, red arcs and the bar.
-class _GoogleG extends CustomPainter {
-  const _GoogleG();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.shortestSide;
-    final stroke = s * 0.2;
-    final rect = Rect.fromCircle(
-      center: size.center(Offset.zero),
-      radius: (s - stroke) / 2,
-    );
-    Paint p(int c) => Paint()
-      ..color = Color(c)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke;
-    double deg(double d) => d * math.pi / 180;
-    canvas
-      ..drawArc(rect, deg(-40), deg(85), false, p(0xFF4285F4)) // blue, right
-      ..drawArc(rect, deg(45), deg(90), false, p(0xFF34A853)) // green, bottom
-      ..drawArc(rect, deg(135), deg(90), false, p(0xFFFBBC05)) // yellow, left
-      ..drawArc(rect, deg(225), deg(95), false, p(0xFFEA4335)) // red, top
-      ..drawRect(
-        Rect.fromLTWH(s / 2, s / 2 - stroke / 2, s / 2 - stroke / 4, stroke),
-        Paint()..color = const Color(0xFF4285F4),
-      );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

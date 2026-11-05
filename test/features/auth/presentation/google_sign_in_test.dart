@@ -89,6 +89,7 @@ void main() {
     t,
   ) async {
     await pump(t, const LoginPage(), google: _FakeGoogle());
+    expect(find.image(const AssetImage('assets/brand/google_g.png')), findsOneWidget);
     await t.tap(find.text('Continue with Google'));
     await t.pumpAndSettle();
     expect(repo.googleTokens, ['google-id-token']);
