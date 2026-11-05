@@ -10,7 +10,6 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/nearby_branch.dart';
 import '../../domain/place.dart';
-import '../../domain/rating.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
 import 'branch_edit_sheet.dart';
@@ -24,7 +23,6 @@ class NearbySheet extends StatefulWidget {
     required this.place,
     required this.onSave,
     this.onEdited,
-    this.onRate,
   });
 
   final NearbyBranch place;
@@ -32,9 +30,6 @@ class NearbySheet extends StatefulWidget {
 
   /// Called after a branch edit so the map can reload its nearby list.
   final Future<void> Function()? onEdited;
-
-  /// The map can update its nearby row with the returned summary.
-  final Future<RatingSummary> Function(int? stars)? onRate;
 
   @override
   State<NearbySheet> createState() => _NearbySheetState();
@@ -173,17 +168,9 @@ class _NearbySheetState extends State<NearbySheet> {
                   size: 20,
                   color: nb.kunyit,
                 ),
-                child: NotebookRating(
+                child: RatingLine(
                   rating: p.rating,
-                  onRate:
-                      widget.onRate ??
-                      (stars) => context.read<PlacesController>().setRating(
-                        p.branchId,
-                        stars,
-                      ),
-                  onReviews: () =>
-                      context.push('/branches/${p.branchId}/reviews'),
-                  hint: p.saved ? l.ratingVerifyEmail : l.ratingSaveFirst,
+                  onTap: () => context.push('/branches/${p.branchId}/reviews'),
                 ),
               ),
               if (p.halalClaim != null && p.halalQuote != null) ...[

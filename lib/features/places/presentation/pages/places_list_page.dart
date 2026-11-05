@@ -4,13 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
-import '../../../auth/presentation/auth_text.dart';
 import '../../../recipes/domain/recipe.dart';
 import '../../../recipes/presentation/recipes_controller.dart';
-import '../../../shares/domain/share.dart';
 import '../../../shares/presentation/recent_shares.dart';
+import '../../../shares/presentation/widgets/share_reading.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
 
@@ -27,19 +25,10 @@ class PlacesListPage extends StatelessWidget {
     final shared = context.watch<RecentShares>();
     // Shares the server is still reading, or could not read (last 24 h), above the saved places.
     final inbox = [
-      for (final _ in shared.reading)
-        NotebookRow(
-          mark: const SizedBox.square(
-            dimension: 14,
-            child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-          ),
-          child: Text(
-            l.shareReadingLine,
-            style: Notebook.of(context).hand.copyWith(fontSize: 22),
-          ),
-        ),
+      for (final s in shared.reading)
+        ReadingShareRow(key: ValueKey('reading-${s.id}'), share: s),
       for (final s in shared.failed)
-        _FailedShare(key: ValueKey(s.id), share: s),
+        ShareProblemRow(key: ValueKey('problem-${s.id}'), share: s),
     ];
 
     final List<Widget> lines;
@@ -72,8 +61,24 @@ class PlacesListPage extends StatelessWidget {
     } else {
       // One list, newest first: a shop icon = a place, a book icon = a recipe.
       final items = <(DateTime, Widget)>[
-        for (final p in list) (p.createdAt, PlaceTile(place: p)),
-        for (final r in recipes.recipes) (r.createdAt, RecipeTile(recipe: r)),
+        for (final p in list)
+          (
+            p.createdAt,
+            FreshHighlight(
+              key: ValueKey('place-${p.id}'),
+              fresh: shared.isFresh(p.restaurant.id),
+              child: PlaceTile(place: p),
+            ),
+          ),
+        for (final r in recipes.recipes)
+          (
+            r.createdAt,
+            FreshHighlight(
+              key: ValueKey('recipe-${r.id}'),
+              fresh: shared.isFresh(r.id),
+              child: RecipeTile(recipe: r),
+            ),
+          ),
       ]..sort((a, b) => b.$1.compareTo(a.$1));
       lines = [
         if (recipes.error != null) _RecipesError(onRetry: recipes.load),
@@ -94,99 +99,6 @@ class PlacesListPage extends StatelessWidget {
             children: [...inbox, ...lines],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// A share the server could not read: retry it, or take it off the book.
-class _FailedShare extends StatefulWidget {
-  const _FailedShare({super.key, required this.share});
-
-  final Share share;
-
-  @override
-  State<_FailedShare> createState() => _FailedShareState();
-}
-
-class _FailedShareState extends State<_FailedShare> {
-  bool _busy = false;
-
-  Future<void> _retry() async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final shared = context.read<RecentShares>();
-    setState(() => _busy = true);
-    try {
-      await shared.retry(widget.share.id);
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _dismiss() async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final shared = context.read<RecentShares>();
-    final ok = await showNotebookDialog(
-      context,
-      message: l.shareDismissConfirm,
-      tone: DialogTone.danger,
-      confirmLabel: l.remove,
-    );
-    if (!ok) return;
-    setState(() => _busy = true);
-    try {
-      await shared.dismiss(widget.share.id);
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    return NotebookRow(
-      mark: Icon(Icons.error_outline, size: 18, color: nb.margin),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l.shareFailed),
-          // The server's code (unreadable, ai_failed, quota...): what to look up in the logs.
-          Text(
-            widget.share.reason,
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: nb.inkSoft),
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 4,
-            children: [
-              TextButton.icon(
-                onPressed: _busy ? null : _retry,
-                icon: _busy
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator.adaptive(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Icons.refresh, size: 18),
-                label: Text(l.tryAgain),
-              ),
-              TextButton.icon(
-                onPressed: _busy ? null : _dismiss,
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: Text(l.remove),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

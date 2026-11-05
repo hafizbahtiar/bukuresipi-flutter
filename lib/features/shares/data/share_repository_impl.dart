@@ -117,5 +117,7 @@ class ShareRepositoryImpl implements ShareRepository {
     recipeId: j['recipeId'] as String?,
     gaps: [...(j['gaps'] as List? ?? const []).cast<String>()],
     error: j['error'] as String?,
+    platform: j['platform'] as String?,
+    attempts: (j['attempts'] as num?)?.toInt() ?? 0,
   );
 }

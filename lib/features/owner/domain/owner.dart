@@ -9,6 +9,7 @@ class OwnerStats {
     this.reportsReady = 0,
     this.reviewReportsOpen = 0,
     this.ratingBursts = 0,
+    this.testers = 0,
   });
 
   final int usersTotal;
@@ -27,6 +28,9 @@ class OwnerStats {
   /// Branches rated by several new accounts this week.
   final int ratingBursts;
 
+  /// Website signups for the Android closed test.
+  final int testers;
+
   OwnerStats withMeter(Meter m) => OwnerStats(
     usersTotal: usersTotal,
     usersNewThisWeek: usersNewThisWeek,
@@ -37,7 +41,21 @@ class OwnerStats {
     reportsReady: reportsReady,
     reviewReportsOpen: reviewReportsOpen,
     ratingBursts: ratingBursts,
+    testers: testers,
   );
+}
+
+/// A website signup for the Android closed test (a Google account email, pasted into the Play Console).
+class Tester {
+  const Tester({
+    required this.email,
+    required this.lang,
+    required this.joinedAt,
+  });
+
+  final String email;
+  final String lang;
+  final DateTime joinedAt;
 }
 
 /// A branch rated by several brand-new accounts in one week: maybe fake accounts. [ratings]: every rating on it this

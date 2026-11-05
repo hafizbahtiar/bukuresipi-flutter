@@ -82,6 +82,9 @@ class ShareIntake extends ChangeNotifier {
 
   final List<Incoming> _queue = [];
   Incoming? _last; // for retry
+
+  /// What is being sent (or waits for sign-in): the share screen names it.
+  Incoming? get current => _sending || _queue.isEmpty ? _last : _queue.first;
   bool _sending = false;
 
   static const _ownHosts = {'bukuresipi.com', 'www.bukuresipi.com'};

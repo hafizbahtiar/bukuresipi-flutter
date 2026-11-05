@@ -33,6 +33,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
       reportsReady: r?['ready'] as int? ?? 0,
       reviewReportsOpen: j['reviewReportsOpen'] as int? ?? 0,
       ratingBursts: j['ratingBursts'] as int? ?? 0,
+      testers: j['testers'] as int? ?? 0,
       meters: [
         for (final m in j['meters'] as List) _meter(m as Map<String, dynamic>),
       ],
@@ -129,6 +130,19 @@ class OwnerRepositoryImpl implements OwnerRepository {
     return [
       for (final b in (j['bursts'] as List).cast<Map<String, dynamic>>())
         _burst(b),
+    ];
+  });
+
+  @override
+  Future<List<Tester>> testers() => apiCall(() async {
+    final j = await _get('/owner/testers');
+    return [
+      for (final t in (j['testers'] as List).cast<Map<String, dynamic>>())
+        Tester(
+          email: t['email'] as String,
+          lang: t['lang'] as String,
+          joinedAt: dbTime(t['createdAt'] as String),
+        ),
     ];
   });
 

@@ -36,11 +36,7 @@ class LocationButton extends StatelessWidget {
                       dimension: 18,
                       child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                     )
-                  : Icon(
-                      Icons.my_location,
-                      size: 18,
-                      color: nb.pandanDeep,
-                    ),
+                  : Icon(Icons.my_location, size: 18, color: nb.pandanDeep),
             ),
           ),
         ),

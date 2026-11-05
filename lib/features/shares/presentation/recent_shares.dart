@@ -27,10 +27,17 @@ class RecentShares extends ChangeNotifier {
     for (final s in _shares)
       if (!s.isFinished) s,
   ];
+
+  /// Could not be read, or read with nothing in it: the book says why.
   List<Share> get failed => [
     for (final s in _shares)
-      if (s.couldNotRead) s,
+      if (s.couldNotRead || s.nothingFound) s,
   ];
+
+  /// Recipe / restaurant ids that just finished reading: the book highlights them as they arrive.
+  final Set<String> _fresh = {};
+  Timer? _unfresh;
+  bool isFresh(String id) => _fresh.contains(id);
 
   Future<void> load() async {
     _next?.cancel();
@@ -53,7 +60,17 @@ class RecentShares extends ChangeNotifier {
     }
     if (generation != _generation) return;
     notifyListeners();
-    if (_shares.any((s) => s.isFinished && wasReading.contains(s.id))) {
+    final finished = [
+      for (final s in _shares)
+        if (s.isFinished && wasReading.contains(s.id)) s,
+    ];
+    if (finished.isNotEmpty) {
+      _fresh.addAll([
+        for (final s in finished) ?s.restaurantId,
+        for (final s in finished) ?s.recipeId,
+      ]);
+      _unfresh?.cancel();
+      _unfresh = Timer(const Duration(seconds: 6), _fresh.clear);
       await onFinished();
     }
     if (reading.isNotEmpty) _next = Timer(every, load);
@@ -75,6 +92,7 @@ class RecentShares extends ChangeNotifier {
   void clear() {
     _generation++;
     _next?.cancel();
+    _fresh.clear();
     _shares = const [];
     notifyListeners();
   }
@@ -82,6 +100,7 @@ class RecentShares extends ChangeNotifier {
   @override
   void dispose() {
     _next?.cancel();
+    _unfresh?.cancel();
     super.dispose();
   }
 }

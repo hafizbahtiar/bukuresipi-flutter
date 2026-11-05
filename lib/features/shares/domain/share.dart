@@ -9,6 +9,8 @@ class Share {
     this.recipeId,
     this.gaps = const [],
     this.error,
+    this.platform,
+    this.attempts = 0,
   });
 
   final String id;
@@ -19,6 +21,12 @@ class Share {
   final List<String> gaps;
   final String? error;
 
+  /// tiktok | instagram | facebook | youtube | google_maps | web; null = a screenshot.
+  final String? platform;
+
+  /// Read attempts so far (the server tries up to 3 times).
+  final int attempts;
+
   bool get isFinished => status == 'done' || status == 'failed';
 
   /// Finished without anything read from it (the book says so, with a hint to share a screenshot).
@@ -26,4 +34,11 @@ class Share {
   String get reason => error ?? gaps.join(', ');
 
   bool get couldNotRead => status == 'failed' || gaps.contains('unreadable');
+
+  /// Read fine, but the post holds neither a recipe nor a place to eat.
+  bool get nothingFound =>
+      status == 'done' &&
+      restaurantId == null &&
+      recipeId == null &&
+      !couldNotRead;
 }

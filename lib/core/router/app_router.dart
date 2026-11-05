@@ -19,6 +19,7 @@ import '../../features/home/presentation/home_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_rating_bursts_page.dart';
+import '../../features/owner/presentation/pages/owner_testers_page.dart';
 import '../../features/owner/presentation/pages/owner_review_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_shares_page.dart';
 import '../../features/owner/presentation/pages/owner_users_page.dart';
@@ -134,6 +135,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
             path: 'rating-bursts',
             builder: (_, _) => const OwnerRatingBurstsPage(),
           ),
+          _page(path: 'testers', builder: (_, _) => const OwnerTestersPage()),
         ],
       ),
     ],

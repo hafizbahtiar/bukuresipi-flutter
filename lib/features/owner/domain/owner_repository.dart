@@ -43,4 +43,7 @@ abstract interface class OwnerRepository {
 
   /// Deletes a rating and its review for good (its votes and reports too).
   Future<void> deleteRating(String ratingId);
+
+  /// Website tester signups, oldest first.
+  Future<List<Tester>> testers();
 }

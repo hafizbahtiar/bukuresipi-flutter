@@ -4,10 +4,12 @@ import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_testers_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_review_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -189,5 +191,51 @@ void main() {
   testWidgets('no bursts: a calm empty state', (t) async {
     await pump(t, const OwnerRatingBurstsPage());
     expect(find.text('No unusual ratings this week.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'testers: listed oldest first; copy all puts one email per line',
+    (t) async {
+      String? copied;
+      t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      repo.testerList = [
+        Tester(
+          email: 'ali@gmail.com',
+          lang: 'ms',
+          joinedAt: DateTime.utc(2026, 11, 4),
+        ),
+        Tester(
+          email: 'siti@gmail.com',
+          lang: 'en',
+          joinedAt: DateTime.utc(2026, 11, 5),
+        ),
+      ];
+      await pump(t, const OwnerTestersPage());
+      expect(find.text('ali@gmail.com'), findsOneWidget);
+      await t.tap(find.byTooltip('Copy all emails'));
+      await t.pumpAndSettle();
+      expect(copied, 'ali@gmail.com\nsiti@gmail.com');
+      expect(find.textContaining('2 emails copied'), findsOneWidget);
+    },
+  );
+
+  testWidgets('no testers: an empty state and no copy button', (t) async {
+    await pump(t, const OwnerTestersPage());
+    expect(find.text('No tester signups yet.'), findsOneWidget);
+    expect(find.byTooltip('Copy all emails'), findsNothing);
   });
 }

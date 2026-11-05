@@ -348,12 +348,9 @@ class _BranchRow extends StatelessWidget {
             Text(n, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: NotebookRating(
+            child: RatingLine(
               rating: branch.rating,
-              onRate: (stars) =>
-                  context.read<PlacesController>().setRating(branch.id, stars),
-              onReviews: () => context.push('/branches/${branch.id}/reviews'),
-              hint: branch.rating.canRate ? null : l.ratingVerifyEmail,
+              onTap: () => context.push('/branches/${branch.id}/reviews'),
             ),
           ),
           if (!branch.hasPin)

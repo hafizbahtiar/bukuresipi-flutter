@@ -517,18 +517,6 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       builder: (context) => NearbySheet(
         place: place,
         onEdited: _loadNearby,
-        onRate: (stars) async {
-          final rating = await places.setRating(place.branchId, stars);
-          if (mounted) {
-            setState(() {
-              _nearby = [
-                for (final n in _nearby)
-                  n.branchId == place.branchId ? n.copyWith(rating: rating) : n,
-              ];
-            });
-          }
-          return rating;
-        },
         onSave: () async {
           final saved = await places.saveBranch(place.branchId);
           if (!mounted) return;
@@ -861,12 +849,9 @@ class _PinSheet extends StatelessWidget {
                             .where((x) => x.id == b.id)
                             .firstOrNull ??
                         b;
-                    return NotebookRating(
+                    return RatingLine(
                       rating: live.rating,
-                      onRate: (stars) => places.setRating(b.id, stars),
-                      onReviews: () =>
-                          context.push('/branches/${b.id}/reviews'),
-                      hint: live.rating.canRate ? null : l.ratingVerifyEmail,
+                      onTap: () => context.push('/branches/${b.id}/reviews'),
                     );
                   },
                 ),

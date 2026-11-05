@@ -57,6 +57,9 @@ void main() {
       await t.pump();
       await t.pump();
       expect(find.textContaining('in your book in a minute'), findsOneWidget);
+      // The clipping names what was shared, read from the link.
+      expect(find.text('Your TikTok post'), findsOneWidget);
+      expect(find.text('Taking you back…'), findsOneWidget);
       expect(left, 0);
       await t.pump(const Duration(seconds: 2));
       expect(left, 1);

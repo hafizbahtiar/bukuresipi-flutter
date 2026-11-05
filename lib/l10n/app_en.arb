@@ -146,20 +146,12 @@
   "@shareTitle": {},
   "shareSending": "Sending to Bukuresipi...",
   "@shareSending": {},
-  "shareReading": "Reading the post. This can take up to a minute.",
-  "@shareReading": {},
-  "shareSavedPlace": "Saved to your places.",
-  "@shareSavedPlace": {},
-  "shareRecipeSoon": "This looks like a recipe. Saving recipes is coming soon.",
-  "@shareRecipeSoon": {},
   "shareNothingFound": "We could not find a recipe or a place to eat in this post.",
   "@shareNothingFound": {},
   "shareFailed": "We could not read this post. Try sharing a screenshot of it instead.",
   "@shareFailed": {},
   "shareDismissConfirm": "Remove this post from your list? It was not saved.",
   "@shareDismissConfirm": {},
-  "shareStillWorking": "Still working on it. It will appear in your book when it is ready.",
-  "@shareStillWorking": {},
   "shareNone": "Nothing to show. Share a post from TikTok, Instagram, Facebook or YouTube to Bukuresipi.",
   "@shareNone": {},
   "shareWaitingLogin": "Sign in to save what you shared.",
@@ -558,8 +550,6 @@
       }
     }
   },
-  "ratingSaveFirst": "Save this place to rate it.",
-  "@ratingSaveFirst": {},
   "ratingVerifyEmail": "Verify your email to rate.",
   "@ratingVerifyEmail": {},
   "ratingRemoved": "Rating removed.",
@@ -721,8 +711,6 @@
   },
   "shareSavedLeaving": "Saved. It will be in your book in a minute.",
   "@shareSavedLeaving": {},
-  "shareReadingLine": "Reading a post you shared…",
-  "@shareReadingLine": {},
   "northUp": "North up",
   "@northUp": {},
   "view3d": "3D view",
@@ -815,6 +803,20 @@
   "@ownerRatingBursts": {},
   "ownerRatingBurstsEmpty": "No unusual ratings this week.",
   "@ownerRatingBurstsEmpty": {},
+  "ownerTesters": "Testers",
+  "@ownerTesters": {},
+  "ownerTestersEmpty": "No tester signups yet.",
+  "@ownerTestersEmpty": {},
+  "ownerTestersCopy": "Copy all emails",
+  "@ownerTestersCopy": {},
+  "ownerTestersCopied": "{count} emails copied. Paste them into the Play Console closed test.",
+  "@ownerTestersCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ownerRatingBurstNew": "{count} ratings from new accounts this week",
   "@ownerRatingBurstNew": {
     "placeholders": {
@@ -928,7 +930,58 @@
   "changeEmailButton": "Send confirmation link",
   "@changeEmailButton": {},
   "changeEmailSent": "We sent a link to {email}. Open it to finish; your email stays the same until then.",
-  "@changeEmailSent": {"placeholders": {"email": {"type": "String"}}},
+  "@changeEmailSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "errEmailInUse": "Another account already uses this email.",
-  "@errEmailInUse": {}
+  "@errEmailInUse": {},
+  "shareSourcePost": "your {platform} post",
+  "@shareSourcePost": {
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "shareSourceMaps": "your Google Maps place",
+  "@shareSourceMaps": {},
+  "shareSourceScreenshot": "your screenshot",
+  "@shareSourceScreenshot": {},
+  "shareSourceWeb": "the web page",
+  "@shareSourceWeb": {},
+  "shareReadingTitle": "Reading {source}…",
+  "@shareReadingTitle": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "shareStageQueued": "In the queue, starting soon",
+  "@shareStageQueued": {},
+  "shareStageReading": "Reading the caption and the page",
+  "@shareStageReading": {},
+  "shareStageRetry": "Trying again ({attempt} of {max})",
+  "@shareStageRetry": {
+    "placeholders": {
+      "attempt": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "shareWhyUnreadable": "We could not open this post. It may be private or removed. Try sharing a screenshot of it instead.",
+  "@shareWhyUnreadable": {},
+  "shareWhyBusy": "We were too busy to read it. Try again in a while.",
+  "@shareWhyBusy": {},
+  "shareWhyError": "Something went wrong while reading it. Try again.",
+  "@shareWhyError": {},
+  "shareBackSoon": "Taking you back…",
+  "@shareBackSoon": {}
 }

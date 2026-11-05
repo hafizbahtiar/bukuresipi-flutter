@@ -116,6 +116,7 @@ void main() {
       ),
     ];
     await pump(t, const PlacesListPage());
+    await t.pump(const Duration(milliseconds: 400)); // the row slides in
     expect(find.text('Try again'), findsOneWidget);
 
     await t.tap(find.text('Try again'));
@@ -276,7 +277,9 @@ void main() {
     expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
   });
 
-  testWidgets('a saved branch can be rated from its row', (t) async {
+  testWidgets('a branch row shows its rating as one line, without overflow', (
+    t,
+  ) async {
     repo = FakePlaces()
       ..places = [
         place(
@@ -290,12 +293,13 @@ void main() {
         mine: 4,
         canRate: true,
       );
+    t.view.physicalSize = const Size(320 * 3, 640 * 3); // a small phone
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
     await pump(t, const PlaceDetailPage(id: 'a'));
-    await t.tap(find.byKey(const ValueKey('rating-star-4')));
-    await t.pumpAndSettle();
-
-    expect(repo.ratingCalls, [('b-1', 4)]);
-    expect(find.text('Your rating: 4'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rating-star-4')), findsNothing);
+    expect(find.textContaining('4.3 · 7 ratings'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('the owner reviews an AI draft before saving it', (t) async {
@@ -399,7 +403,13 @@ void main() {
     (t) async {
       repo = FakePlaces();
       shared = [
-        const Share(id: 's1', status: 'processing', kind: 'unknown'),
+        const Share(
+          id: 's1',
+          status: 'processing',
+          kind: 'unknown',
+          platform: 'tiktok',
+          attempts: 1,
+        ),
         const Share(
           id: 's2',
           status: 'failed',
@@ -408,9 +418,13 @@ void main() {
         ),
       ];
       await pump(t, const PlacesListPage());
-      await t.pump();
-      expect(find.text('Reading a post you shared…'), findsOneWidget);
-      expect(find.textContaining('could not read this post'), findsOneWidget);
+      await t.pump(const Duration(milliseconds: 400)); // the rows slide in
+      expect(find.text('Reading your TikTok post…'), findsOneWidget);
+      expect(find.text('Reading the caption and the page'), findsOneWidget);
+      expect(
+        find.text('Something went wrong while reading it. Try again.'),
+        findsOneWidget,
+      );
       // Why, for whoever is looking into it.
       expect(find.textContaining('ai_failed'), findsOneWidget);
       shared = [];

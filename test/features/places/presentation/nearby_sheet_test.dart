@@ -84,7 +84,9 @@ void main() {
     expect(find.text('open'), findsOneWidget);
   });
 
-  testWidgets('a saved nearby branch can be rated from the sheet', (t) async {
+  testWidgets('the sheet shows a one-line rating summary, no star buttons', (
+    t,
+  ) async {
     final repo = FakePlaces()
       ..ratingResult = const RatingSummary(
         average: 4.3,
@@ -113,7 +115,6 @@ void main() {
                       ),
                     ),
                     onSave: () async {},
-                    onRate: (stars) => controller.setRating('b-1', stars),
                   ),
                 ),
                 child: const Text('open'),
@@ -125,11 +126,9 @@ void main() {
     );
     await t.tap(find.text('open'));
     await t.pumpAndSettle();
-    await t.tap(find.byKey(const ValueKey('rating-star-4')));
-    await t.pumpAndSettle();
-
-    expect(repo.ratingCalls, [('b-1', 4)]);
-    expect(find.text('Your rating: 4'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rating-star-4')), findsNothing);
+    expect(find.textContaining('4.3 · 7 ratings'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 
   testWidgets(
@@ -170,7 +169,7 @@ void main() {
       expect(find.text('Jalan Telawi'), findsOneWidget);
       expect(find.text('2.4 km'), findsOneWidget);
       expect(find.textContaining('Halal ya'), findsOneWidget);
-      expect(find.text('Save this place to rate it.'), findsOneWidget);
+      expect(find.textContaining('No ratings yet.'), findsOneWidget);
 
       await t.tap(find.text('Save'));
       await t.pumpAndSettle();

@@ -38,6 +38,7 @@ class FakeOwner implements OwnerRepository {
   final reviewResolved = <(String, bool)>[];
   List<ReviewReportGroup> reviewReportGroups = [];
   List<RatingBurst> bursts = [];
+  List<Tester> testerList = [];
   final deletedRatings = <String>[];
 
   @override
@@ -106,6 +107,9 @@ class FakeOwner implements OwnerRepository {
 
   @override
   Future<List<RatingBurst>> ratingBursts() async => bursts;
+
+  @override
+  Future<List<Tester>> testers() async => testerList;
 
   @override
   Future<void> deleteRating(String ratingId) async {
