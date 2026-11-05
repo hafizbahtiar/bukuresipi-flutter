@@ -78,21 +78,25 @@ void main() {
     http = FakeAdapter((_) => (204, null));
   });
 
-  test('asks only after the first share, once; then this phone is registered', () async {
+  test('signed in: asks once, then this phone is registered; a later share does not ask again', () async {
     final push = await start();
-    expect([fcm.asked, calls()], [0, []]); // not at launch
-    await push.askAfterShare();
-    await push.askAfterShare();
+    await push.askOnce();
     expect(fcm.asked, 1);
     expect(push.enabled, isTrue);
     expect(calls(), [
-      'PUT /push/device {token: token-aaaaaaaaaaaaaaaaaaaa, platform: android}',
+      'PUT /push/device {token: token-aaaaaaaaaaaaaaaaaaaa, platform: android}', // sign-in
+      'PUT /push/device {token: token-aaaaaaaaaaaaaaaaaaaa, platform: android}', // the share: registers again, no dialog
     ]);
+  });
+
+  test('signed out: not asked until sign-in', () async {
+    await start(signedIn: false);
+    expect([fcm.asked, calls()], [0, []]);
   });
 
   test('allowed already: registered on sign-in and on every token refresh; the switch turns it off', () async {
     fcm.granted = true;
-    final push = await start();
+    final push = await start(prefs: {'push.asked': true});
     fcm.refresh.add('token-bbbbbbbbbbbbbbbbbbbb');
     await pumpEventQueue();
     expect(calls().length, 2);
@@ -107,8 +111,7 @@ void main() {
   test('said no at the system dialog: nothing is registered', () async {
     fcm.answer = false;
     final push = await start();
-    await push.askAfterShare();
-    expect([push.enabled, calls()], [false, []]);
+    expect([fcm.asked, push.enabled, calls()], [1, false, []]);
   });
 
   test('signing out replaces the token, so the next account on the phone gets its own', () async {

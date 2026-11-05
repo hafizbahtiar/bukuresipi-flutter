@@ -11,7 +11,7 @@ import '../auth/presentation/auth_controller.dart';
 import 'push_messaging.dart';
 
 /// "Your share is ready" pushes (bukuresipi-hono docs/superpowers/specs/2026-11-05-push-notifications-design.md).
-/// The system permission is asked once, after the first share (not at launch). The device is registered with the API
+/// The system permission is asked once, right after sign-in (or the first share, whichever comes first). The device is registered with the API
 /// on every sign-in and token refresh while it is on; sign-out needs nothing (the session's device goes with it), but
 /// the token is replaced so the next account on this phone gets its own.
 class PushController extends ChangeNotifier {
@@ -47,7 +47,9 @@ class PushController extends ChangeNotifier {
 
   Future<void> start() async {
     _allowed = await _messaging.allowed();
-    log('push: started, notifications ${_allowed ? 'allowed' : 'not allowed yet (asked after the first share)'}');
+    log(
+      'push: started, notifications ${_allowed ? 'allowed' : 'not allowed yet'}',
+    );
     _auth.addListener(_authChanged);
     _subs
       ..add(_messaging.tokenRefresh.listen(_register))
@@ -69,18 +71,20 @@ class PushController extends ChangeNotifier {
     if (status == _lastStatus) return;
     _lastStatus = status;
     if (status == AuthStatus.signedIn) {
-      unawaited(_register());
+      unawaited(
+        askOnce(),
+      ); // registers when it was asked before, or when the answer is yes
     } else if (status == AuthStatus.signedOut) {
       unawaited(_messaging.deleteToken().catchError((_) {}));
     }
   }
 
-  /// After the first share the server accepted: the one moment we ask (the push is about that share).
-  Future<void> askAfterShare() async {
-    if (_prefs.getBool(_askedKey) ?? false) return;
+  /// The system dialog, once per install: after sign-in, or after a share. Later calls only register.
+  Future<void> askOnce() async {
+    if (_prefs.getBool(_askedKey) ?? false) return _register();
     await _prefs.setBool(_askedKey, true);
     _allowed = await _messaging.requestPermission();
-    log('push: asked after the first share, ${_allowed ? 'allowed' : 'refused'}');
+    log('push: asked, ${_allowed ? 'allowed' : 'refused'}');
     notifyListeners();
     await _register();
   }
@@ -104,7 +108,9 @@ class PushController extends ChangeNotifier {
   /// Saves this phone for the signed-in session. Failures only log: the app works without pushes.
   Future<void> _register([String? refreshed]) async {
     if (!enabled || _auth.status != AuthStatus.signedIn) {
-      if (_auth.status == AuthStatus.signedIn) log('push: device not saved (notifications off)');
+      if (_auth.status == AuthStatus.signedIn) {
+        log('push: device not saved (notifications off)');
+      }
       return;
     }
     try {

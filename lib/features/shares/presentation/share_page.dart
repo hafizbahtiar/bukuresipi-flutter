@@ -40,8 +40,8 @@ class SharePage extends StatelessWidget {
     }
 
     Future<void> leaveApp() async {
-      // The first accepted share is the moment to ask for notifications (the push is about it), before leaving.
-      await context.read<PushController?>()?.askAfterShare();
+      // Not asked yet (skipped at sign-in on an older install): ask before leaving, the push is about this share.
+      await context.read<PushController?>()?.askOnce();
       if (!context.mounted) return;
       close();
       context.read<RecentShares>().load();
