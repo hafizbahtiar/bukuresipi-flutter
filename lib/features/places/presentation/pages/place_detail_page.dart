@@ -9,6 +9,7 @@ import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../family/presentation/family_controller.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/place.dart';
 import '../../domain/report.dart';
@@ -84,6 +85,30 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     }
   }
 
+  /// A family member's place: the caller's own save of it (then note, Only me, rating are theirs).
+  Future<void> _saveToMine(Place place) async {
+    final l = AppLocalizations.of(context);
+    final branch = place.savedBranch;
+    if (branch == null) return;
+    final router = GoRouter.of(context);
+    try {
+      final saved = await context.read<PlacesController>().saveBranch(branch.id);
+      _snack(l.placeSavedToMine);
+      router.replace('/places/${saved.id}');
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
+  Future<void> _setPrivate(Place place, bool private) async {
+    final l = AppLocalizations.of(context);
+    try {
+      await context.read<PlacesController>().setPrivate(place.id, private);
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
   Future<void> _report(Place place) => showNotebookSheet<void>(
     context,
     builder: (_) => PlaceReportSheet(
@@ -138,6 +163,10 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     // The post's branch first, then the others.
     final branches = [?branch, ...place.branches.where((b) => b != branch)];
     final dirty = _note.text.trim() != _savedNote!.trim();
+    final inFamily = context.watch<FamilyController?>()?.inFamily ?? false;
+    final savers = [
+      for (final s in place.savedBy) s.isMe ? l.savedByYou : (s.name ?? '?'),
+    ];
 
     return Scaffold(
       appBar: AppBar(),
@@ -150,12 +179,19 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
               label: l.directions,
               onPressed: () => openLink(context, url, failed: l.openFailed),
             ),
-          DockAction(
-            icon: Icons.edit_note,
-            label: l.noteSave,
-            onPressed: dirty ? () => _saveNote(place) : null,
-            busy: _savingNote,
-          ),
+          if (place.mine)
+            DockAction(
+              icon: Icons.edit_note,
+              label: l.noteSave,
+              onPressed: dirty ? () => _saveNote(place) : null,
+              busy: _savingNote,
+            )
+          else if (place.savedBranch != null)
+            DockAction(
+              icon: Icons.bookmark_add_outlined,
+              label: l.placeSaveToMine,
+              onPressed: () => _saveToMine(place),
+            ),
           if (owner)
             DockAction(
               icon: Icons.merge_type,
@@ -168,13 +204,15 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
             label: l.report,
             onPressed: () => _report(place),
           ),
-          DockAction(
-            icon: Icons.delete_outline,
-            label: l.remove,
-            tooltip: l.removePlace,
-            danger: true,
-            onPressed: () => _remove(place),
-          ),
+          // Unsave removes only the caller's own save; a family member's stays theirs.
+          if (place.mine)
+            DockAction(
+              icon: Icons.delete_outline,
+              label: l.remove,
+              tooltip: l.removePlace,
+              danger: true,
+              onPressed: () => _remove(place),
+            ),
         ],
       ),
       body: NotebookPage(
@@ -223,6 +261,24 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                   ],
                 ),
               ),
+              if (savers.length > 1 || !place.mine)
+                NotebookRow(
+                  mark: Icon(Icons.people_outline, size: 20, color: nb.inkSoft),
+                  child: Text(l.placeSavedBy(savers.join(', '))),
+                ),
+              if (place.mine && inFamily)
+                NotebookRow(
+                  mark: Icon(Icons.lock_outline, size: 20, color: nb.inkSoft),
+                  onTap: () => _setPrivate(place, !place.private),
+                  trailing: Switch(value: place.private, onChanged: (v) => _setPrivate(place, v)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.placeOnlyMe),
+                      Text(l.placeOnlyMeHint, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
+                    ],
+                  ),
+                ),
               NotebookHeading(l.branchesTitle),
               for (final b in branches)
                 _BranchRow(
@@ -235,8 +291,10 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 NotebookHeading(l.halalTitle),
                 _HalalQuote(restaurant: r),
               ],
-              NotebookHeading(l.noteTitle),
-              _NoteField(controller: _note),
+              if (place.mine) ...[
+                NotebookHeading(l.noteTitle),
+                _NoteField(controller: _note),
+              ],
             ],
           ),
         ),

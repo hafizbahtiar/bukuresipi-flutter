@@ -15,6 +15,8 @@ import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/family/data/family_repository_impl.dart';
+import 'features/family/presentation/family_controller.dart';
 import 'features/owner/data/owner_repository_impl.dart';
 import 'features/owner/domain/owner_repository.dart';
 import 'features/places/data/places_repository_impl.dart';
@@ -56,11 +58,19 @@ Future<void> main() async {
   final places = PlacesController(PlacesRepositoryImpl(api.dio));
   final recipes = RecipesController(RecipesRepositoryImpl(api.dio));
   final shopping = ShoppingController(ShoppingRepositoryImpl(api.dio));
+  // Joining or leaving changes the book, the recipes and which lists exist.
+  final family = FamilyController(
+    FamilyRepositoryImpl(api.dio),
+    onChanged: () async {
+      await Future.wait([places.load(), recipes.load(), shopping.load()]);
+    },
+  );
   auth.addListener(() {
     if (auth.status == AuthStatus.signedOut) {
       places.clear();
       recipes.clear();
       shopping.clear();
+      family.clear();
     }
   });
   final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
@@ -92,6 +102,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: places),
         ChangeNotifierProvider.value(value: recipes),
         ChangeNotifierProvider.value(value: shopping),
+        ChangeNotifierProvider.value(value: family),
         ChangeNotifierProvider.value(value: recent),
         Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),

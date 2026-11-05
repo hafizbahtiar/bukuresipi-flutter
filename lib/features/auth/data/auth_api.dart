@@ -50,4 +50,10 @@ class AuthApi {
 
   Future<Map<String, dynamic>> me() async =>
       (await _dio.get<Map<String, dynamic>>('/auth/me')).data!;
+
+  Future<Map<String, dynamic>> setName(String name) async =>
+      (await _dio.patch<Map<String, dynamic>>(
+        '/auth/me',
+        data: {'name': name},
+      )).data!;
 }

@@ -53,7 +53,13 @@ RecipeDetail recipeDetail({
     RecipeStep(stepNo: 1, instruction: 'Goreng ayam hingga masak.'),
   ],
   List<RecipeAllergen> allergens = const [],
+  bool canEdit = true,
+  RecipeVisibility visibility = RecipeVisibility.private,
+  RecipeOwner? owner,
 }) => RecipeDetail(
+  canEdit: canEdit,
+  visibility: visibility,
+  owner: owner,
   id: 'r-1',
   name: 'Nasi Lemak Ayam',
   createdAt: DateTime.utc(2026, 11, 2),
@@ -80,11 +86,61 @@ class FakeRecipes implements RecipesRepository {
   Object? detailError;
   final deleted = <String>[];
 
+  List<Recipe> family = [];
+  List<Recipe> communityList = [];
+  List<Dish> dishList = [];
+  final copied = <String>[];
+  final visibilities = <(String, RecipeVisibility)>[];
+  final reports = <(String, String)>[];
+
   @override
-  Future<List<Recipe>> list() async {
+  Future<List<Recipe>> list({bool family = false}) async {
     if (error != null) throw error!;
-    return recipes;
+    return family ? this.family : recipes;
   }
+
+  @override
+  Future<({List<Recipe> recipes, String? next})> community({
+    String? query,
+    String? cursor,
+  }) async => (
+    recipes: communityList
+        .where(
+          (r) =>
+              query == null ||
+              r.name.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList(),
+    next: null,
+  );
+
+  @override
+  Future<List<Dish>> dishes({String? query}) async => dishList
+      .where(
+        (d) =>
+            query == null || d.name.toLowerCase().contains(query.toLowerCase()),
+      )
+      .toList();
+
+  @override
+  Future<RecipeDetail> copy(String id) async {
+    copied.add(id);
+    return detailResult!;
+  }
+
+  @override
+  Future<RecipeDetail> setVisibility(
+    String id,
+    RecipeVisibility visibility,
+  ) async {
+    if (error != null) throw error!;
+    visibilities.add((id, visibility));
+    return detailResult!;
+  }
+
+  @override
+  Future<void> report(String id, String reason, {String? note}) async =>
+      reports.add((id, reason));
 
   @override
   Future<RecipeDetail> get(String id) async {

@@ -48,6 +48,8 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="bukuresipi.com" android:pathPrefix="/auth/"/>
                 <data android:scheme="https" android:host="bukuresipi.com" android:pathPrefix="/en/auth/"/>
+                <data android:scheme="https" android:host="bukuresipi.com" android:path="/family/join"/>
+                <data android:scheme="https" android:host="bukuresipi.com" android:path="/en/family/join"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

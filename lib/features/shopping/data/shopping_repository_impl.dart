@@ -17,26 +17,54 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
       shoppingItemFromJson(j),
   ];
 
-  @override
-  Future<List<ShoppingItem>> list() =>
-      apiCall(() => _items(_dio.get<Map<String, dynamic>>('/shopping')));
+  static String _list(bool family) => family ? 'family' : 'mine';
 
   @override
-  Future<List<ShoppingItem>> addText(String text) => apiCall(
+  Future<List<ShoppingItem>> list({bool family = false}) => apiCall(
     () => _items(
-      _dio.post<Map<String, dynamic>>('/shopping', data: {'text': text}),
-    ),
-  );
-
-  @override
-  Future<List<ShoppingItem>> addRecipe(String recipeId) => apiCall(
-    () => _items(
-      _dio.post<Map<String, dynamic>>(
+      _dio.get<Map<String, dynamic>>(
         '/shopping',
-        data: {'recipeId': recipeId},
+        queryParameters: {'list': _list(family)},
       ),
     ),
   );
+
+  @override
+  Future<List<ShoppingItem>> addText(String text, {bool family = false}) =>
+      apiCall(
+        () => _items(
+          _dio.post<Map<String, dynamic>>(
+            '/shopping',
+            data: {'text': text, 'list': _list(family)},
+          ),
+        ),
+      );
+
+  @override
+  Future<List<ShoppingItem>> addRecipe(
+    String recipeId, {
+    bool family = false,
+  }) => apiCall(
+    () => _items(
+      _dio.post<Map<String, dynamic>>(
+        '/shopping',
+        data: {'recipeId': recipeId, 'list': _list(family)},
+      ),
+    ),
+  );
+
+  @override
+  Future<List<String>> suggest(String query) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/recipes/ingredients',
+      queryParameters: {'q': query},
+    )).data!;
+    return [
+      for (final i
+          in (data['ingredients'] as List).cast<Map<String, dynamic>>())
+        i['name'] as String,
+    ];
+  });
 
   @override
   Future<ShoppingItem> setDone(String id, bool done) => apiCall(
@@ -67,8 +95,12 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
   );
 
   @override
-  Future<void> clearDone() =>
-      apiCall(() => _dio.delete<void>('/shopping/done'));
+  Future<void> clearDone({bool family = false}) => apiCall(
+    () => _dio.delete<void>(
+      '/shopping/done',
+      queryParameters: {'list': _list(family)},
+    ),
+  );
 }
 
 ShoppingItem shoppingItemFromJson(Map<String, dynamic> j) {

@@ -41,6 +41,7 @@ class BranchSuggestion {
 }
 
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
+/// In a family the book also holds the members' saves: [mine] false = only a family member saved it.
 class Place {
   const Place({
     required this.id,
@@ -51,9 +52,27 @@ class Place {
     required this.branches,
     this.sourceUrl,
     this.shareId,
+    this.mine = true,
+    this.private = false,
+    this.savedBy = const [],
   });
 
   final String id;
+
+  /// The caller saved it (note, Only me, remove and rating are theirs). false = "Save to my book".
+  final bool mine;
+
+  /// "Only me": the caller's save is kept out of the family book.
+  final bool private;
+
+  /// Who saved it, the caller first (name null + isMe: "You").
+  final List<({String? name, bool isMe})> savedBy;
+
+  /// The family members who saved it (not the caller).
+  List<String> get savedByOthers => [
+    for (final s in savedBy)
+      if (!s.isMe) s.name ?? '?',
+  ];
   final String? note;
   final DateTime createdAt;
 
@@ -78,8 +97,15 @@ class Place {
   static const _keep = Object();
 
   // `note: null` must clear the note, so "not passed" is a sentinel, not null.
-  Place copyWith({Object? note = _keep, List<Branch>? branches}) => Place(
+  Place copyWith({
+    Object? note = _keep,
+    List<Branch>? branches,
+    bool? private,
+  }) => Place(
     id: id,
+    mine: mine,
+    private: private ?? this.private,
+    savedBy: savedBy,
     note: identical(note, _keep) ? this.note : note as String?,
     createdAt: createdAt,
     branchId: branchId,

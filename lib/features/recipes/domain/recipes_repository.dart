@@ -2,8 +2,26 @@ import 'recipe.dart';
 
 /// The user's imported recipes. Every method throws ApiException (core/network) on failure.
 abstract interface class RecipesRepository {
-  /// Newest first.
-  Future<List<Recipe>> list();
+  /// Newest first. [family] = the other family members' family recipes.
+  Future<List<Recipe>> list({bool family = false});
+
+  /// Public recipes, newest first, 20 a page; pass the last page's next as [cursor].
+  Future<({List<Recipe> recipes, String? next})> community({
+    String? query,
+    String? cursor,
+  });
+
+  /// The seeded catalogue dishes, by name.
+  Future<List<Dish>> dishes({String? query});
+
+  /// "Make my copy": the caller's own, editable copy.
+  Future<RecipeDetail> copy(String id);
+
+  /// The owner's choice. public needs a name (409 name_required); family needs a family.
+  Future<RecipeDetail> setVisibility(String id, RecipeVisibility visibility);
+
+  /// Reasons: copyright, spam, offensive, wrong_info, other.
+  Future<void> report(String id, String reason, {String? note});
 
   Future<RecipeDetail> get(String id);
 

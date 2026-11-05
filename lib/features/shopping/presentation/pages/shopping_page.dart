@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +9,7 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../family/presentation/family_controller.dart';
 import '../../domain/shopping.dart';
 import '../shopping_controller.dart';
 
@@ -21,11 +24,40 @@ class ShoppingPage extends StatefulWidget {
 class _ShoppingPageState extends State<ShoppingPage> {
   final _text = TextEditingController();
   bool _adding = false;
+  Timer? _debounce;
+  int _asked = 0;
+
+  /// Catalogue ingredient names for what is being typed (2+ characters).
+  List<String> _suggestions = const [];
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _text.dispose();
     super.dispose();
+  }
+
+  void _typed(String text) {
+    _debounce?.cancel();
+    final q = text.trim();
+    if (q.length < 2) {
+      if (_suggestions.isNotEmpty) setState(() => _suggestions = const []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      final asked = ++_asked;
+      final found = await context.read<ShoppingController>().suggest(q).catchError((_) => const <String>[]);
+      if (!mounted || asked != _asked || _text.text.trim() != q) return; // typed on meanwhile
+      setState(() => _suggestions = [
+        for (final s in found)
+          if (s.toLowerCase() != q.toLowerCase()) s,
+      ].take(5).toList());
+    });
+  }
+
+  Future<void> _addSuggestion(String name) async {
+    _text.text = name;
+    await _add();
   }
 
   void _snack(String text) {
@@ -50,6 +82,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
     await _run(() async {
       await context.read<ShoppingController>().addText(text);
       _text.clear();
+      _asked++; // a suggestion answer still on its way is for the old text
+      _suggestions = const [];
     });
     if (mounted) setState(() => _adding = false);
   }
@@ -74,6 +108,11 @@ class _ShoppingPageState extends State<ShoppingPage> {
     final nb = Notebook.of(context);
     final shopping = context.watch<ShoppingController>();
     final items = shopping.items;
+    final inFamily = context.watch<FamilyController?>()?.inFamily ?? false;
+    // Out of the family while on its list: back to the user's own.
+    if (!inFamily && shopping.family) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => shopping.show(family: false));
+    }
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
@@ -94,6 +133,18 @@ class _ShoppingPageState extends State<ShoppingPage> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
             children: [
+              if (inFamily)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
+                  child: NotebookSegmented<bool>(
+                    selected: shopping.family,
+                    onChanged: (family) => _run(() => shopping.show(family: family)),
+                    segments: [
+                      NotebookSegment(value: false, label: l.shoppingMine),
+                      NotebookSegment(value: true, label: l.shoppingFamily),
+                    ],
+                  ),
+                ),
               NotebookRow(
                 mark: Icon(Icons.add, size: 20, color: nb.inkSoft),
                 trailing: _adding
@@ -112,6 +163,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
                   controller: _text,
                   maxLength: 200,
                   textInputAction: TextInputAction.done,
+                  onChanged: _typed,
                   onSubmitted: (_) => _add(),
                   decoration: InputDecoration(
                     hintText: l.shoppingAddHint,
@@ -120,6 +172,13 @@ class _ShoppingPageState extends State<ShoppingPage> {
                   ),
                 ),
               ),
+              // Tap a catalogue name to add it as written there (it then links to products).
+              for (final name in _suggestions)
+                NotebookRow(
+                  mark: Icon(Icons.north_west, size: 16, color: nb.inkSoft),
+                  onTap: _adding ? null : () => _addSuggestion(name),
+                  child: Text(name, style: TextStyle(color: nb.pandanDeep)),
+                ),
               if (shopping.error != null && items.isEmpty)
                 NotebookRow(
                   mark: Icon(Icons.cloud_off, size: 20, color: nb.margin),

@@ -72,4 +72,17 @@ void main() {
     expect(redirectFor('/', await signedIn(), u), '/update');
     expect(redirectFor('/update', await signedOut(), u), isNull);
   });
+
+  test('an invite link survives sign-in: login carries it in next, then goes back to it', () async {
+    final u = UpdateGate();
+    final link = Uri.parse('/family/join?t=abc');
+    final login = redirectFor(link.path, await signedOut(), u, uri: link)!;
+    expect(Uri.parse(login).path, '/login');
+    expect(Uri.parse(login).queryParameters['next'], '/family/join?t=abc');
+    final back = Uri.parse(login);
+    expect(redirectFor(back.path, await signedIn(), u, uri: back), '/family/join?t=abc');
+    // next is only ever a join link: nothing else can be smuggled through the login page.
+    final other = Uri.parse('/login?next=/owner');
+    expect(redirectFor(other.path, await signedIn(), u, uri: other), '/');
+  });
 }

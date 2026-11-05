@@ -987,5 +987,239 @@
   "pinFindingYou": "Finding where you are…",
   "creditsDedicationKicker": "For my lovely wife",
   "creditsDedication1": "I built Bukuresipi for my wife, so every recipe and food spot she loves has one place, instead of getting lost in the scroll.",
-  "creditsDedication2": "Now it's for everyone. If it's useful to you too, that's a second gift I truly appreciate."
+  "creditsDedication2": "Now it's for everyone. If it's useful to you too, that's a second gift I truly appreciate.",
+  "navRecipes": "Recipes",
+  "@navRecipes": {},
+  "recipesTitle": "Recipes",
+  "@recipesTitle": {},
+  "recipesMine": "Mine",
+  "@recipesMine": {},
+  "recipesFamily": "Family",
+  "@recipesFamily": {},
+  "recipesCommunity": "Community",
+  "@recipesCommunity": {},
+  "recipesCatalogue": "Catalogue",
+  "@recipesCatalogue": {},
+  "recipesSearchHint": "Search recipes",
+  "@recipesSearchHint": {},
+  "recipesEmptyMine": "No recipes yet. Share a recipe post to Bukuresipi.",
+  "@recipesEmptyMine": {},
+  "recipesEmptyFamily": "No family recipes yet.",
+  "@recipesEmptyFamily": {},
+  "recipesEmptyCommunity": "No community recipes found.",
+  "@recipesEmptyCommunity": {},
+  "recipesEmptyCatalogue": "No dishes found.",
+  "@recipesEmptyCatalogue": {},
+  "recipesLoadMore": "Load more",
+  "@recipesLoadMore": {},
+  "recipesLoadFailed2": "Could not load. Tap to try again.",
+  "@recipesLoadFailed2": {},
+  "recipeBy": "by {name}",
+  "@recipeBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bookSearchHint": "Search your book",
+  "@bookSearchHint": {},
+  "bookAll": "All",
+  "@bookAll": {},
+  "bookMine": "Mine",
+  "@bookMine": {},
+  "bookFamily": "Family",
+  "@bookFamily": {},
+  "bookNoMatch": "Nothing matches.",
+  "@bookNoMatch": {},
+  "placeSavedBy": "Saved by {names}",
+  "@placeSavedBy": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "savedByYou": "you",
+  "@savedByYou": {},
+  "placeOnlyMe": "Only me",
+  "@placeOnlyMe": {},
+  "placeOnlyMeHint": "Keep this place out of the family book",
+  "@placeOnlyMeHint": {},
+  "placeSaveToMine": "Save to my book",
+  "@placeSaveToMine": {},
+  "placeSavedToMine": "Saved to your book",
+  "@placeSavedToMine": {},
+  "shoppingMine": "Mine",
+  "@shoppingMine": {},
+  "shoppingFamily": "Family",
+  "@shoppingFamily": {},
+  "shoppingWhichList": "Add to which list?",
+  "@shoppingWhichList": {},
+  "shoppingSuggestions": "Suggestions",
+  "@shoppingSuggestions": {},
+  "visTitle": "Who sees this",
+  "@visTitle": {},
+  "visPrivate": "Only me",
+  "@visPrivate": {},
+  "visPrivateHint": "Only you see this recipe.",
+  "@visPrivateHint": {},
+  "visFamily": "Family",
+  "@visFamily": {},
+  "visFamilyHint": "Everyone in your family sees it.",
+  "@visFamilyHint": {},
+  "visPublic": "Everyone",
+  "@visPublic": {},
+  "visPublicHint": "Shown in Community with your name and where it came from.",
+  "@visPublicHint": {},
+  "recipeCopy": "Make my copy",
+  "@recipeCopy": {},
+  "recipeCopied": "Copied to your recipes",
+  "@recipeCopied": {},
+  "recipeHidden": "Hidden from Community after a report. Only you see it.",
+  "@recipeHidden": {},
+  "recipeFromScreenshot": "From a screenshot",
+  "@recipeFromScreenshot": {},
+  "recipeTyped": "Typed by its owner",
+  "@recipeTyped": {},
+  "recipeCatalogue": "Bukuresipi catalogue",
+  "@recipeCatalogue": {},
+  "recipeReportTitle": "Why report this recipe?",
+  "@recipeReportTitle": {},
+  "reasonCopyright": "It's my content (copyright)",
+  "@reasonCopyright": {},
+  "reasonSpam": "Spam",
+  "@reasonSpam": {},
+  "reasonOffensive": "Offensive",
+  "@reasonOffensive": {},
+  "reasonWrongInfo": "Wrong information",
+  "@reasonWrongInfo": {},
+  "reasonOther": "Other",
+  "@reasonOther": {},
+  "recipeReported": "Thanks, the report was sent.",
+  "@recipeReported": {},
+  "nameTitle": "Your name",
+  "@nameTitle": {},
+  "nameAsk": "What should your family call you?",
+  "@nameAsk": {},
+  "nameRule": "Up to 40 characters. Others see this name, never your email.",
+  "@nameRule": {},
+  "nameRow": "Name",
+  "@nameRow": {},
+  "nameNotSet": "Not set",
+  "@nameNotSet": {},
+  "errName": "Use 1-40 characters, with at least one letter.",
+  "@errName": {},
+  "familyTitle": "Family",
+  "@familyTitle": {},
+  "familyIntro": "Share your book with your family: a place anyone saves shows in everyone's book and map, and recipes can be shared too.",
+  "@familyIntro": {},
+  "familyStart": "Start a family",
+  "@familyStart": {},
+  "familyGotLink": "Got an invite link? Open it from WhatsApp.",
+  "@familyGotLink": {},
+  "familyNameAsk": "Family name",
+  "@familyNameAsk": {},
+  "familyNameHint": "e.g. Our family",
+  "@familyNameHint": {},
+  "familyInvite": "Invite",
+  "@familyInvite": {},
+  "familyInviteText": "Join my family on Bukuresipi: {url}",
+  "@familyInviteText": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "familyLinkUntil": "Link works until {date}",
+  "@familyLinkUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "familyStopLink": "Stop link",
+  "@familyStopLink": {},
+  "familyShareWhatsApp": "Send on WhatsApp",
+  "@familyShareWhatsApp": {},
+  "familyCopyLink": "Copy link",
+  "@familyCopyLink": {},
+  "familyLinkCopied": "Link copied",
+  "@familyLinkCopied": {},
+  "familyOwner": "Owner",
+  "@familyOwner": {},
+  "familyYou": "You",
+  "@familyYou": {},
+  "familyRemoveConfirm": "Remove {name} from the family? Their places and recipes leave your book.",
+  "@familyRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "familyMakeOwner": "Make owner",
+  "@familyMakeOwner": {},
+  "familyLeave": "Leave family",
+  "@familyLeave": {},
+  "familyLeaveConfirm": "Leave {family}? You keep your own places and recipes; your family recipes become private, and the others' places and recipes leave your book.",
+  "@familyLeaveConfirm": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "familyRename": "Rename",
+  "@familyRename": {},
+  "familyJoinTitle": "Join {family}?",
+  "@familyJoinTitle": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinOwner": "Started by {name}",
+  "@familyJoinOwner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinBody": "You will see each other's places and family recipes. Your saved places will be shared with them too; you can hide any of them.",
+  "@familyJoinBody": {},
+  "familyJoin": "Join",
+  "@familyJoin": {},
+  "familyNotNow": "Not now",
+  "@familyNotNow": {},
+  "familyJoined": "You joined {family}",
+  "@familyJoined": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "errAlreadyInFamily": "You are already in a family. Leave it first to join this one.",
+  "@errAlreadyInFamily": {},
+  "errFamilyFull": "This family is full (3 people).",
+  "@errFamilyFull": {},
+  "errInviteExpired": "This invite link has expired or was stopped. Ask for a new one.",
+  "@errInviteExpired": {},
+  "errNotInFamily": "You are not in a family.",
+  "@errNotInFamily": {},
+  "errNotOwner": "Only the family owner can do that.",
+  "@errNotOwner": {},
+  "familyPeople": "{count, plural, =1{1 person} other{{count} people}}",
+  "@familyPeople": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

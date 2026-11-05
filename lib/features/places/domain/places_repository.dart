@@ -12,6 +12,9 @@ abstract interface class PlacesRepository {
   /// Empty or blank [note] clears it.
   Future<void> updateNote(String id, String? note);
 
+  /// "Only me": keeps the caller's own save out of the family book.
+  Future<void> setPrivate(String id, bool private);
+
   /// The user's own pin for an unpinned branch (one per user + branch; moving it replaces it).
   Future<void> setPin(String branchId, double lat, double lng);
 
