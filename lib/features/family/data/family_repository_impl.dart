@@ -86,10 +86,19 @@ class FamilyRepositoryImpl implements FamilyRepository {
 
 Family familyFromJson(Map<String, dynamic> j) {
   final invite = j['invite'] as Map<String, dynamic>?;
+  final creator = j['createdBy'] as Map<String, dynamic>?;
+  final created = j['createdAt'] as String?;
+  
   return Family(
     id: j['id'] as String,
     name: j['name'] as String,
     role: j['role'] as String,
+    createdBy: creator?['name'] as String?,
+    creatorIsMe: creator?['isMe'] == true,
+    // D1 datetime ("2026-11-05 10:00:00") is UTC with no zone mark.
+    createdAt: created == null
+        ? null
+        : DateTime.tryParse('${created.replaceFirst(' ', 'T')}Z')?.toLocal(),
     members: [
       for (final m in (j['members'] as List).cast<Map<String, dynamic>>())
         FamilyMember(

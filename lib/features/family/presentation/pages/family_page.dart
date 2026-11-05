@@ -170,6 +170,21 @@ class _FamilyPageState extends State<FamilyPage> {
     }
   }
 
+  /// "Created by Ali · 5 Nov 2026", "Created by you · …", or only the date when the creator's account is gone.
+  String? _created(AppLocalizations l, Family f) {
+    final at = f.createdAt;
+    final date = at == null
+        ? null
+        : MaterialLocalizations.of(context).formatMediumDate(at);
+    final who = f.creatorIsMe ? l.familyCreatedByYou : f.createdBy;
+    if (who != null) {
+      return date == null
+          ? l.familyCreatedBy(who)
+          : '${l.familyCreatedBy(who)} · $date';
+    }
+    return date == null ? null : l.familyCreatedOn(date);
+  }
+
   Future<void> _leave(Family f) async {
     final l = AppLocalizations.of(context);
     final family = context.read<FamilyController>();
@@ -221,9 +236,16 @@ class _FamilyPageState extends State<FamilyPage> {
           trailing: f.isOwner
               ? Icon(Icons.edit_outlined, size: 18, color: nb.inkSoft)
               : null,
-          child: Text(
-            f.name,
-            style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                f.name,
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              if (_created(l, f) case final line?)
+                Text(line, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
+            ],
           ),
         ),
         for (final m in f.members)

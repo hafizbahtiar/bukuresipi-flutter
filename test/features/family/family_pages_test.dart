@@ -29,9 +29,15 @@ void main() {
     final router = GoRouter(
       initialLocation: location,
       routes: [
-        GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: Text('home')),
+        ),
         GoRoute(path: '/family', builder: (_, _) => const FamilyPage()),
-        GoRoute(path: '/family/join', builder: (_, s) => FamilyJoinPage(token: s.uri.queryParameters['t'])),
+        GoRoute(
+          path: '/family/join',
+          builder: (_, s) => FamilyJoinPage(token: s.uri.queryParameters['t']),
+        ),
       ],
     );
     await t.pumpWidget(
@@ -55,31 +61,48 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  testWidgets('a family lists its members by name; the owner can invite', (t) async {
+  testWidgets('a family lists its members by name; the owner can invite', (
+    t,
+  ) async {
     repo.current = aFamily();
     await pump(t, '/family');
     expect(find.text('Rumah Ali'), findsOneWidget);
     expect(find.text('Siti'), findsOneWidget);
-    await t.tap(find.text(lookupAppLocalizations(const Locale('en')).familyInvite));
+    expect(
+      find.textContaining('Created by Hafiz · '),
+      findsOneWidget,
+    ); // kept after the creator leaves
+    await t.tap(
+      find.text(lookupAppLocalizations(const Locale('en')).familyInvite),
+    );
     await t.pumpAndSettle();
     expect(repo.invites, 1);
-    expect(find.text(lookupAppLocalizations(const Locale('en')).familyCopyLink), findsOneWidget);
+    expect(
+      find.text(lookupAppLocalizations(const Locale('en')).familyCopyLink),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('an invite link previews the family, joins it and reloads the book', (t) async {
-    await pump(t, '/family/join?t=abc');
-    final l = lookupAppLocalizations(const Locale('en'));
-    expect(find.text(l.familyJoinTitle('Rumah Ali')), findsOneWidget);
-    await t.tap(find.text(l.familyJoin));
-    await t.pumpAndSettle();
-    expect(repo.joined, ['abc']);
-    expect(family.inFamily, isTrue);
-    expect(changed, 1);
-    expect(find.text('home'), findsOneWidget);
-  });
+  testWidgets(
+    'an invite link previews the family, joins it and reloads the book',
+    (t) async {
+      await pump(t, '/family/join?t=abc');
+      final l = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l.familyJoinTitle('Rumah Ali')), findsOneWidget);
+      await t.tap(find.text(l.familyJoin));
+      await t.pumpAndSettle();
+      expect(repo.joined, ['abc']);
+      expect(family.inFamily, isTrue);
+      expect(changed, 1);
+      expect(find.text('home'), findsOneWidget);
+    },
+  );
 
   testWidgets('a stopped or expired link says so', (t) async {
     await pump(t, '/family/join?t=old');
-    expect(find.text(lookupAppLocalizations(const Locale('en')).errInviteExpired), findsOneWidget);
+    expect(
+      find.text(lookupAppLocalizations(const Locale('en')).errInviteExpired),
+      findsOneWidget,
+    );
   });
 }

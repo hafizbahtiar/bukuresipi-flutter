@@ -6,6 +6,9 @@ class Family {
     required this.role,
     required this.members,
     this.inviteExpiresAt,
+    this.createdBy,
+    this.creatorIsMe = false,
+    this.createdAt,
   });
 
   final String id;
@@ -15,6 +18,11 @@ class Family {
 
   /// Owner only: until when the current invite link works (null = no live link). The link itself is shown once.
   final DateTime? inviteExpiresAt;
+
+  /// "Created by Ali": kept after Ali leaves (like WhatsApp). Null = that account was deleted, or unknown.
+  final String? createdBy;
+  final bool creatorIsMe;
+  final DateTime? createdAt;
 
   bool get isOwner => role == 'owner';
 }

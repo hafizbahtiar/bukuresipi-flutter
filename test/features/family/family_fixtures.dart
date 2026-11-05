@@ -5,8 +5,17 @@ import 'package:bukuresipi_flutter/features/family/domain/family_repository.dart
 const me = FamilyMember(id: 'u-1', name: 'Ali', role: 'owner', isMe: true);
 const siti = FamilyMember(id: 'u-2', name: 'Siti', role: 'member', isMe: false);
 
-Family aFamily({String name = 'Rumah Ali', List<FamilyMember> members = const [me, siti]}) =>
-    Family(id: 'f-1', name: name, role: 'owner', members: members);
+Family aFamily({
+  String name = 'Rumah Ali',
+  List<FamilyMember> members = const [me, siti],
+}) => Family(
+  id: 'f-1',
+  name: name,
+  role: 'owner',
+  members: members,
+  createdBy: 'Hafiz',
+  createdAt: DateTime(2026, 11, 5),
+);
 
 class FakeFamily implements FamilyRepository {
   Family? current;
@@ -18,7 +27,8 @@ class FakeFamily implements FamilyRepository {
   Future<Family?> get() async => current;
 
   @override
-  Future<Family> create(String name) async => current = aFamily(name: name, members: const [me]);
+  Future<Family> create(String name) async =>
+      current = aFamily(name: name, members: const [me]);
 
   @override
   Future<Family> rename(String name) async => current = aFamily(name: name);
@@ -26,7 +36,10 @@ class FakeFamily implements FamilyRepository {
   @override
   Future<({String url, DateTime expiresAt})> invite() async {
     invites++;
-    return (url: 'https://bukuresipi.com/family/join?t=abc', expiresAt: DateTime.utc(2026, 11, 12));
+    return (
+      url: 'https://bukuresipi.com/family/join?t=abc',
+      expiresAt: DateTime.utc(2026, 11, 12),
+    );
   }
 
   @override
@@ -35,7 +48,11 @@ class FakeFamily implements FamilyRepository {
   @override
   Future<InvitePreview> preview(String token) async {
     if (token != 'abc') throw const ApiException('invite_expired', status: 410);
-    return const InvitePreview(familyName: 'Rumah Ali', ownerName: 'Ali', memberCount: 2);
+    return const InvitePreview(
+      familyName: 'Rumah Ali',
+      ownerName: 'Ali',
+      memberCount: 2,
+    );
   }
 
   @override
@@ -49,7 +66,8 @@ class FakeFamily implements FamilyRepository {
   Future<void> leave() async => current = null;
 
   @override
-  Future<void> removeMember(String userId) async => current = aFamily(members: const [me]);
+  Future<void> removeMember(String userId) async =>
+      current = aFamily(members: const [me]);
 
   @override
   Future<Family> handOver(String userId) async => current = aFamily();

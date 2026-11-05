@@ -493,5 +493,8 @@
   "sessionsEndOthers": "Log keluar semua peranti lain",
   "sessionsEndOthersConfirm": "Log keluar semua peranti kecuali telefon ini?",
   "sessionsAppVersion": "Aplikasi {version}",
-  "sessionsSignedIn": "Log masuk {date}"
+  "sessionsSignedIn": "Log masuk {date}",
+  "familyCreatedBy": "Dicipta oleh {name}",
+  "familyCreatedByYou": "anda",
+  "familyCreatedOn": "Dicipta {date}"
 }

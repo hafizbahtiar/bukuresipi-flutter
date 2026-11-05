@@ -1275,5 +1275,23 @@
         "type": "String"
       }
     }
+  },
+  "familyCreatedBy": "Created by {name}",
+  "@familyCreatedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "familyCreatedByYou": "you",
+  "@familyCreatedByYou": {},
+  "familyCreatedOn": "Created {date}",
+  "@familyCreatedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   }
 }
