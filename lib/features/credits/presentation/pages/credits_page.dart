@@ -94,6 +94,7 @@ class CreditsPage extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: [
+            const _Dedication(),
             Padding(
               padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
               child: Text(
@@ -119,6 +120,63 @@ class CreditsPage extends StatelessWidget {
               child: Text(
                 l.dataCredits,
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Who the app was built for, first, as on the website's credits page.
+class _Dedication extends StatelessWidget {
+  const _Dedication();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final line = nb.hand.copyWith(fontSize: 20, height: 1.4, color: nb.ink);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 12, 20, 16),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        decoration: BoxDecoration(
+          color: nb.paper,
+          border: Border(
+            left: BorderSide(color: nb.margin, width: 3),
+            top: BorderSide(color: nb.line),
+            right: BorderSide(color: nb.line),
+            bottom: BorderSide(color: nb.line),
+          ),
+        ),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l.creditsDedicationKicker,
+                  style: line.copyWith(fontSize: 24, color: nb.margin),
+                ),
+                const SizedBox(height: 8),
+                Text(l.creditsDedication1, style: line),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(right: 24),
+                  child: Text(l.creditsDedication2, style: line),
+                ),
+              ],
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: ExcludeSemantics(
+                child: Text(
+                  '♥',
+                  style: line.copyWith(fontSize: 24, color: nb.margin),
+                ),
               ),
             ),
           ],

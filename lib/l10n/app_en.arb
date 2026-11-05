@@ -983,5 +983,9 @@
   "shareWhyError": "Something went wrong while reading it. Try again.",
   "@shareWhyError": {},
   "shareBackSoon": "Taking you back…",
-  "@shareBackSoon": {}
+  "@shareBackSoon": {},
+  "pinFindingYou": "Finding where you are…",
+  "creditsDedicationKicker": "For my lovely wife",
+  "creditsDedication1": "I built Bukuresipi for my wife, so every recipe and food spot she loves has one place, instead of getting lost in the scroll.",
+  "creditsDedication2": "Now it's for everyone. If it's useful to you too, that's a second gift I truly appreciate."
 }

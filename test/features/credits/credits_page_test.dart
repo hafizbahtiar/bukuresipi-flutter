@@ -24,9 +24,10 @@ void main() {
     expect(find.byType(NotebookTitle), findsOneWidget);
     expect(find.byType(NotebookRow), findsWidgets);
     expect(find.text('Credits'), findsOneWidget);
+    expect(find.text('For my lovely wife'), findsOneWidget);
     expect(find.text('OpenFreeMap'), findsOneWidget);
-    expect(find.text('OpenStreetMap contributors'), findsOneWidget);
-    expect(find.text('Overture Maps'), findsOneWidget);
+    await t.scrollUntilVisible(find.text('OpenStreetMap contributors'), 200);
+    await t.scrollUntilVisible(find.text('Overture Maps'), 200);
     await t.scrollUntilVisible(find.text('Google Fonts'), 200);
     expect(find.text('Google Fonts'), findsOneWidget);
   });

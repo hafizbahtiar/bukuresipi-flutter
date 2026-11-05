@@ -32,7 +32,8 @@ class NearbyCarousel extends StatefulWidget {
 }
 
 class _NearbyCarouselState extends State<NearbyCarousel> {
-  static const _cardWidth = 240.0;
+  // Wide enough for a long name on one line; a 360 dp phone still shows the next card peeking in.
+  static const _cardWidth = 300.0;
   static const _gap = 8.0;
   static const _extent = _cardWidth + _gap;
 

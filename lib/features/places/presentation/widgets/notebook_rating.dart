@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -35,8 +37,17 @@ class NotebookRating extends StatefulWidget {
 
 class _NotebookRatingState extends State<NotebookRating> {
   late RatingSummary _rating = widget.rating;
+
+  /// What the stars show: changes at once on a tap, before the server answers.
   late int? _mine = widget.rating.mine;
-  bool _busy = false;
+
+  /// What the server last confirmed: an error goes back to it.
+  late int? _saved = widget.rating.mine;
+
+  // Taps are saved after a short pause, and one request at a time: tapping 1-2-3-4-5 quickly sends only 5.
+  static const _settle = Duration(milliseconds: 450);
+  Timer? _debounce;
+  bool _sending = false;
 
   /// The star under the finger while dragging; saved when the finger lifts.
   int? _drag;
@@ -60,21 +71,30 @@ class _NotebookRatingState extends State<NotebookRating> {
   @override
   void didUpdateWidget(covariant NotebookRating oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_busy && oldWidget.rating != widget.rating) {
+    final idle = !_sending && !(_debounce?.isActive ?? false);
+    if (idle && oldWidget.rating != widget.rating) {
       _rating = widget.rating;
-      _mine = widget.rating.mine;
+      _mine = _saved = widget.rating.mine;
     }
+  }
+
+  @override
+  void dispose() {
+    // Left the page within the pause: still save the last tap (nothing left to show an error on).
+    if (_debounce?.isActive ?? false) {
+      _debounce!.cancel();
+      if (_mine != _saved) widget.onRate!(_mine).ignore();
+    }
+    super.dispose();
   }
 
   bool get _canRate => widget.rating.canRate && widget.onRate != null;
 
   Future<void> _tap(int stars) async {
-    if (!_canRate || _busy) return;
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final oldMine = _mine;
+    if (!_canRate) return;
     final clear = _mine == stars;
     if (clear && _rating.myReview) {
+      final l = AppLocalizations.of(context);
       final ok = await showNotebookDialog(
         context,
         message: l.reviewRemoveRatingConfirm,
@@ -83,23 +103,36 @@ class _NotebookRatingState extends State<NotebookRating> {
       );
       if (!ok || !mounted) return;
     }
-    setState(() {
-      _mine = clear ? null : stars;
-      _busy = true;
-    });
+    setState(() => _mine = clear ? null : stars);
+    _debounce?.cancel();
+    _debounce = Timer(_settle, _save);
+  }
+
+  /// Sends what the stars show now, if the server does not have it yet. A tap during the request is sent after it.
+  Future<void> _save() async {
+    if (_sending || !mounted) return;
+    final want = _mine;
+    if (want == _saved) return;
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    _sending = true;
     try {
-      final updated = await widget.onRate!(clear ? null : stars);
+      final updated = await widget.onRate!(want);
       if (!mounted) return;
+      _saved = updated.mine;
       setState(() {
         _rating = updated;
-        _mine = updated.mine;
+        if (_mine == want) _mine = updated.mine;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _mine = oldMine);
+      setState(() => _mine = _saved);
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      _sending = false;
+    }
+    if (mounted && !(_debounce?.isActive ?? false) && _mine != _saved) {
+      await _save();
     }
   }
 
@@ -125,7 +158,7 @@ class _NotebookRatingState extends State<NotebookRating> {
           lifted: n == _drag,
           interactive: _canRate,
           label: l.ratingStarLabel(n),
-          onTap: _busy ? null : () => _tap(n),
+          onTap: () => _tap(n),
         ),
     ];
     final row = Row(mainAxisSize: MainAxisSize.min, children: stars);
@@ -148,29 +181,15 @@ class _NotebookRatingState extends State<NotebookRating> {
                   // Tap a star, or slide a finger along the row: the stars follow it and the rating is saved on lift.
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTapUp: _busy
-                        ? null
-                        : (d) => _tap(_starAt(d.localPosition.dx)),
-                    onHorizontalDragStart: _busy
-                        ? null
-                        : (d) => _dragTo(d.localPosition.dx),
-                    onHorizontalDragUpdate: _busy
-                        ? null
-                        : (d) => _dragTo(d.localPosition.dx),
-                    onHorizontalDragEnd: _busy ? null : (_) => _dragEnd(),
+                    onTapUp: (d) => _tap(_starAt(d.localPosition.dx)),
+                    onHorizontalDragStart: (d) => _dragTo(d.localPosition.dx),
+                    onHorizontalDragUpdate: (d) => _dragTo(d.localPosition.dx),
+                    onHorizontalDragEnd: (_) => _dragEnd(),
                     onHorizontalDragCancel: () => setState(() => _drag = null),
                     child: row,
                   )
                 else
                   row,
-                if (_busy)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 6),
-                    child: SizedBox.square(
-                      dimension: 14,
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                    ),
-                  ),
               ],
             ),
           ),

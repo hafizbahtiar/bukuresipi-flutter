@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/notebook_rating.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -45,12 +47,15 @@ void main() {
     expect(find.text('Your rating: 4'), findsOneWidget);
 
     await t.tap(find.byKey(const ValueKey('rating-star-5')));
-    await t.pumpAndSettle();
-    expect(calls, [5]);
+    await t.pump();
+    // The stars change at once; the request goes after a short pause.
     expect(find.text('Your rating: 5'), findsOneWidget);
+    expect(calls, isEmpty);
+    await t.pump(const Duration(milliseconds: 500));
+    expect(calls, [5]);
 
     await t.tap(find.byKey(const ValueKey('rating-star-5')));
-    await t.pumpAndSettle();
+    await t.pump(const Duration(milliseconds: 500));
     expect(calls, [5, null]);
   });
 
@@ -144,8 +149,69 @@ void main() {
     await t.pump(const Duration(milliseconds: 100));
     expect(calls, isEmpty); // nothing saved while the finger is down
     await gesture.up();
-    await t.pumpAndSettle();
+    await t.pump(const Duration(milliseconds: 500));
     expect(calls, [4]);
     expect(find.text('Your rating: 4'), findsOneWidget);
+  });
+
+  testWidgets(
+    'tapping stars quickly sends one request, never a spinner; a tap during a request is sent after it',
+    (t) async {
+      final calls = <int?>[];
+      Completer<void>? slow;
+      await t.pumpWidget(
+        app(
+          NotebookRating(
+            rating: const RatingSummary(canRate: true),
+            onRate: (stars) async {
+              calls.add(stars);
+              await slow?.future;
+              return RatingSummary(mine: stars, canRate: true, count: 1);
+            },
+          ),
+        ),
+      );
+      for (final n in [1, 2, 3, 4, 5]) {
+        await t.tap(find.byKey(ValueKey('rating-star-$n')));
+        await t.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await t.pump(const Duration(milliseconds: 500));
+      expect(calls, [5]);
+
+      slow = Completer();
+      await t.tap(find.byKey(const ValueKey('rating-star-2')));
+      await t.pump(
+        const Duration(milliseconds: 500),
+      ); // request for 2 starts, hangs
+      await t.tap(find.byKey(const ValueKey('rating-star-3')));
+      await t.pump(const Duration(milliseconds: 500)); // 3 waits for it
+      expect(calls, [5, 2]);
+      expect(find.text('Your rating: 3'), findsOneWidget);
+      slow.complete();
+      await t.pump();
+      await t.pump();
+      expect(calls, [5, 2, 3]);
+      expect(find.text('Your rating: 3'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a failed save puts the stars back to what the server has', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      app(
+        NotebookRating(
+          rating: const RatingSummary(mine: 2, canRate: true, count: 1),
+          onRate: (_) async => throw Exception('offline'),
+        ),
+      ),
+    );
+    await t.tap(find.byKey(const ValueKey('rating-star-5')));
+    await t.pump();
+    expect(find.text('Your rating: 5'), findsOneWidget);
+    await t.pump(const Duration(milliseconds: 500));
+    await t.pump();
+    expect(find.text('Your rating: 2'), findsOneWidget);
   });
 }

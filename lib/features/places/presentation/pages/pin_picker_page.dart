@@ -44,12 +44,31 @@ class _PinPickerPageState extends State<PinPickerPage> {
   bool _locating = false;
   bool _started = false;
 
+  /// Where the map opens. Null while looking for the user: the map waits instead of opening on all of Malaysia.
+  CameraPosition? _camera;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
-    _pin = widget.initial ?? _start(context.read<PlacesController>()).target;
+    _camera = _start(context.read<PlacesController>());
+    if (_camera == null) {
+      _openAtUser();
+    } else {
+      _pin = _camera!.target;
+    }
+  }
+
+  Future<void> _openAtUser() async {
+    final here = await startPosition();
+    if (!mounted) return;
+    setState(() {
+      _camera = here == null
+          ? malaysiaCamera
+          : CameraPosition(target: LatLng(here.lat, here.lng), zoom: 17);
+      _pin = _camera!.target;
+    });
   }
 
   void _created(MapLibreMapController c) {
@@ -66,8 +85,9 @@ class _PinPickerPageState extends State<PinPickerPage> {
     if (target != null && mounted) setState(() => _pin = target);
   }
 
-  /// The branch being edited when it has a pin, else a pinned branch of the same restaurant, else Malaysia.
-  CameraPosition _start(PlacesController places) {
+  /// The branch being edited when it has a pin, else a pinned branch of the same restaurant, else null (the user's
+  /// location, then Malaysia).
+  CameraPosition? _start(PlacesController places) {
     final place = places.byId(widget.placeId);
     final branch = place?.branches
         .where((b) => b.id == widget.branchId)
@@ -83,7 +103,7 @@ class _PinPickerPageState extends State<PinPickerPage> {
     }
     final pins = place?.pins ?? const [];
     return pins.isEmpty
-        ? malaysiaCamera
+        ? null
         : CameraPosition(
             target: LatLng(pins.first.lat!, pins.first.lng!),
             zoom: 13,
@@ -149,43 +169,65 @@ class _PinPickerPageState extends State<PinPickerPage> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                MapLibreMap(
-                  styleString: mapStyle,
-                  initialCameraPosition: _start(
-                    context.read<PlacesController>(),
+                if (_camera == null)
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: nb.paper,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator.adaptive(),
+                            const SizedBox(height: 12),
+                            Text(
+                              l.pinFindingYou,
+                              style: text.bodyMedium?.copyWith(
+                                color: nb.inkSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  MapLibreMap(
+                    styleString: mapStyle,
+                    initialCameraPosition: _camera!,
+                    onMapCreated: _created,
+                    onStyleLoadedCallback: _styleLoaded,
+                    onCameraIdle: _cameraIdle,
+                    trackCameraPosition: true,
+                    tiltGesturesEnabled: false,
+                    compassEnabled: false,
+                    logoEnabled: false,
+                    attributionButtonPosition:
+                        AttributionButtonPosition.topLeft,
+                    attributionButtonMargins: const Point(8, 8),
+                    attributionButtonColor: nb.ink.withValues(alpha: 0.3),
                   ),
-                  onMapCreated: _created,
-                  onStyleLoadedCallback: _styleLoaded,
-                  onCameraIdle: _cameraIdle,
-                  trackCameraPosition: true,
-                  tiltGesturesEnabled: false,
-                  compassEnabled: false,
-                  logoEnabled: false,
-                  attributionButtonPosition: AttributionButtonPosition.topLeft,
-                  attributionButtonMargins: const Point(8, 8),
-                  attributionButtonColor: nb.ink.withValues(alpha: 0.3),
-                ),
                 // Google Maps style: the pin is fixed to the middle; the map moves underneath.
-                IgnorePointer(
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: Transform.translate(
-                      offset: const Offset(0, -24),
-                      child: Icon(
-                        Icons.location_pin,
-                        size: 48,
-                        color: nb.margin,
-                        shadows: [
-                          Shadow(
-                            color: nb.ink.withValues(alpha: 0.25),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                if (_camera != null)
+                  IgnorePointer(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Transform.translate(
+                        offset: const Offset(0, -24),
+                        child: Icon(
+                          Icons.location_pin,
+                          size: 48,
+                          color: nb.margin,
+                          shadows: [
+                            Shadow(
+                              color: nb.ink.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
                 if (_map != null)
                   Positioned(
                     top: 12,
@@ -200,15 +242,16 @@ class _PinPickerPageState extends State<PinPickerPage> {
                       ),
                     ),
                   ),
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: LocationButton(
-                    tooltip: l.myLocation,
-                    onPressed: _myLocation,
-                    busy: _locating,
+                if (_camera != null)
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: LocationButton(
+                      tooltip: l.myLocation,
+                      onPressed: _myLocation,
+                      busy: _locating,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
