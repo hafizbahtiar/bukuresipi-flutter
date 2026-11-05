@@ -1206,7 +1206,7 @@
   },
   "errAlreadyInFamily": "You are already in a family. Leave it first to join this one.",
   "@errAlreadyInFamily": {},
-  "errFamilyFull": "This family is full (10 people).",
+  "errFamilyFull": "This family is full (3 people).",
   "@errFamilyFull": {},
   "errInviteExpired": "This invite link has expired or was stopped. Ask for a new one.",
   "@errInviteExpired": {},

@@ -476,7 +476,7 @@
   "familyNotNow": "Bukan sekarang",
   "familyJoined": "Anda menyertai {family}",
   "errAlreadyInFamily": "Anda sudah dalam keluarga. Keluar dahulu untuk menyertai yang ini.",
-  "errFamilyFull": "Keluarga ini sudah penuh (10 orang).",
+  "errFamilyFull": "Keluarga ini sudah penuh (3 orang).",
   "errInviteExpired": "Pautan jemputan ini telah tamat atau dihentikan. Minta pautan baharu.",
   "errNotInFamily": "Anda tiada dalam keluarga.",
   "errNotOwner": "Hanya pemilik keluarga boleh berbuat begitu.",
