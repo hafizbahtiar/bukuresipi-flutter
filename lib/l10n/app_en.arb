@@ -1225,5 +1225,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "pushRow": "Notify me when a share is ready",
+  "pushRowHint": "Recipes and places from your shares, as soon as they are saved",
+  "@pushRow": {},
+  "@pushRowHint": {}
 }

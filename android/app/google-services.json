@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092028895748",
+    "project_id": "bukuresipi",
+    "storage_bucket": "bukuresipi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092028895748:android:867053bdb6d8fe80ad5b51",
+        "android_client_info": {
+          "package_name": "com.bukuresipi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdr2PeGOKB-8eBrsXwyanpSr9ak4QXQJ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

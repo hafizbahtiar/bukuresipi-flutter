@@ -1,5 +1,7 @@
 // Composition root: the only place that builds concrete classes. Everything below depends on interfaces
 // (AuthRepository, TokenStore) handed down through Provider, so tests swap them for fakes.
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +23,8 @@ import 'features/owner/data/owner_repository_impl.dart';
 import 'features/owner/domain/owner_repository.dart';
 import 'features/places/data/places_repository_impl.dart';
 import 'features/places/presentation/places_controller.dart';
+import 'features/push/push_controller.dart';
+import 'features/push/push_messaging.dart';
 import 'features/recipes/data/recipes_repository_impl.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
 import 'features/shopping/data/shopping_repository_impl.dart';
@@ -91,9 +95,26 @@ Future<void> main() async {
     WebViewCaptionReader(),
   ); // started by the app, once the router exists
 
+  // Android only until iOS has its Firebase file; no Firebase = no pushes, the app checks while open instead.
+  PushController? push;
+  if (Platform.isAndroid) {
+    try {
+      push = PushController(
+        await FirebasePushMessaging.start(),
+        api.dio,
+        prefs,
+        auth,
+      );
+    } catch (e) {
+      debugPrint('push: Firebase did not start: $e');
+    }
+  }
+
   runApp(
     MultiProvider(
       providers: [
+        if (push != null)
+          ChangeNotifierProvider<PushController>.value(value: push),
         Provider<ApiClient>.value(value: api),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: update),

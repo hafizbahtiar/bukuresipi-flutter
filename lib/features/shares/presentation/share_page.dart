@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
+import '../../push/push_controller.dart';
 import 'recent_shares.dart';
 import 'share_intake.dart';
 import 'widgets/share_reading.dart';
@@ -38,7 +39,10 @@ class SharePage extends StatelessWidget {
       context.go('/');
     }
 
-    void leaveApp() {
+    Future<void> leaveApp() async {
+      // The first accepted share is the moment to ask for notifications (the push is about it), before leaving.
+      await context.read<PushController?>()?.askAfterShare();
+      if (!context.mounted) return;
       close();
       context.read<RecentShares>().load();
       SystemNavigator.pop(); // Android: back to the source app; iOS ignores it and the book is shown

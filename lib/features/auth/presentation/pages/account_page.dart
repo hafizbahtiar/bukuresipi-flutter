@@ -10,6 +10,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../../../family/presentation/ask.dart';
 import '../../../family/presentation/family_controller.dart';
+import '../../../push/push_controller.dart';
 import '../auth_text.dart';
 
 class AccountPage extends StatefulWidget {
@@ -98,6 +99,25 @@ class _AccountPageState extends State<AccountPage> {
                   ],
                 ),
               ),
+              if (context.watch<PushController?>() case final push?)
+                NotebookRow(
+                  mark: mark(Icons.notifications_none),
+                  onTap: () => push.setEnabled(!push.enabled),
+                  trailing: Switch(
+                    value: push.enabled,
+                    onChanged: push.setEnabled,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.pushRow),
+                      Text(
+                        l.pushRowHint,
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
+                    ],
+                  ),
+                ),
               NotebookRow(
                 mark: mark(Icons.people_outline),
                 onTap: () => context.push('/family'),

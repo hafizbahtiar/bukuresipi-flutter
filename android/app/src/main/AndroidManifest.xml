@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+: asked after the first share (lib/features/push), not at launch. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- "My location" when setting a place's pin by hand (asked only then). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -8,6 +10,8 @@
         android:name="${applicationName}"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
+        <!-- Pushes without a channel of their own land on "shares" (created in MainActivity). -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="shares"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

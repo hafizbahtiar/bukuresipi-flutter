@@ -480,5 +480,7 @@
   "errInviteExpired": "Pautan jemputan ini telah tamat atau dihentikan. Minta pautan baharu.",
   "errNotInFamily": "Anda tiada dalam keluarga.",
   "errNotOwner": "Hanya pemilik keluarga boleh berbuat begitu.",
-  "familyPeople": "{count} orang"
+  "familyPeople": "{count} orang",
+  "pushRow": "Beritahu saya bila kiriman siap",
+  "pushRowHint": "Resipi dan tempat daripada kiriman anda, sebaik sahaja disimpan"
 }
