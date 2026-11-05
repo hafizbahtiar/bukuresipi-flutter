@@ -1,3 +1,10 @@
+import java.util.Properties
+
+// Release signing: android/key.properties (git-ignored) points at the upload key in ~/Documents/Keystore (iCloud).
+val keyProps = Properties().apply {
+    rootProject.file("key.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -16,7 +23,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.bukuresipi"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -30,11 +36,19 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keyProps["keyAlias"] as String?
+            keyPassword = keyProps["keyPassword"] as String?
+            storeFile = (keyProps["storeFile"] as String?)?.let { file(it) }
+            storePassword = keyProps["storePassword"] as String?
+        }
+    }
+
     buildTypes {
+        // Minify (R8) and resource shrinking are on by default for release in the Flutter Gradle plugin.
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
