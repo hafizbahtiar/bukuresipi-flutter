@@ -7,6 +7,7 @@ import '../../features/places/presentation/pages/reviews_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/pages/account_page.dart';
 import '../../features/auth/presentation/pages/change_email_page.dart';
+import '../../features/auth/presentation/pages/sessions_page.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
 import '../../features/auth/presentation/pages/delete_account_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
@@ -124,6 +125,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
         builder: (_, _) => const ChangePasswordPage(),
       ),
       _page(path: '/account/email', builder: (_, _) => const ChangeEmailPage()),
+      _page(path: '/account/sessions', builder: (_, _) => const SessionsPage()),
       _page(path: '/share', builder: (_, _) => const SharePage()),
       _page(
         path: '/places/:id',

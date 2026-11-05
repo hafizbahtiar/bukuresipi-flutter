@@ -40,8 +40,8 @@ class PushController extends ChangeNotifier {
   /// The user tapped a share's notification: open it.
   void Function(String shareId)? onTap;
 
-  /// The user tapped a "new sign-in to your account" alert (sent to the account's other phones at each login).
-  VoidCallback? onSignInTap;
+  /// The user tapped a push that is not a share's: `sign_in` ("new sign-in to your account") or `family`.
+  void Function(String type)? onTypeTap;
 
   bool _allowed = false;
 
@@ -67,7 +67,8 @@ class PushController extends ChangeNotifier {
   void _tapped(Map<String, String> data) {
     final id = data['shareId'];
     if (id != null && id.isNotEmpty) return onTap?.call(id);
-    if (data['type'] == 'sign_in') onSignInTap?.call();
+    final type = data['type'];
+    if (type != null) onTypeTap?.call(type);
   }
 
   void _authChanged() {

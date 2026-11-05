@@ -131,21 +131,22 @@ void main() {
       authRepo = FakeAuthRepository()..session = true;
       auth = AuthController(authRepo);
       await auth.restore();
-      final push = PushController(
-        fcm,
-        Dio()..httpClientAdapter = http,
-        await SharedPreferences.getInstance(),
-        auth,
-        platform: 'android',
-      )
-        ..onTap = opened.add
-        ..onSignInTap = () => opened.add('sign-in');
+      final push =
+          PushController(
+              fcm,
+              Dio()..httpClientAdapter = http,
+              await SharedPreferences.getInstance(),
+              auth,
+              platform: 'android',
+            )
+            ..onTap = opened.add
+            ..onTypeTap = opened.add;
       await push.start();
       fcm.taps_.add({'shareId': 's-2'});
       await pumpEventQueue();
       fcm.taps_.add({'type': 'sign_in'});
       await pumpEventQueue();
-      expect(opened, ['s-1', 's-2', 'sign-in']);
+      expect(opened, ['s-1', 's-2', 'sign_in']);
     },
   );
 }

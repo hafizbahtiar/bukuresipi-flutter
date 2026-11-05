@@ -42,7 +42,12 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
       push
         ..onForeground = _foreground
         ..onTap = _openShare
-        ..onSignInTap = (() => _router.go('/account'))
+        // A new sign-in opens the device list (sign that one out); a family change opens the family.
+        ..onTypeTap = ((type) => switch (type) {
+          'sign_in' => _router.push('/account/sessions'),
+          'family' => _router.push('/family'),
+          _ => null,
+        })
         ..start();
     }
   }
@@ -65,7 +70,10 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
           content: Text(push.body == null ? title : '$title\n${push.body}'),
           action: shareId == null
               ? null
-              : SnackBarAction(label: AppLocalizations.of(context).openPlace, onPressed: () => _openShare(shareId)),
+              : SnackBarAction(
+                  label: AppLocalizations.of(context).openPlace,
+                  onPressed: () => _openShare(shareId),
+                ),
         ),
       );
   }
