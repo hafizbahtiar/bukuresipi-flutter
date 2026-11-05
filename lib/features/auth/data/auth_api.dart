@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/api_client.dart';
+import '../domain/session.dart';
 
 /// /api/v1/auth/* calls, raw JSON in and out. Errors surface as DioException (mapped by the repository).
 class AuthApi {
@@ -72,11 +73,14 @@ class AuthApi {
         'newPassword': next,
       }, auth: true);
 
-  Future<List<Map<String, dynamic>>> sessions() async =>
-      ((await _dio.get<Map<String, dynamic>>('/auth/sessions'))
-                  .data!['sessions']
-              as List)
-          .cast<Map<String, dynamic>>();
+  Future<List<Session>> sessions() async {
+    final res = await _dio.get<Map<String, dynamic>>('/auth/sessions');
+    return [
+      for (final s in res.data!['sessions'] as List)
+        Session.fromJson(s as Map<String, dynamic>),
+    ];
+  }
+
   Future<void> endSession(String id) => _dio.delete<void>('/auth/sessions/$id');
   Future<void> endOtherSessions() => _dio.delete<void>('/auth/sessions/others');
 

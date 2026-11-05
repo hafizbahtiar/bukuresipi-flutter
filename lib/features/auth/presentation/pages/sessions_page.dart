@@ -8,6 +8,7 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/auth_api.dart';
+import '../../domain/session.dart';
 import '../auth_text.dart';
 
 /// "Signed-in devices": every live session of this account (GET /auth/sessions), this phone first.
@@ -25,7 +26,7 @@ class SessionsPage extends StatefulWidget {
 class _SessionsPageState extends State<SessionsPage> {
   late final AuthApi _api =
       widget.api ?? AuthApi(context.read<ApiClient>().dio);
-  List<Map<String, dynamic>>? _sessions;
+  List<Session>? _sessions;
   Object? _error;
 
   @override
@@ -61,7 +62,7 @@ class _SessionsPageState extends State<SessionsPage> {
     await _load();
   }
 
-  Future<void> _end(Map<String, dynamic> s) async {
+  Future<void> _end(Session s) async {
     final l = AppLocalizations.of(context);
     if (await showNotebookDialog(
       context,
@@ -69,7 +70,7 @@ class _SessionsPageState extends State<SessionsPage> {
       tone: DialogTone.danger,
       confirmLabel: l.sessionsEnd,
     )) {
-      await _run(() => _api.endSession(s['id'] as String));
+      await _run(() => _api.endSession(s.id));
     }
   }
 
@@ -87,20 +88,20 @@ class _SessionsPageState extends State<SessionsPage> {
 
   /// "Infinix X6731 · Android 14 · App 1.4.0 · Kuala Lumpur, MY": whatever the session has (the model only when
   /// the name is not already it). The place is Cloudflare's guess from the IP: approximate.
-  String? _details(AppLocalizations l, Map<String, dynamic> s) {
-    final model = s['deviceModel'] as String?;
-    final app = s['appVersion'] as String?;
+  String? _details(AppLocalizations l, Session s) {
+    final model = s.deviceModel;
+    final app = s.appVersion;
     final parts = [
-      if (model != null && model != s['deviceName']) model,
-      ?s['osVersion'] as String?,
+      if (model != null && model != s.deviceName) model,
+      ?s.osVersion,
       if (app != null) l.sessionsAppVersion(app),
-      ?s['location'] as String?,
+      ?s.location,
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
 
-  String _name(AppLocalizations l, Map<String, dynamic> s) =>
-      (s['deviceName'] as String?) ?? l.sessionsUnknownDevice;
+  String _name(AppLocalizations l, Session s) =>
+      s.deviceName ?? l.sessionsUnknownDevice;
 
   @override
   Widget build(BuildContext context) {
@@ -108,8 +109,7 @@ class _SessionsPageState extends State<SessionsPage> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final dates = MaterialLocalizations.of(context);
-    String when(String iso) =>
-        dates.formatMediumDate(DateTime.parse(iso).toLocal());
+    String when(DateTime d) => dates.formatMediumDate(d);
     final sessions = _sessions;
 
     return Scaffold(
@@ -129,13 +129,13 @@ class _SessionsPageState extends State<SessionsPage> {
                     for (final s in sessions)
                       NotebookRow(
                         mark: Icon(
-                          s['platform'] == 'web'
+                          s.platform == 'web'
                               ? Icons.language
                               : Icons.smartphone,
                           size: 20,
                           color: nb.inkSoft,
                         ),
-                        trailing: s['current'] == true
+                        trailing: s.current
                             ? null
                             : TextButton(
                                 onPressed: () => _end(s),
@@ -153,23 +153,17 @@ class _SessionsPageState extends State<SessionsPage> {
                                 ),
                               ),
                             Text(
-                              l.sessionsSignedIn(
-                                when(s['createdAt'] as String),
-                              ),
+                              l.sessionsSignedIn(when(s.createdAt)),
                               style: text.bodySmall?.copyWith(
                                 color: nb.inkSoft,
                               ),
                             ),
                             Text(
-                              s['current'] == true
+                              s.current
                                   ? l.sessionsThisDevice
-                                  : l.sessionsLastUsed(
-                                      when(s['lastUsedAt'] as String),
-                                    ),
+                                  : l.sessionsLastUsed(when(s.lastUsedAt)),
                               style: text.bodySmall?.copyWith(
-                                color: s['current'] == true
-                                    ? nb.pandanDeep
-                                    : nb.inkSoft,
+                                color: s.current ? nb.pandanDeep : nb.inkSoft,
                               ),
                             ),
                           ],
