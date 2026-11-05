@@ -184,6 +184,12 @@ class _AccountPageState extends State<AccountPage> {
                 trailing: next,
                 child: Text(l.changePasswordTitle),
               ),
+              NotebookRow(
+                mark: mark(Icons.devices_outlined),
+                onTap: () => context.push('/account/sessions'),
+                trailing: next,
+                child: Text(l.sessionsRow),
+              ),
               if (user.isOwner)
                 NotebookRow(
                   mark: mark(Icons.admin_panel_settings_outlined),

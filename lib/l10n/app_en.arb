@@ -1229,5 +1229,35 @@
   "pushRow": "Notify me when a share is ready",
   "pushRowHint": "Recipes and places from your shares, as soon as they are saved",
   "@pushRow": {},
-  "@pushRowHint": {}
+  "@pushRowHint": {},
+  "sessionsTitle": "Signed-in devices",
+  "@sessionsTitle": {},
+  "sessionsRow": "Signed-in devices",
+  "@sessionsRow": {},
+  "sessionsThisDevice": "This phone",
+  "@sessionsThisDevice": {},
+  "sessionsLastUsed": "Last used {date}",
+  "@sessionsLastUsed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionsUnknownDevice": "Unknown device",
+  "@sessionsUnknownDevice": {},
+  "sessionsEnd": "Sign out",
+  "@sessionsEnd": {},
+  "sessionsEndConfirm": "Sign out {device}? It will need your password to sign in again.",
+  "@sessionsEndConfirm": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionsEndOthers": "Sign out all other devices",
+  "@sessionsEndOthers": {},
+  "sessionsEndOthersConfirm": "Sign out every device except this phone?",
+  "@sessionsEndOthersConfirm": {}
 }

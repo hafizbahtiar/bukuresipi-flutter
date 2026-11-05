@@ -482,5 +482,14 @@
   "errNotOwner": "Hanya pemilik keluarga boleh berbuat begitu.",
   "familyPeople": "{count} orang",
   "pushRow": "Beritahu saya bila kiriman siap",
-  "pushRowHint": "Resipi dan tempat daripada kiriman anda, sebaik sahaja disimpan"
+  "pushRowHint": "Resipi dan tempat daripada kiriman anda, sebaik sahaja disimpan",
+  "sessionsTitle": "Peranti yang log masuk",
+  "sessionsRow": "Peranti yang log masuk",
+  "sessionsThisDevice": "Telefon ini",
+  "sessionsLastUsed": "Kali terakhir digunakan {date}",
+  "sessionsUnknownDevice": "Peranti tidak dikenali",
+  "sessionsEnd": "Log keluar",
+  "sessionsEndConfirm": "Log keluar {device}? Kata laluan diperlukan untuk log masuk semula.",
+  "sessionsEndOthers": "Log keluar semua peranti lain",
+  "sessionsEndOthersConfirm": "Log keluar semua peranti kecuali telefon ini?"
 }
