@@ -102,6 +102,10 @@ class AuthRepositoryImpl implements AuthRepository {
   );
 
   @override
+  Future<void> changeEmail(String email, String password) =>
+      apiCall(() => _api.changeEmail(email, password));
+
+  @override
   Future<void> deleteAccount(String email, String password) async {
     await apiCall(() => _api.deleteAccount(email, password));
     await clearLocal();

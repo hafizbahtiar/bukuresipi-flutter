@@ -107,6 +107,14 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<void> changePassword(String current, String next) async {}
 
+  final emailChanges = <String>[];
+  Object? changeEmailError;
+  @override
+  Future<void> changeEmail(String email, String password) async {
+    if (changeEmailError != null) throw changeEmailError!;
+    emailChanges.add(email);
+  }
+
   final deleted = <String>[];
   Object? deleteError;
   @override

@@ -111,4 +111,8 @@ class AuthController extends ChangeNotifier {
 
   Future<void> changePassword(String current, String next) =>
       _repo.changePassword(current, next);
+
+  /// Throws ApiException. The user's email updates when the link is opened (verifyEmail refreshes the user).
+  Future<void> changeEmail(String email, String password) =>
+      _repo.changeEmail(email, password);
 }

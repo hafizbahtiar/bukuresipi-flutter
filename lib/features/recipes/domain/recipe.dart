@@ -33,6 +33,8 @@ class RecipeDetail {
     this.missing = const [],
     required this.ingredients,
     required this.steps,
+    this.allergens = const [],
+    this.uncheckedIngredients = 0,
   });
 
   final String id;
@@ -45,6 +47,18 @@ class RecipeDetail {
   final List<String> missing;
   final List<RecipeIngredient> ingredients;
   final List<RecipeStep> steps;
+
+  /// Label-required allergen groups of the recognised ingredients (usual recipe; products differ). Empty is NOT
+  /// "allergen free": [uncheckedIngredients] lines were never checked.
+  final List<RecipeAllergen> allergens;
+  final int uncheckedIngredients;
+}
+
+class RecipeAllergen {
+  const RecipeAllergen({required this.name, required this.ingredients});
+
+  final String name;
+  final List<String> ingredients;
 }
 
 class RecipeIngredient {

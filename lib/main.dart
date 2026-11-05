@@ -21,6 +21,8 @@ import 'features/places/data/places_repository_impl.dart';
 import 'features/places/presentation/places_controller.dart';
 import 'features/recipes/data/recipes_repository_impl.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
+import 'features/shopping/data/shopping_repository_impl.dart';
+import 'features/shopping/presentation/shopping_controller.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
 import 'features/shares/data/webview_caption_reader.dart';
 import 'features/shares/data/share_repository_impl.dart';
@@ -53,10 +55,12 @@ Future<void> main() async {
   auth.restore();
   final places = PlacesController(PlacesRepositoryImpl(api.dio));
   final recipes = RecipesController(RecipesRepositoryImpl(api.dio));
+  final shopping = ShoppingController(ShoppingRepositoryImpl(api.dio));
   auth.addListener(() {
     if (auth.status == AuthStatus.signedOut) {
       places.clear();
       recipes.clear();
+      shopping.clear();
     }
   });
   final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
@@ -87,6 +91,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: shares),
         ChangeNotifierProvider.value(value: places),
         ChangeNotifierProvider.value(value: recipes),
+        ChangeNotifierProvider.value(value: shopping),
         ChangeNotifierProvider.value(value: recent),
         Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),

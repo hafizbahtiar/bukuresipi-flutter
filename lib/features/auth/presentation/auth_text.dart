@@ -32,6 +32,7 @@ String errorText(
     'not_saved' => l.ratingNotSaved,
     'email_unverified' => l.ratingVerifyEmail,
     'owner_account' => l.errOwnerAccount,
+    'list_full' => l.errShoppingListFull,
     'invalid_input' => l.errInvalidEmail,
     ApiException.network => l.errNetwork,
     _ => l.errUnknown,

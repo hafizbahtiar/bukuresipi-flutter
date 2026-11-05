@@ -7,9 +7,11 @@ import '../../places/presentation/pages/places_list_page.dart';
 import '../../places/presentation/pages/places_map_page.dart';
 import '../../places/presentation/places_controller.dart';
 import '../../recipes/presentation/recipes_controller.dart';
+import '../../shopping/presentation/pages/shopping_page.dart';
+import '../../shopping/presentation/shopping_controller.dart';
 import '../../shares/presentation/recent_shares.dart';
 
-/// Signed-in home: Book, Map and Account tabs. Rebuilt after every share (the share page goes back to '/'), so it
+/// Signed-in home: Book, Map, Shopping and Account tabs. Rebuilt after every share (the share page goes back to '/'), so it
 /// reloads the places.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,9 +31,11 @@ class _HomePageState extends State<HomePage> {
     final places = context.read<PlacesController>();
     final recipes = context.read<RecipesController>();
     final shared = context.read<RecentShares>();
+    final shopping = context.read<ShoppingController>();
     void refresh() {
       places.load();
       recipes.load();
+      shopping.load();
       shared.load();
     }
 
@@ -60,6 +64,7 @@ class _HomePageState extends State<HomePage> {
           _mapOpened
               ? PlacesMapPage(active: _tab == 1)
               : const SizedBox.shrink(),
+          const ShoppingPage(),
           const AccountPage(),
         ],
       ),
@@ -79,6 +84,11 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.map_outlined),
             selectedIcon: const Icon(Icons.map),
             label: l.navMap,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.shopping_basket_outlined),
+            selectedIcon: const Icon(Icons.shopping_basket),
+            label: l.navShopping,
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),

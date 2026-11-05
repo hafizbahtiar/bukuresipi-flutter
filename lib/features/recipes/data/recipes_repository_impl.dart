@@ -36,6 +36,43 @@ class RecipesRepositoryImpl implements RecipesRepository {
   @override
   Future<void> delete(String id) =>
       apiCall(() => _dio.delete<void>('/recipes/$id'));
+
+  @override
+  Future<List<String>> searchIngredients(String query) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/recipes/ingredients',
+      queryParameters: {'q': query},
+    )).data!;
+    return [
+      for (final i
+          in (data['ingredients'] as List).cast<Map<String, dynamic>>())
+        i['name'] as String,
+    ];
+  });
+
+  @override
+  Future<RecipeDetail> linkIngredient(String id, int index, String? name) =>
+      apiCall(() async {
+        final data = (await _dio.put<Map<String, dynamic>>(
+          '/recipes/$id/ingredients/$index',
+          data: {'ingredient': name},
+        )).data!;
+        return recipeDetailFromJson(data);
+      });
+
+  @override
+  Future<RecipeDetail> edit(
+    String id, {
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) => apiCall(() async {
+    final data = (await _dio.patch<Map<String, dynamic>>(
+      '/recipes/$id',
+      data: {'name': name, 'ingredients': ingredients, 'steps': steps},
+    )).data!;
+    return recipeDetailFromJson(data);
+  });
 }
 
 List<String> _missing(Object? v) => [
@@ -77,4 +114,13 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
         instruction: s['instruction'] as String,
       ),
   ],
+  allergens: [
+    for (final a
+        in (j['allergens'] as List? ?? const []).cast<Map<String, dynamic>>())
+      RecipeAllergen(
+        name: a['name'] as String,
+        ingredients: (a['ingredients'] as List).cast<String>(),
+      ),
+  ],
+  uncheckedIngredients: (j['uncheckedIngredients'] as num?)?.toInt() ?? 0,
 );

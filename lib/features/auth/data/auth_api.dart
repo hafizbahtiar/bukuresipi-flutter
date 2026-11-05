@@ -37,6 +37,11 @@ class AuthApi {
       _post('/auth/delete-account', {'email': email, 'password': password});
   Future<void> resetPassword(String token, String password) =>
       _post('/auth/reset-password', {'token': token, 'password': password});
+  Future<void> changeEmail(String email, String password) => _post(
+    '/auth/change-email',
+    {'email': email, 'password': password},
+    auth: true,
+  );
   Future<Map<String, dynamic>> changePassword(String current, String next) =>
       _post('/auth/change-password', {
         'currentPassword': current,

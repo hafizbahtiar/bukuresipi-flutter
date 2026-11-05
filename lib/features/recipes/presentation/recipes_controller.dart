@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -59,6 +61,30 @@ class RecipesController extends ChangeNotifier {
 
   /// Throws ApiException; the detail page shows it.
   Future<RecipeDetail> detail(String id) => _repo.get(id);
+
+  Future<List<String>> searchIngredients(String query) =>
+      _repo.searchIngredients(query);
+
+  /// Throws ApiException.
+  Future<RecipeDetail> linkIngredient(String id, int index, String? name) =>
+      _repo.linkIngredient(id, index, name);
+
+  /// Throws ApiException. The book list is reloaded: the name or counts may have changed.
+  Future<RecipeDetail> edit(
+    String id, {
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) async {
+    final saved = await _repo.edit(
+      id,
+      name: name,
+      ingredients: ingredients,
+      steps: steps,
+    );
+    unawaited(load());
+    return saved;
+  }
 
   /// Throws ApiException; the detail page shows it.
   Future<void> remove(String id) async {

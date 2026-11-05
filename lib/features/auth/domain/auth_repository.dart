@@ -32,6 +32,9 @@ abstract interface class AuthRepository {
   /// Ends every other session; this device gets new tokens.
   Future<void> changePassword(String current, String next);
 
+  /// Emails a confirmation link to [email]; the account email changes when it is opened.
+  Future<void> changeEmail(String email, String password);
+
   /// Deletes the account for good (email + password confirm it), then forgets it on this device.
   Future<void> deleteAccount(String email, String password);
 }

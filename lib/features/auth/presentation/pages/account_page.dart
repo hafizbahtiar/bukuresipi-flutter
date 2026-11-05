@@ -120,6 +120,12 @@ class _AccountPageState extends State<AccountPage> {
                 child: Text(l.language),
               ),
               NotebookRow(
+                mark: mark(Icons.alternate_email),
+                onTap: () => context.push('/account/email'),
+                trailing: next,
+                child: Text(l.changeEmailTitle),
+              ),
+              NotebookRow(
                 mark: mark(Icons.lock_outline),
                 onTap: () => context.push('/account/password'),
                 trailing: next,

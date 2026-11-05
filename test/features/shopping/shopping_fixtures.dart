@@ -1,0 +1,81 @@
+import 'package:bukuresipi_flutter/features/shopping/domain/shopping.dart';
+import 'package:bukuresipi_flutter/features/shopping/domain/shopping_repository.dart';
+
+/// In-memory list in the server's order: still to buy first, then bought.
+class FakeShopping implements ShoppingRepository {
+  List<ShoppingItem> items = [];
+  final recipesAdded = <String>[];
+  int _next = 0;
+
+  List<ShoppingItem> get _sorted => [
+    ...items.where((i) => !i.done),
+    ...items.where((i) => i.done),
+  ];
+
+  @override
+  Future<List<ShoppingItem>> list() async => _sorted;
+
+  @override
+  Future<List<ShoppingItem>> addText(String text) async {
+    final item = ShoppingItem(id: 'i${_next++}', text: text, done: false);
+    items = [...items, item];
+    return [item];
+  }
+
+  @override
+  Future<List<ShoppingItem>> addRecipe(String recipeId) async {
+    recipesAdded.add(recipeId);
+    if (items.any((i) => i.recipes.any((r) => r.id == recipeId))) return [];
+    final item = ShoppingItem(
+      id: 'i${_next++}',
+      text: '2 cawan beras putih',
+      done: false,
+      ingredient: 'Beras putih',
+      recipes: [(id: recipeId, name: 'Nasi Lemak Ayam')],
+      products: const [
+        ShoppingProduct(
+          name: 'Beras Super Special Tempatan Jati 5kg',
+          brand: 'Jati',
+        ),
+      ],
+    );
+    items = [...items, item];
+    return [item];
+  }
+
+  @override
+  Future<ShoppingItem> setDone(String id, bool done) async {
+    final old = items.firstWhere((i) => i.id == id);
+    final item = ShoppingItem(
+      id: id,
+      text: old.text,
+      done: done,
+      ingredient: old.ingredient,
+      recipes: old.recipes,
+      products: old.products,
+    );
+    items = [for (final i in items) i.id == id ? item : i];
+    return item;
+  }
+
+  @override
+  Future<void> delete(String id) async =>
+      items = items.where((i) => i.id != id).toList();
+
+  @override
+  Future<void> clearDone() async =>
+      items = items.where((i) => !i.done).toList();
+
+  @override
+  Future<List<ShoppingProduct>> products(String ingredient) async => const [
+    ShoppingProduct(
+      name: 'Beras Super Special Tempatan Jati 5kg',
+      brand: 'Jati',
+      manufacturer: 'Serba Wangi Sdn Bhd',
+    ),
+    ShoppingProduct(
+      name: 'Jati Signature Super Special Rice 10kg',
+      brand: 'Jati',
+    ),
+  ];
+}

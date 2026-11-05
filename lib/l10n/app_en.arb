@@ -816,11 +816,119 @@
   "ownerRatingBurstsEmpty": "No unusual ratings this week.",
   "@ownerRatingBurstsEmpty": {},
   "ownerRatingBurstNew": "{count} ratings from new accounts this week",
-  "@ownerRatingBurstNew": {"placeholders": {"count": {"type": "int"}}},
+  "@ownerRatingBurstNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ownerRatingJoined": "Joined {date}",
-  "@ownerRatingJoined": {"placeholders": {"date": {"type": "String"}}},
+  "@ownerRatingJoined": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "ownerRatingDelete": "Delete rating",
   "@ownerRatingDelete": {},
   "ownerRatingDeleteConfirm": "Delete this rating and its review for good? Its votes and reports go too.",
-  "@ownerRatingDeleteConfirm": {}
+  "@ownerRatingDeleteConfirm": {},
+  "recipeAllergens": "Allergens",
+  "@recipeAllergens": {},
+  "recipeAllergenNote": "From recognised ingredients only, by their usual recipe. Always check product labels.",
+  "@recipeAllergenNote": {},
+  "recipeAllergenUnchecked": "Ingredients not checked: {count}.",
+  "@recipeAllergenUnchecked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navShopping": "Shopping",
+  "@navShopping": {},
+  "shoppingTitle": "Shopping list",
+  "@shoppingTitle": {},
+  "shoppingAdd": "Add",
+  "@shoppingAdd": {},
+  "shoppingAddHint": "Add an item",
+  "@shoppingAddHint": {},
+  "shoppingEmpty": "Nothing to buy. Add a recipe's ingredients from its page, or type an item above.",
+  "@shoppingEmpty": {},
+  "shoppingLoadFailed": "Could not load the list. Tap to try again.",
+  "@shoppingLoadFailed": {},
+  "shoppingClearDone": "Clear bought items",
+  "@shoppingClearDone": {},
+  "shoppingClearDoneConfirm": "Remove every ticked item from the list?",
+  "@shoppingClearDoneConfirm": {},
+  "shoppingFromRecipe": "For {recipe}",
+  "@shoppingFromRecipe": {
+    "placeholders": {
+      "recipe": {
+        "type": "String"
+      }
+    }
+  },
+  "shoppingProducts": "e.g. {products}",
+  "@shoppingProducts": {
+    "placeholders": {
+      "products": {
+        "type": "String"
+      }
+    }
+  },
+  "shoppingAddRecipe": "Add to list",
+  "@shoppingAddRecipe": {},
+  "shoppingAdded": "{count, plural, =1{1 item added to your shopping list} other{{count} items added to your shopping list}}",
+  "@shoppingAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shoppingAlreadyAdded": "These ingredients are already on your list.",
+  "@shoppingAlreadyAdded": {},
+  "errShoppingListFull": "Your list is full (200 items). Clear bought items first.",
+  "@errShoppingListFull": {},
+  "ingredientPickTitle": "Which ingredient is this?",
+  "@ingredientPickTitle": {},
+  "ingredientSearchHint": "Search ingredients",
+  "@ingredientSearchHint": {},
+  "ingredientUnlink": "Not a listed ingredient",
+  "@ingredientUnlink": {},
+  "ingredientUnrecognised": "Not recognised: tap to choose the ingredient",
+  "@ingredientUnrecognised": {},
+  "shoppingSeeAllProducts": "See all",
+  "@shoppingSeeAllProducts": {},
+  "shoppingProductsTitle": "Products: {ingredient}",
+  "@shoppingProductsTitle": {
+    "placeholders": {
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeEdit": "Edit",
+  "@recipeEdit": {},
+  "recipeEditName": "Name",
+  "@recipeEditName": {},
+  "recipeEditNameRequired": "Give the recipe a name.",
+  "@recipeEditNameRequired": {},
+  "recipeEditAddIngredient": "Add ingredient",
+  "@recipeEditAddIngredient": {},
+  "recipeEditAddStep": "Add step",
+  "@recipeEditAddStep": {},
+  "changeEmailTitle": "Change email",
+  "@changeEmailTitle": {},
+  "newEmail": "New email",
+  "@newEmail": {},
+  "changeEmailButton": "Send confirmation link",
+  "@changeEmailButton": {},
+  "changeEmailSent": "We sent a link to {email}. Open it to finish; your email stays the same until then.",
+  "@changeEmailSent": {"placeholders": {"email": {"type": "String"}}},
+  "errEmailInUse": "Another account already uses this email.",
+  "@errEmailInUse": {}
 }

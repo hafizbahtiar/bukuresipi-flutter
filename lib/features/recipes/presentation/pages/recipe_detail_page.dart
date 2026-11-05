@@ -10,7 +10,10 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
+import '../../../shopping/presentation/shopping_controller.dart';
 import '../recipes_controller.dart';
+import '../widgets/ingredient_picker.dart';
+import 'recipe_edit_page.dart';
 
 /// One imported recipe as a notebook page: what the post said, with the pieces it did not give marked.
 class RecipeDetailPage extends StatefulWidget {
@@ -78,6 +81,46 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     }
   }
 
+  Future<void> _addToList(RecipeDetail recipe) async {
+    final l = AppLocalizations.of(context);
+    final shopping = context.read<ShoppingController>();
+    try {
+      final added = await shopping.addRecipe(recipe.id);
+      _snack(added == 0 ? l.shoppingAlreadyAdded : l.shoppingAdded(added));
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
+  Future<void> _edit(RecipeDetail recipe) async {
+    final saved = await Navigator.of(context).push<RecipeDetail>(
+      MaterialPageRoute(builder: (_) => RecipeEditPage(recipe: recipe)),
+    );
+    if (saved != null && mounted) setState(() => _recipe = saved);
+  }
+
+  Future<void> _pick(RecipeDetail recipe, int index) async {
+    final l = AppLocalizations.of(context);
+    final recipes = context.read<RecipesController>();
+    final line = recipe.ingredients[index];
+    final picked = await pickIngredient(
+      context,
+      line: line.rawText ?? line.label,
+      linked: line.name != null,
+    );
+    if (picked == null) return;
+    try {
+      final updated = await recipes.linkIngredient(
+        recipe.id,
+        index,
+        picked.name,
+      );
+      if (mounted) setState(() => _recipe = updated);
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -119,6 +162,17 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               label: l.recipeOpenSource,
               onPressed: () => openLink(context, url, failed: l.openFailed),
             ),
+          if (recipe.ingredients.isNotEmpty)
+            DockAction(
+              icon: Icons.add_shopping_cart,
+              label: l.shoppingAddRecipe,
+              onPressed: () => _addToList(recipe),
+            ),
+          DockAction(
+            icon: Icons.edit_outlined,
+            label: l.recipeEdit,
+            onPressed: () => _edit(recipe),
+          ),
           DockAction(
             icon: Icons.delete_outline,
             label: l.remove,
@@ -163,8 +217,20 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             // No heading over an empty section: a post with no steps shows ingredients only.
             if (recipe.ingredients.isNotEmpty)
               NotebookHeading(l.recipeIngredients),
-            for (final i in recipe.ingredients)
+            for (final (index, i) in recipe.ingredients.indexed)
               NotebookRow(
+                // Tap: link the line to a catalogue ingredient (allergens, shopping hints) or change that link.
+                onTap: () => _pick(recipe, index),
+                trailing: i.name == null
+                    ? Tooltip(
+                        message: l.ingredientUnrecognised,
+                        child: Icon(
+                          Icons.help_outline,
+                          size: 18,
+                          color: nb.inkSoft,
+                        ),
+                      )
+                    : null,
                 mark: Container(
                   width: 8,
                   height: 8,
@@ -186,6 +252,39 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   ),
                 ),
               ),
+            // Only when something was found: no section must never read as "safe".
+            if (recipe.allergens.isNotEmpty) ...[
+              NotebookHeading(l.recipeAllergens),
+              for (final a in recipe.allergens)
+                NotebookRow(
+                  mark: Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: nb.margin,
+                  ),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: a.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        TextSpan(text: ' · ${a.ingredients.join(', ')}'),
+                      ],
+                    ),
+                  ),
+                ),
+              NotebookRow(
+                child: Text(
+                  [
+                    l.recipeAllergenNote,
+                    if (recipe.uncheckedIngredients > 0)
+                      l.recipeAllergenUnchecked(recipe.uncheckedIngredients),
+                  ].join(' '),
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                ),
+              ),
+            ],
             if (recipe.steps.isNotEmpty) NotebookHeading(l.recipeSteps),
             for (final s in recipe.steps)
               NotebookRow(

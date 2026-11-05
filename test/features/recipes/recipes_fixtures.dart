@@ -52,6 +52,7 @@ RecipeDetail recipeDetail({
   List<RecipeStep> steps = const [
     RecipeStep(stepNo: 1, instruction: 'Goreng ayam hingga masak.'),
   ],
+  List<RecipeAllergen> allergens = const [],
 }) => RecipeDetail(
   id: 'r-1',
   name: 'Nasi Lemak Ayam',
@@ -68,6 +69,8 @@ RecipeDetail recipeDetail({
     RecipeIngredient(rawText: 'sedikit bahan rahsia'),
   ],
   steps: steps,
+  allergens: allergens,
+  uncheckedIngredients: 1,
 );
 
 class FakeRecipes implements RecipesRepository {
@@ -93,5 +96,34 @@ class FakeRecipes implements RecipesRepository {
   Future<void> delete(String id) async {
     if (error != null) throw error!;
     deleted.add(id);
+  }
+
+  List<String> ingredientNames = const ['Susu segar', 'Susu pekat'];
+  final linked = <(String, int, String?)>[];
+
+  @override
+  Future<List<String>> searchIngredients(String query) async => ingredientNames;
+
+  @override
+  Future<RecipeDetail> linkIngredient(
+    String id,
+    int index,
+    String? name,
+  ) async {
+    linked.add((id, index, name));
+    return detailResult!;
+  }
+
+  final edited = <(String, String, List<String>, List<String>)>[];
+
+  @override
+  Future<RecipeDetail> edit(
+    String id, {
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) async {
+    edited.add((id, name, ingredients, steps));
+    return detailResult!;
   }
 }

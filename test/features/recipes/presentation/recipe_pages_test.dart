@@ -1,6 +1,7 @@
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/pages/recipe_detail_page.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/features/shares/presentation/recent_shares.dart';
@@ -106,7 +107,43 @@ void main() {
 
     expect(find.text('Ingredients'), findsOneWidget);
     expect(find.text('Steps'), findsNothing);
+    expect(
+      find.text('Allergens'),
+      findsNothing,
+    ); // none found: no section, never "safe"
   });
+
+  testWidgets(
+    'allergens found are listed with the label warning and the unchecked count',
+    (t) async {
+      final recipes = RecipesController(
+        FakeRecipes()
+          ..detailResult = recipeDetail(
+            allergens: const [
+              RecipeAllergen(name: 'Susu', ingredients: ['Susu segar']),
+            ],
+          ),
+      );
+      await t.pumpWidget(
+        app(
+          providers: [ChangeNotifierProvider.value(value: recipes)],
+          home: const RecipeDetailPage(id: 'r-1'),
+        ),
+      );
+      await t.pumpAndSettle();
+
+      expect(find.text('Allergens'), findsOneWidget);
+      expect(find.textContaining('Susu segar'), findsOneWidget);
+      expect(
+        find.textContaining('Always check product labels.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Ingredients not checked: 1.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('a recipe is removed only after confirming', (t) async {
     final fake = FakeRecipes()
@@ -179,4 +216,87 @@ void main() {
 
     expect(find.textContaining('no longer in your book'), findsOneWidget);
   });
+
+  testWidgets('tapping an ingredient line links it to a catalogue ingredient', (
+    t,
+  ) async {
+    final repo = FakeRecipes()..detailResult = recipeDetail();
+    final recipes = RecipesController(repo);
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.textContaining('sedikit bahan rahsia'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField), 'susu');
+    await t.pump(const Duration(milliseconds: 400));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Susu segar'));
+    await t.pumpAndSettle();
+    expect(repo.linked, [('r-1', 1, 'Susu segar')]);
+  });
+
+  testWidgets(
+    'the editor: one row per line, dragged to reorder, removed, and Enter or a paste splits a row',
+    (t) async {
+      final fake = FakeRecipes()..detailResult = recipeDetail();
+      await t.pumpWidget(
+        app(
+          providers: [
+            ChangeNotifierProvider.value(value: RecipesController(fake)),
+          ],
+          home: const RecipeDetailPage(id: 'r-1'),
+        ),
+      );
+      await t.pumpAndSettle();
+
+      await t.tap(find.text('Edit'));
+      await t.pumpAndSettle();
+      expect(find.widgetWithText(TextField, '500g ayam'), findsOneWidget);
+      await t.enterText(find.widgetWithText(TextField, 'Name'), '  ');
+      await t.tap(find.text('Save'));
+      await t.pump();
+      expect(find.text('Give the recipe a name.'), findsOneWidget);
+      expect(fake.edited, isEmpty);
+      await t.enterText(
+        find.widgetWithText(TextField, 'Name'),
+        'Nasi Lemak Sambal',
+      );
+
+      // Drag the first ingredient below the second.
+      final drag = await t.startGesture(
+        t.getCenter(find.byIcon(Icons.drag_indicator).first),
+      );
+      await t.pump(const Duration(milliseconds: 100));
+      for (var i = 0; i < 4; i++) {
+        await drag.moveBy(const Offset(0, 30));
+        await t.pump(const Duration(milliseconds: 50));
+      }
+      await drag.up();
+      await t.pumpAndSettle();
+
+      // Replace the step with two typed on one row.
+      await t.tap(find.byTooltip('Remove').last);
+      await t.pumpAndSettle();
+      await t.tap(find.text('Add step'));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byType(TextField).last,
+        'Masak nasi.\n  Goreng ayam. ',
+      );
+      await t.pumpAndSettle();
+      expect(find.widgetWithText(TextField, '  Goreng ayam. '), findsOneWidget);
+
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      final (id, name, ingredients, steps) = fake.edited.single;
+      expect([id, name], ['r-1', 'Nasi Lemak Sambal']);
+      expect(ingredients, ['sedikit bahan rahsia', '500g ayam']);
+      expect(steps, ['Masak nasi.', 'Goreng ayam.']);
+      expect(find.text('Save'), findsNothing); // back on the recipe
+    },
+  );
 }
