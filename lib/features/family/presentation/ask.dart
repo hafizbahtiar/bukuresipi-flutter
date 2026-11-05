@@ -19,30 +19,67 @@ Future<String?> askText(
   int maxLength = 40,
 }) async {
   final l = AppLocalizations.of(context);
-  final controller = TextEditingController(text: initial);
-  try {
-    final ok = await showNotebookDialog(
-      context,
-      title: title,
-      message: message,
-      confirmLabel: confirmLabel ?? l.save,
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        maxLength: maxLength,
-        textCapitalization: TextCapitalization.words,
-        decoration: InputDecoration(
-          hintText: hint,
-          helperText: helper,
-          helperMaxLines: 3,
-        ),
-      ),
-    );
-    final text = controller.text.trim();
-    return ok && text.isNotEmpty ? text : null;
-  } finally {
-    controller.dispose();
+  var text = initial;
+  final ok = await showNotebookDialog(
+    context,
+    title: title,
+    message: message,
+    confirmLabel: confirmLabel ?? l.save,
+    content: _AskField(
+      initial: initial,
+      onChanged: (v) => text = v,
+      maxLength: maxLength,
+      hint: hint,
+      helper: helper,
+    ),
+  );
+  text = text.trim();
+  return ok && text.isNotEmpty ? text : null;
+}
+
+/// Owns its controller: the dialog still rebuilds the field during its closing animation, after askText has its
+/// answer, so the controller must live until the field itself goes (disposing it in askText crashed there).
+class _AskField extends StatefulWidget {
+  const _AskField({
+    required this.initial,
+    required this.onChanged,
+    required this.maxLength,
+    this.hint,
+    this.helper,
+  });
+
+  final String initial;
+  final ValueChanged<String> onChanged;
+  final int maxLength;
+  final String? hint;
+  final String? helper;
+
+  @override
+  State<_AskField> createState() => _AskFieldState();
+}
+
+class _AskFieldState extends State<_AskField> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: _controller,
+    autofocus: true,
+    maxLength: widget.maxLength,
+    textCapitalization: TextCapitalization.words,
+    onChanged: widget.onChanged,
+    decoration: InputDecoration(
+      hintText: widget.hint,
+      helperText: widget.helper,
+      helperMaxLines: 3,
+    ),
+  );
 }
 
 /// The server's rule for a name others see: 1-40 characters with a letter.
