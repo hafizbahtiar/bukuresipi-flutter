@@ -515,5 +515,16 @@
   "aboutMoreTitle": "Lagi",
   "aboutWebsite": "Laman web",
   "aboutDeleteAccount": "Padam akaun saya",
-  "aboutVersion": "Versi {version}"
+  "aboutVersion": "Versi {version}",
+  "googleContinue": "Teruskan dengan Google",
+  "orDivider": "atau",
+  "errGoogleEmailUnverified": "Emel akaun Google anda belum disahkan. Sahkan dengan Google, atau daftar dengan emel.",
+  "errGoogleAccountMismatch": "Emel ini sudah dipautkan dengan akaun Google lain. Log masuk dengan akaun itu, atau dengan kata laluan anda.",
+  "errGoogleUnavailable": "Log masuk Google tidak tersedia sekarang. Gunakan emel dan kata laluan anda.",
+  "setPasswordTitle": "Tetapkan kata laluan",
+  "setPasswordHint": "Anda log masuk dengan Google. Kata laluan membolehkan anda log masuk dengan emel juga.",
+  "setPasswordSent": "Kami telah menghantar pautan untuk menetapkan kata laluan anda.",
+  "changeEmailNeedsPassword": "Tetapkan kata laluan dahulu untuk menukar emel.",
+  "deleteWithGoogle": "Sahkan dengan Google",
+  "deleteWithGoogleHint": "Akaun anda tiada kata laluan: sahkan diri anda dengan Google."
 }

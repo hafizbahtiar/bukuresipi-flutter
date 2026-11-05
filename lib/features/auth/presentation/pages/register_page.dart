@@ -7,6 +7,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
 import '../widgets/auth_cover.dart';
+import '../widgets/google_button.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/new_password_fields.dart';
 
@@ -117,6 +118,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   busy: _busy,
                   onPressed: _submit,
                 ),
+                GoogleButton(onError: (e) => setState(() => _error = e)),
                 FormMessage(_error),
               ],
             ),

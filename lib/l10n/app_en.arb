@@ -1370,5 +1370,27 @@
         "type": "String"
       }
     }
-  }
+  },
+  "googleContinue": "Continue with Google",
+  "@googleContinue": {},
+  "orDivider": "or",
+  "@orDivider": {},
+  "errGoogleEmailUnverified": "Your Google account's email isn't confirmed yet. Confirm it with Google, or sign up with email.",
+  "@errGoogleEmailUnverified": {},
+  "errGoogleAccountMismatch": "This email is already linked to a different Google account. Sign in with that one, or with your password.",
+  "@errGoogleAccountMismatch": {},
+  "errGoogleUnavailable": "Google sign-in isn't available right now. Use your email and password.",
+  "@errGoogleUnavailable": {},
+  "setPasswordTitle": "Set a password",
+  "@setPasswordTitle": {},
+  "setPasswordHint": "You sign in with Google. A password lets you sign in with your email too.",
+  "@setPasswordHint": {},
+  "setPasswordSent": "We emailed you a link to set your password.",
+  "@setPasswordSent": {},
+  "changeEmailNeedsPassword": "Set a password first to change your email.",
+  "@changeEmailNeedsPassword": {},
+  "deleteWithGoogle": "Confirm with Google",
+  "@deleteWithGoogle": {},
+  "deleteWithGoogleHint": "Your account has no password: confirm it's you with Google.",
+  "@deleteWithGoogleHint": {}
 }

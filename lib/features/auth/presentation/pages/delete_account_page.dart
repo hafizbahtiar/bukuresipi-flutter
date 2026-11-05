@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../data/google_auth.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
 import '../widgets/auth_cover.dart';
@@ -20,13 +21,19 @@ class DeleteAccountPage extends StatefulWidget {
 
 class _DeleteAccountPageState extends State<DeleteAccountPage> {
   final _form = GlobalKey<FormState>();
-  late final _email = TextEditingController(
-    text: context.read<AuthController>().user?.email,
-  );
+  // Made in initState, not `late`: the Google path never shows the email field, and a lazy one would first be built
+  // in dispose(), where reading the context throws.
+  final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
   bool _done = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _email.text = context.read<AuthController>().user?.email ?? '';
+  }
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
@@ -56,6 +63,34 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
     }
   }
 
+  /// A Google-only account has no password: a fresh Google ID token proves it is theirs.
+  Future<void> _submitGoogle(GoogleAuth google) async {
+    final l = AppLocalizations.of(context);
+    final auth = context.read<AuthController>();
+    final yes = await showNotebookDialog(
+      context,
+      title: l.deleteAccountTitle,
+      message: l.deleteAccountConfirm,
+      tone: DialogTone.danger,
+      confirmLabel: l.deleteAccountButton,
+    );
+    if (!yes || !mounted) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final token = await google.idToken();
+      if (token == null) return;
+      await auth.deleteAccountWithGoogle(token);
+      if (mounted) setState(() => _done = true);
+    } catch (e) {
+      if (mounted) setState(() => _error = errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   void dispose() {
     _email.dispose();
@@ -74,6 +109,10 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
       }
     }
 
+    final google = context.watch<GoogleAuth?>();
+    final googleOnly =
+        google != null &&
+        context.watch<AuthController>().user?.hasPassword == false;
     return AuthCover(
       kicker: l.deleteAccountTitle,
       subtitle: _done ? null : l.deleteAccountText,
@@ -82,6 +121,20 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
       children: [
         if (_done)
           FormMessage(l.deleteAccountDone, success: true)
+        else if (googleOnly)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l.deleteWithGoogleHint),
+              const SizedBox(height: 24),
+              BusyButton(
+                label: l.deleteWithGoogle,
+                busy: _busy,
+                onPressed: () => _submitGoogle(google),
+              ),
+              FormMessage(_error),
+            ],
+          )
         else
           Form(
             key: _form,
