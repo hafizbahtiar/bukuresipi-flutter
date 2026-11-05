@@ -1414,5 +1414,7 @@
   "errGoogleInUse": "That Google account is already used by another Bukuresipi account.",
   "@errGoogleInUse": {},
   "errPasswordRequired": "Set a password first, so you can still sign in.",
-  "@errPasswordRequired": {}
+  "@errPasswordRequired": {},
+  "errGoogleFailed": "Google didn't let us sign you in. Try again; if it keeps happening, the app's Google setup needs checking.",
+  "@errGoogleFailed": {}
 }

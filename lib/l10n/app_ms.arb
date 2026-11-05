@@ -537,5 +537,6 @@
   "googleUnlinked": "Google dinyahpautkan.",
   "errAlreadyLinked": "Akaun Google lain sudah dipautkan. Nyahpaut dahulu.",
   "errGoogleInUse": "Akaun Google itu sudah digunakan oleh akaun Bukuresipi lain.",
-  "errPasswordRequired": "Tetapkan kata laluan dahulu supaya anda masih boleh log masuk."
+  "errPasswordRequired": "Tetapkan kata laluan dahulu supaya anda masih boleh log masuk.",
+  "errGoogleFailed": "Google tidak membenarkan kami log masuk anda. Cuba lagi; jika berulang, tetapan Google aplikasi perlu disemak."
 }
