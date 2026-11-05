@@ -20,6 +20,10 @@ void main() {
     repo = FakeAuthRepository()..session = true;
     final auth = AuthController(repo);
     await auth.restore();
+    // A tall phone: the whole page (Name, Family rows included) without scrolling.
+    t.view.physicalSize = const Size(1080, 2800);
+    t.view.devicePixelRatio = 2;
+    addTearDown(t.view.reset);
     await t.pumpWidget(
       MultiProvider(
         providers: [
@@ -44,7 +48,7 @@ void main() {
     'the account page: who, email not confirmed yet (resend), language, sign out',
     (t) async {
       await pump(t);
-      expect(find.text('Ali'), findsOneWidget);
+      expect(find.text('Ali'), findsNWidgets(2)); // the heading and the Name row
       expect(find.text('a@example.com'), findsOneWidget);
       expect(find.text('Send confirmation email again'), findsOneWidget);
       expect(find.text('Sign out'), findsOneWidget);

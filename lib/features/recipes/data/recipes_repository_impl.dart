@@ -12,8 +12,11 @@ class RecipesRepositoryImpl implements RecipesRepository {
   final Dio _dio;
 
   @override
-  Future<List<Recipe>> list() => apiCall(() async {
-    final data = (await _dio.get<Map<String, dynamic>>('/recipes')).data!;
+  Future<List<Recipe>> list({bool family = false}) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/recipes',
+      queryParameters: family ? {'scope': 'family'} : null,
+    )).data!;
     final rows = data['recipes'] as List;
     final recipes = <Recipe>[];
     for (final j in rows) {
@@ -26,6 +29,72 @@ class RecipesRepositoryImpl implements RecipesRepository {
     log('recipes: ${recipes.length}/${rows.length} rows loaded');
     return recipes..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   });
+
+  @override
+  Future<({List<Recipe> recipes, String? next})> community({
+    String? query,
+    String? cursor,
+  }) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/recipes/community',
+      queryParameters: {
+        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        'cursor': ?cursor,
+      },
+    )).data!;
+    return (
+      recipes: [
+        for (final j in (data['recipes'] as List).cast<Map<String, dynamic>>())
+          recipeFromJson(j),
+      ],
+      next: data['next'] as String?,
+    );
+  });
+
+  @override
+  Future<List<Dish>> dishes({String? query}) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/catalogue/dishes',
+      queryParameters: {
+        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+      },
+    )).data!;
+    return [
+      for (final d in (data['dishes'] as List).cast<Map<String, dynamic>>())
+        Dish(
+          id: d['id'] as String,
+          name: d['name'] as String,
+          category: d['category'] as String?,
+          ingredientCount: (d['ingredientCount'] as num?)?.toInt() ?? 0,
+        ),
+    ];
+  });
+
+  @override
+  Future<RecipeDetail> copy(String id) => apiCall(
+    () async => recipeDetailFromJson(
+      (await _dio.post<Map<String, dynamic>>('/recipes/$id/copy')).data!,
+    ),
+  );
+
+  @override
+  Future<RecipeDetail> setVisibility(String id, RecipeVisibility visibility) =>
+      apiCall(
+        () async => recipeDetailFromJson(
+          (await _dio.patch<Map<String, dynamic>>(
+            '/recipes/$id',
+            data: {'visibility': visibility.name},
+          )).data!,
+        ),
+      );
+
+  @override
+  Future<void> report(String id, String reason, {String? note}) => apiCall(
+    () => _dio.post<void>(
+      '/recipes/$id/report',
+      data: {'reason': reason, 'note': ?note},
+    ),
+  );
 
   @override
   Future<RecipeDetail> get(String id) => apiCall(() async {
@@ -79,9 +148,15 @@ List<String> _missing(Object? v) => [
   ...((v as List?) ?? const []).cast<String>(),
 ];
 
+RecipeOwner? _owner(Object? o) => o is Map<String, dynamic>
+    ? RecipeOwner(name: o['name'] as String?, isMe: o['isMe'] as bool? ?? false)
+    : null;
+
 Recipe recipeFromJson(Map<String, dynamic> j) => Recipe(
   id: j['id'] as String,
   name: j['name'] as String,
+  visibility: RecipeVisibility.parse(j['visibility']),
+  owner: _owner(j['owner']),
   createdAt: dbTime(j['createdAt'] as String),
   sourceUrl: j['sourceUrl'] as String?,
   missing: _missing(j['missing']),
@@ -92,6 +167,16 @@ Recipe recipeFromJson(Map<String, dynamic> j) => Recipe(
 RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
   id: j['id'] as String,
   name: j['name'] as String,
+  visibility: RecipeVisibility.parse(j['visibility']),
+  owner: _owner(j['owner']),
+  canEdit: j['canEdit'] as bool? ?? true,
+  hidden: j['hidden'] as bool? ?? false,
+  sourceType:
+      RecipeSourceType.values
+          .where((t) => t.name == (j['source'] as Map?)?['type'])
+          .firstOrNull ??
+      (j['sourceUrl'] != null ? RecipeSourceType.link : RecipeSourceType.typed),
+  platform: (j['source'] as Map?)?['platform'] as String?,
   createdAt: dbTime(j['createdAt'] as String),
   sourceUrl: j['sourceUrl'] as String?,
   shareId: j['shareId'] as String?,

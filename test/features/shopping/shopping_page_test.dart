@@ -118,4 +118,19 @@ void main() {
       expect(find.text('Jati · Serba Wangi Sdn Bhd'), findsOneWidget);
     },
   );
+
+  testWidgets('typing 2+ letters suggests catalogue names; tapping one adds it', (t) async {
+    await pump(t);
+    await t.enterText(find.byType(TextField), 'g');
+    await t.pump(const Duration(milliseconds: 350));
+    expect(find.text('Gula pasir'), findsNothing); // one letter: no lookup
+    await t.enterText(find.byType(TextField), 'gula');
+    await t.pump(const Duration(milliseconds: 350));
+    await t.pumpAndSettle();
+    expect(find.text('Gula melaka'), findsOneWidget);
+    await t.tap(find.text('Gula melaka'));
+    await t.pumpAndSettle();
+    expect(shopping.items.map((i) => i.text), contains('Gula melaka'));
+    expect(find.text('Gula pasir'), findsNothing); // suggestions cleared after adding
+  });
 }

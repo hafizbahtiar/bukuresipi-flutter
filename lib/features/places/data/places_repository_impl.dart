@@ -41,6 +41,11 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<void> setPrivate(String id, bool private) => apiCall(
+    () => _dio.patch<void>('/places/$id', data: {'private': private}),
+  );
+
+  @override
   Future<void> setPin(String branchId, double lat, double lng) => apiCall(
     () => _dio.put<void>(
       '/places/branches/$branchId/pin',
@@ -310,6 +315,13 @@ Place placeFromJson(Map<String, dynamic> j) {
   final r = j['restaurant'] as Map<String, dynamic>;
   return Place(
     id: j['id'] as String,
+    mine: j['mine'] as bool? ?? true,
+    private: j['private'] as bool? ?? false,
+    savedBy: [
+      for (final s
+          in (j['savedBy'] as List? ?? const []).cast<Map<String, dynamic>>())
+        (name: s['name'] as String?, isMe: s['isMe'] as bool),
+    ],
     note: j['note'] as String?,
     createdAt: dbTime(j['createdAt'] as String),
     branchId: j['branchId'] as String?,

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../family/presentation/family_controller.dart';
 import '../../../recipes/domain/recipe.dart';
 import '../../../recipes/presentation/recipes_controller.dart';
 import '../../../shares/presentation/recent_shares.dart';
@@ -12,16 +13,83 @@ import '../../../shares/presentation/widgets/share_reading.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
 
-/// The Book tab: a notebook page, one saved place per line, newest first.
-class PlacesListPage extends StatelessWidget {
+enum BookFilter { all, mine, family }
+
+/// The Book tab: a notebook page, one saved place per line, newest first. In a family it also holds the members'
+/// places (All · Mine · Family); the search box filters places and recipes by name on the phone (the book is small).
+class PlacesListPage extends StatefulWidget {
   const PlacesListPage({super.key});
+
+  @override
+  State<PlacesListPage> createState() => _PlacesListPageState();
+}
+
+class _PlacesListPageState extends State<PlacesListPage> {
+  final _search = TextEditingController();
+  BookFilter _filter = BookFilter.all;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
     final places = context.watch<PlacesController>();
-    final list = places.places;
     final recipes = context.watch<RecipesController>();
+    final inFamily = context.watch<FamilyController?>()?.inFamily ?? false;
+    final filter = inFamily ? _filter : BookFilter.all;
+    final q = _search.text.trim().toLowerCase();
+    bool hit(String? s) => q.isEmpty || (s?.toLowerCase().contains(q) ?? false);
+    final searching = q.isNotEmpty || filter != BookFilter.all;
+    final list = [
+      for (final p in places.places)
+        if ((hit(p.restaurant.name) || hit(p.savedBranch?.where) || hit(p.note)) &&
+            switch (filter) {
+              BookFilter.all => true,
+              BookFilter.mine => p.mine,
+              BookFilter.family => p.savedByOthers.isNotEmpty,
+            })
+          p,
+    ];
+    final bookRecipes = [
+      for (final r in filter == BookFilter.family ? recipes.familyRecipes : recipes.recipes)
+        if (hit(r.name)) r,
+    ];
+    final tools = [
+      NotebookRow(
+        mark: Icon(Icons.search, size: 20, color: nb.inkSoft),
+        trailing: q.isEmpty
+            ? null
+            : IconButton(
+                tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () => setState(_search.clear),
+              ),
+        child: TextField(
+          controller: _search,
+          onChanged: (_) => setState(() {}),
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(hintText: l.bookSearchHint, border: InputBorder.none),
+        ),
+      ),
+      if (inFamily)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
+          child: NotebookSegmented<BookFilter>(
+            selected: filter,
+            onChanged: (f) => setState(() => _filter = f),
+            segments: [
+              NotebookSegment(value: BookFilter.all, label: l.bookAll),
+              NotebookSegment(value: BookFilter.mine, label: l.bookMine),
+              NotebookSegment(value: BookFilter.family, label: l.bookFamily),
+            ],
+          ),
+        ),
+    ];
     final shared = context.watch<RecentShares>();
     // Shares the server is still reading, or could not read (last 24 h), above the saved places.
     final inbox = [
@@ -39,6 +107,8 @@ class PlacesListPage extends StatelessWidget {
           child: Center(child: CircularProgressIndicator.adaptive()),
         ),
       ];
+    } else if (searching && list.isEmpty && bookRecipes.isEmpty) {
+      lines = [_Note(text: l.bookNoMatch)];
     } else if (list.isEmpty && places.error != null) {
       lines = [
         _Note(text: l.placesLoadFailed),
@@ -50,13 +120,13 @@ class PlacesListPage extends StatelessWidget {
           ),
         ),
         if (recipes.error != null) _RecipesError(onRetry: recipes.load),
-        for (final r in recipes.recipes) RecipeTile(recipe: r),
+        for (final r in bookRecipes) RecipeTile(recipe: r),
       ];
     } else if (list.isEmpty &&
-        recipes.recipes.isEmpty &&
+        bookRecipes.isEmpty &&
         recipes.error != null) {
       lines = [_RecipesError(onRetry: recipes.load)];
-    } else if (list.isEmpty && recipes.recipes.isEmpty && inbox.isEmpty) {
+    } else if (list.isEmpty && bookRecipes.isEmpty && inbox.isEmpty) {
       lines = [_Note(text: l.homeEmpty)];
     } else {
       // One list, newest first: a shop icon = a place, a book icon = a recipe.
@@ -70,7 +140,7 @@ class PlacesListPage extends StatelessWidget {
               child: PlaceTile(place: p),
             ),
           ),
-        for (final r in recipes.recipes)
+        for (final r in bookRecipes)
           (
             r.createdAt,
             FreshHighlight(
@@ -96,7 +166,12 @@ class PlacesListPage extends StatelessWidget {
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
-            children: [...inbox, ...lines],
+            // The search box once there is something to search.
+            children: [
+              ...inbox,
+              if (places.places.isNotEmpty || recipes.recipes.isNotEmpty || searching) ...tools,
+              ...lines,
+            ],
           ),
         ),
       ),
@@ -118,7 +193,9 @@ class PlaceTile extends StatelessWidget {
     final branch = place.savedBranch;
     final pinned = place.pins.isNotEmpty;
     final where = pinned ? (branch?.where ?? branch?.label) : l.noPin;
+    final others = place.savedByOthers;
     return NotebookRow(
+      trailing: place.private ? Tooltip(message: l.placeOnlyMe, child: Icon(Icons.lock_outline, size: 18, color: nb.inkSoft)) : null,
       // Green = on the map, yellow = no pin yet (as PinMark).
       mark: Icon(
         Icons.storefront,
@@ -142,6 +219,13 @@ class PlaceTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: text.bodyMedium?.copyWith(color: nb.inkSoft),
               ),
+            ),
+          if (others.isNotEmpty)
+            Text(
+              others.join(', '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.bodySmall?.copyWith(color: nb.pandanDeep, fontWeight: FontWeight.w600),
             ),
         ],
       ),

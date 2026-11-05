@@ -12,18 +12,32 @@ class FakeShopping implements ShoppingRepository {
     ...items.where((i) => i.done),
   ];
 
-  @override
-  Future<List<ShoppingItem>> list() async => _sorted;
+  final lists = <bool>[];
+  List<String> suggestions = const ['Gula pasir', 'Gula melaka'];
 
   @override
-  Future<List<ShoppingItem>> addText(String text) async {
+  Future<List<ShoppingItem>> list({bool family = false}) async {
+    lists.add(family);
+    return _sorted;
+  }
+
+  @override
+  Future<List<String>> suggest(String query) async => suggestions
+      .where((s) => s.toLowerCase().contains(query.toLowerCase()))
+      .toList();
+
+  @override
+  Future<List<ShoppingItem>> addText(String text, {bool family = false}) async {
     final item = ShoppingItem(id: 'i${_next++}', text: text, done: false);
     items = [...items, item];
     return [item];
   }
 
   @override
-  Future<List<ShoppingItem>> addRecipe(String recipeId) async {
+  Future<List<ShoppingItem>> addRecipe(
+    String recipeId, {
+    bool family = false,
+  }) async {
     recipesAdded.add(recipeId);
     if (items.any((i) => i.recipes.any((r) => r.id == recipeId))) return [];
     final item = ShoppingItem(
@@ -63,7 +77,7 @@ class FakeShopping implements ShoppingRepository {
       items = items.where((i) => i.id != id).toList();
 
   @override
-  Future<void> clearDone() async =>
+  Future<void> clearDone({bool family = false}) async =>
       items = items.where((i) => !i.done).toList();
 
   @override

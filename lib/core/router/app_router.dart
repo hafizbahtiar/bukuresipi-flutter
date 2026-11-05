@@ -15,6 +15,8 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/verify_email_page.dart';
 import '../../features/credits/presentation/pages/credits_page.dart';
+import '../../features/family/presentation/pages/family_join_page.dart';
+import '../../features/family/presentation/pages/family_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_reports_page.dart';
@@ -35,17 +37,34 @@ bool isPublic(String path) =>
     path.startsWith('/auth/') ||
     path.startsWith('/en/auth/');
 
-/// Where to send the user, or null to stay. Pure, so it is unit-tested without widgets.
-String? redirectFor(String path, AuthController auth, UpdateGate update) {
+/// A family invite link (App Link), in either language.
+bool isFamilyJoin(String path) =>
+    path == '/family/join' || path == '/en/family/join';
+
+/// Where to send the user, or null to stay. Pure, so it is unit-tested without widgets. [uri] (the full location)
+/// lets a signed-out invite link come back after sign-in: /login?next=/family/join?t=...
+String? redirectFor(
+  String path,
+  AuthController auth,
+  UpdateGate update, {
+  Uri? uri,
+}) {
   if (update.required) return path == '/update' ? null : '/update';
   switch (auth.status) {
     case AuthStatus.unknown:
       return isPublic(path) || path == '/splash' ? null : '/splash';
     case AuthStatus.signedOut:
-      return isPublic(path) ? null : '/login';
+      if (isPublic(path)) return null;
+      return isFamilyJoin(path) && uri != null
+          ? Uri(
+              path: '/login',
+              queryParameters: {'next': uri.toString()},
+            ).toString()
+          : '/login';
     case AuthStatus.signedIn:
       if (const {'/login', '/register', '/splash', '/update'}.contains(path)) {
-        return '/';
+        final next = uri?.queryParameters['next'];
+        return next != null && isFamilyJoin(Uri.parse(next).path) ? next : '/';
       }
       if (path.startsWith('/owner') && !(auth.user?.isOwner ?? false)) {
         return '/';
@@ -80,7 +99,8 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
     initialLocation: '/',
     observers: [UnfocusOnNavigation()],
     refreshListenable: Listenable.merge([auth, update]),
-    redirect: (_, state) => redirectFor(state.uri.path, auth, update),
+    redirect: (_, state) =>
+        redirectFor(state.uri.path, auth, update, uri: state.uri),
     routes: [
       _page(path: '/', builder: (_, _) => const HomePage()),
       _page(path: '/splash', builder: (_, _) => const SplashPage()),
@@ -92,6 +112,12 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
       ...linkRoutes('/en'),
       _page(path: '/account', builder: (_, _) => const AccountPage()),
       _page(path: '/credits', builder: (_, _) => const CreditsPage()),
+      _page(path: '/family', builder: (_, _) => const FamilyPage()),
+      for (final path in const ['/family/join', '/en/family/join'])
+        _page(
+          path: path,
+          builder: (_, s) => FamilyJoinPage(token: s.uri.queryParameters['t']),
+        ),
       // Top level, not nested under /account: Account is also a home tab, so pushing this must add one page only.
       _page(
         path: '/account/password',

@@ -166,6 +166,14 @@ class FakePlaces implements PlacesRepository {
     notes[id] = note;
   }
 
+  final privates = <String, bool>{};
+
+  @override
+  Future<void> setPrivate(String id, bool private) async {
+    if (error != null) throw error!;
+    privates[id] = private;
+  }
+
   final pins = <(String, double, double)>[];
   final located = <String>[];
   final deletedBranches = <String>[];

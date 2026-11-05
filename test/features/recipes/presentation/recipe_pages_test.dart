@@ -299,4 +299,31 @@ void main() {
       expect(find.text('Save'), findsNothing); // back on the recipe
     },
   );
+
+  testWidgets('someone else\'s public recipe: no edit or remove; copy it or report it', (t) async {
+    final fake = FakeRecipes()
+      ..detailResult = recipeDetail(
+        canEdit: false,
+        visibility: RecipeVisibility.public,
+        owner: const RecipeOwner(name: 'Siti', isMe: false),
+      );
+    final recipes = RecipesController(fake);
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    final l = lookupAppLocalizations(const Locale('en'));
+    expect(find.textContaining(l.recipeBy('Siti')), findsOneWidget);
+    expect(find.byTooltip('Remove from my book'), findsNothing);
+    expect(find.text(l.recipeEdit), findsNothing);
+    await t.tap(find.text(l.report));
+    await t.pumpAndSettle();
+    await t.tap(find.text(l.reasonCopyright));
+    await t.pumpAndSettle();
+    expect(fake.reports, [('r-1', 'copyright')]);
+    expect(find.text(l.recipeCopy), findsOneWidget); // opens the copy through the router (not in this harness)
+  });
 }

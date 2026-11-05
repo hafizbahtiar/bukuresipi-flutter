@@ -8,6 +8,8 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
+import '../../../family/presentation/ask.dart';
+import '../../../family/presentation/family_controller.dart';
 import '../auth_text.dart';
 
 class AccountPage extends StatefulWidget {
@@ -78,6 +80,37 @@ class _AccountPageState extends State<AccountPage> {
                         user.email,
                         style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                       ),
+                  ],
+                ),
+              ),
+              NotebookRow(
+                mark: mark(Icons.badge_outlined),
+                onTap: () => askName(context),
+                trailing: next,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.nameRow),
+                    Text(
+                      user.name ?? l.nameNotSet,
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+              NotebookRow(
+                mark: mark(Icons.people_outline),
+                onTap: () => context.push('/family'),
+                trailing: next,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.familyTitle),
+                    Text(
+                      context.watch<FamilyController?>()?.family?.name ??
+                          l.familyStart,
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
                   ],
                 ),
               ),

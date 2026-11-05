@@ -17,7 +17,12 @@ class RecipesController extends ChangeNotifier {
   bool _loaded = false;
   String? _error;
 
+  List<Recipe> _family = const [];
+
   List<Recipe> get recipes => _recipes;
+
+  /// The other family members' family recipes (empty outside a family).
+  List<Recipe> get familyRecipes => _family;
   bool get loading => _loading;
 
   /// False until the first load finished (empty list vs. not loaded yet).
@@ -32,6 +37,7 @@ class RecipesController extends ChangeNotifier {
     _generation++; // a load still in flight belongs to the previous user: drop its answer
     _loading = false;
     _recipes = const [];
+    _family = const [];
     _loaded = false;
     _error = null;
     notifyListeners();
@@ -43,10 +49,27 @@ class RecipesController extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      final list = await _repo.list();
+      final (list, family) = await (
+        _repo.list(),
+        _repo.list(family: true),
+      ).wait;
       if (generation != _generation) return;
       _recipes = list;
+      _family = family;
       _error = null;
+    } on ParallelWaitError<
+      (List<Recipe>?, List<Recipe>?),
+      (AsyncError?, AsyncError?)
+    > catch (e) {
+      if (generation != _generation) return;
+      if (e.values.$1 case final list?) {
+        _recipes = list; // the family list failing never hides the user's own
+      }
+      // Only the user's own list sets error; a failed family list shows on the next load.
+      final err = e.errors.$1?.error;
+      _error = err == null
+          ? null
+          : (err is ApiException ? err.code : 'unknown');
     } on ApiException catch (e) {
       if (generation != _generation) return;
       _error = e.code;
@@ -85,6 +108,36 @@ class RecipesController extends ChangeNotifier {
     unawaited(load());
     return saved;
   }
+
+  /// Throws ApiException.
+  Future<({List<Recipe> recipes, String? next})> community({
+    String? query,
+    String? cursor,
+  }) => _repo.community(query: query, cursor: cursor);
+
+  /// Throws ApiException.
+  Future<List<Dish>> dishes({String? query}) => _repo.dishes(query: query);
+
+  /// Throws ApiException. The copy is the user's: their list is reloaded.
+  Future<RecipeDetail> copy(String id) async {
+    final copy = await _repo.copy(id);
+    unawaited(load());
+    return copy;
+  }
+
+  /// Throws ApiException (name_required, not_in_family).
+  Future<RecipeDetail> setVisibility(
+    String id,
+    RecipeVisibility visibility,
+  ) async {
+    final saved = await _repo.setVisibility(id, visibility);
+    unawaited(load());
+    return saved;
+  }
+
+  /// Throws ApiException.
+  Future<void> report(String id, String reason, {String? note}) =>
+      _repo.report(id, reason, note: note);
 
   /// Throws ApiException; the detail page shows it.
   Future<void> remove(String id) async {

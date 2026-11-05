@@ -72,6 +72,10 @@ class AuthController extends ChangeNotifier {
     if (_status != AuthStatus.signedOut) _set(AuthStatus.signedOut, null);
   }
 
+  /// Throws ApiException (invalid_input for a name with no letter or over 40 characters).
+  Future<void> setName(String name) async =>
+      _set(AuthStatus.signedIn, await _repo.setName(name));
+
   Future<void> refreshUser() async {
     if (_status == AuthStatus.signedIn) {
       _set(AuthStatus.signedIn, await _repo.me());

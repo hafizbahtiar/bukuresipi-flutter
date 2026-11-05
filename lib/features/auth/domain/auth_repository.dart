@@ -10,6 +10,9 @@ abstract interface class AuthRepository {
   User? get cachedUser;
 
   Future<User> me();
+
+  /// The display name other users see (family, a public recipe's credit); never the email.
+  Future<User> setName(String name);
   Future<User> login(String email, String password);
   Future<User> register({
     required String email,

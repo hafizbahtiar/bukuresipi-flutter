@@ -43,6 +43,12 @@ class AuthRepositoryImpl implements AuthRepository {
   );
 
   @override
+  Future<User> setName(String name) => apiCall(
+    () async =>
+        _remember((await _api.setName(name))['user'] as Map<String, dynamic>),
+  );
+
+  @override
   Future<User> login(String email, String password) =>
       apiCall(() async => _signedIn(await _api.login(email.trim(), password)));
 

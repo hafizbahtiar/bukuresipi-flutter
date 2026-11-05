@@ -69,6 +69,21 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<User> me() async =>
       meResult is ApiException ? throw meResult! : meResult as User;
+  final names = <String>[];
+
+  @override
+  Future<User> setName(String name) async {
+    names.add(name);
+    return User(
+      id: testUser.id,
+      email: testUser.email,
+      name: name,
+      role: testUser.role,
+      lang: testUser.lang,
+      emailVerified: testUser.emailVerified,
+    );
+  }
+
   @override
   Future<User> login(String email, String password) async {
     if (loginError != null) throw loginError!;
