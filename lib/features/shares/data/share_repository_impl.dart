@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../domain/share.dart';
 import '../domain/share_repository.dart';
@@ -20,16 +22,8 @@ class ShareRepositoryImpl implements ShareRepository {
   };
   static const maxImageBytes = 5 * 1024 * 1024;
 
-  Future<T> _call<T>(Future<T> Function() fn) async {
-    try {
-      return await fn();
-    } catch (e) {
-      throw ApiException.from(e);
-    }
-  }
-
   @override
-  Future<String> submitLink(String url, {String? caption}) => _call(() async {
+  Future<String> submitLink(String url, {String? caption}) => apiCall(() async {
     final body = {
       'url': url,
       if (caption != null && caption.trim().isNotEmpty)
@@ -52,7 +46,7 @@ class ShareRepositoryImpl implements ShareRepository {
     if (await file.length() > maxImageBytes) {
       throw const ApiException('invalid_image');
     }
-    return _call(() async {
+    return apiCall(() async {
       final form = FormData.fromMap({
         'image': await MultipartFile.fromFile(
           path,
@@ -68,17 +62,51 @@ class ShareRepositoryImpl implements ShareRepository {
   }
 
   @override
-  Future<Share> get(String id) => _call(
-    () async =>
-        _share((await _dio.get<Map<String, dynamic>>('/shares/$id')).data!),
-  );
+  Future<Share> get(String id) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/shares/$id')).data!;
+    try {
+      return _share(j);
+    } catch (e) {
+      log('shares: cannot read $id: $e; row=${logJson(j)}');
+      rethrow;
+    }
+  });
 
   @override
-  Future<List<Share>> recent() => _call(() async {
+  Future<void> retry(String id) =>
+      apiCall(() => _dio.post<void>('/shares/$id/retry'));
+
+  @override
+  Future<Uint8List?> image(String id) => apiCall(() async {
+    // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
+    final res = await _dio.get<List<int>>(
+      '/shares/$id/image',
+      options: Options(
+        responseType: ResponseType.bytes,
+        validateStatus: (s) => s == 200 || s == 404,
+      ),
+    );
+    return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+  });
+
+  @override
+  Future<void> dismiss(String id) =>
+      apiCall(() => _dio.delete<void>('/shares/$id'));
+
+  @override
+  Future<List<Share>> recent() => apiCall(() async {
     final j = (await _dio.get<Map<String, dynamic>>('/shares')).data!;
-    return [
-      for (final s in j['shares'] as List) _share(s as Map<String, dynamic>),
-    ];
+    final rows = j['shares'] as List;
+    final shares = <Share>[];
+    for (final s in rows) {
+      try {
+        shares.add(_share(s as Map<String, dynamic>));
+      } catch (e) {
+        log('shares: skipped row: $e; row=${logJson(s)}');
+      }
+    }
+    log('shares: ${shares.length}/${rows.length} recent rows loaded');
+    return shares;
   });
 
   static Share _share(Map<String, dynamic> j) => Share(
@@ -89,5 +117,7 @@ class ShareRepositoryImpl implements ShareRepository {
     recipeId: j['recipeId'] as String?,
     gaps: [...(j['gaps'] as List? ?? const []).cast<String>()],
     error: j['error'] as String?,
+    platform: j['platform'] as String?,
+    attempts: (j['attempts'] as num?)?.toInt() ?? 0,
   );
 }

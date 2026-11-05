@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../router/book_page_transitions.dart';
+
 /// Brand from the website (bukuresipi-astro global.css): a notebook page. Paper, ink, pale-blue rules, a red margin
-/// line, pandan green, kunyit yellow. Familjen Grotesk for text; Caveat (handwriting) only for page titles and the
-/// user's own notes.
+/// line, pandan green, kunyit yellow. Familjen Grotesk for text; Caveat (handwriting) only for what a person would
+/// write by hand: page titles, section headings, step numbers and the user's own notes.
 abstract final class AppTheme {
   static const pandan = Color(0xFF2F6B3B);
 
@@ -95,6 +97,7 @@ abstract final class AppTheme {
         ),
         filled: true,
         fillColor: nb.paper,
+        errorMaxLines: 2,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -116,6 +119,16 @@ abstract final class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: nb.ink,
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: BookPageTransitionsBuilder(),
+          TargetPlatform.iOS: BookPageTransitionsBuilder(),
+          TargetPlatform.macOS: BookPageTransitionsBuilder(),
+          TargetPlatform.windows: BookPageTransitionsBuilder(),
+          TargetPlatform.linux: BookPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: BookPageTransitionsBuilder(),
+        },
       ),
     );
   }

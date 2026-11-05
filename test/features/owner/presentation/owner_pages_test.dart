@@ -1,8 +1,15 @@
+import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
+import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_testers_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_review_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -46,6 +53,61 @@ void main() {
     },
   );
 
+  testWidgets(
+    'reports is a notebook page with an open and closed empty state',
+    (t) async {
+      repo.tickets = [];
+      await pump(t, const OwnerReportsPage());
+      expect(find.byType(NotebookPage), findsOneWidget);
+      expect(find.byType(NotebookTitle), findsOneWidget);
+      expect(find.byType(NotebookSegmented<String>), findsOneWidget);
+      expect(find.text('Reports'), findsOneWidget);
+      expect(find.text('No reports.'), findsOneWidget);
+      expect(find.text('Community reports will show up here.'), findsOneWidget);
+      expect(repo.reportQueries, ['open', 'closed']);
+
+      await t.tap(find.text('Closed'));
+      await t.pumpAndSettle();
+      // Switching tabs uses the cached list: no spinner and no new request.
+      expect(repo.reportQueries, ['open', 'closed']);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('No closed reports.'), findsOneWidget);
+      expect(
+        find.text('Applied and rejected tickets will show up here.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('review reports show the review and hide it after confirmation', (
+    t,
+  ) async {
+    repo.reviewReportGroups = [
+      ReviewReportGroup(
+        reviewId: 'r-1',
+        stars: 1,
+        text: 'Review yang salah.',
+        author: 'Aina',
+        hidden: false,
+        createdAt: DateTime.utc(2026, 11, 4),
+        count: 2,
+        reasons: const ['spam', 'offensive'],
+        latestNote: 'Spam',
+        updatedAt: DateTime.utc(2026, 11, 4),
+      ),
+    ];
+    await pump(t, const OwnerReviewReportsPage());
+    expect(find.text('Review yang salah.'), findsOneWidget);
+    expect(find.text('Aina'), findsOneWidget);
+    expect(find.text('2 reports'), findsOneWidget);
+
+    await t.tap(find.text('Hide review'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Hide review').last);
+    await t.pumpAndSettle();
+    expect(repo.reviewResolved, [('r-1', true)]);
+  });
+
   testWidgets('a meter is edited in a notebook sheet, cap and period', (
     t,
   ) async {
@@ -85,5 +147,95 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Sign out'));
     await t.pumpAndSettle();
     expect(repo.loggedOut, ['u-ali@b.c']);
+  });
+
+  testWidgets(
+    'rating bursts list who rated; the owner deletes one after confirming',
+    (t) async {
+      repo.bursts = [
+        RatingBurst(
+          branchId: 'b1',
+          restaurant: 'Warung Uji',
+          label: 'Ampang',
+          newAccounts: 3,
+          ratings: [
+            BurstRating(
+              id: 'r1',
+              stars: 5,
+              text: 'Terbaik',
+              hidden: false,
+              createdAt: DateTime.utc(2026, 11, 4),
+              email: 'new1@b.c',
+              joinedAt: DateTime.utc(2026, 11, 3),
+              emailVerified: true,
+            ),
+          ],
+        ),
+      ];
+      await pump(t, const OwnerRatingBurstsPage());
+      expect(find.text('Warung Uji · Ampang'), findsOneWidget);
+      expect(
+        find.text('3 ratings from new accounts this week'),
+        findsOneWidget,
+      );
+      expect(find.text('new1@b.c'), findsOneWidget);
+      await t.tap(find.byTooltip('Delete rating'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Delete rating').last);
+      await t.pumpAndSettle();
+      expect(repo.deletedRatings, ['r1']);
+      expect(find.text('new1@b.c'), findsNothing);
+    },
+  );
+
+  testWidgets('no bursts: a calm empty state', (t) async {
+    await pump(t, const OwnerRatingBurstsPage());
+    expect(find.text('No unusual ratings this week.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'testers: listed oldest first; copy all puts one email per line',
+    (t) async {
+      String? copied;
+      t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      repo.testerList = [
+        Tester(
+          email: 'ali@gmail.com',
+          lang: 'ms',
+          joinedAt: DateTime.utc(2026, 11, 4),
+        ),
+        Tester(
+          email: 'siti@gmail.com',
+          lang: 'en',
+          joinedAt: DateTime.utc(2026, 11, 5),
+        ),
+      ];
+      await pump(t, const OwnerTestersPage());
+      expect(find.text('ali@gmail.com'), findsOneWidget);
+      await t.tap(find.byTooltip('Copy all emails'));
+      await t.pumpAndSettle();
+      expect(copied, 'ali@gmail.com\nsiti@gmail.com');
+      expect(find.textContaining('2 emails copied'), findsOneWidget);
+    },
+  );
+
+  testWidgets('no testers: an empty state and no copy button', (t) async {
+    await pump(t, const OwnerTestersPage());
+    expect(find.text('No tester signups yet.'), findsOneWidget);
+    expect(find.byTooltip('Copy all emails'), findsNothing);
   });
 }

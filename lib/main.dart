@@ -1,5 +1,7 @@
 // Composition root: the only place that builds concrete classes. Everything below depends on interfaces
 // (AuthRepository, TokenStore) handed down through Provider, so tests swap them for fakes.
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -12,15 +14,22 @@ import 'core/network/update_gate.dart';
 import 'core/settings/locale_controller.dart';
 import 'core/storage/token_store.dart';
 import 'features/auth/data/auth_api.dart';
+import 'features/auth/data/google_auth.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/family/data/family_repository_impl.dart';
+import 'features/family/presentation/family_controller.dart';
 import 'features/owner/data/owner_repository_impl.dart';
 import 'features/owner/domain/owner_repository.dart';
 import 'features/places/data/places_repository_impl.dart';
 import 'features/places/presentation/places_controller.dart';
+import 'features/push/push_controller.dart';
+import 'features/push/push_messaging.dart';
 import 'features/recipes/data/recipes_repository_impl.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
+import 'features/shopping/data/shopping_repository_impl.dart';
+import 'features/shopping/presentation/shopping_controller.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
 import 'features/shares/data/webview_caption_reader.dart';
 import 'features/shares/data/share_repository_impl.dart';
@@ -53,10 +62,20 @@ Future<void> main() async {
   auth.restore();
   final places = PlacesController(PlacesRepositoryImpl(api.dio));
   final recipes = RecipesController(RecipesRepositoryImpl(api.dio));
+  final shopping = ShoppingController(ShoppingRepositoryImpl(api.dio));
+  // Joining or leaving changes the book, the recipes and which lists exist.
+  final family = FamilyController(
+    FamilyRepositoryImpl(api.dio),
+    onChanged: () async {
+      await Future.wait([places.load(), recipes.load(), shopping.load()]);
+    },
+  );
   auth.addListener(() {
     if (auth.status == AuthStatus.signedOut) {
       places.clear();
       recipes.clear();
+      shopping.clear();
+      family.clear();
     }
   });
   final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
@@ -77,9 +96,42 @@ Future<void> main() async {
     WebViewCaptionReader(),
   ); // started by the app, once the router exists
 
+  // Android only until iOS has its Firebase file; no Firebase = no pushes, the app checks while open instead.
+  PushController? push;
+  if (Platform.isAndroid) {
+    try {
+      push = PushController(
+        await FirebasePushMessaging.start(),
+        api.dio,
+        prefs,
+        auth,
+      );
+    } catch (e) {
+      debugPrint(
+        'push: Firebase did not start: $e',
+      ); // the log names why (e.g. google-services.json)
+    }
+  }
+
+  // Android only (iOS needs Sign in with Apple first, App Store 4.8), and only once the client id is in .env.
+  final googleId = Env.googleServerClientId ?? '';
+  final GoogleAuth? google = Platform.isAndroid && googleId.isNotEmpty
+      ? PluginGoogleAuth(googleId)
+      : null;
+  auth.addListener(() {
+    if (auth.status == AuthStatus.signedOut) {
+      google?.signOut().catchError(
+        (_) {},
+      ); // next time: the account sheet, not the last account
+    }
+  });
+
   runApp(
     MultiProvider(
       providers: [
+        Provider<GoogleAuth?>.value(value: google),
+        if (push != null)
+          ChangeNotifierProvider<PushController>.value(value: push),
         Provider<ApiClient>.value(value: api),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: update),
@@ -87,6 +139,8 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: shares),
         ChangeNotifierProvider.value(value: places),
         ChangeNotifierProvider.value(value: recipes),
+        ChangeNotifierProvider.value(value: shopping),
+        ChangeNotifierProvider.value(value: family),
         ChangeNotifierProvider.value(value: recent),
         Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),

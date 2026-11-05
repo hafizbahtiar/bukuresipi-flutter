@@ -1,6 +1,7 @@
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/pages/recipe_detail_page.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/features/shares/presentation/recent_shares.dart';
@@ -19,23 +20,32 @@ Widget app({
   required List<SingleChildWidget> providers,
   required Widget home,
 }) => MultiProvider(
-      providers: providers,
-      child: MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('en'), Locale('ms')],
-        home: home,
-      ),
-    );
+  providers: providers,
+  child: MaterialApp(
+    locale: const Locale('en'),
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+    ],
+    supportedLocales: const [Locale('en'), Locale('ms')],
+    home: home,
+  ),
+);
 
 void main() {
-  testWidgets('the book lists recipes under the places', (t) async {
-    final places = PlacesController(FakePlaces());
-    final recipes = RecipesController(FakeRecipes()..recipes = [recipe()]);
+  testWidgets('the book lists places and recipes together, newest first', (
+    t,
+  ) async {
+    // Place from 2026-11-02 (fixture), recipe from the day after: the recipe comes first.
+    final places = PlacesController(FakePlaces()..places = [place(id: 'p')]);
+    final recipes = RecipesController(
+      FakeRecipes()
+        ..recipes = [
+          recipe(),
+          recipe(id: 'r-2', name: 'Ayam Rebus Pedas', stepCount: 0),
+        ],
+    );
     final recent = RecentShares(FakeShares(), onFinished: () async {});
     await places.load();
     await recipes.load();
@@ -52,9 +62,13 @@ void main() {
     );
     await t.pump();
 
-    expect(find.text('Recipes'), findsOneWidget);
-    expect(find.text('Nasi Lemak Ayam'), findsOneWidget);
+    expect(find.text('Recipes'), findsNothing, reason: 'no separate section');
+    expect(find.byIcon(Icons.storefront), findsOneWidget);
+    expect(find.byIcon(Icons.menu_book), findsNWidgets(2));
     expect(find.text('2 ingredients · 2 steps'), findsOneWidget);
+    expect(find.text('2 ingredients'), findsOneWidget, reason: 'no "0 steps"');
+    double y(String s) => t.getTopLeft(find.text(s)).dy;
+    expect(y('Nasi Lemak Ayam'), lessThan(y('Nasi Kandar Pelita')));
   });
 
   testWidgets('the recipe page shows its ingredients, steps and missing note', (
@@ -79,6 +93,115 @@ void main() {
     expect(find.text('Open video'), findsOneWidget);
   });
 
+  testWidgets('a recipe with no steps shows no Steps heading', (t) async {
+    final recipes = RecipesController(
+      FakeRecipes()..detailResult = recipeDetail(steps: const []),
+    );
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(find.text('Ingredients'), findsOneWidget);
+    expect(find.text('Steps'), findsNothing);
+    expect(
+      find.text('Allergens'),
+      findsNothing,
+    ); // none found: no section, never "safe"
+  });
+
+  testWidgets(
+    'allergens found are listed with the label warning and the unchecked count',
+    (t) async {
+      final recipes = RecipesController(
+        FakeRecipes()
+          ..detailResult = recipeDetail(
+            allergens: const [
+              RecipeAllergen(name: 'Susu', ingredients: ['Susu segar']),
+            ],
+          ),
+      );
+      await t.pumpWidget(
+        app(
+          providers: [ChangeNotifierProvider.value(value: recipes)],
+          home: const RecipeDetailPage(id: 'r-1'),
+        ),
+      );
+      await t.pumpAndSettle();
+
+      expect(find.text('Allergens'), findsOneWidget);
+      expect(find.textContaining('Susu segar'), findsOneWidget);
+      expect(
+        find.textContaining('Always check product labels.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Ingredients not checked: 1.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('a recipe is removed only after confirming', (t) async {
+    final fake = FakeRecipes()
+      ..recipes = [recipe()]
+      ..detailResult = recipeDetail();
+    final recipes = RecipesController(fake);
+    await recipes.load();
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    await t.tap(find.byTooltip('Remove from my book'));
+    await t.pumpAndSettle();
+    expect(fake.deleted, isEmpty);
+    await t.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await t.pumpAndSettle();
+    expect(fake.deleted, ['r-1']);
+    expect(recipes.recipes, isEmpty);
+  });
+
+  testWidgets('a recipe load error shows a notice while places still list', (
+    t,
+  ) async {
+    final places = PlacesController(FakePlaces()..places = [place(id: 'p')]);
+    final fake = FakeRecipes()..error = const ApiException('network');
+    final recipes = RecipesController(fake);
+    final recent = RecentShares(FakeShares(), onFinished: () async {});
+    await places.load();
+    await recipes.load();
+
+    await t.pumpWidget(
+      app(
+        providers: [
+          ChangeNotifierProvider.value(value: places),
+          ChangeNotifierProvider.value(value: recipes),
+          ChangeNotifierProvider.value(value: recent),
+        ],
+        home: const PlacesListPage(),
+      ),
+    );
+    await t.pump();
+
+    expect(find.text('Nasi Kandar Pelita'), findsOneWidget);
+    expect(find.text('Could not load your recipes.'), findsOneWidget);
+
+    fake
+      ..error = null
+      ..recipes = [recipe()];
+    await t.tap(find.text('Try again'));
+    await t.pumpAndSettle();
+    expect(find.text('Could not load your recipes.'), findsNothing);
+    expect(find.text('Nasi Lemak Ayam'), findsOneWidget);
+  });
+
   testWidgets('a recipe that is gone says so', (t) async {
     final recipes = RecipesController(
       FakeRecipes()..detailError = const ApiException('not_found', status: 404),
@@ -92,5 +215,115 @@ void main() {
     await t.pumpAndSettle();
 
     expect(find.textContaining('no longer in your book'), findsOneWidget);
+  });
+
+  testWidgets('tapping an ingredient line links it to a catalogue ingredient', (
+    t,
+  ) async {
+    final repo = FakeRecipes()..detailResult = recipeDetail();
+    final recipes = RecipesController(repo);
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.textContaining('sedikit bahan rahsia'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField), 'susu');
+    await t.pump(const Duration(milliseconds: 400));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Susu segar'));
+    await t.pumpAndSettle();
+    expect(repo.linked, [('r-1', 1, 'Susu segar')]);
+  });
+
+  testWidgets(
+    'the editor: one row per line, dragged to reorder, removed, and Enter or a paste splits a row',
+    (t) async {
+      final fake = FakeRecipes()..detailResult = recipeDetail();
+      await t.pumpWidget(
+        app(
+          providers: [
+            ChangeNotifierProvider.value(value: RecipesController(fake)),
+          ],
+          home: const RecipeDetailPage(id: 'r-1'),
+        ),
+      );
+      await t.pumpAndSettle();
+
+      await t.tap(find.text('Edit'));
+      await t.pumpAndSettle();
+      expect(find.widgetWithText(TextField, '500g ayam'), findsOneWidget);
+      await t.enterText(find.widgetWithText(TextField, 'Name'), '  ');
+      await t.tap(find.text('Save'));
+      await t.pump();
+      expect(find.text('Give the recipe a name.'), findsOneWidget);
+      expect(fake.edited, isEmpty);
+      await t.enterText(
+        find.widgetWithText(TextField, 'Name'),
+        'Nasi Lemak Sambal',
+      );
+
+      // Drag the first ingredient below the second.
+      final drag = await t.startGesture(
+        t.getCenter(find.byIcon(Icons.drag_indicator).first),
+      );
+      await t.pump(const Duration(milliseconds: 100));
+      for (var i = 0; i < 4; i++) {
+        await drag.moveBy(const Offset(0, 30));
+        await t.pump(const Duration(milliseconds: 50));
+      }
+      await drag.up();
+      await t.pumpAndSettle();
+
+      // Replace the step with two typed on one row.
+      await t.tap(find.byTooltip('Remove').last);
+      await t.pumpAndSettle();
+      await t.tap(find.text('Add step'));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byType(TextField).last,
+        'Masak nasi.\n  Goreng ayam. ',
+      );
+      await t.pumpAndSettle();
+      expect(find.widgetWithText(TextField, '  Goreng ayam. '), findsOneWidget);
+
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      final (id, name, ingredients, steps) = fake.edited.single;
+      expect([id, name], ['r-1', 'Nasi Lemak Sambal']);
+      expect(ingredients, ['sedikit bahan rahsia', '500g ayam']);
+      expect(steps, ['Masak nasi.', 'Goreng ayam.']);
+      expect(find.text('Save'), findsNothing); // back on the recipe
+    },
+  );
+
+  testWidgets('someone else\'s public recipe: no edit or remove; copy it or report it', (t) async {
+    final fake = FakeRecipes()
+      ..detailResult = recipeDetail(
+        canEdit: false,
+        visibility: RecipeVisibility.public,
+        owner: const RecipeOwner(name: 'Siti', isMe: false),
+      );
+    final recipes = RecipesController(fake);
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    final l = lookupAppLocalizations(const Locale('en'));
+    expect(find.textContaining(l.recipeBy('Siti')), findsOneWidget);
+    expect(find.byTooltip('Remove from my book'), findsNothing);
+    expect(find.text(l.recipeEdit), findsNothing);
+    await t.tap(find.text(l.report));
+    await t.pumpAndSettle();
+    await t.tap(find.text(l.reasonCopyright));
+    await t.pumpAndSettle();
+    expect(fake.reports, [('r-1', 'copyright')]);
+    expect(find.text(l.recipeCopy), findsOneWidget); // opens the copy through the router (not in this harness)
   });
 }

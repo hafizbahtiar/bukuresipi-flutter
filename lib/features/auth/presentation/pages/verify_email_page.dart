@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
+import '../widgets/auth_cover.dart';
 import '../widgets/auth_widgets.dart';
 
 /// Opened from the confirmation email (App Link https://bukuresipi.com/auth/verify?token=...). Confirms at once:
@@ -46,9 +47,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     final l = AppLocalizations.of(context);
     final signedIn =
         context.watch<AuthController>().status == AuthStatus.signedIn;
-    return AuthScaffold(
-      title: l.verifyTitle,
-      showBack: false,
+    return AuthCover(
+      kicker: l.verifyTitle,
       children: [
         if (!_done && _error == null) ...[
           const Center(child: CircularProgressIndicator.adaptive()),

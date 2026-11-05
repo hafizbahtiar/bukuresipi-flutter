@@ -124,11 +124,14 @@ class _Meter extends StatelessWidget {
           liveRegion: true,
           child: Row(
             children: [
-              Text(
-                l.passwordStrength,
-                style: small?.copyWith(color: c.onSurfaceVariant),
+              // Expanded, not Spacer: a long label (Malay, large text) wraps instead of pushing the word off-screen.
+              Expanded(
+                child: Text(
+                  l.passwordStrength,
+                  style: small?.copyWith(color: c.onSurfaceVariant),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               if (text.isNotEmpty)
                 Text(
                   word,

@@ -3,6 +3,7 @@ import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.da
 import 'package:bukuresipi_flutter/features/home/presentation/home_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
+import 'package:bukuresipi_flutter/features/shopping/presentation/shopping_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -17,6 +18,7 @@ import '../shares/presentation/share_intake_test.dart' show FakeShares;
 
 import '../places/places_fixtures.dart';
 import '../recipes/recipes_fixtures.dart';
+import '../shopping/shopping_fixtures.dart';
 
 void main() {
   testWidgets('opening home loads the places without notifying during build', (
@@ -36,6 +38,9 @@ void main() {
           ),
           ChangeNotifierProvider(
             create: (_) => AuthController(FakeAuthRepository()),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => ShoppingController(FakeShopping()),
           ),
           ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
           ChangeNotifierProvider(

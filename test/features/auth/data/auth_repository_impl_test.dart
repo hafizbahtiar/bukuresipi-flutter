@@ -55,6 +55,13 @@ void main() {
       'email': 'a@example.com',
       'password': 'longenough',
       'lang': 'en',
+      // No platform channel in tests: no name, but the platform is still sent.
+      'device': {
+        'name': null,
+        'model': null,
+        'os': null,
+        'platform': 'android',
+      },
     });
   });
 

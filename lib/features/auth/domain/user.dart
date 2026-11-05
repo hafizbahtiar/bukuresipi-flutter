@@ -7,6 +7,8 @@ class User {
     required this.role,
     required this.lang,
     required this.emailVerified,
+    this.hasPassword = true,
+    this.google = false,
   });
 
   final String id;
@@ -15,6 +17,12 @@ class User {
   final String role; // 'user' | 'owner'
   final String lang; // 'ms' | 'en'
   final bool emailVerified;
+
+  /// false = Google-only: no password yet ("Set a password" sends the reset link; changing the email needs one).
+  final bool hasPassword;
+
+  /// Signed in with Google at least once (linked).
+  final bool google;
 
   bool get isOwner => role == 'owner';
 }

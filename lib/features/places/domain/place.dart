@@ -1,4 +1,47 @@
+import 'rating.dart';
+
+/// Whether a branch edit is private to the caller or changes the shared branch (owner only).
+enum BranchEditScope { personal, shared }
+
+/// An owner-only AI/map suggestion. It is a draft: the owner reviews it before saving.
+class BranchDraft {
+  const BranchDraft({
+    this.label,
+    this.address,
+    this.city,
+    this.state,
+    this.lat,
+    this.lng,
+  });
+
+  final String? label;
+  final String? address;
+  final String? city;
+  final String? state;
+  final double? lat;
+  final double? lng;
+}
+
+class BranchSuggestion {
+  const BranchSuggestion({
+    required this.draft,
+    required this.sources,
+    required this.aiUsed,
+    required this.changed,
+    this.summary,
+    this.warnings = const [],
+  });
+
+  final BranchDraft draft;
+  final List<String> sources;
+  final bool aiUsed;
+  final bool changed;
+  final String? summary;
+  final List<String> warnings;
+}
+
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
+/// In a family the book also holds the members' saves: [mine] false = only a family member saved it.
 class Place {
   const Place({
     required this.id,
@@ -7,14 +50,40 @@ class Place {
     required this.branchId,
     required this.restaurant,
     required this.branches,
+    this.sourceUrl,
+    this.shareId,
+    this.mine = true,
+    this.private = false,
+    this.savedBy = const [],
   });
 
   final String id;
+
+  /// The caller saved it (note, Only me, remove and rating are theirs). false = "Save to my book".
+  final bool mine;
+
+  /// "Only me": the caller's save is kept out of the family book.
+  final bool private;
+
+  /// Who saved it, the caller first (name null + isMe: "You").
+  final List<({String? name, bool isMe})> savedBy;
+
+  /// The family members who saved it (not the caller).
+  List<String> get savedByOthers => [
+    for (final s in savedBy)
+      if (!s.isMe) s.name ?? '?',
+  ];
   final String? note;
   final DateTime createdAt;
 
   /// The branch the shared post was about, when known.
   final String? branchId;
+
+  /// The link the user shared; null for a screenshot.
+  final String? sourceUrl;
+
+  /// The share behind this place: its screenshot or post thumbnail (ShareRepository.image).
+  final String? shareId;
   final PlaceRestaurant restaurant;
   final List<Branch> branches;
 
@@ -25,13 +94,25 @@ class Place {
   /// Branches with coordinates. A branch that did not geocode has none: no pin beats a wrong pin.
   List<Branch> get pins => branches.where((b) => b.hasPin).toList();
 
-  Place copyWith({String? note}) => Place(
+  static const _keep = Object();
+
+  // `note: null` must clear the note, so "not passed" is a sentinel, not null.
+  Place copyWith({
+    Object? note = _keep,
+    List<Branch>? branches,
+    bool? private,
+  }) => Place(
     id: id,
-    note: note,
+    mine: mine,
+    private: private ?? this.private,
+    savedBy: savedBy,
+    note: identical(note, _keep) ? this.note : note as String?,
     createdAt: createdAt,
     branchId: branchId,
     restaurant: restaurant,
-    branches: branches,
+    branches: branches ?? this.branches,
+    sourceUrl: sourceUrl,
+    shareId: shareId,
   );
 }
 
@@ -65,6 +146,7 @@ class Branch {
     this.lat,
     this.lng,
     this.pinSource,
+    this.rating = const RatingSummary(),
   });
 
   final String id;
@@ -75,11 +157,29 @@ class Branch {
   final double? lat;
   final double? lng;
 
-  /// 'osm' | 'nominatim' | 'photon' | 'maps_link' | 'user' | null (no pin).
+  /// 'osm' | 'nominatim' | 'photon' | 'overture' | 'here' | 'maps_link' | 'web' | 'user' | 'owner' | null.
   final String? pinSource;
+
+  /// Community stars for this canonical branch; `canRate` is decided by the server.
+  final RatingSummary rating;
+
+  Branch copyWith({RatingSummary? rating}) => Branch(
+    id: id,
+    label: label,
+    address: address,
+    city: city,
+    state: state,
+    lat: lat,
+    lng: lng,
+    pinSource: pinSource,
+    rating: rating ?? this.rating,
+  );
 
   /// Set by hand in the app: shown, but not verified yet.
   bool get pinnedByUser => pinSource == 'user';
+
+  /// Set by the owner: shared by everyone and not overwritten by a hand pin.
+  bool get pinnedByOwner => pinSource == 'owner';
 
   /// Google Maps search by coordinates (opens the Maps app when installed). null = no pin.
   String? get mapsUrl => hasPin

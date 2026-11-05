@@ -53,4 +53,35 @@ void main() {
       expect(repo.session, isFalse);
     },
   );
+
+  test('a verified email is not reported as failed when the profile refresh is offline', () async {
+    final repo = FakeAuthRepository()..session = true;
+    final c = AuthController(repo);
+    await c.restore();
+    repo.meResult = const ApiException(ApiException.network);
+    await c.verifyEmail('token'); // must not throw: the link is single-use
+    expect(c.status, AuthStatus.signedIn);
+  });
+
+  test('deleting the account signs this device out', () async {
+    final repo = FakeAuthRepository()..session = true;
+    final c = AuthController(repo);
+    await c.restore();
+    await c.deleteAccount('a@b.c', 'password');
+    expect(repo.deleted, ['a@b.c']);
+    expect(c.status, AuthStatus.signedOut);
+  });
+
+  test('a refused deletion keeps the user signed in', () async {
+    final repo = FakeAuthRepository()
+      ..session = true
+      ..deleteError = const ApiException('invalid_credentials', status: 401);
+    final c = AuthController(repo);
+    await c.restore();
+    await expectLater(
+      c.deleteAccount('a@b.c', 'wrong'),
+      throwsA(isA<ApiException>()),
+    );
+    expect(c.status, AuthStatus.signedIn);
+  });
 }

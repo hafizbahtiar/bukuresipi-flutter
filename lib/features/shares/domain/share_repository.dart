@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'share.dart';
 
 /// Sending shared posts to the API. Every method throws ApiException (core/network) on failure.
@@ -10,6 +12,15 @@ abstract interface class ShareRepository {
   Future<String> submitImage(String path);
 
   Future<Share> get(String id);
+
+  /// Reads a failed/unreadable share again (it goes back to pending).
+  Future<void> retry(String id);
+
+  /// Takes a failed/unreadable share off the list.
+  Future<void> dismiss(String id);
+
+  /// The share's screenshot, else its post thumbnail; null = none.
+  Future<Uint8List?> image(String id);
 
   /// The user's shares from the last 24 h, newest first.
   Future<List<Share>> recent();

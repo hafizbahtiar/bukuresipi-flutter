@@ -9,7 +9,7 @@ import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../load_view.dart';
+import '../../../../core/widgets/load_view.dart';
 
 /// Owner overview: counts, and each outside service's use this month against its cap (tap to change it).
 class OwnerPage extends StatefulWidget {
@@ -97,6 +97,28 @@ class _OwnerPageState extends State<OwnerPage> {
                       value: s.failedToday,
                       warn: s.failedToday > 0,
                       onTap: () => context.push('/owner/shares'),
+                    ),
+                    _Ledger(
+                      label: l.ownerReports,
+                      value: s.reportsOpen,
+                      note: l.ownerReportReadyCount(s.reportsReady),
+                      onTap: () => context.push('/owner/reports'),
+                    ),
+                    _Ledger(
+                      label: l.ownerReviewReports,
+                      value: s.reviewReportsOpen,
+                      onTap: () => context.push('/owner/review-reports'),
+                    ),
+                    _Ledger(
+                      label: l.ownerRatingBursts,
+                      value: s.ratingBursts,
+                      warn: s.ratingBursts > 0,
+                      onTap: () => context.push('/owner/rating-bursts'),
+                    ),
+                    _Ledger(
+                      label: l.ownerTesters,
+                      value: s.testers,
+                      onTap: () => context.push('/owner/testers'),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(

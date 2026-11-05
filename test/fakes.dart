@@ -69,6 +69,21 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<User> me() async =>
       meResult is ApiException ? throw meResult! : meResult as User;
+  final names = <String>[];
+
+  @override
+  Future<User> setName(String name) async {
+    names.add(name);
+    return User(
+      id: testUser.id,
+      email: testUser.email,
+      name: name,
+      role: testUser.role,
+      lang: testUser.lang,
+      emailVerified: testUser.emailVerified,
+    );
+  }
+
   @override
   Future<User> login(String email, String password) async {
     if (loginError != null) throw loginError!;
@@ -98,12 +113,70 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> verifyEmail(String token) async {}
+  var resends = 0;
   @override
-  Future<void> resendVerification() async {}
+  Future<void> resendVerification() async => resends++;
   @override
   Future<void> forgotPassword(String email) async {}
   @override
   Future<void> resetPassword(String token, String password) async {}
   @override
   Future<void> changePassword(String current, String next) async {}
+
+  final emailChanges = <String>[];
+  Object? changeEmailError;
+  @override
+  Future<void> changeEmail(String email, String password) async {
+    if (changeEmailError != null) throw changeEmailError!;
+    emailChanges.add(email);
+  }
+
+  final googleTokens = <String>[];
+  @override
+  Future<User> loginWithGoogle(String idToken, String lang) async {
+    if (loginError != null) throw loginError!;
+    googleTokens.add(idToken);
+    session = true;
+    return cached = testUser;
+  }
+
+  User _with({required bool google}) => User(
+    id: testUser.id,
+    email: testUser.email,
+    name: testUser.name,
+    role: testUser.role,
+    lang: testUser.lang,
+    emailVerified: testUser.emailVerified,
+    hasPassword: (cached ?? testUser).hasPassword,
+    google: google,
+  );
+  Object? linkError;
+  @override
+  Future<User> linkGoogle(String idToken) async {
+    if (linkError != null) throw linkError!;
+    googleTokens.add('link:$idToken');
+    return cached = _with(google: true);
+  }
+
+  @override
+  Future<User> unlinkGoogle() async {
+    if (linkError != null) throw linkError!;
+    return cached = _with(google: false);
+  }
+
+  @override
+  Future<void> deleteAccountWithGoogle(String idToken) async {
+    if (deleteError != null) throw deleteError!;
+    deleted.add('google:$idToken');
+    await clearLocal();
+  }
+
+  final deleted = <String>[];
+  Object? deleteError;
+  @override
+  Future<void> deleteAccount(String email, String password) async {
+    if (deleteError != null) throw deleteError!;
+    deleted.add(email);
+    await clearLocal();
+  }
 }

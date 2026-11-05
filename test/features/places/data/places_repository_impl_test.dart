@@ -1,6 +1,7 @@
 import 'package:bukuresipi_flutter/core/network/api_client.dart';
 import 'package:bukuresipi_flutter/core/storage/token_store.dart';
 import 'package:bukuresipi_flutter/features/places/data/places_repository_impl.dart';
+import 'package:bukuresipi_flutter/features/places/domain/review.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,6 +41,7 @@ void main() {
       expect(places.map((p) => p.id), ['p-1', 'p-0']);
       final p = places.first;
       expect(p.restaurant.name, 'Nasi Kandar Pelita');
+      expect(p.sourceUrl, 'https://www.tiktok.com/@makan/video/1');
       expect(p.savedBranch?.label, 'Pelita Jalan Ampang');
       expect(p.pins.map((b) => b.id), [
         'b-2',
@@ -47,6 +49,48 @@ void main() {
       expect(p.createdAt.isUtc, isTrue);
     },
   );
+
+  test('nearby sends the point and radius, and reads the branches', () async {
+    final repo = make(
+      (o) => o.path == '/places/nearby'
+          ? (
+              200,
+              {
+                'branches': [nearbyBranchJson],
+              },
+            )
+          : (200, {}),
+    );
+    final rows = await repo.nearby(3.15, 101.71, 5);
+    expect(adapter.requests.single.path, '/places/nearby');
+    expect(adapter.requests.single.queryParameters, {
+      'lat': 3.15,
+      'lng': 101.71,
+      'km': 5.0,
+    });
+    expect(rows.single.branchId, 'b-1');
+    expect(rows.single.distanceM, 2400);
+    expect(rows.single.saved, isFalse);
+  });
+
+  test('saveBranch POSTs the id and reads the place', () async {
+    final repo = make((_) => (200, placeJson));
+    final saved = await repo.saveBranch('b-2');
+    expect(
+      [
+        adapter.requests.single.method,
+        adapter.requests.single.path,
+        adapter.requests.single.data,
+      ],
+      [
+        'POST',
+        '/places',
+        {'branchId': 'b-2'},
+      ],
+    );
+    expect(saved.restaurant.name, 'Nasi Kandar Pelita');
+    expect(saved.branchId, 'b-2');
+  });
 
   test('note: PATCH with null for empty; remove: DELETE', () async {
     final repo = make((_) => (200, {'ok': true}));
@@ -111,6 +155,172 @@ void main() {
     );
     final b = (await repo.list()).single.branches.last;
     expect([b.pinSource, b.pinnedByUser], ['user', isTrue]);
+  });
+
+  test('rating: PUT stars and DELETE, both parse the fresh summary', () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          'rating': {'average': 4.3, 'count': 7, 'mine': 4, 'canRate': true},
+        },
+      ),
+    );
+    final rated = await repo.rateBranch('b-1', 4);
+    expect(adapter.requests.single.method, 'PUT');
+    expect(adapter.requests.single.path, '/places/branches/b-1/rating');
+    expect(adapter.requests.single.data, {'stars': 4});
+    expect(rated.average, 4.3);
+    expect(rated.count, 7);
+    expect(rated.mine, 4);
+    expect(rated.canRate, true);
+
+    final cleared = await repo.clearRating('b-1');
+    expect(adapter.requests.last.method, 'DELETE');
+    expect(adapter.requests.last.path, '/places/branches/b-1/rating');
+    expect(cleared.mine, 4);
+  });
+
+  test('reviews: save, list, vote and report', () async {
+    final reviewJson = {
+      'id': 'r-1',
+      'stars': 4,
+      'text': 'Sedap!',
+      'author': 'Aina',
+      'mine': false,
+      'hidden': false,
+      'createdAt': '2026-11-04 10:00:00',
+      'updatedAt': '2026-11-04 10:00:00',
+      'votes': {'up': 2, 'down': 1, 'mine': null},
+      'reported': false,
+    };
+    final repo = make((request) {
+      if (request.path.endsWith('/reviews')) {
+        return (
+          200,
+          {
+            'branch': {
+              'id': 'b-1',
+              'name': 'Kedai',
+              'label': 'Kedai Bangsar',
+              'rating': {
+                'average': 4.3,
+                'count': 7,
+                'mine': 4,
+                'canRate': true,
+                'reviewCount': 1,
+                'myReview': true,
+              },
+            },
+            'reviews': [reviewJson],
+            'nextOffset': null,
+          },
+        );
+      }
+      if (request.path.endsWith('/vote')) {
+        return (
+          200,
+          {
+            'votes': {'up': 3, 'down': 0, 'mine': 'up'},
+          },
+        );
+      }
+      if (request.path.endsWith('/report')) return (200, {});
+      return (
+        200,
+        {
+          'rating': {
+            'average': 4.3,
+            'count': 7,
+            'mine': 4,
+            'canRate': true,
+            'reviewCount': 1,
+            'myReview': true,
+          },
+          'review': reviewJson,
+        },
+      );
+    });
+
+    final saved = await repo.saveReview('b-1', 4, 'Sedap!');
+    expect(adapter.requests.first.method, 'PUT');
+    expect(adapter.requests.first.path, '/places/branches/b-1/review');
+    expect(adapter.requests.first.data, {'stars': 4, 'text': 'Sedap!'});
+    expect(saved.review?.text, 'Sedap!');
+    expect(saved.rating.reviewCount, 1);
+
+    final page = await repo.reviews('b-1');
+    expect(page.branchName, 'Kedai');
+    expect(page.reviews.single.author, 'Aina');
+    expect(page.reviews.single.votes.up, 2);
+
+    final votes = await repo.voteReview('r-1', ReviewVote.up);
+    expect(adapter.requests.last.method, 'PUT');
+    expect(adapter.requests.last.data, {'vote': 'up'});
+    expect(votes.mine, ReviewVote.up);
+
+    await repo.reportReview('r-1', ReviewReason.spam, 'Spam');
+    expect(adapter.requests.last.path, '/places/reviews/r-1/report');
+    expect(adapter.requests.last.data, {'reason': 'spam', 'note': 'Spam'});
+  });
+
+  test('owner AI draft: POST and parse the branch suggestion', () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          'draft': {
+            'label': 'AI Branch',
+            'address': 'Jalan AI',
+            'city': 'Bangi',
+            'state': 'Selangor',
+            'lat': 2.99,
+            'lng': 101.79,
+          },
+          'sources': ['nominatim'],
+          'aiUsed': true,
+          'changed': true,
+          'summary': 'Cleaned from the map.',
+          'warnings': <String>[],
+        },
+      ),
+    );
+    final s = await repo.suggestBranch('b-1');
+    expect(adapter.requests.single.method, 'POST');
+    expect(adapter.requests.single.path, '/places/branches/b-1/suggest');
+    expect(
+      adapter.requests.single.receiveTimeout,
+      const Duration(seconds: 120),
+    );
+    expect(s.draft.label, 'AI Branch');
+    expect(s.draft.lat, 2.99);
+    expect(s.sources, ['nominatim']);
+    expect(s.aiUsed, true);
+    expect(s.changed, true);
+  });
+
+  test('owner branch edit: PATCH text and optional coordinates', () async {
+    final repo = make((_) => (200, {}));
+    await repo.updateBranch(
+      'b-1',
+      label: 'Kedai Baru',
+      address: null,
+      city: 'Bangi',
+      state: null,
+      lat: 2.99,
+      lng: 101.79,
+    );
+    final request = adapter.requests.single;
+    expect([request.method, request.path], ['PATCH', '/places/branches/b-1']);
+    expect(request.data, {
+      'label': 'Kedai Baru',
+      'address': null,
+      'city': 'Bangi',
+      'state': null,
+      'lat': 2.99,
+      'lng': 101.79,
+      'scope': 'self',
+    });
   });
 
   test(

@@ -10,14 +10,6 @@ class OwnerRepositoryImpl implements OwnerRepository {
 
   final Dio _dio;
 
-  Future<T> _call<T>(Future<T> Function() fn) async {
-    try {
-      return await fn();
-    } catch (e) {
-      throw ApiException.from(e);
-    }
-  }
-
   Future<Map<String, dynamic>> _get(
     String path, [
     Map<String, dynamic>? query,
@@ -27,15 +19,21 @@ class OwnerRepositoryImpl implements OwnerRepository {
   )).data!;
 
   @override
-  Future<OwnerStats> getStats() => _call(() async {
+  Future<OwnerStats> getStats() => apiCall(() async {
     final j = await _get('/owner/stats');
     final u = j['users'] as Map<String, dynamic>,
-        s = j['shares'] as Map<String, dynamic>;
+        s = j['shares'] as Map<String, dynamic>,
+        r = j['reports'] as Map<String, dynamic>?;
     return OwnerStats(
       usersTotal: u['total'] as int,
       usersNewThisWeek: u['newThisWeek'] as int,
       sharesToday: s['today'] as int,
       failedToday: s['failedToday'] as int,
+      reportsOpen: r?['open'] as int? ?? 0,
+      reportsReady: r?['ready'] as int? ?? 0,
+      reviewReportsOpen: j['reviewReportsOpen'] as int? ?? 0,
+      ratingBursts: j['ratingBursts'] as int? ?? 0,
+      testers: j['testers'] as int? ?? 0,
       meters: [
         for (final m in j['meters'] as List) _meter(m as Map<String, dynamic>),
       ],
@@ -48,7 +46,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
     int? cap,
     String? period,
     bool? active,
-  }) => _call(() async {
+  }) => apiCall(() async {
     final res = await _dio.patch<Map<String, dynamic>>(
       '/owner/meters/${Uri.encodeComponent(code)}',
       data: {'cap': ?cap, 'period': ?period, 'active': ?active},
@@ -57,7 +55,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<List<OwnerUser>> listUsers({String? query}) => _call(() async {
+  Future<List<OwnerUser>> listUsers({String? query}) => apiCall(() async {
     final q = query?.trim();
     final j = await _get('/owner/users', {
       if (q != null && q.isNotEmpty) 'q': q,
@@ -77,10 +75,83 @@ class OwnerRepositoryImpl implements OwnerRepository {
 
   @override
   Future<void> endSessions(String userId) =>
-      _call(() => _dio.post<void>('/owner/users/$userId/logout'));
+      apiCall(() => _dio.post<void>('/owner/users/$userId/logout'));
 
   @override
-  Future<List<FailedShare>> failedShares() => _call(() async {
+  Future<List<ReportTicket>> reports({String status = 'open'}) =>
+      apiCall(() async {
+        final j = await _get('/owner/reports', {'status': status});
+        return [
+          for (final t in (j['reports'] as List).cast<Map<String, dynamic>>())
+            _ticket(t),
+        ];
+      });
+
+  @override
+  Future<void> resolveReport({
+    required String targetType,
+    required String targetId,
+    required String field,
+    required bool apply,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/owner/reports/resolve',
+      data: {
+        'target': {'type': targetType, 'id': targetId},
+        'field': field,
+        'action': apply ? 'apply' : 'reject',
+      },
+    ),
+  );
+
+  @override
+  Future<List<ReviewReportGroup>> reviewReports() => apiCall(() async {
+    final j = await _get('/owner/review-reports');
+    return [
+      for (final r in (j['reports'] as List).cast<Map<String, dynamic>>())
+        _reviewReport(r),
+    ];
+  });
+
+  @override
+  Future<void> resolveReviewReport({
+    required String reviewId,
+    required bool hide,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/owner/review-reports/resolve',
+      data: {'reviewId': reviewId, 'action': hide ? 'hide' : 'keep'},
+    ),
+  );
+
+  @override
+  Future<List<RatingBurst>> ratingBursts() => apiCall(() async {
+    final j = await _get('/owner/rating-bursts');
+    return [
+      for (final b in (j['bursts'] as List).cast<Map<String, dynamic>>())
+        _burst(b),
+    ];
+  });
+
+  @override
+  Future<List<Tester>> testers() => apiCall(() async {
+    final j = await _get('/owner/testers');
+    return [
+      for (final t in (j['testers'] as List).cast<Map<String, dynamic>>())
+        Tester(
+          email: t['email'] as String,
+          lang: t['lang'] as String,
+          joinedAt: dbTime(t['createdAt'] as String),
+        ),
+    ];
+  });
+
+  @override
+  Future<void> deleteRating(String ratingId) =>
+      apiCall(() => _dio.delete<void>('/owner/ratings/$ratingId'));
+
+  @override
+  Future<List<FailedShare>> failedShares() => apiCall(() async {
     final j = await _get('/owner/shares');
     return [
       for (final s in (j['shares'] as List).cast<Map<String, dynamic>>())
@@ -100,6 +171,51 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 }
 
+ReviewReportGroup _reviewReport(Map<String, dynamic> j) {
+  final review = j['review'] as Map<String, dynamic>;
+  return ReviewReportGroup(
+    reviewId: review['id'] as String,
+    stars: (review['stars'] as num).toInt(),
+    text: review['text'] as String,
+    author: review['author'] as String,
+    hidden: review['hidden'] as bool? ?? false,
+    createdAt: dbTime(review['createdAt'] as String),
+    count: (j['count'] as num).toInt(),
+    reasons: (j['reasons'] as List).cast<String>(),
+    latestNote: j['latestNote'] as String?,
+    updatedAt: dbTime(j['updatedAt'] as String),
+  );
+}
+
+ReportTicket _ticket(Map<String, dynamic> j) {
+  final target = j['target'] as Map<String, dynamic>;
+  ReportValue value(Map<String, dynamic>? v) => ReportValue(
+    lat: (v?['lat'] as num?)?.toDouble(),
+    lng: (v?['lng'] as num?)?.toDouble(),
+    value: v?['value'] as String?,
+  );
+  return ReportTicket(
+    targetType: target['type'] as String,
+    targetId: target['id'] as String,
+    targetName: target['name'] as String,
+    targetLabel: target['label'] as String?,
+    field: j['field'] as String,
+    count: j['count'] as int,
+    threshold: j['threshold'] as int,
+    current: value(j['current'] as Map<String, dynamic>?),
+    proposed: j['proposed'] == null
+        ? null
+        : value(j['proposed'] as Map<String, dynamic>),
+    status: j['status'] as String,
+    ready: j['ready'] as bool,
+    latestNote: j['latestNote'] as String?,
+    verifiedAt: j['verifiedAt'] == null
+        ? null
+        : dbTime(j['verifiedAt'] as String),
+    updatedAt: dbTime(j['updatedAt'] as String),
+  );
+}
+
 Meter _meter(Map<String, dynamic> m) => Meter(
   code: m['code'] as String,
   name: m['name'] as String,
@@ -109,3 +225,26 @@ Meter _meter(Map<String, dynamic> m) => Meter(
   active: m['active'] as bool,
   vendorUrl: m['vendorUrl'] as String?,
 );
+
+RatingBurst _burst(Map<String, dynamic> j) {
+  final branch = j['branch'] as Map<String, dynamic>;
+  return RatingBurst(
+    branchId: branch['id'] as String,
+    restaurant: branch['restaurant'] as String,
+    label: branch['label'] as String?,
+    newAccounts: (j['newAccounts'] as num).toInt(),
+    ratings: [
+      for (final r in (j['ratings'] as List).cast<Map<String, dynamic>>())
+        BurstRating(
+          id: r['id'] as String,
+          stars: (r['stars'] as num).toInt(),
+          text: r['text'] as String?,
+          hidden: r['hidden'] as bool? ?? false,
+          createdAt: dbTime(r['createdAt'] as String),
+          email: (r['user'] as Map)['email'] as String,
+          joinedAt: dbTime((r['user'] as Map)['createdAt'] as String),
+          emailVerified: (r['user'] as Map)['emailVerified'] as bool? ?? false,
+        ),
+    ],
+  );
+}

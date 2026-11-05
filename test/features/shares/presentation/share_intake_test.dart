@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
@@ -14,10 +15,12 @@ class FakeShares implements ShareRepository {
   final sent = <String>[];
   final captions = <String?>[];
   Object? error;
+  Completer<void>? gate;
 
   @override
   Future<String> submitLink(String url, {String? caption}) async {
     if (error != null) throw error!;
+    await gate?.future;
     sent.add('link:$url');
     captions.add(caption);
     return 'share-1';
@@ -26,6 +29,7 @@ class FakeShares implements ShareRepository {
   @override
   Future<String> submitImage(String path) async {
     if (error != null) throw error!;
+    await gate?.future;
     sent.add('image:$path');
     return 'share-2';
   }
@@ -35,6 +39,18 @@ class FakeShares implements ShareRepository {
 
   List<Share> recentList = [];
   int recentReads = 0;
+  final retried = <String>[];
+  final dismissed = <String>[];
+
+  @override
+  Future<void> retry(String id) async => retried.add(id);
+
+  @override
+  Future<void> dismiss(String id) async => dismissed.add(id);
+
+  Uint8List? imageBytes;
+  @override
+  Future<Uint8List?> image(String id) async => imageBytes;
 
   @override
   Future<List<Share>> recent() async {
@@ -115,6 +131,25 @@ void main() {
     );
     expect(shown, isNotEmpty);
   });
+
+  test(
+    'two shares arriving while the first is sending are both sent',
+    () async {
+      final intake = await start();
+      final gate = Completer<void>();
+      shares.gate = gate;
+      await share([const Incoming.text('https://www.tiktok.com/@a/video/1')]);
+      expect(shares.sent, isEmpty);
+      await share([const Incoming.text('https://www.tiktok.com/@a/video/2')]);
+      gate.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(shares.sent, [
+        'link:https://www.tiktok.com/@a/video/1',
+        'link:https://www.tiktok.com/@a/video/2',
+      ]);
+      expect(intake.state, isA<ShareAccepted>());
+    },
+  );
 
   test('a shared image is uploaded', () async {
     await start();

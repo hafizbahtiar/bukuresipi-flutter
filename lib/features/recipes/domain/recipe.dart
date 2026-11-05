@@ -1,4 +1,22 @@
-/// A recipe the user shared into Bukuresipi.
+/// Who sees a recipe: only its owner, their family, or everyone (community).
+enum RecipeVisibility {
+  private,
+  family,
+  public;
+
+  static RecipeVisibility parse(Object? v) =>
+      values.where((x) => x.name == v).firstOrNull ?? RecipeVisibility.private;
+}
+
+/// A recipe's owner as other users see it. null on a recipe = a catalogue dish.
+class RecipeOwner {
+  const RecipeOwner({required this.name, required this.isMe});
+
+  final String? name;
+  final bool isMe;
+}
+
+/// A recipe the user shared into Bukuresipi (or a family member's / a community one).
 class Recipe {
   const Recipe({
     required this.id,
@@ -8,11 +26,15 @@ class Recipe {
     this.missing = const [],
     this.ingredientCount = 0,
     this.stepCount = 0,
+    this.visibility = RecipeVisibility.private,
+    this.owner,
   });
 
   final String id;
   final String name;
   final DateTime createdAt;
+  final RecipeVisibility visibility;
+  final RecipeOwner? owner;
 
   /// The post it came from; opens the video.
   final String? sourceUrl;
@@ -23,24 +45,78 @@ class Recipe {
   final int stepCount;
 }
 
+/// The credit a shared recipe shows: the post's link, or what it was made from.
+enum RecipeSourceType { link, screenshot, typed, catalogue }
+
+/// A seeded catalogue dish (no owner, no steps): read, shopped, or copied.
+class Dish {
+  const Dish({
+    required this.id,
+    required this.name,
+    this.category,
+    this.ingredientCount = 0,
+  });
+
+  final String id;
+  final String name;
+  final String? category;
+  final int ingredientCount;
+}
+
 class RecipeDetail {
   const RecipeDetail({
     required this.id,
     required this.name,
     required this.createdAt,
+    this.visibility = RecipeVisibility.private,
+    this.owner,
+    this.canEdit = true,
+    this.hidden = false,
+    this.sourceType = RecipeSourceType.typed,
+    this.platform,
     this.sourceUrl,
+    this.shareId,
     this.missing = const [],
     required this.ingredients,
     required this.steps,
+    this.allergens = const [],
+    this.uncheckedIngredients = 0,
   });
 
   final String id;
   final String name;
   final DateTime createdAt;
+  final RecipeVisibility visibility;
+  final RecipeOwner? owner;
+
+  /// Only the owner edits, removes or links lines; others view, shop or make a copy.
+  final bool canEdit;
+
+  /// The app owner hid it from the community (only its owner sees this).
+  final bool hidden;
+  final RecipeSourceType sourceType;
+
+  /// 'tiktok' | 'instagram' | ... for a link source.
+  final String? platform;
   final String? sourceUrl;
+
+  /// The share it was imported from: its screenshot or post thumbnail (ShareRepository.image).
+  final String? shareId;
   final List<String> missing;
   final List<RecipeIngredient> ingredients;
   final List<RecipeStep> steps;
+
+  /// Label-required allergen groups of the recognised ingredients (usual recipe; products differ). Empty is NOT
+  /// "allergen free": [uncheckedIngredients] lines were never checked.
+  final List<RecipeAllergen> allergens;
+  final int uncheckedIngredients;
+}
+
+class RecipeAllergen {
+  const RecipeAllergen({required this.name, required this.ingredients});
+
+  final String name;
+  final List<String> ingredients;
 }
 
 class RecipeIngredient {
@@ -56,10 +132,10 @@ class RecipeIngredient {
 
   /// "500 g", or null when the post gave no amount.
   String? get amount {
-    final parts = [quantity, unit]
-        .whereType<String>()
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
+    final parts = [
+      quantity,
+      unit,
+    ].whereType<String>().where((s) => s.trim().isNotEmpty).toList();
     return parts.isEmpty ? null : parts.join(' ');
   }
 }

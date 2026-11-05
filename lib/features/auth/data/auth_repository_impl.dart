@@ -27,14 +27,6 @@ class AuthRepositoryImpl implements AuthRepository {
         : userFromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
-  Future<T> _call<T>(Future<T> Function() fn) async {
-    try {
-      return await fn();
-    } catch (e) {
-      throw ApiException.from(e);
-    }
-  }
-
   Future<User> _signedIn(Map<String, dynamic> body) async {
     await _tokens.save(Tokens.fromJson(body));
     return _remember(body['user'] as Map<String, dynamic>);
@@ -46,13 +38,19 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<User> me() => _call(
+  Future<User> me() => apiCall(
     () async => _remember((await _api.me())['user'] as Map<String, dynamic>),
   );
 
   @override
+  Future<User> setName(String name) => apiCall(
+    () async =>
+        _remember((await _api.setName(name))['user'] as Map<String, dynamic>),
+  );
+
+  @override
   Future<User> login(String email, String password) =>
-      _call(() async => _signedIn(await _api.login(email.trim(), password)));
+      apiCall(() async => _signedIn(await _api.login(email.trim(), password)));
 
   @override
   Future<User> register({
@@ -60,7 +58,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     String? name,
     required String lang,
-  }) => _call(
+  }) => apiCall(
     () async => _signedIn(
       await _api.register({
         'email': email.trim(),
@@ -90,24 +88,57 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> verifyEmail(String token) =>
-      _call(() => _api.verifyEmail(token));
+      apiCall(() => _api.verifyEmail(token));
 
   @override
-  Future<void> resendVerification() => _call(_api.resendVerification);
+  Future<void> resendVerification() => apiCall(_api.resendVerification);
 
   @override
   Future<void> forgotPassword(String email) =>
-      _call(() => _api.forgotPassword(email.trim()));
+      apiCall(() => _api.forgotPassword(email.trim()));
 
   @override
   Future<void> resetPassword(String token, String password) =>
-      _call(() => _api.resetPassword(token, password));
+      apiCall(() => _api.resetPassword(token, password));
 
   @override
-  Future<void> changePassword(String current, String next) => _call(
+  Future<void> changePassword(String current, String next) => apiCall(
     () async =>
         _tokens.save(Tokens.fromJson(await _api.changePassword(current, next))),
   );
+
+  @override
+  Future<void> changeEmail(String email, String password) =>
+      apiCall(() => _api.changeEmail(email, password));
+
+  @override
+  Future<User> loginWithGoogle(String idToken, String lang) =>
+      apiCall(() async => _signedIn(await _api.google(idToken, lang)));
+
+  @override
+  Future<User> linkGoogle(String idToken) => apiCall(
+    () async => _remember(
+      (await _api.linkGoogle(idToken))['user'] as Map<String, dynamic>,
+    ),
+  );
+
+  @override
+  Future<User> unlinkGoogle() => apiCall(
+    () async =>
+        _remember((await _api.unlinkGoogle())['user'] as Map<String, dynamic>),
+  );
+
+  @override
+  Future<void> deleteAccountWithGoogle(String idToken) async {
+    await apiCall(() => _api.deleteAccountWithGoogle(idToken));
+    await clearLocal();
+  }
+
+  @override
+  Future<void> deleteAccount(String email, String password) async {
+    await apiCall(() => _api.deleteAccount(email, password));
+    await clearLocal();
+  }
 }
 
 User userFromJson(Map<String, dynamic> j) => User(
@@ -117,4 +148,8 @@ User userFromJson(Map<String, dynamic> j) => User(
   role: j['role'] as String,
   lang: j['lang'] as String,
   emailVerified: j['emailVerified'] as bool,
+  hasPassword:
+      j['hasPassword'] as bool? ??
+      true, // a cached user from before Google sign-in
+  google: j['google'] as bool? ?? false,
 );

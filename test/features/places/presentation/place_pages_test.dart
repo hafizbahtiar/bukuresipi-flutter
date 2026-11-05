@@ -1,5 +1,8 @@
+import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
+import 'package:bukuresipi_flutter/features/places/domain/place.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -21,12 +24,14 @@ import '../../recipes/recipes_fixtures.dart';
 void main() {
   late FakePlaces repo;
   late PlacesController places;
+  late FakeShares fakeShares;
+  late FakeRecipes fakeRecipes;
   var shared = <Share>[];
 
   Future<void> pump(WidgetTester t, Widget page, {String role = 'user'}) async {
     places = PlacesController(repo);
     await places.load();
-    final recipes = RecipesController(FakeRecipes());
+    final recipes = RecipesController(fakeRecipes = FakeRecipes());
     await recipes.load();
     final auth = AuthController(
       FakeAuthRepository()
@@ -49,7 +54,7 @@ void main() {
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider(
             create: (_) => RecentShares(
-              FakeShares()..recentList = shared,
+              fakeShares = FakeShares()..recentList = shared,
               onFinished: () async {},
             )..load(),
           ),
@@ -83,10 +88,51 @@ void main() {
     expect(find.text('Location not found yet'), findsOneWidget);
   });
 
+  testWidgets('pulling the book down reloads places, recipes and shares', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a', name: 'Kedai Kopi Ah Seng')];
+    await pump(t, const PlacesListPage());
+    fakeRecipes.recipes = [recipe(id: 'r1', name: 'Ayam Masak Merah')];
+    await t.fling(find.text('Kedai Kopi Ah Seng'), const Offset(0, 400), 1000);
+    await t.pumpAndSettle();
+    expect(find.text('Ayam Masak Merah'), findsOneWidget);
+  });
+
   testWidgets('an empty book tells the user how to add to it', (t) async {
     repo = FakePlaces();
     await pump(t, const PlacesListPage());
     expect(find.textContaining('Share a TikTok'), findsOneWidget);
+  });
+
+  testWidgets('an unreadable share can be retried or removed', (t) async {
+    repo = FakePlaces();
+    shared = [
+      Share(
+        id: 's1',
+        status: 'done',
+        kind: 'other',
+        gaps: const ['unreadable'],
+      ),
+    ];
+    await pump(t, const PlacesListPage());
+    await t.pump(const Duration(milliseconds: 400)); // the row slides in
+    expect(find.text('Try again'), findsOneWidget);
+
+    await t.tap(find.text('Try again'));
+    await t.pumpAndSettle();
+    expect(fakeShares.retried, ['s1']);
+
+    await t.tap(find.text('Remove'));
+    await t.pumpAndSettle();
+    expect(
+      find.textContaining('Remove this post from your list'),
+      findsOneWidget,
+    );
+    await t.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await t.pumpAndSettle();
+    expect(fakeShares.dismissed, ['s1']);
+    expect(find.text('Remove'), findsNothing);
   });
 
   testWidgets(
@@ -99,6 +145,21 @@ void main() {
       expect(find.text('Open the post'), findsOneWidget);
       expect(find.textContaining('not a halal certificate'), findsOneWidget);
       expect(find.text('Halal'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'the place links to the post the user shared, when there is one',
+    (t) async {
+      repo = FakePlaces()
+        ..places = [
+          place(id: 'a', sourceUrl: 'https://www.tiktok.com/@makan/video/2'),
+          place(id: 'b'),
+        ];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      expect(find.text('Open your post'), findsOneWidget);
+      await pump(t, const PlaceDetailPage(id: 'b'));
+      expect(find.text('Open your post'), findsNothing);
     },
   );
 
@@ -150,6 +211,179 @@ void main() {
     expect(repo.deletedBranches, ['b-1']);
   });
 
+  testWidgets('the owner edits a branch from the place page', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    expect(find.byTooltip('Edit branch'), findsOneWidget);
+
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.text('This branch is shared by every user.'), findsOneWidget);
+
+    await t.enterText(find.byKey(const ValueKey('branch-label')), 'Kedai Baru');
+    await t.enterText(
+      find.byKey(const ValueKey('branch-address')),
+      'Jalan Baru',
+    );
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.label, 'Kedai Baru');
+    expect(repo.branchUpdates.single.address, 'Jalan Baru');
+    expect(repo.branchUpdates.single.lat, isNull);
+    expect(repo.branchUpdates.single.lng, isNull);
+    expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
+  });
+
+  testWidgets('a user can edit a branch for themselves only', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.text('Only you will see these changes.'), findsOneWidget);
+    expect(find.text('Who sees this edit?'), findsNothing);
+    expect(find.text('Suggest with AI'), findsNothing);
+
+    await t.enterText(find.byKey(const ValueKey('branch-label')), 'My Kedai');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.label, 'My Kedai');
+    expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+    expect(find.text('Saved for you.'), findsOneWidget);
+  });
+
+  testWidgets('the owner can choose Just me before saving', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.text('Who sees this edit?'), findsOneWidget);
+
+    await t.tap(find.text('Just me'));
+    await t.pumpAndSettle();
+    expect(find.text('Only you will see these changes.'), findsOneWidget);
+    await t.enterText(find.byKey(const ValueKey('branch-label')), 'Owner only');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+  });
+
+  testWidgets('a branch row shows its rating as one line, without overflow', (
+    t,
+  ) async {
+    repo = FakePlaces()
+      ..places = [
+        place(
+          id: 'a',
+          rating: const RatingSummary(average: 4.3, count: 7, canRate: true),
+        ),
+      ]
+      ..ratingResult = const RatingSummary(
+        average: 4.3,
+        count: 7,
+        mine: 4,
+        canRate: true,
+      );
+    t.view.physicalSize = const Size(320 * 3, 640 * 3); // a small phone
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    expect(find.byKey(const ValueKey('rating-star-4')), findsNothing);
+    expect(find.textContaining('4.3 · 7 ratings'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('the owner reviews an AI draft before saving it', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    repo.suggestion = const BranchSuggestion(
+      draft: BranchDraft(
+        label: 'AI Label',
+        address: 'AI Address',
+        city: 'AI City',
+        state: 'Selangor',
+        lat: 2.991234,
+        lng: 101.791234,
+      ),
+      sources: ['nominatim'],
+      aiUsed: true,
+      changed: true,
+      summary: 'Cleaned from the map.',
+    );
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+
+    final suggest = find.text('Suggest with AI');
+    await t.ensureVisible(suggest);
+    await t.tap(suggest);
+    await t.pumpAndSettle();
+
+    expect(repo.suggested, ['b-1']);
+    expect(find.text('AI draft — review before saving'), findsOneWidget);
+    expect(find.text('Source: nominatim'), findsOneWidget);
+    expect(
+      find.text('Filled into the fields below — review before saving.'),
+      findsOneWidget,
+    );
+    expect(find.text('AI'), findsWidgets);
+    expect(
+      t
+          .widget<TextField>(find.byKey(const ValueKey('branch-label')))
+          .controller!
+          .text,
+      'AI Label',
+    );
+    expect(
+      t
+          .widget<TextField>(find.byKey(const ValueKey('branch-lat')))
+          .controller!
+          .text,
+      '2.991234',
+    );
+
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.label, 'AI Label');
+    expect(repo.branchUpdates.single.lat, 2.991234);
+    expect(repo.branchUpdates.single.lng, 101.791234);
+    expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
+  });
+
+  testWidgets('the owner can type coordinates instead of using the map', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+
+    final lat = find.byKey(const ValueKey('branch-lat'));
+    final lng = find.byKey(const ValueKey('branch-lng'));
+    await t.ensureVisible(lat);
+    await t.enterText(lat, '2.991234');
+    await t.ensureVisible(lng);
+    await t.enterText(lng, '101.791234');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+
+    expect(repo.branchUpdates.single.lat, 2.991234);
+    expect(repo.branchUpdates.single.lng, 101.791234);
+  });
+
   testWidgets('the owner can check a restaurant\'s branches; users cannot', (
     t,
   ) async {
@@ -169,7 +403,13 @@ void main() {
     (t) async {
       repo = FakePlaces();
       shared = [
-        const Share(id: 's1', status: 'processing', kind: 'unknown'),
+        const Share(
+          id: 's1',
+          status: 'processing',
+          kind: 'unknown',
+          platform: 'tiktok',
+          attempts: 1,
+        ),
         const Share(
           id: 's2',
           status: 'failed',
@@ -178,9 +418,13 @@ void main() {
         ),
       ];
       await pump(t, const PlacesListPage());
-      await t.pump();
-      expect(find.text('Reading a post you shared…'), findsOneWidget);
-      expect(find.textContaining('could not read this post'), findsOneWidget);
+      await t.pump(const Duration(milliseconds: 400)); // the rows slide in
+      expect(find.text('Reading your TikTok post…'), findsOneWidget);
+      expect(find.text('Reading the caption and the page'), findsOneWidget);
+      expect(
+        find.text('Something went wrong while reading it. Try again.'),
+        findsOneWidget,
+      );
       // Why, for whoever is looking into it.
       expect(find.textContaining('ai_failed'), findsOneWidget);
       shared = [];
@@ -220,6 +464,39 @@ void main() {
         t.getBottomLeft(find.byTooltip('Save note')).dy,
         lessThanOrEqualTo(screen - 300),
       );
+    },
+  );
+
+  testWidgets(
+    'typing a note with the keyboard open: the note shows above the keyboard and the dock',
+    (t) async {
+      t.view.physicalSize = const Size(
+        1080,
+        1800,
+      ); // a short phone: the note starts below the fold
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      await t.scrollUntilVisible(
+        find.byType(TextField),
+        200,
+      ); // the user scrolls down to the note
+      await t.showKeyboard(find.byType(TextField));
+      t.view.viewInsets = const FakeViewPadding(
+        bottom: 900,
+      ); // 300 logical px of keyboard
+      await t.pumpAndSettle();
+      await t.enterText(find.byType(TextField), 'Sedap, datang lagi');
+      await t.pumpAndSettle();
+      final dockTop = t.getTopLeft(find.byType(ActionDock)).dy;
+      final field = t.getRect(find.byType(TextField));
+      expect(
+        field.bottom,
+        lessThanOrEqualTo(dockTop),
+        reason: 'the note is under the dock or keyboard',
+      );
+      expect(field.top, greaterThanOrEqualTo(0));
     },
   );
 }

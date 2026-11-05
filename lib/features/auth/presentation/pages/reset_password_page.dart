@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
+import '../widgets/auth_cover.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/new_password_fields.dart';
 
@@ -65,9 +66,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return AuthScaffold(
-      title: l.resetTitle,
-      showBack: false,
+    return AuthCover(
+      kicker: l.resetTitle,
       children: [
         if (_done) ...[
           FormMessage(l.resetDone, success: true),

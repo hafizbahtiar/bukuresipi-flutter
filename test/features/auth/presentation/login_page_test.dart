@@ -31,7 +31,9 @@ void main() {
       ..loginError = StateError('must not be called');
     await pump(t, repo);
     await t.enterText(find.byType(TextFormField).first, 'not-an-email');
-    await t.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    final button = find.widgetWithText(FilledButton, 'Sign in');
+    await t.ensureVisible(button);
+    await t.tap(button);
     await t.pumpAndSettle();
     expect(find.text('Enter a valid email address.'), findsOneWidget);
   });
@@ -44,7 +46,9 @@ void main() {
     );
     await t.enterText(find.byType(TextFormField).at(0), 'a@example.com');
     await t.enterText(find.byType(TextFormField).at(1), 'whatever');
-    await t.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    final button = find.widgetWithText(FilledButton, 'Sign in');
+    await t.ensureVisible(button);
+    await t.tap(button);
     await t.pumpAndSettle();
     expect(find.text('Wrong email or password.'), findsOneWidget);
   });

@@ -1,0 +1,186 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../l10n/gen/app_localizations.dart';
+import '../../data/auth_api.dart';
+import '../../domain/session.dart';
+import '../auth_text.dart';
+
+/// "Signed-in devices": every live session of this account (GET /auth/sessions), this phone first.
+/// Signing one out ends it at once (its next call is 401) and drops its push device.
+class SessionsPage extends StatefulWidget {
+  const SessionsPage({super.key, this.api});
+
+  /// Tests pass a fake; the app uses the shared Dio.
+  final AuthApi? api;
+
+  @override
+  State<SessionsPage> createState() => _SessionsPageState();
+}
+
+class _SessionsPageState extends State<SessionsPage> {
+  late final AuthApi _api =
+      widget.api ?? AuthApi(context.read<ApiClient>().dio);
+  List<Session>? _sessions;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final s = await apiCall(_api.sessions);
+      if (mounted) {
+        setState(() {
+          _sessions = s;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
+  }
+
+  Future<void> _run(Future<void> Function() call) async {
+    final l = AppLocalizations.of(context);
+    try {
+      await apiCall(call);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorText(l, e))));
+      }
+    }
+    await _load();
+  }
+
+  Future<void> _end(Session s) async {
+    final l = AppLocalizations.of(context);
+    if (await showNotebookDialog(
+      context,
+      message: l.sessionsEndConfirm(_name(l, s)),
+      tone: DialogTone.danger,
+      confirmLabel: l.sessionsEnd,
+    )) {
+      await _run(() => _api.endSession(s.id));
+    }
+  }
+
+  Future<void> _endOthers() async {
+    final l = AppLocalizations.of(context);
+    if (await showNotebookDialog(
+      context,
+      message: l.sessionsEndOthersConfirm,
+      tone: DialogTone.danger,
+      confirmLabel: l.sessionsEndOthers,
+    )) {
+      await _run(_api.endOtherSessions);
+    }
+  }
+
+  /// "Infinix X6731 · Android 14 · App 1.4.0 · Kuala Lumpur, MY": whatever the session has (the model only when
+  /// the name is not already it). The place is Cloudflare's guess from the IP: approximate.
+  String? _details(AppLocalizations l, Session s) {
+    final model = s.deviceModel;
+    final app = s.appVersion;
+    final parts = [
+      if (model != null && model != s.deviceName) model,
+      ?s.osVersion,
+      if (app != null) l.sessionsAppVersion(app),
+      ?s.location,
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  String _name(AppLocalizations l, Session s) =>
+      s.deviceName ?? l.sessionsUnknownDevice;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final dates = MaterialLocalizations.of(context);
+    String when(DateTime d) => dates.formatMediumDate(d);
+    final sessions = _sessions;
+
+    return Scaffold(
+      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.sessionsTitle)),
+      body: NotebookPage(
+        child: sessions == null
+            ? Center(
+                child: _error == null
+                    ? const CircularProgressIndicator.adaptive()
+                    : TextButton(onPressed: _load, child: Text(l.tryAgain)),
+              )
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: [
+                    for (final s in sessions)
+                      NotebookRow(
+                        mark: Icon(
+                          s.platform == 'web'
+                              ? Icons.language
+                              : Icons.smartphone,
+                          size: 20,
+                          color: nb.inkSoft,
+                        ),
+                        trailing: s.current
+                            ? null
+                            : TextButton(
+                                onPressed: () => _end(s),
+                                child: Text(l.sessionsEnd),
+                              ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_name(l, s)),
+                            if (_details(l, s) case final d?)
+                              Text(
+                                d,
+                                style: text.bodySmall?.copyWith(
+                                  color: nb.inkSoft,
+                                ),
+                              ),
+                            Text(
+                              l.sessionsSignedIn(when(s.createdAt)),
+                              style: text.bodySmall?.copyWith(
+                                color: nb.inkSoft,
+                              ),
+                            ),
+                            Text(
+                              s.current
+                                  ? l.sessionsThisDevice
+                                  : l.sessionsLastUsed(when(s.lastUsedAt)),
+                              style: text.bodySmall?.copyWith(
+                                color: s.current ? nb.pandanDeep : nb.inkSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (sessions.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: OutlinedButton(
+                          onPressed: _endOthers,
+                          child: Text(l.sessionsEndOthers),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+}

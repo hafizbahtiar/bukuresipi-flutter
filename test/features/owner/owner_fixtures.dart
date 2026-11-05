@@ -29,9 +29,17 @@ class FakeOwner implements OwnerRepository {
   );
   List<OwnerUser> users = [];
   List<FailedShare> shares = [];
+  List<ReportTicket> tickets = [];
   final queries = <String?>[];
+  final reportQueries = <String>[];
   final loggedOut = <String>[];
   final meterUpdates = <(String, int?, String?, bool?)>[];
+  final resolved = <(String, String, bool)>[];
+  final reviewResolved = <(String, bool)>[];
+  List<ReviewReportGroup> reviewReportGroups = [];
+  List<RatingBurst> bursts = [];
+  List<Tester> testerList = [];
+  final deletedRatings = <String>[];
 
   @override
   Future<OwnerStats> getStats() async => stats;
@@ -69,4 +77,45 @@ class FakeOwner implements OwnerRepository {
 
   @override
   Future<List<FailedShare>> failedShares() async => shares;
+
+  @override
+  Future<List<ReportTicket>> reports({String status = 'open'}) async {
+    reportQueries.add(status);
+    return tickets.where((t) => t.status == status).toList();
+  }
+
+  @override
+  Future<void> resolveReport({
+    required String targetType,
+    required String targetId,
+    required String field,
+    required bool apply,
+  }) async {
+    resolved.add((targetId, field, apply));
+  }
+
+  @override
+  Future<List<ReviewReportGroup>> reviewReports() async => reviewReportGroups;
+
+  @override
+  Future<void> resolveReviewReport({
+    required String reviewId,
+    required bool hide,
+  }) async {
+    reviewResolved.add((reviewId, hide));
+  }
+
+  @override
+  Future<List<RatingBurst>> ratingBursts() async => bursts;
+
+  @override
+  Future<List<Tester>> testers() async => testerList;
+
+  @override
+  Future<void> deleteRating(String ratingId) async {
+    deletedRatings.add(ratingId);
+    for (final b in bursts) {
+      b.ratings.removeWhere((r) => r.id == ratingId);
+    }
+  }
 }

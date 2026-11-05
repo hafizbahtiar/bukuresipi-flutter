@@ -72,6 +72,10 @@ class AuthController extends ChangeNotifier {
     if (_status != AuthStatus.signedOut) _set(AuthStatus.signedOut, null);
   }
 
+  /// Throws ApiException (invalid_input for a name with no letter or over 40 characters).
+  Future<void> setName(String name) async =>
+      _set(AuthStatus.signedIn, await _repo.setName(name));
+
   Future<void> refreshUser() async {
     if (_status == AuthStatus.signedIn) {
       _set(AuthStatus.signedIn, await _repo.me());
@@ -80,7 +84,10 @@ class AuthController extends ChangeNotifier {
 
   Future<void> verifyEmail(String token) async {
     await _repo.verifyEmail(token);
-    if (_status == AuthStatus.signedIn) await refreshUser();
+    // Verified already (the link is spent): a failed profile refresh must not turn that into an error.
+    if (_status == AuthStatus.signedIn) {
+      await refreshUser().catchError((Object _) {});
+    }
   }
 
   Future<void> resendVerification() async {
@@ -100,6 +107,30 @@ class AuthController extends ChangeNotifier {
     await sessionEnded();
   }
 
+  Future<void> loginWithGoogle(String idToken, String lang) async =>
+      _set(AuthStatus.signedIn, await _repo.loginWithGoogle(idToken, lang));
+
+  Future<void> linkGoogle(String idToken) async =>
+      _set(AuthStatus.signedIn, await _repo.linkGoogle(idToken));
+
+  Future<void> unlinkGoogle() async =>
+      _set(AuthStatus.signedIn, await _repo.unlinkGoogle());
+
+  Future<void> deleteAccountWithGoogle(String idToken) async {
+    await _repo.deleteAccountWithGoogle(idToken);
+    if (_status != AuthStatus.signedOut) _set(AuthStatus.signedOut, null);
+  }
+
+  /// Throws ApiException (wrong password, owner account). Works signed out too: the website's link opens this page.
+  Future<void> deleteAccount(String email, String password) async {
+    await _repo.deleteAccount(email, password);
+    if (_status != AuthStatus.signedOut) _set(AuthStatus.signedOut, null);
+  }
+
   Future<void> changePassword(String current, String next) =>
       _repo.changePassword(current, next);
+
+  /// Throws ApiException. The user's email updates when the link is opened (verifyEmail refreshes the user).
+  Future<void> changeEmail(String email, String password) =>
+      _repo.changeEmail(email, password);
 }

@@ -20,6 +20,10 @@ void main() {
     repo = FakeAuthRepository()..session = true;
     final auth = AuthController(repo);
     await auth.restore();
+    // A tall phone: the whole page (Name, Family rows included) without scrolling.
+    t.view.physicalSize = const Size(1080, 2800);
+    t.view.devicePixelRatio = 2;
+    addTearDown(t.view.reset);
     await t.pumpWidget(
       MultiProvider(
         providers: [
@@ -44,9 +48,20 @@ void main() {
     'the account page: who, email not confirmed yet (resend), language, sign out',
     (t) async {
       await pump(t);
-      expect(find.text('Ali'), findsOneWidget);
+      expect(
+        find.text('Ali'),
+        findsNWidgets(2),
+      ); // the heading and the Name row
       expect(find.text('a@example.com'), findsOneWidget);
-      expect(find.text('Send confirmation email again'), findsOneWidget);
+      // Not confirmed: a small "Verify" chip beside the email; tapping it sends the link again.
+      expect(find.text('Verify'), findsOneWidget);
+      await t.tap(find.text('Verify'));
+      await t.pump();
+      expect(repo.resends, 1);
+      expect(
+        find.text('Send confirmation email again'),
+        findsNothing,
+      ); // no separate row any more
       expect(find.text('Sign out'), findsOneWidget);
       expect(find.byType(CircleAvatar), findsNothing);
       expect(find.byType(SegmentedButton<String>), findsNothing);
@@ -71,5 +86,35 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Sign out'));
     await t.pumpAndSettle();
     expect(repo.clears, 1);
+  });
+
+  testWidgets('the account page links to About and the credits', (t) async {
+    await pump(t);
+    expect(find.text('About'), findsOneWidget);
+    expect(find.text('Credits'), findsOneWidget);
+  });
+
+  testWidgets('a long email is cut with … and the chip stays on screen', (
+    t,
+  ) async {
+    await pump(t);
+    t.view.physicalSize = const Size(
+      480,
+      2800,
+    ); // 240 dp: too narrow for the whole email
+    await t.pump();
+    final email = t.widget<Text>(find.text('a@example.com'));
+    expect((email.maxLines, email.overflow), (1, TextOverflow.ellipsis));
+    expect(t.takeException(), isNull); // no overflow stripe
+    expect(t.getRect(find.text('Verify')).right, lessThanOrEqualTo(240));
+    final p = TextPainter(
+      text: TextSpan(text: email.data, style: email.style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: t.getSize(find.text('a@example.com')).width);
+    expect(
+      p.didExceedMaxLines,
+      isTrue,
+    ); // it really is cut, not just allowed to be
   });
 }
