@@ -10,8 +10,8 @@
         android:name="${applicationName}"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
-        <!-- Pushes without a channel of their own land on "shares" (created in MainActivity). -->
-        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="shares"/>
+        <!-- Pushes without a channel of their own (e.g. a Firebase console test) land on "share_ready" (MainActivity). -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="share_ready"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

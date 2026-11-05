@@ -34,11 +34,14 @@ class PushController extends ChangeNotifier {
   static const _askedKey = 'push.asked';
   static const _offKey = 'push.off';
 
-  /// A share's push arrived while the app is open: reload what it changed.
-  VoidCallback? onForeground;
+  /// A share's push arrived while the app is open: reload what it changed and show it in the app.
+  void Function(ForegroundPush push)? onForeground;
 
   /// The user tapped a share's notification: open it.
   void Function(String shareId)? onTap;
+
+  /// The user tapped a "new sign-in to your account" alert (sent to the account's other phones at each login).
+  VoidCallback? onSignInTap;
 
   bool _allowed = false;
 
@@ -53,7 +56,7 @@ class PushController extends ChangeNotifier {
     _auth.addListener(_authChanged);
     _subs
       ..add(_messaging.tokenRefresh.listen(_register))
-      ..add(_messaging.foreground.listen((_) => onForeground?.call()))
+      ..add(_messaging.foreground.listen((p) => onForeground?.call(p)))
       ..add(_messaging.taps.listen(_tapped));
     final first = await _messaging.initialTap();
     if (first != null) _tapped(first);
@@ -63,7 +66,8 @@ class PushController extends ChangeNotifier {
 
   void _tapped(Map<String, String> data) {
     final id = data['shareId'];
-    if (id != null && id.isNotEmpty) onTap?.call(id);
+    if (id != null && id.isNotEmpty) return onTap?.call(id);
+    if (data['type'] == 'sign_in') onSignInTap?.call();
   }
 
   void _authChanged() {

@@ -12,13 +12,20 @@ abstract interface class PushMessaging {
   Stream<String> get tokenRefresh;
   Future<void> deleteToken();
 
-  /// A push that arrived while the app was open (no system notification is shown then).
-  Stream<Map<String, String>> get foreground;
+  /// A push that arrived while the app was open: Android shows no system notification then, so the app shows its own.
+  Stream<ForegroundPush> get foreground;
 
   /// The data of a notification the user tapped: one that opened the app, then later ones.
   Future<Map<String, String>?> initialTap();
   Stream<Map<String, String>> get taps;
 }
+
+/// A push received while the app is open: what the system notification would have said, and its data.
+typedef ForegroundPush = ({
+  String? title,
+  String? body,
+  Map<String, String> data,
+});
 
 /// Android only for now: Firebase reads android/app/google-services.json (no firebase_options.dart). iOS needs
 /// GoogleService-Info.plist and an APNs key first (bukuresipi-hono docs/fcm-setup.md).
@@ -62,8 +69,13 @@ class FirebasePushMessaging implements PushMessaging {
   Future<void> deleteToken() => _fcm.deleteToken();
 
   @override
-  Stream<Map<String, String>> get foreground =>
-      FirebaseMessaging.onMessage.map(_data);
+  Stream<ForegroundPush> get foreground => FirebaseMessaging.onMessage.map(
+    (m) => (
+      title: m.notification?.title,
+      body: m.notification?.body,
+      data: _data(m),
+    ),
+  );
 
   @override
   Future<Map<String, String>?> initialTap() async {

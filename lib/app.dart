@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_controller.dart';
 import 'features/places/presentation/places_controller.dart';
 import 'features/push/push_controller.dart';
+import 'features/push/push_messaging.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
 import 'features/shares/domain/share_repository.dart';
 import 'features/shares/presentation/recent_shares.dart';
@@ -39,10 +40,34 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     final push = context.read<PushController?>();
     if (push != null) {
       push
-        ..onForeground = _reload
+        ..onForeground = _foreground
         ..onTap = _openShare
+        ..onSignInTap = (() => _router.go('/account'))
         ..start();
     }
+  }
+
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
+
+  /// Android shows no system notification while the app is open, so the app says it itself.
+  void _foreground(ForegroundPush push) {
+    _reload();
+    final title = push.title;
+    final context = _messenger.currentContext;
+    if (title == null || context == null) return;
+    final shareId = push.data['shareId'];
+    _messenger.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          content: Text(push.body == null ? title : '$title\n${push.body}'),
+          action: shareId == null
+              ? null
+              : SnackBarAction(label: AppLocalizations.of(context).openPlace, onPressed: () => _openShare(shareId)),
+        ),
+      );
   }
 
   void _reload() {
@@ -94,5 +119,6 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
       GlobalCupertinoLocalizations.delegate,
     ],
     routerConfig: _router,
+    scaffoldMessengerKey: _messenger,
   );
 }

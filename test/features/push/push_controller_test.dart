@@ -16,7 +16,7 @@ class FakeMessaging implements PushMessaging {
   int deleted = 0;
   final refresh = StreamController<String>.broadcast();
   final taps_ = StreamController<Map<String, String>>.broadcast();
-  final foreground_ = StreamController<Map<String, String>>.broadcast();
+  final foreground_ = StreamController<ForegroundPush>.broadcast();
   Map<String, String>? opened;
 
   @override
@@ -34,7 +34,7 @@ class FakeMessaging implements PushMessaging {
   @override
   Future<void> deleteToken() async => deleted++;
   @override
-  Stream<Map<String, String>> get foreground => foreground_.stream;
+  Stream<ForegroundPush> get foreground => foreground_.stream;
   @override
   Future<Map<String, String>?> initialTap() async => opened;
   @override
@@ -137,11 +137,15 @@ void main() {
         await SharedPreferences.getInstance(),
         auth,
         platform: 'android',
-      )..onTap = opened.add;
+      )
+        ..onTap = opened.add
+        ..onSignInTap = () => opened.add('sign-in');
       await push.start();
       fcm.taps_.add({'shareId': 's-2'});
       await pumpEventQueue();
-      expect(opened, ['s-1', 's-2']);
+      fcm.taps_.add({'type': 'sign_in'});
+      await pumpEventQueue();
+      expect(opened, ['s-1', 's-2', 'sign-in']);
     },
   );
 }
