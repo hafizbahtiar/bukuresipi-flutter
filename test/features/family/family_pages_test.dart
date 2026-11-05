@@ -1,4 +1,5 @@
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
+import 'package:bukuresipi_flutter/features/family/domain/family.dart';
 import 'package:bukuresipi_flutter/features/family/presentation/family_controller.dart';
 import 'package:bukuresipi_flutter/features/family/presentation/pages/family_join_page.dart';
 import 'package:bukuresipi_flutter/features/family/presentation/pages/family_page.dart';
@@ -102,6 +103,50 @@ void main() {
     await pump(t, '/family/join?t=old');
     expect(
       find.text(lookupAppLocalizations(const Locale('en')).errInviteExpired),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the limit is shown: "2 of 3", then full with no invite', (
+    t,
+  ) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    repo.current = aFamily();
+    await pump(t, '/family');
+    expect(find.text('2 of 3 people'), findsOneWidget);
+    expect(find.text('1 more person can join'), findsOneWidget);
+    repo.current = aFamily(
+      members: const [
+        me,
+        siti,
+        FamilyMember(id: 'u-3', name: 'Abu', role: 'member', isMe: false),
+      ],
+    );
+    await family.load();
+    await t.pumpAndSettle();
+    expect(find.text('3 of 3 people'), findsOneWidget);
+    expect(find.text(l.familyFullOwner(3)), findsOneWidget);
+    expect(find.text(l.familyInvite), findsNothing);
+  });
+
+  testWidgets('a full family\'s link says so and cannot be joined', (t) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    await pump(t, '/family/join?t=full');
+    expect(find.text(l.familyJoinFull(3)), findsOneWidget);
+    expect(
+      t
+          .widget<FilledButton>(find.widgetWithText(FilledButton, l.familyJoin))
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('before starting a family, the page says how many it holds', (
+    t,
+  ) async {
+    await pump(t, '/family');
+    expect(
+      find.text(lookupAppLocalizations(const Locale('en')).familyLimitNote(3)),
       findsOneWidget,
     );
   });

@@ -56,6 +56,7 @@ class FamilyRepositoryImpl implements FamilyRepository {
       familyName: j['familyName'] as String,
       ownerName: j['ownerName'] as String?,
       memberCount: (j['memberCount'] as num).toInt(),
+      maxMembers: (j['maxMembers'] as num?)?.toInt() ?? familyMaxFallback,
     );
   });
 
@@ -88,13 +89,14 @@ Family familyFromJson(Map<String, dynamic> j) {
   final invite = j['invite'] as Map<String, dynamic>?;
   final creator = j['createdBy'] as Map<String, dynamic>?;
   final created = j['createdAt'] as String?;
-  
+
   return Family(
     id: j['id'] as String,
     name: j['name'] as String,
     role: j['role'] as String,
     createdBy: creator?['name'] as String?,
     creatorIsMe: creator?['isMe'] == true,
+    maxMembers: (j['maxMembers'] as num?)?.toInt() ?? familyMaxFallback,
     // D1 datetime ("2026-11-05 10:00:00") is UTC with no zone mark.
     createdAt: created == null
         ? null

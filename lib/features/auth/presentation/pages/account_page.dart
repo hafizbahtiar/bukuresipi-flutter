@@ -70,17 +70,38 @@ class _AccountPageState extends State<AccountPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      user.name ?? user.email,
-                      style: text.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
                     if (user.name != null)
                       Text(
-                        user.email,
-                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                        user.name!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                    // The email shrinks (…) before the chip does: a long address never pushes it off.
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            user.email,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: user.name == null
+                                ? text.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  )
+                                : text.bodyMedium?.copyWith(color: nb.inkSoft),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _VerifiedChip(
+                          verified: verified,
+                          sending: _sending,
+                          onResend: _resend,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -135,35 +156,6 @@ class _AccountPageState extends State<AccountPage> {
                 ),
               ),
               NotebookRow(
-                mark: mark(
-                  verified ? Icons.check : Icons.mail_outline,
-                  verified ? nb.pandan : nb.margin,
-                ),
-                onTap: verified || _sending ? null : _resend,
-                trailing: _sending
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator.adaptive(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : null,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(verified ? l.emailVerified : l.emailNotVerified),
-                    if (!verified)
-                      Text(
-                        l.resendVerification,
-                        style: text.bodySmall?.copyWith(
-                          color: nb.pandanDeep,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              NotebookRow(
                 mark: mark(Icons.translate),
                 onTap: () => locale.setLang(locale.lang == 'ms' ? 'en' : 'ms'),
                 trailing: _LangChoice(
@@ -199,6 +191,12 @@ class _AccountPageState extends State<AccountPage> {
                 ),
               NotebookRow(
                 mark: mark(Icons.info_outline),
+                onTap: () => context.push('/about'),
+                trailing: next,
+                child: Text(l.aboutTitle),
+              ),
+              NotebookRow(
+                mark: mark(Icons.favorite_outline),
                 onTap: () => context.push('/credits'),
                 child: Text(l.creditsTitle),
               ),
@@ -282,6 +280,67 @@ class _LangChoice extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// "Verified" (green) or "Not verified" beside the email; the second one sends the link again when tapped.
+class _VerifiedChip extends StatelessWidget {
+  const _VerifiedChip({
+    required this.verified,
+    required this.sending,
+    required this.onResend,
+  });
+
+  final bool verified;
+  final bool sending;
+  final VoidCallback onResend;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final color = verified ? nb.pandanDeep : nb.margin;
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (sending)
+            SizedBox.square(
+              dimension: 12,
+              child: CircularProgressIndicator.adaptive(
+                strokeWidth: 1.5,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            )
+          else
+            Icon(
+              verified ? Icons.check : Icons.mail_outline,
+              size: 14,
+              color: color,
+            ),
+          const SizedBox(width: 4),
+          Text(
+            verified ? l.emailVerifiedChip : l.emailNotVerifiedChip,
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+    if (verified) return chip;
+    return Tooltip(
+      message: l.resendVerification,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: sending ? null : onResend,
+        child: chip,
+      ),
     );
   }
 }

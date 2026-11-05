@@ -47,11 +47,14 @@ class FakeFamily implements FamilyRepository {
 
   @override
   Future<InvitePreview> preview(String token) async {
-    if (token != 'abc') throw const ApiException('invite_expired', status: 410);
-    return const InvitePreview(
+    if (token != 'abc' && token != 'full') {
+      throw const ApiException('invite_expired', status: 410);
+    }
+    return InvitePreview(
       familyName: 'Rumah Ali',
       ownerName: 'Ali',
-      memberCount: 2,
+      memberCount: token == 'full' ? 3 : 2,
+      maxMembers: 3,
     );
   }
 

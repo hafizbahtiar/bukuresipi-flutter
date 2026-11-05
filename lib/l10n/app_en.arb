@@ -1293,5 +1293,82 @@
         "type": "String"
       }
     }
+  },
+  "familyCount": "{count} of {max} people",
+  "@familyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "familySpotsLeft": "{count, plural, =1{1 more person can join} other{{count} more people can join}}",
+  "@familySpotsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "familyFullOwner": "Your family is full ({max} people). Remove someone before inviting another.",
+  "@familyFullOwner": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "familyLimitNote": "A family holds up to {max} people, you included.",
+  "@familyLimitNote": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "familyJoinFull": "This family is full ({max} people), so you can't join right now. Ask the owner to make room.",
+  "@familyJoinFull": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "emailVerifiedChip": "Verified",
+  "@emailVerifiedChip": {},
+  "emailNotVerifiedChip": "Verify",
+  "@emailNotVerifiedChip": {},
+  "aboutTitle": "About",
+  "@aboutTitle": {},
+  "aboutTagline": "Your recipe book and food map, from the posts you share.",
+  "@aboutTagline": {},
+  "aboutHowTitle": "How it works",
+  "@aboutHowTitle": {},
+  "aboutHowShare": "Share a TikTok, Facebook, Instagram or YouTube post, a web page or a screenshot to Bukuresipi.",
+  "@aboutHowShare": {},
+  "aboutHowBook": "We read it and save the recipe or the place to your book and map. Only what the post says is kept; anything it doesn't say is left empty, never guessed.",
+  "@aboutHowBook": {},
+  "aboutHowFamily": "Start a family to share your book, recipes and shopping list with the people you cook for.",
+  "@aboutHowFamily": {},
+  "aboutHalalTitle": "About halal",
+  "@aboutHalalTitle": {},
+  "aboutHalalBody": "A halal note is what the post or page says, quoted with its link. Bukuresipi does not certify anything: check the JAKIM logo at the shop.",
+  "@aboutHalalBody": {},
+  "aboutMoreTitle": "More",
+  "@aboutMoreTitle": {},
+  "aboutWebsite": "Website",
+  "@aboutWebsite": {},
+  "aboutDeleteAccount": "Delete my account",
+  "@aboutDeleteAccount": {},
+  "aboutVersion": "Version {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   }
 }

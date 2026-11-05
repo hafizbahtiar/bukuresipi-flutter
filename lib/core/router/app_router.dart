@@ -15,6 +15,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/verify_email_page.dart';
+import '../../features/about/presentation/pages/about_page.dart';
 import '../../features/credits/presentation/pages/credits_page.dart';
 import '../../features/family/presentation/pages/family_join_page.dart';
 import '../../features/family/presentation/pages/family_page.dart';
@@ -113,6 +114,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
       ...linkRoutes('/en'),
       _page(path: '/account', builder: (_, _) => const AccountPage()),
       _page(path: '/credits', builder: (_, _) => const CreditsPage()),
+      _page(path: '/about', builder: (_, _) => const AboutPage()),
       _page(path: '/family', builder: (_, _) => const FamilyPage()),
       for (final path in const ['/family/join', '/en/family/join'])
         _page(

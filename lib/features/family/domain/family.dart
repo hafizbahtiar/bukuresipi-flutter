@@ -1,3 +1,7 @@
+/// shortcut: the cap before the API has told us (no family yet), kept equal to hono FAMILY_MAX; once plans exist,
+/// read it from an endpoint instead.
+const familyMaxFallback = 3;
+
 /// A household sharing one book. [role] is the caller's. Members are shown by name, never email.
 class Family {
   const Family({
@@ -9,6 +13,7 @@ class Family {
     this.createdBy,
     this.creatorIsMe = false,
     this.createdAt,
+    this.maxMembers = familyMaxFallback,
   });
 
   final String id;
@@ -24,6 +29,10 @@ class Family {
   final bool creatorIsMe;
   final DateTime? createdAt;
 
+  /// How many people the family can hold (the API's FAMILY_MAX now, a plan later), the caller included.
+  final int maxMembers;
+
+  bool get isFull => members.length >= maxMembers;
   bool get isOwner => role == 'owner';
 }
 
@@ -49,9 +58,13 @@ class InvitePreview {
     required this.familyName,
     required this.ownerName,
     required this.memberCount,
+    this.maxMembers = familyMaxFallback,
   });
 
   final String familyName;
   final String? ownerName;
   final int memberCount;
+  final int maxMembers;
+
+  bool get isFull => memberCount >= maxMembers;
 }

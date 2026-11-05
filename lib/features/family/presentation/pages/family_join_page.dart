@@ -64,7 +64,10 @@ class _FamilyJoinPageState extends State<FamilyJoinPage> {
             if (s.hasError) {
               return ListView(
                 children: [
-                  NotebookRow(minHeight: 96, child: Text(errorText(l, s.error!))),
+                  NotebookRow(
+                    minHeight: 96,
+                    child: Text(errorText(l, s.error!)),
+                  ),
                 ],
               );
             }
@@ -83,12 +86,20 @@ class _FamilyJoinPageState extends State<FamilyJoinPage> {
                   child: Text(
                     [
                       if (p.ownerName != null) l.familyJoinOwner(p.ownerName!),
-                      l.familyPeople(p.memberCount),
+                      l.familyCount(p.memberCount, p.maxMembers),
                     ].join(' · '),
                     style: TextStyle(color: nb.inkSoft),
                   ),
                 ),
-                NotebookRow(minHeight: 96, child: Text(l.familyJoinBody)),
+                NotebookRow(
+                  minHeight: 96,
+                  child: Text(
+                    p.isFull
+                        ? l.familyJoinFull(p.maxMembers)
+                        : l.familyJoinBody,
+                    style: p.isFull ? TextStyle(color: nb.margin) : null,
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     notebookGutter + 10,
@@ -100,7 +111,7 @@ class _FamilyJoinPageState extends State<FamilyJoinPage> {
                     spacing: 12,
                     children: [
                       FilledButton(
-                        onPressed: _joining ? null : () => _join(p),
+                        onPressed: _joining || p.isFull ? null : () => _join(p),
                         child: Text(l.familyJoin),
                       ),
                       TextButton(

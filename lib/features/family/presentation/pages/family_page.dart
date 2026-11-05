@@ -217,6 +217,13 @@ class _FamilyPageState extends State<FamilyPage> {
       rows = [
         NotebookRow(minHeight: 96, child: Text(l.familyIntro)),
         NotebookRow(
+          mark: Icon(Icons.groups_outlined, size: 20, color: nb.inkSoft),
+          child: Text(
+            l.familyLimitNote(familyMaxFallback),
+            style: TextStyle(color: nb.inkSoft),
+          ),
+        ),
+        NotebookRow(
           mark: Icon(Icons.group_add_outlined, size: 20, color: nb.pandan),
           onTap: _busy ? null : _start,
           child: Text(
@@ -275,19 +282,47 @@ class _FamilyPageState extends State<FamilyPage> {
               ),
             ),
           ),
-        if (f.isOwner) ...[
-          NotebookRow(
-            mark: Icon(Icons.share_outlined, size: 20, color: nb.pandan),
-            onTap: _busy ? null : () => _run(_invite),
-            child: Text(
-              l.familyInvite,
-              style: TextStyle(
-                color: nb.pandanDeep,
-                fontWeight: FontWeight.w600,
-              ),
+        NotebookRow(
+          child: Text(
+            l.familyCount(f.members.length, f.maxMembers),
+            style: text.bodySmall?.copyWith(
+              color: f.isFull ? nb.margin : nb.inkSoft,
+              fontWeight: f.isFull ? FontWeight.w600 : null,
             ),
           ),
-          if (until != null)
+        ),
+        if (f.isOwner) ...[
+          if (f.isFull)
+            // Full: say why there is no invite, and what makes room.
+            NotebookRow(
+              mark: Icon(Icons.block, size: 20, color: nb.margin),
+              child: Text(
+                l.familyFullOwner(f.maxMembers),
+                style: TextStyle(color: nb.inkSoft),
+              ),
+            )
+          else
+            NotebookRow(
+              mark: Icon(Icons.share_outlined, size: 20, color: nb.pandan),
+              onTap: _busy ? null : () => _run(_invite),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.familyInvite,
+                    style: TextStyle(
+                      color: nb.pandanDeep,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    l.familySpotsLeft(f.maxMembers - f.members.length),
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                ],
+              ),
+            ),
+          if (until != null && !f.isFull)
             NotebookRow(
               trailing: TextButton(
                 onPressed: _busy ? null : () => _run(controller.stopInvite),
