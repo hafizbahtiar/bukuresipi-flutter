@@ -85,6 +85,20 @@ class _SessionsPageState extends State<SessionsPage> {
     }
   }
 
+  /// "Infinix X6731 · Android 14 · App 1.4.0 · Kuala Lumpur, MY": whatever the session has (the model only when
+  /// the name is not already it). The place is Cloudflare's guess from the IP: approximate.
+  String? _details(AppLocalizations l, Map<String, dynamic> s) {
+    final model = s['deviceModel'] as String?;
+    final app = s['appVersion'] as String?;
+    final parts = [
+      if (model != null && model != s['deviceName']) model,
+      ?s['osVersion'] as String?,
+      if (app != null) l.sessionsAppVersion(app),
+      ?s['location'] as String?,
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
   String _name(AppLocalizations l, Map<String, dynamic> s) =>
       (s['deviceName'] as String?) ?? l.sessionsUnknownDevice;
 
@@ -131,6 +145,21 @@ class _SessionsPageState extends State<SessionsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(_name(l, s)),
+                            if (_details(l, s) case final d?)
+                              Text(
+                                d,
+                                style: text.bodySmall?.copyWith(
+                                  color: nb.inkSoft,
+                                ),
+                              ),
+                            Text(
+                              l.sessionsSignedIn(
+                                when(s['createdAt'] as String),
+                              ),
+                              style: text.bodySmall?.copyWith(
+                                color: nb.inkSoft,
+                              ),
+                            ),
                             Text(
                               s['current'] == true
                                   ? l.sessionsThisDevice

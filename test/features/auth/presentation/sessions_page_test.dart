@@ -12,9 +12,14 @@ class _FakeApi extends AuthApi {
   var list = <Map<String, dynamic>>[
     {
       'id': 'a',
-      'deviceName': 'Infinix X6731',
+      'deviceName': 'Infinix HOT 40 Pro',
+      'deviceModel': 'Infinix X6731',
+      'osVersion': 'Android 14',
+      'appVersion': '1.4.0',
+      'location': 'Kuala Lumpur, MY',
       'platform': 'android',
       'current': true,
+      'createdAt': '2026-11-01T10:00:00Z',
       'lastUsedAt': '2026-11-05T10:00:00Z',
     },
     {
@@ -22,6 +27,7 @@ class _FakeApi extends AuthApi {
       'deviceName': null,
       'platform': 'android',
       'current': false,
+      'createdAt': '2026-10-01T10:00:00Z',
       'lastUsedAt': '2026-11-01T10:00:00Z',
     },
   ];
@@ -52,7 +58,11 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    expect(find.text('Infinix X6731'), findsOneWidget);
+    expect(find.text('Infinix HOT 40 Pro'), findsOneWidget);
+    expect(
+      find.text('Infinix X6731 · Android 14 · App 1.4.0 · Kuala Lumpur, MY'),
+      findsOneWidget,
+    );
     expect(find.text('This phone'), findsOneWidget);
     expect(find.text('Unknown device'), findsOneWidget);
     await t.tap(

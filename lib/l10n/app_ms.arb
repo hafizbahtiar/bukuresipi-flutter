@@ -491,5 +491,7 @@
   "sessionsEnd": "Log keluar",
   "sessionsEndConfirm": "Log keluar {device}? Kata laluan diperlukan untuk log masuk semula.",
   "sessionsEndOthers": "Log keluar semua peranti lain",
-  "sessionsEndOthersConfirm": "Log keluar semua peranti kecuali telefon ini?"
+  "sessionsEndOthersConfirm": "Log keluar semua peranti kecuali telefon ini?",
+  "sessionsAppVersion": "Aplikasi {version}",
+  "sessionsSignedIn": "Log masuk {date}"
 }

@@ -13,13 +13,19 @@ class AuthApi {
 
   static const _channel = MethodChannel('bukuresipi/device');
 
-  /// What this phone is called in "Signed-in devices". No name (iOS for now, tests) = the API shows none.
+  /// This phone in "Signed-in devices": name, model code, OS (MainActivity.kt). None (iOS for now, tests) = the API
+  /// shows "Unknown device". The app version goes in the X-App-Version header, which the API reads itself.
   static Future<Map<String, String?>> device() async {
-    String? name;
+    Map<Object?, Object?>? info;
     try {
-      name = await _channel.invokeMethod<String>('name');
+      info = await _channel.invokeMapMethod<Object?, Object?>('info');
     } catch (_) {}
-    return {'name': name, 'platform': Platform.isIOS ? 'ios' : 'android'};
+    return {
+      'name': info?['name'] as String?,
+      'model': info?['model'] as String?,
+      'os': info?['os'] as String?,
+      'platform': Platform.isIOS ? 'ios' : 'android',
+    };
   }
 
   Future<Map<String, dynamic>> _post(

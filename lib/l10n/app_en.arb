@@ -1259,5 +1259,21 @@
   "sessionsEndOthers": "Sign out all other devices",
   "@sessionsEndOthers": {},
   "sessionsEndOthersConfirm": "Sign out every device except this phone?",
-  "@sessionsEndOthersConfirm": {}
+  "@sessionsEndOthersConfirm": {},
+  "sessionsAppVersion": "App {version}",
+  "@sessionsAppVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionsSignedIn": "Signed in {date}",
+  "@sessionsSignedIn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }
