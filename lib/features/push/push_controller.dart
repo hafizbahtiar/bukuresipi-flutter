@@ -47,6 +47,7 @@ class PushController extends ChangeNotifier {
 
   Future<void> start() async {
     _allowed = await _messaging.allowed();
+    log('push: started, notifications ${_allowed ? 'allowed' : 'not allowed yet (asked after the first share)'}');
     _auth.addListener(_authChanged);
     _subs
       ..add(_messaging.tokenRefresh.listen(_register))
@@ -79,6 +80,7 @@ class PushController extends ChangeNotifier {
     if (_prefs.getBool(_askedKey) ?? false) return;
     await _prefs.setBool(_askedKey, true);
     _allowed = await _messaging.requestPermission();
+    log('push: asked after the first share, ${_allowed ? 'allowed' : 'refused'}');
     notifyListeners();
     await _register();
   }
@@ -101,7 +103,10 @@ class PushController extends ChangeNotifier {
 
   /// Saves this phone for the signed-in session. Failures only log: the app works without pushes.
   Future<void> _register([String? refreshed]) async {
-    if (!enabled || _auth.status != AuthStatus.signedIn) return;
+    if (!enabled || _auth.status != AuthStatus.signedIn) {
+      if (_auth.status == AuthStatus.signedIn) log('push: device not saved (notifications off)');
+      return;
+    }
     try {
       final token = refreshed ?? await _messaging.token();
       if (token == null) return;
@@ -111,6 +116,7 @@ class PushController extends ChangeNotifier {
           data: {'token': token, 'platform': _platform},
         ),
       );
+      log('push: device saved');
     } catch (e) {
       log('push: register failed, ${ApiException.from(e).code}');
     }

@@ -106,7 +106,7 @@ Future<void> main() async {
         auth,
       );
     } catch (e) {
-      debugPrint('push: Firebase did not start: $e');
+      debugPrint('push: Firebase did not start: $e'); // the log names why (e.g. google-services.json)
     }
   }
 
