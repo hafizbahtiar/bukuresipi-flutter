@@ -42,6 +42,18 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
+  /// Google-only: the reset link sets the first password (the same page as "Forgot password").
+  Future<void> _setPassword() async {
+    final l = AppLocalizations.of(context);
+    final auth = context.read<AuthController>();
+    try {
+      await auth.forgotPassword(auth.user!.email);
+      _snack(l.setPasswordSent);
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -166,15 +178,41 @@ class _AccountPageState extends State<AccountPage> {
               ),
               NotebookRow(
                 mark: mark(Icons.alternate_email),
-                onTap: () => context.push('/account/email'),
-                trailing: next,
-                child: Text(l.changeEmailTitle),
+                // Changing the email asks for the password: a Google-only account sets one first.
+                onTap: user.hasPassword
+                    ? () => context.push('/account/email')
+                    : null,
+                trailing: user.hasPassword ? next : null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.changeEmailTitle),
+                    if (!user.hasPassword)
+                      Text(
+                        l.changeEmailNeedsPassword,
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
+                  ],
+                ),
               ),
               NotebookRow(
                 mark: mark(Icons.lock_outline),
-                onTap: () => context.push('/account/password'),
-                trailing: next,
-                child: Text(l.changePasswordTitle),
+                onTap: user.hasPassword
+                    ? () => context.push('/account/password')
+                    : _setPassword,
+                trailing: user.hasPassword ? next : null,
+                child: user.hasPassword
+                    ? Text(l.changePasswordTitle)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l.setPasswordTitle),
+                          Text(
+                            l.setPasswordHint,
+                            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                          ),
+                        ],
+                      ),
               ),
               NotebookRow(
                 mark: mark(Icons.devices_outlined),

@@ -107,6 +107,14 @@ class AuthController extends ChangeNotifier {
     await sessionEnded();
   }
 
+  Future<void> loginWithGoogle(String idToken, String lang) async =>
+      _set(AuthStatus.signedIn, await _repo.loginWithGoogle(idToken, lang));
+
+  Future<void> deleteAccountWithGoogle(String idToken) async {
+    await _repo.deleteAccountWithGoogle(idToken);
+    if (_status != AuthStatus.signedOut) _set(AuthStatus.signedOut, null);
+  }
+
   /// Throws ApiException (wrong password, owner account). Works signed out too: the website's link opens this page.
   Future<void> deleteAccount(String email, String password) async {
     await _repo.deleteAccount(email, password);

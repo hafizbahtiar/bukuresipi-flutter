@@ -112,6 +112,16 @@ class AuthRepositoryImpl implements AuthRepository {
       apiCall(() => _api.changeEmail(email, password));
 
   @override
+  Future<User> loginWithGoogle(String idToken, String lang) =>
+      apiCall(() async => _signedIn(await _api.google(idToken, lang)));
+
+  @override
+  Future<void> deleteAccountWithGoogle(String idToken) async {
+    await apiCall(() => _api.deleteAccountWithGoogle(idToken));
+    await clearLocal();
+  }
+
+  @override
   Future<void> deleteAccount(String email, String password) async {
     await apiCall(() => _api.deleteAccount(email, password));
     await clearLocal();
@@ -125,4 +135,8 @@ User userFromJson(Map<String, dynamic> j) => User(
   role: j['role'] as String,
   lang: j['lang'] as String,
   emailVerified: j['emailVerified'] as bool,
+  hasPassword:
+      j['hasPassword'] as bool? ??
+      true, // a cached user from before Google sign-in
+  google: j['google'] as bool? ?? false,
 );

@@ -7,6 +7,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
 import '../widgets/auth_cover.dart';
+import '../widgets/google_button.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -116,6 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                   busy: _busy,
                   onPressed: _submit,
                 ),
+                GoogleButton(onError: (e) => setState(() => _error = e)),
                 if (_error case final error?) _CoverError(error),
               ],
             ),

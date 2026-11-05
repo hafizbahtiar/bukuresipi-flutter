@@ -14,6 +14,7 @@ import 'core/network/update_gate.dart';
 import 'core/settings/locale_controller.dart';
 import 'core/storage/token_store.dart';
 import 'features/auth/data/auth_api.dart';
+import 'features/auth/data/google_auth.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
@@ -106,13 +107,29 @@ Future<void> main() async {
         auth,
       );
     } catch (e) {
-      debugPrint('push: Firebase did not start: $e'); // the log names why (e.g. google-services.json)
+      debugPrint(
+        'push: Firebase did not start: $e',
+      ); // the log names why (e.g. google-services.json)
     }
   }
+
+  // Android only (iOS needs Sign in with Apple first, App Store 4.8), and only once the client id is in .env.
+  final googleId = Env.googleServerClientId ?? '';
+  final GoogleAuth? google = Platform.isAndroid && googleId.isNotEmpty
+      ? PluginGoogleAuth(googleId)
+      : null;
+  auth.addListener(() {
+    if (auth.status == AuthStatus.signedOut) {
+      google?.signOut().catchError(
+        (_) {},
+      ); // next time: the account sheet, not the last account
+    }
+  });
 
   runApp(
     MultiProvider(
       providers: [
+        Provider<GoogleAuth?>.value(value: google),
         if (push != null)
           ChangeNotifierProvider<PushController>.value(value: push),
         Provider<ApiClient>.value(value: api),

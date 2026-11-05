@@ -131,6 +131,22 @@ class FakeAuthRepository implements AuthRepository {
     emailChanges.add(email);
   }
 
+  final googleTokens = <String>[];
+  @override
+  Future<User> loginWithGoogle(String idToken, String lang) async {
+    if (loginError != null) throw loginError!;
+    googleTokens.add(idToken);
+    session = true;
+    return cached = testUser;
+  }
+
+  @override
+  Future<void> deleteAccountWithGoogle(String idToken) async {
+    if (deleteError != null) throw deleteError!;
+    deleted.add('google:$idToken');
+    await clearLocal();
+  }
+
   final deleted = <String>[];
   Object? deleteError;
   @override

@@ -50,6 +50,14 @@ class AuthApi {
         'password': password,
         'device': await device(),
       });
+  Future<Map<String, dynamic>> google(String idToken, String lang) async =>
+      _post('/auth/google', {
+        'idToken': idToken,
+        'lang': lang,
+        'device': await device(),
+      });
+  Future<void> deleteAccountWithGoogle(String idToken) =>
+      _post('/auth/delete-account', {'idToken': idToken});
   Future<void> logout(String refreshToken) =>
       _post('/auth/logout', {'refreshToken': refreshToken});
   Future<void> verifyEmail(String token) =>
