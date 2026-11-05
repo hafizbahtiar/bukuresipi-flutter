@@ -116,6 +116,19 @@ class AuthRepositoryImpl implements AuthRepository {
       apiCall(() async => _signedIn(await _api.google(idToken, lang)));
 
   @override
+  Future<User> linkGoogle(String idToken) => apiCall(
+    () async => _remember(
+      (await _api.linkGoogle(idToken))['user'] as Map<String, dynamic>,
+    ),
+  );
+
+  @override
+  Future<User> unlinkGoogle() => apiCall(
+    () async =>
+        _remember((await _api.unlinkGoogle())['user'] as Map<String, dynamic>),
+  );
+
+  @override
   Future<void> deleteAccountWithGoogle(String idToken) async {
     await apiCall(() => _api.deleteAccountWithGoogle(idToken));
     await clearLocal();

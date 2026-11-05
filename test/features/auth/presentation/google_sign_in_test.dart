@@ -147,4 +147,52 @@ void main() {
       expect(repo.deleted, ['google:google-id-token']);
     },
   );
+
+  testWidgets(
+    'Account > Google: link with the Google sheet, then unlink after asking',
+    (t) async {
+      await pump(t, const AccountPage(), google: _FakeGoogle(), user: testUser);
+      expect(
+        find.text('Link your Google account to sign in with one tap'),
+        findsOneWidget,
+      );
+      await t.tap(find.text('Google'));
+      await t.pumpAndSettle();
+      expect(repo.googleTokens, ['link:google-id-token']);
+      expect(
+        find.text('Linked: you can sign in with Google or your password'),
+        findsOneWidget,
+      );
+      await t.tap(find.text('Unlink'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('dialog-confirm')));
+      await t.pumpAndSettle();
+      expect(auth.user!.google, isFalse);
+    },
+  );
+
+  testWidgets('a Google-only account cannot unlink (no other way in)', (
+    t,
+  ) async {
+    await pump(
+      t,
+      const AccountPage(),
+      google: _FakeGoogle(),
+      user: _googleOnly,
+    );
+    expect(
+      find.text(
+        'Linked: you sign in with Google. Set a password to unlink it.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Unlink'), findsNothing);
+  });
+
+  testWidgets('no Google on this phone and not linked: no Google row', (
+    t,
+  ) async {
+    await pump(t, const AccountPage(), user: testUser);
+    expect(find.text('Google'), findsNothing);
+  });
 }

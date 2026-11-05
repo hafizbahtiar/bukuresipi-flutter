@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../data/google_auth.dart';
 import '../auth_controller.dart';
 import '../../../family/presentation/ask.dart';
 import '../../../family/presentation/family_controller.dart';
@@ -39,6 +40,33 @@ class _AccountPageState extends State<AccountPage> {
       if (mounted) _snack(errorText(l, e));
     } finally {
       if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  /// Account > Google: link asks Google for the account; unlink asks first (they then sign in with the password).
+  Future<void> _google(bool linked) async {
+    final l = AppLocalizations.of(context);
+    final auth = context.read<AuthController>();
+    final google = context.read<GoogleAuth?>();
+    try {
+      if (linked) {
+        final yes = await showNotebookDialog(
+          context,
+          message: l.googleUnlinkConfirm,
+          tone: DialogTone.danger,
+          confirmLabel: l.googleUnlink,
+        );
+        if (!yes) return;
+        await auth.unlinkGoogle();
+        _snack(l.googleUnlinked);
+      } else {
+        final token = await google?.idToken();
+        if (token == null) return; // closed the sheet
+        await auth.linkGoogle(token);
+        _snack(l.googleLinked);
+      }
+    } catch (e) {
+      _snack(errorText(l, e));
     }
   }
 
@@ -214,6 +242,38 @@ class _AccountPageState extends State<AccountPage> {
                         ],
                       ),
               ),
+              // Linked: shown everywhere (with Unlink when there is a password). Not linked: only where Google works.
+              if (user.google || context.watch<GoogleAuth?>() != null)
+                NotebookRow(
+                  mark: mark(Icons.link),
+                  onTap: user.google && !user.hasPassword
+                      ? null
+                      : () => _google(user.google),
+                  trailing: user.google
+                      ? (user.hasPassword
+                            ? Text(
+                                l.googleUnlink,
+                                style: TextStyle(color: nb.margin),
+                              )
+                            : null)
+                      : next,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.googleRow),
+                      Text(
+                        user.google
+                            ? (user.hasPassword
+                                  ? l.googleLinkedHint
+                                  : l.googleOnlyHint)
+                            : l.googleLinkHint,
+                        style: text.bodySmall?.copyWith(
+                          color: user.google ? nb.pandanDeep : nb.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               NotebookRow(
                 mark: mark(Icons.devices_outlined),
                 onTap: () => context.push('/account/sessions'),

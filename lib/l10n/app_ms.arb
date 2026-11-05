@@ -526,5 +526,16 @@
   "setPasswordSent": "Kami telah menghantar pautan untuk menetapkan kata laluan anda.",
   "changeEmailNeedsPassword": "Tetapkan kata laluan dahulu untuk menukar emel.",
   "deleteWithGoogle": "Sahkan dengan Google",
-  "deleteWithGoogleHint": "Akaun anda tiada kata laluan: sahkan diri anda dengan Google."
+  "deleteWithGoogleHint": "Akaun anda tiada kata laluan: sahkan diri anda dengan Google.",
+  "googleRow": "Google",
+  "googleLinkHint": "Pautkan akaun Google anda untuk log masuk dengan satu ketikan",
+  "googleLinkedHint": "Dipautkan: anda boleh log masuk dengan Google atau kata laluan",
+  "googleOnlyHint": "Dipautkan: anda log masuk dengan Google. Tetapkan kata laluan untuk nyahpaut.",
+  "googleUnlink": "Nyahpaut",
+  "googleUnlinkConfirm": "Nyahpaut Google? Anda akan log masuk dengan emel dan kata laluan.",
+  "googleLinked": "Google dipautkan.",
+  "googleUnlinked": "Google dinyahpautkan.",
+  "errAlreadyLinked": "Akaun Google lain sudah dipautkan. Nyahpaut dahulu.",
+  "errGoogleInUse": "Akaun Google itu sudah digunakan oleh akaun Bukuresipi lain.",
+  "errPasswordRequired": "Tetapkan kata laluan dahulu supaya anda masih boleh log masuk."
 }

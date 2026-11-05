@@ -56,6 +56,10 @@ class AuthApi {
         'lang': lang,
         'device': await device(),
       });
+  Future<Map<String, dynamic>> linkGoogle(String idToken) =>
+      _post('/auth/google/link', {'idToken': idToken}, auth: true);
+  Future<Map<String, dynamic>> unlinkGoogle() async =>
+      (await _dio.delete<Map<String, dynamic>>('/auth/google/link')).data!;
   Future<void> deleteAccountWithGoogle(String idToken) =>
       _post('/auth/delete-account', {'idToken': idToken});
   Future<void> logout(String refreshToken) =>
