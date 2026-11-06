@@ -76,8 +76,29 @@ class ShareRepositoryImpl implements ShareRepository {
   Future<void> retry(String id) =>
       apiCall(() => _dio.post<void>('/shares/$id/retry'));
 
+  // A list scrolls rows out and back, and the detail page shows the same image: fetch each once per session.
+  final _images = <String, Future<Uint8List?>>{};
+  static const _imageCacheSize = 80;
+
   @override
-  Future<Uint8List?> image(String id) => apiCall(() async {
+  Future<Uint8List?> image(String id) {
+    final cached = _images.remove(id);
+    if (cached != null) {
+      return _images[id] = cached; // re-insert = most recently used
+    }
+    if (_images.length >= _imageCacheSize) {
+      _images.remove(_images.keys.first);
+    }
+    final f = _fetchImage(id);
+    _images[id] = f;
+    f.catchError((Object _) {
+      _images.remove(id); // a failed fetch is tried again next time
+      return null;
+    });
+    return f;
+  }
+
+  Future<Uint8List?> _fetchImage(String id) => apiCall(() async {
     // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
     final res = await _dio.get<List<int>>(
       '/shares/$id/image',

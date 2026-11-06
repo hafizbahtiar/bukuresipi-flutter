@@ -10,6 +10,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../family/presentation/family_controller.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 
 enum RecipeShelf { mine, family, community, catalogue }
 
@@ -195,6 +196,10 @@ class RecipeRow extends StatelessWidget {
     ];
     return NotebookRow(
       mark: Icon(_visibilityIcon(recipe.visibility, mine: owner?.isMe ?? true), size: 20, color: nb.inkSoft),
+      trailing: switch (recipe.shareId) {
+        final id? => SharePhoto(id),
+        null => null,
+      },
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

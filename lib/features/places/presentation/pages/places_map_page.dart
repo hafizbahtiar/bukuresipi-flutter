@@ -24,6 +24,7 @@ import '../widgets/north_button.dart';
 import '../widgets/unpinned_actions.dart';
 import '../widgets/view_mode_button.dart';
 import '../location.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 
 /// OpenFreeMap: free vector tiles, no key, no request cap; its style carries the OpenStreetMap attribution.
 const _style = 'https://tiles.openfreemap.org/styles/liberty';
@@ -802,12 +803,20 @@ class _PinSheet extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
-          child: Text(
-            place.restaurant.name,
-            style: text.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              height: 1.15,
-            ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  place.restaurant.name,
+                  style: text.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                  ),
+                ),
+              ),
+              if (place.shareId case final id?) SharePhoto(id, size: 64),
+            ],
           ),
         ),
         if (b != null)

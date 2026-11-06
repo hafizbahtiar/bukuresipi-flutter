@@ -129,4 +129,18 @@ void main() {
       [('s-2', false, false), ('s-1', true, true)],
     );
   });
+
+  test('an image is fetched once per share; a failed fetch is tried again', () async {
+    var status = 404;
+    final repo = make((o) => (status, null));
+    expect(await repo.image('s1'), isNull);
+    expect(await repo.image('s1'), isNull);
+    expect(adapter.requests.where((r) => r.path.endsWith('/shares/s1/image')), hasLength(1));
+
+    status = 500;
+    await expectLater(repo.image('s2'), throwsA(isA<ApiException>()));
+    status = 404;
+    expect(await repo.image('s2'), isNull);
+    expect(adapter.requests.where((r) => r.path.endsWith('/shares/s2/image')), hasLength(2));
+  });
 }

@@ -28,11 +28,15 @@ class Recipe {
     this.stepCount = 0,
     this.visibility = RecipeVisibility.private,
     this.owner,
+    this.shareId,
   });
 
   final String id;
   final String name;
   final DateTime createdAt;
+
+  /// The share it came from: its photo is the list thumbnail (none = no photo).
+  final String? shareId;
   final RecipeVisibility visibility;
   final RecipeOwner? owner;
 
