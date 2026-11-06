@@ -1433,7 +1433,6 @@
   "@legendFamily": {},
   "legendFamilyHint": "Saved by someone in your family.",
   "@legendFamilyHint": {},
-  "legendCommunity": "Other restaurants",
   "@legendCommunity": {},
   "legendHere": "You are here",
   "@legendHere": {},
@@ -1443,7 +1442,6 @@
   "@recipeEditSuggestions": {},
   "mapShowCommunity": "Show other users' restaurants",
   "@mapShowCommunity": {},
-  "legendCommunityOwnerHint": "Every other restaurant in Bukuresipi (owner only).",
   "@legendCommunityOwnerHint": {},
   "ownerPlaceSavers": "{n, plural, =0{Saved by no one} =1{Saved by 1 user} other{Saved by {n} users}}",
   "@ownerPlaceSavers": {
@@ -1466,5 +1464,14 @@
   "halalSaysNotHalal": "The post says not halal",
   "@halalSaysNotHalal": {},
   "halalNoClaim": "No halal claim found",
-  "@halalNoClaim": {}
+  "@halalNoClaim": {},
+  "ownerTools": "Owner tools",
+  "legendOtherMap": "Other restaurants: pin from a map",
+  "legendOtherMapHint": "Found by the address lookup (OpenStreetMap, Overture, HERE, a Maps link).",
+  "legendOtherWeb": "Other restaurants: pin from the web",
+  "legendOtherWebHint": "Coordinates found on a web page naming the shop. Worth a check.",
+  "legendOtherHandPin": "Other restaurants: pinned by users",
+  "legendOtherHandPinHint": "Users placed it by hand; it shows the pin most of them agree on.",
+  "legendOtherOwner": "Other restaurants: pinned by you",
+  "legendOtherOwnerHint": "You set this pin as owner; a user's pin never replaces it."
 }

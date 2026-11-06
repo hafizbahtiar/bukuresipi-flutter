@@ -1,3 +1,5 @@
+import '../../places/domain/place.dart';
+
 class OwnerStats {
   const OwnerStats({
     required this.usersTotal,
@@ -253,19 +255,39 @@ class FailedShare {
 class OwnerPlace {
   const OwnerPlace({
     required this.branchId,
+    required this.restaurantId,
     required this.name,
     required this.lat,
     required this.lng,
     required this.savers,
     this.label,
+    this.address,
+    this.city,
+    this.state,
     this.pinSource,
   });
 
   final String branchId;
+  final String restaurantId;
   final String name;
   final String? label;
+  final String? address;
+  final String? city;
+  final String? state;
   final double lat;
   final double lng;
   final String? pinSource;
   final int savers;
+
+  /// As the place screens' branch, for the shared edit sheet.
+  Branch get branch => Branch(
+    id: branchId,
+    label: label,
+    address: address,
+    city: city,
+    state: state,
+    lat: lat,
+    lng: lng,
+    pinSource: pinSource,
+  );
 }

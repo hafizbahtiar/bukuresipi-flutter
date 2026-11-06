@@ -140,8 +140,12 @@ class OwnerRepositoryImpl implements OwnerRepository {
       for (final p in (j['places'] as List).cast<Map<String, dynamic>>())
         OwnerPlace(
           branchId: p['branchId'] as String,
+          restaurantId: p['restaurantId'] as String,
           name: p['name'] as String,
           label: p['label'] as String?,
+          address: p['address'] as String?,
+          city: p['city'] as String?,
+          state: p['state'] as String?,
           lat: (p['lat'] as num).toDouble(),
           lng: (p['lng'] as num).toDouble(),
           pinSource: p['pinSource'] as String?,

@@ -5,12 +5,15 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 
 /// The circles on the map. The map page draws them from these values and the legend paints the same ones, so the two
-/// never disagree. Other users stay anonymous: their restaurants are "other Bukuresipi users", never a name.
+/// never disagree. The other* marks are the owner's: every restaurant, coloured by where its pin came from.
 enum MapMark {
   mine(radius: 8, strokeWidth: 3),
   mineHandPin(radius: 8, strokeWidth: 3),
   family(radius: 8, strokeWidth: 3),
-  community(radius: 5, strokeWidth: 1),
+  otherMap(radius: 5, strokeWidth: 1),
+  otherWeb(radius: 5, strokeWidth: 1),
+  otherHandPin(radius: 5, strokeWidth: 2),
+  otherOwner(radius: 5, strokeWidth: 1),
   here(radius: 6.5, strokeWidth: 2.5);
 
   const MapMark({required this.radius, required this.strokeWidth});
@@ -18,17 +21,30 @@ enum MapMark {
   final double radius;
   final double strokeWidth;
 
+  /// An owner-layer dot by `pin_source`: owner, a user's hand pin, a web page, else a map source (or none).
+  static MapMark forSource(String? source) => switch (source) {
+    'owner' => otherOwner,
+    'user' => otherHandPin,
+    'web' => otherWeb,
+    _ => otherMap,
+  };
+
+  bool get ownerOnly => index >= otherMap.index && index <= otherOwner.index;
+
   Color fill(Notebook nb) => switch (this) {
     mine || mineHandPin => nb.pandan,
     family => Colors.white,
-    community => nb.inkSoft.withValues(alpha: 0.7),
+    otherMap => nb.inkSoft.withValues(alpha: 0.75),
+    otherWeb => nb.kunyit,
+    otherHandPin => Colors.white,
+    otherOwner => nb.ink,
     here => hereBlue,
   };
 
   Color stroke(Notebook nb) => switch (this) {
-    mineHandPin => nb.kunyit,
+    mineHandPin || otherHandPin => nb.kunyit,
     family => nb.pandan,
-    mine || community || here => Colors.white,
+    mine || otherMap || otherWeb || otherOwner || here => Colors.white,
   };
 
   static const hereBlue = Color(0xFF1E88E5);
@@ -113,8 +129,12 @@ class _MapLegendState extends State<MapLegend> {
       (MapMark.mine, l.legendMine, l.legendMineHint),
       (MapMark.mineHandPin, l.legendHandPin, l.legendHandPinHint),
       (MapMark.family, l.legendFamily, l.legendFamilyHint),
-      if (widget.owner)
-        (MapMark.community, l.legendCommunity, l.legendCommunityOwnerHint),
+      if (widget.owner) ...[
+        (MapMark.otherMap, l.legendOtherMap, l.legendOtherMapHint),
+        (MapMark.otherWeb, l.legendOtherWeb, l.legendOtherWebHint),
+        (MapMark.otherHandPin, l.legendOtherHandPin, l.legendOtherHandPinHint),
+        (MapMark.otherOwner, l.legendOtherOwner, l.legendOtherOwnerHint),
+      ],
       (MapMark.here, l.legendHere, l.legendHereHint),
     ];
     return ListView(

@@ -10,6 +10,8 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
+import '../../../auth/presentation/auth_text.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../owner/domain/owner.dart';
 import '../../../owner/domain/owner_repository.dart';
@@ -435,7 +437,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       await map.addCircles(
         [
           for (final a in all)
-            _circle(LatLng(a.lat, a.lng), MapMark.community, nb),
+            _circle(LatLng(a.lat, a.lng), MapMark.forSource(a.pinSource), nb),
         ],
         [
           for (final a in all) {'ownerBranch': a.branchId},
@@ -446,7 +448,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       await map.addCircles(
         [
           for (final n in nearby)
-            _circle(LatLng(n.lat, n.lng), MapMark.community, nb),
+            _circle(LatLng(n.lat, n.lng), MapMark.otherMap, nb),
         ],
         [
           for (final n in nearby) {'nearbyBranch': n.branchId},
@@ -531,7 +533,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       } else if (all != null) {
         showNotebookSheet<void>(
           context,
-          builder: (_) => _OwnerPlaceSheet(place: all),
+          builder: (_) => _OwnerPlaceSheet(place: all, onChanged: _loadAll),
         );
       }
       return;
@@ -995,22 +997,113 @@ class _PinSheet extends StatelessWidget {
   }
 }
 
-/// The owner's look at any restaurant on the map: where its pin came from and how many saved it.
-class _OwnerPlaceSheet extends StatelessWidget {
-  const _OwnerPlaceSheet({required this.place});
+/// The owner's look at any restaurant on the map (one they did not save): where its pin came from, how many saved
+/// it, and the shared edits: edit (with the AI draft), check the restaurant's branches, delete the branch.
+class _OwnerPlaceSheet extends StatefulWidget {
+  const _OwnerPlaceSheet({required this.place, required this.onChanged});
 
   final OwnerPlace place;
+
+  /// The shared data changed: the map reloads the owner's layer.
+  final VoidCallback onChanged;
+
+  @override
+  State<_OwnerPlaceSheet> createState() => _OwnerPlaceSheetState();
+}
+
+class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
+  bool _busy = false;
+
+  OwnerPlace get place => widget.place;
+
+  void _snack(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+
+  Future<void> _edit() async {
+    final places = context.read<PlacesController>();
+    final navigator = Navigator.of(context);
+    final b = place.branch;
+    final saved = await showNotebookSheet<bool>(
+      context,
+      builder: (_) => BranchEditSheet(
+        placeId: '',
+        branch: b,
+        canEditShared: true,
+        onSuggest: () => places.suggestBranch(b.id),
+        onSave: (edit, scope) => places.updateBranch(
+          b.id,
+          label: edit.label,
+          address: edit.address,
+          city: edit.city,
+          state: edit.state,
+          lat: edit.lat,
+          lng: edit.lng,
+          scope: scope,
+        ),
+      ),
+    );
+    if (saved == true) {
+      widget.onChanged();
+      navigator.pop();
+    }
+  }
+
+  Future<void> _run(Future<String?> Function() action) async {
+    final l = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    setState(() => _busy = true);
+    try {
+      final done = await action();
+      if (done == null) return;
+      widget.onChanged();
+      _snack(done);
+      navigator.pop();
+    } catch (e) {
+      _snack(errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<String?> _check() async {
+    final l = AppLocalizations.of(context);
+    final done = await context.read<PlacesController>().tidyBranches(
+      place.restaurantId,
+    );
+    return l.branchesChecked(done.merged, done.removed);
+  }
+
+  Future<String?> _delete() async {
+    final l = AppLocalizations.of(context);
+    final places = context.read<PlacesController>();
+    final sure = await showNotebookDialog(
+      context,
+      message: l.deleteBranchConfirm(
+        place.label ?? place.address ?? place.name,
+      ),
+      tone: DialogTone.danger,
+      confirmLabel: l.delete,
+    );
+    if (!sure) return null;
+    await places.deleteBranch(place.branchId);
+    return l.deleteBranch;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
+    final where = [
+      for (final line in [place.address, place.city, place.state])
+        if (line != null && line.isNotEmpty) line,
+    ].join(', ');
     return ListView(
       shrinkWrap: true,
       children: [
         NotebookRow(
-          mark: const MapMarkDot(MapMark.community),
+          mark: MapMarkDot(MapMark.forSource(place.pinSource)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1021,6 +1114,11 @@ class _OwnerPlaceSheet extends StatelessWidget {
               if (place.label != null && place.label != place.name)
                 Text(
                   place.label!,
+                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              if (where.isNotEmpty)
+                Text(
+                  where,
                   style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                 ),
             ],
@@ -1033,6 +1131,22 @@ class _OwnerPlaceSheet extends StatelessWidget {
         NotebookRow(
           mark: Icon(Icons.place_outlined, size: 20, color: nb.inkSoft),
           child: Text(l.ownerPlacePinSource(place.pinSource ?? '-')),
+        ),
+        NotebookHeading(l.ownerTools),
+        NotebookRow(
+          mark: Icon(Icons.edit_outlined, size: 20, color: nb.pandanDeep),
+          onTap: _busy ? null : _edit,
+          child: Text(l.editBranch),
+        ),
+        NotebookRow(
+          mark: Icon(Icons.merge_type, size: 20, color: nb.pandanDeep),
+          onTap: _busy ? null : () => _run(_check),
+          child: Text(l.checkBranches),
+        ),
+        NotebookRow(
+          mark: Icon(Icons.delete_outline, size: 20, color: nb.margin),
+          onTap: _busy ? null : () => _run(_delete),
+          child: Text(l.deleteBranch, style: TextStyle(color: nb.margin)),
         ),
       ],
     );
