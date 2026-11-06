@@ -10,7 +10,7 @@ Everything Play Console > Grow users > Store presence > **Main store listing** a
 | Full description (max 4000) | below |
 | App icon (512 x 512) | `icon-512.png` (from `assets/brand/icon.png`: full square, Play rounds it) |
 | Feature graphic (1024 x 500) | `feature-ms.png` (Malay listing), `feature-en.png` (English) |
-| Phone screenshots (2-8, 9:16) | `screens/*.png`, made by `./frame.sh` (below) |
+| Phone screenshots (2-8, 9:16) | `screens/ms/1-6.png` (Malay listing), `screens/en/1-6.png` (English), made by `./screens.sh` (below) |
 
 No other app's name or logo (TikTok, Instagram...) in the icon, feature graphic or screenshots: Play's metadata
 policy. The description may say which links work, as plain words.
@@ -98,15 +98,14 @@ Privacy: https://bukuresipi.com/en/privacy
 
 ## Screenshots
 
-Take them on the phone (signed in to an account with real content, not the reviewer's empty one), copy them to
-`store/screens/raw/`, then `./store/frame.sh`: each becomes a 1080 x 1920 PNG in `store/screens/`. Suggested 6, in
-this order (the first 2-3 show in search results):
+Banners (1080 x 1920): a caption on the brand green, then the screenshot in a phone frame with the status and
+navigation bars cropped off. Captions are in `screen.html`.
 
-1. A recipe (ingredients + steps)
-2. The map with saved places
-3. The book (list of places and recipes)
-4. A restaurant's branch with rating and halal quote
-5. The shopping list
-6. Family
+1. Put the six phone screenshots in `screens/raw/` named `1-book`, `2-recipe`, `3-steps`, `4-map`, `5-place`,
+   `6-shopping` (`.jpeg`). Copy them off the phone by cable or Google Drive, **not WhatsApp** (it shrinks them to
+   485 px wide, which looks soft in the banner).
+2. `./store/screens.sh` -> `screens/ms/1.png ... 6.png` and `screens/en/1.png ... 6.png`.
+3. Upload in order: the first 2-3 show in search results.
 
-Hide anything private first: other people's names or emails, your notification bar if it shows messages.
+For the English listing, take the shots with the app in English (Account > Language > EN) and render again.
+Hide anything private first: other people's names or emails, message notifications.

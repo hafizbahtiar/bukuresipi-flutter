@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- Play phone screenshot banner (1080 x 1920): caption + the app screenshot in a phone frame. Rendered by
+     screens.sh as screens/<lang>/<n>.png; ?lang=ms|en&n=1..6 picks the caption and screens/raw/<n>-*.jpeg. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Familjen+Grotesk:wght@600;700&display=block">
+<style>
+  html,body{margin:0;width:1080px;height:1920px;overflow:hidden}
+  body{background:#1f4a29;color:#fff;font-family:'Familjen Grotesk',sans-serif;text-align:center}
+  .cap{padding:120px 80px 0;height:330px;box-sizing:border-box}
+  h1{margin:0;font-size:78px;line-height:1.05;letter-spacing:-.03em}
+  p{margin:22px 0 0;font-family:'Caveat',cursive;font-size:52px;color:#f6c945}
+  /* The phone: the status bar (top 8.3% of the width) and the navigation bar (bottom 12%) are cropped away. */
+  .phone{margin:60px auto 0;width:720px;padding:16px;background:#0f2414;border-radius:72px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+  .shot{width:720px;height:calc(720px * 2400 / 1080 - 720px * .083 - 720px * .12);overflow:hidden;border-radius:56px;background:#000}
+  .shot img{display:block;width:100%;margin-top:calc(-720px * .083)}
+</style></head>
+<body>
+  <div class="cap"><h1 id="t"></h1><p id="s"></p></div>
+  <div class="phone"><div class="shot"><img id="img" alt=""></div></div>
+<script>
+  const q = new URLSearchParams(location.search), en = q.get('lang') === 'en', n = +q.get('n')
+  const caps = [
+    ['book',     'Semua dalam satu buku',      'resipi dan kedai yang anda kongsi',   'All in one book',              'the recipes and places you share'],
+    ['recipe',   'Kongsi siaran, dapat resipi', 'bahan dibaca terus dari siaran',     'Share a post, get the recipe', 'ingredients read from the post'],
+    ['steps',    'Langkah demi langkah',        'seperti yang ditulis pencipta',      'Step by step',                 'as the creator wrote it'],
+    ['map',      'Kedai anda di peta',          'dan kedai berdekatan',               'Your places on a map',         'and what’s nearby'],
+    ['place',    'Cawangan dan nota',           'arah, penilaian dan ulasan',         'Branches and notes',           'directions, ratings and reviews'],
+    ['shopping', 'Senarai beli-belah',          'terus dari resipi, satu ketik',      'A shopping list',              'straight from a recipe, one tap'],
+  ][n - 1]
+  document.getElementById('t').textContent = en ? caps[3] : caps[1]
+  document.getElementById('s').textContent = en ? caps[4] : caps[2]
+  document.getElementById('img').src = `screens/raw/${n}-${caps[0]}.jpeg`
+</script>
+</body></html>
