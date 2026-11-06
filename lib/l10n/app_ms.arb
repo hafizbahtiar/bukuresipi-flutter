@@ -583,5 +583,18 @@
   "variantStepsThereUnknown": "Cara masak ada di laman resepi asal.",
   "variantUnlinked": "tiada dalam katalog",
   "variantOpen": "Buka resepi",
-  "variantSave": "Simpan ke buku saya"
+  "variantSave": "Simpan ke buku saya",
+  "ownerTesterDone": "Selesai",
+  "ownerTesterResend": "Hantar semula",
+  "ownerTesterInviteConfirm": "Emel pautan ujian kepada {email}? Tambah emel ini ke ujian tertutup Play Console dahulu.",
+  "ownerTesterResendConfirm": "Hantar jemputan kepada {email} sekali lagi?",
+  "ownerTesterInvited": "Jemputan dihantar.",
+  "ownerTesterInvitedOn": "dijemput {date}",
+  "emailSent": "Dihantar",
+  "emailDelivered": "Diterima",
+  "emailOpened": "Dibuka",
+  "emailDelayed": "Tertangguh",
+  "emailBounced": "Gagal sampai",
+  "emailComplained": "Ditanda spam",
+  "emailUnknown": "Tidak diketahui"
 }

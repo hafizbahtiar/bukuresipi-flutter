@@ -57,6 +57,9 @@ abstract interface class OwnerRepository {
   /// Every pinned branch, for the owner's map.
   Future<List<OwnerPlace>> places();
 
+  /// Done: [email] is in the Play closed test; the server emails them the opt-in link (again = sent again).
+  Future<void> inviteTester(String email);
+
   /// Website tester signups, oldest first.
   Future<List<Tester>> testers();
 }

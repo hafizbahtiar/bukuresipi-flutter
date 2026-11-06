@@ -112,6 +112,11 @@ class FakeOwner implements OwnerRepository {
   @override
   Future<List<Tester>> testers() async => testerList;
 
+  final invited = <String>[];
+
+  @override
+  Future<void> inviteTester(String email) async => invited.add(email);
+
   @override
   Future<List<OwnerPlace>> places() async => const [];
 
