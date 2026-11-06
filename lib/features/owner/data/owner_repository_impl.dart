@@ -134,6 +134,14 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
+  Future<void> hideRecipe(String recipeId) => apiCall(
+    () => _dio.post<void>(
+      '/owner/recipe-reports/resolve',
+      data: {'recipeId': recipeId, 'action': 'hide'},
+    ),
+  );
+
+  @override
   Future<List<OwnerPlace>> places() => apiCall(() async {
     final j = await _get('/owner/places');
     return [

@@ -8,7 +8,9 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../owner/domain/owner_repository.dart';
 import '../../../family/presentation/ask.dart';
 import '../../../family/presentation/family_controller.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
@@ -91,18 +93,31 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     // In a family: which list, asked the first time, then remembered.
     var family = false;
     if (inFamily) {
-      final picked = shopping.lastRecipeList ?? await showNotebookSheet<bool>(
-        context,
-        builder: (sheet) => ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: 16),
-          children: [
-            NotebookRow(child: Text(l.shoppingWhichList, style: Theme.of(sheet).textTheme.titleMedium)),
-            NotebookRow(onTap: () => Navigator.of(sheet).pop(false), child: Text(l.shoppingMine)),
-            NotebookRow(onTap: () => Navigator.of(sheet).pop(true), child: Text(l.shoppingFamily)),
-          ],
-        ),
-      );
+      final picked =
+          shopping.lastRecipeList ??
+          await showNotebookSheet<bool>(
+            context,
+            builder: (sheet) => ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.only(bottom: 16),
+              children: [
+                NotebookRow(
+                  child: Text(
+                    l.shoppingWhichList,
+                    style: Theme.of(sheet).textTheme.titleMedium,
+                  ),
+                ),
+                NotebookRow(
+                  onTap: () => Navigator.of(sheet).pop(false),
+                  child: Text(l.shoppingMine),
+                ),
+                NotebookRow(
+                  onTap: () => Navigator.of(sheet).pop(true),
+                  child: Text(l.shoppingFamily),
+                ),
+              ],
+            ),
+          );
       if (picked == null) return;
       family = picked;
     }
@@ -136,15 +151,28 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       builder: (sheet) {
         final nb = Notebook.of(sheet);
         final text = Theme.of(sheet).textTheme;
-        Widget choice(RecipeVisibility v, String label, String hint) => NotebookRow(
-          mark: Icon(visibilityIcon(v), size: 20, color: v == recipe.visibility ? nb.pandan : nb.inkSoft),
-          trailing: v == recipe.visibility ? Icon(Icons.check, color: nb.pandan) : null,
-          onTap: () => Navigator.of(sheet).pop(v),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [Text(label), Text(hint, style: text.bodySmall?.copyWith(color: nb.inkSoft))],
-          ),
-        );
+        Widget choice(RecipeVisibility v, String label, String hint) =>
+            NotebookRow(
+              mark: Icon(
+                visibilityIcon(v),
+                size: 20,
+                color: v == recipe.visibility ? nb.pandan : nb.inkSoft,
+              ),
+              trailing: v == recipe.visibility
+                  ? Icon(Icons.check, color: nb.pandan)
+                  : null,
+              onTap: () => Navigator.of(sheet).pop(v),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label),
+                  Text(
+                    hint,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                ],
+              ),
+            );
         return ListView(
           shrinkWrap: true,
           padding: const EdgeInsets.only(bottom: 16),
@@ -178,7 +206,12 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         shrinkWrap: true,
         padding: const EdgeInsets.only(bottom: 16),
         children: [
-          NotebookRow(child: Text(l.recipeReportTitle, style: Theme.of(sheet).textTheme.titleMedium)),
+          NotebookRow(
+            child: Text(
+              l.recipeReportTitle,
+              style: Theme.of(sheet).textTheme.titleMedium,
+            ),
+          ),
           for (final (code, label) in [
             ('copyright', l.reasonCopyright),
             ('spam', l.reasonSpam),
@@ -186,7 +219,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ('wrong_info', l.reasonWrongInfo),
             ('other', l.reasonOther),
           ])
-            NotebookRow(onTap: () => Navigator.of(sheet).pop(code), child: Text(label)),
+            NotebookRow(
+              onTap: () => Navigator.of(sheet).pop(code),
+              child: Text(label),
+            ),
         ],
       ),
     );
@@ -194,6 +230,25 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     try {
       await recipes.report(recipe.id, reason);
       _snack(l.recipeReported);
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
+  /// Owner: take someone's public recipe off Community without waiting for a report. Reloads to show it hidden.
+  Future<void> _hide(RecipeDetail recipe) async {
+    final l = AppLocalizations.of(context);
+    final owner = context.read<OwnerRepository>();
+    final sure = await showNotebookDialog(
+      context,
+      message: l.recipeHideConfirm,
+      tone: DialogTone.danger,
+      confirmLabel: l.recipeHide,
+    );
+    if (!sure) return;
+    try {
+      await owner.hideRecipe(recipe.id);
+      await _load();
     } catch (e) {
       _snack(errorText(l, e));
     }
@@ -295,12 +350,21 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               label: l.recipeCopy,
               onPressed: () => _copy(recipe),
             ),
-            if (recipe.visibility == RecipeVisibility.public && recipe.owner != null)
-              DockAction(
-                icon: Icons.flag_outlined,
-                label: l.report,
-                onPressed: () => _report(recipe),
-              ),
+            if (recipe.visibility == RecipeVisibility.public &&
+                recipe.owner != null)
+              // The owner removes it from Community directly; anyone else reports it to the owner.
+              (context.read<AuthController?>()?.user?.isOwner ?? false)
+                  ? DockAction(
+                      icon: Icons.visibility_off_outlined,
+                      label: l.recipeHide,
+                      danger: true,
+                      onPressed: recipe.hidden ? null : () => _hide(recipe),
+                    )
+                  : DockAction(
+                      icon: Icons.flag_outlined,
+                      label: l.report,
+                      onPressed: () => _report(recipe),
+                    ),
           ],
         ],
       ),
@@ -320,12 +384,25 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ),
             if (_byLine(l, recipe) case final by?)
               Padding(
-                padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
-                child: Text(by, style: text.bodyMedium?.copyWith(color: nb.inkSoft)),
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 10,
+                  4,
+                  20,
+                  0,
+                ),
+                child: Text(
+                  by,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
               ),
             if (recipe.canEdit)
               Padding(
-                padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 6, 20, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 4,
+                  6,
+                  20,
+                  0,
+                ),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: ActionChip(
@@ -342,8 +419,15 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ),
             if (recipe.hidden)
               NotebookRow(
-                mark: Icon(Icons.visibility_off_outlined, size: 18, color: nb.margin),
-                child: Text(l.recipeHidden, style: text.bodyMedium?.copyWith(color: nb.inkSoft)),
+                mark: Icon(
+                  Icons.visibility_off_outlined,
+                  size: 18,
+                  color: nb.margin,
+                ),
+                child: Text(
+                  l.recipeHidden,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
               ),
             if (recipe.shareId case final id?)
               Padding(

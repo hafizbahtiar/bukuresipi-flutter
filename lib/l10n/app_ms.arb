@@ -564,5 +564,7 @@
   "legendOtherHandPin": "Kedai lain: pin pengguna",
   "legendOtherHandPinHint": "Pengguna letak pin sendiri; yang ditunjuk ialah pin yang paling ramai setuju.",
   "legendOtherOwner": "Kedai lain: pin anda",
-  "legendOtherOwnerHint": "Anda tetapkan pin ini sebagai pemilik; pin pengguna tidak menggantikannya."
+  "legendOtherOwnerHint": "Anda tetapkan pin ini sebagai pemilik; pin pengguna tidak menggantikannya.",
+  "recipeHide": "Sembunyi",
+  "recipeHideConfirm": "Keluarkan resipi ini dari Komuniti? Penulisnya masih nampak; laporan terbuka ditutup sebagai disembunyi."
 }

@@ -44,6 +44,9 @@ abstract interface class OwnerRepository {
   /// Deletes a rating and its review for good (its votes and reports too).
   Future<void> deleteRating(String ratingId);
 
+  /// Takes a public recipe off Community (its open reports close as hidden). The author still sees it.
+  Future<void> hideRecipe(String recipeId);
+
   /// Every pinned branch, for the owner's map.
   Future<List<OwnerPlace>> places();
 

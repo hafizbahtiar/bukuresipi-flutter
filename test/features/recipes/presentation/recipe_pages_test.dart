@@ -1,3 +1,6 @@
+import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
+import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
+import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -16,6 +19,8 @@ import 'package:provider/single_child_widget.dart';
 import '../../places/places_fixtures.dart';
 import '../../shares/presentation/share_intake_test.dart' show FakeShares;
 import '../recipes_fixtures.dart';
+import '../../../fakes.dart';
+import '../../owner/owner_fixtures.dart';
 
 Widget app({
   required List<SingleChildWidget> providers,
@@ -375,4 +380,53 @@ void main() {
       expect(find.text('tepung beras'), findsNothing);
     },
   );
+
+  for (final owner in [true, false]) {
+    testWidgets(
+      'someone else\'s public recipe: ${owner ? 'the owner hides it' : 'a user reports it'}',
+      (t) async {
+        final auth = AuthController(
+          FakeAuthRepository()
+            ..session = true
+            ..meResult = User(
+              id: 'u-1',
+              email: 'a@example.com',
+              name: 'Ali',
+              role: owner ? 'owner' : 'user',
+              lang: 'ms',
+              emailVerified: true,
+            ),
+        );
+        await auth.restore();
+        final ownerRepo = FakeOwner();
+        final recipes = RecipesController(
+          FakeRecipes()
+            ..detailResult = recipeDetail(
+              canEdit: false,
+              visibility: RecipeVisibility.public,
+              owner: const RecipeOwner(name: 'Siti', isMe: false),
+            ),
+        );
+        await t.pumpWidget(
+          app(
+            providers: [
+              ChangeNotifierProvider.value(value: recipes),
+              ChangeNotifierProvider.value(value: auth),
+              Provider<OwnerRepository>.value(value: ownerRepo),
+            ],
+            home: const RecipeDetailPage(id: 'r-1'),
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(find.text('Hide'), owner ? findsOneWidget : findsNothing);
+        expect(find.text('Report'), owner ? findsNothing : findsOneWidget);
+        if (!owner) return;
+        await t.tap(find.text('Hide'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Hide').last);
+        await t.pumpAndSettle();
+        expect(ownerRepo.hiddenRecipes, ['r-1']);
+      },
+    );
+  }
 }

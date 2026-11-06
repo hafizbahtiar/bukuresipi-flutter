@@ -1433,7 +1433,6 @@
   "@legendFamily": {},
   "legendFamilyHint": "Saved by someone in your family.",
   "@legendFamilyHint": {},
-  "@legendCommunity": {},
   "legendHere": "You are here",
   "@legendHere": {},
   "legendHereHint": "Your phone's location.",
@@ -1442,7 +1441,6 @@
   "@recipeEditSuggestions": {},
   "mapShowCommunity": "Show other users' restaurants",
   "@mapShowCommunity": {},
-  "@legendCommunityOwnerHint": {},
   "ownerPlaceSavers": "{n, plural, =0{Saved by no one} =1{Saved by 1 user} other{Saved by {n} users}}",
   "@ownerPlaceSavers": {
     "placeholders": {
@@ -1466,12 +1464,25 @@
   "halalNoClaim": "No halal claim found",
   "@halalNoClaim": {},
   "ownerTools": "Owner tools",
+  "@ownerTools": {},
   "legendOtherMap": "Other restaurants: pin from a map",
+  "@legendOtherMap": {},
   "legendOtherMapHint": "Found by the address lookup (OpenStreetMap, Overture, HERE, a Maps link).",
+  "@legendOtherMapHint": {},
   "legendOtherWeb": "Other restaurants: pin from the web",
+  "@legendOtherWeb": {},
   "legendOtherWebHint": "Coordinates found on a web page naming the shop. Worth a check.",
+  "@legendOtherWebHint": {},
   "legendOtherHandPin": "Other restaurants: pinned by users",
+  "@legendOtherHandPin": {},
   "legendOtherHandPinHint": "Users placed it by hand; it shows the pin most of them agree on.",
+  "@legendOtherHandPinHint": {},
   "legendOtherOwner": "Other restaurants: pinned by you",
-  "legendOtherOwnerHint": "You set this pin as owner; a user's pin never replaces it."
+  "@legendOtherOwner": {},
+  "legendOtherOwnerHint": "You set this pin as owner; a user's pin never replaces it.",
+  "@legendOtherOwnerHint": {},
+  "recipeHide": "Hide",
+  "@recipeHide": {},
+  "recipeHideConfirm": "Take this recipe off Community? Its author still sees it; open reports close as hidden.",
+  "@recipeHideConfirm": {}
 }
