@@ -10,25 +10,31 @@ import '../recipes_controller.dart';
 
 /// Edits a recipe: its name, then one row per ingredient and per step (drag to reorder; Enter or a pasted list splits a
 /// row). Amount and unit stay part of the line ("2 cawan gula"): the server reads them. Pops the saved recipe.
+/// No [recipe] = a new one typed from scratch (POST /recipes), starting with one empty row in each section.
 class RecipeEditPage extends StatefulWidget {
-  const RecipeEditPage({super.key, required this.recipe});
+  const RecipeEditPage({super.key, this.recipe});
 
-  final RecipeDetail recipe;
+  final RecipeDetail? recipe;
 
   @override
   State<RecipeEditPage> createState() => _RecipeEditPageState();
 }
 
 class _RecipeEditPageState extends State<RecipeEditPage> {
-  late final _name = TextEditingController(text: widget.recipe.name);
-  late final _ingredients = [
-    for (final i in widget.recipe.ingredients)
-      TextEditingController(text: i.rawText ?? i.label),
-  ];
-  late final _steps = [
-    for (final s in widget.recipe.steps)
-      TextEditingController(text: s.instruction),
-  ];
+  late final _name = TextEditingController(text: widget.recipe?.name);
+  late final _ingredients = switch (widget.recipe) {
+    final r? => [
+      for (final i in r.ingredients)
+        TextEditingController(text: i.rawText ?? i.label),
+    ],
+    null => [TextEditingController()],
+  };
+  late final _steps = switch (widget.recipe) {
+    final r? => [
+      for (final s in r.steps) TextEditingController(text: s.instruction),
+    ],
+    null => [TextEditingController()],
+  };
   // Removed rows: disposed with the page, not while their field may still be mounted this frame.
   final _gone = <TextEditingController>[];
   TextEditingController? _fresh; // a row just made: it takes the focus
@@ -70,12 +76,20 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     if (name.isEmpty) return;
     setState(() => _saving = true);
     try {
-      final saved = await context.read<RecipesController>().edit(
-        widget.recipe.id,
-        name: name,
-        ingredients: _lines(_ingredients),
-        steps: _lines(_steps),
-      );
+      final recipes = context.read<RecipesController>();
+      final saved = switch (widget.recipe) {
+        final r? => await recipes.edit(
+          r.id,
+          name: name,
+          ingredients: _lines(_ingredients),
+          steps: _lines(_steps),
+        ),
+        null => await recipes.create(
+          name: name,
+          ingredients: _lines(_ingredients),
+          steps: _lines(_steps),
+        ),
+      };
       navigator.pop(saved);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
@@ -156,7 +170,9 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
-        title: NotebookTitle(l.recipeEdit),
+        title: NotebookTitle(
+          widget.recipe == null ? l.recipeNew : l.recipeEdit,
+        ),
         actions: [
           TextButton(onPressed: _saving ? null : _save, child: Text(l.save)),
         ],

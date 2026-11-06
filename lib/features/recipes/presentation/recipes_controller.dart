@@ -93,6 +93,20 @@ class RecipesController extends ChangeNotifier {
       _repo.linkIngredient(id, index, name);
 
   /// Throws ApiException. The book list is reloaded: the name or counts may have changed.
+  Future<RecipeDetail> create({
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) async {
+    final saved = await _repo.create(
+      name: name,
+      ingredients: ingredients,
+      steps: steps,
+    );
+    unawaited(load());
+    return saved;
+  }
+
   Future<RecipeDetail> edit(
     String id, {
     required String name,

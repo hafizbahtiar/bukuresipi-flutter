@@ -172,6 +172,18 @@ class FakeRecipes implements RecipesRepository {
 
   final edited = <(String, String, List<String>, List<String>)>[];
 
+  final created = <(String, List<String>, List<String>)>[];
+
+  @override
+  Future<RecipeDetail> create({
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) async {
+    created.add((name, ingredients, steps));
+    return detailResult!;
+  }
+
   @override
   Future<RecipeDetail> edit(
     String id, {

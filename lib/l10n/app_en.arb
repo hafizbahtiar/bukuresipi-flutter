@@ -1416,5 +1416,7 @@
   "errPasswordRequired": "Set a password first, so you can still sign in.",
   "@errPasswordRequired": {},
   "errGoogleFailed": "Google didn't let us sign you in. Try again; if it keeps happening, the app's Google setup needs checking.",
-  "@errGoogleFailed": {}
+  "@errGoogleFailed": {},
+  "recipeNew": "New recipe",
+  "recipeNewRow": "Write your own recipe"
 }

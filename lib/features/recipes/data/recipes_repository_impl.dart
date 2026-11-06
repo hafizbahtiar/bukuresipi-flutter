@@ -130,6 +130,19 @@ class RecipesRepositoryImpl implements RecipesRepository {
       });
 
   @override
+  Future<RecipeDetail> create({
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) => apiCall(() async {
+    final data = (await _dio.post<Map<String, dynamic>>(
+      '/recipes',
+      data: {'name': name, 'ingredients': ingredients, 'steps': steps},
+    )).data!;
+    return recipeDetailFromJson(data);
+  });
+
+  @override
   Future<RecipeDetail> edit(
     String id, {
     required String name,
