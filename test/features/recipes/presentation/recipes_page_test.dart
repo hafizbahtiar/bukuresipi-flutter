@@ -95,7 +95,7 @@ void main() {
       await t.pumpAndSettle();
       final l = lookupAppLocalizations(const Locale('en'));
 
-      await t.tap(find.text(l.recipeNewRow));
+      await t.tap(find.byType(FloatingActionButton));
       await t.pumpAndSettle();
       expect(find.text(l.recipeNew), findsOneWidget);
       await t.tap(find.text(l.save));

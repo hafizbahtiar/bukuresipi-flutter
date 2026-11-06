@@ -108,6 +108,21 @@ abstract final class AppTheme {
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
+      // Pandan, pill-shaped like the filled buttons: the book's one "new" action (Recipes > New recipe).
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: nb.pandan,
+        foregroundColor: Colors.white,
+        shape: const StadiumBorder(),
+        // Compact: a 44 px pill, not Material's 56 px slab.
+        extendedSizeConstraints: const BoxConstraints.tightFor(height: 44),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
+        extendedIconLabelSpacing: 8,
+        iconSize: 20,
+        extendedTextStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: nb.paper,
         surfaceTintColor: Colors.transparent,

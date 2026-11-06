@@ -125,22 +125,7 @@ class _RecipesPageState extends State<RecipesPage> {
                     : recipes.familyRecipes)
                 .where((r) => matches(r.name))
                 .toList();
-        rows = [
-          if (shelf == RecipeShelf.mine && _query.isEmpty)
-            NotebookRow(
-              key: const ValueKey('recipe-new'),
-              mark: Icon(Icons.edit_note, size: 22, color: nb.pandanDeep),
-              onTap: _newRecipe,
-              child: Text(
-                l.recipeNewRow,
-                style: TextStyle(
-                  color: nb.pandanDeep,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          for (final r in list) RecipeRow(recipe: r),
-        ];
+        rows = [for (final r in list) RecipeRow(recipe: r)];
         if (list.isEmpty && recipes.loaded) {
           empty = shelf == RecipeShelf.mine
               ? l.recipesEmptyMine
@@ -168,6 +153,13 @@ class _RecipesPageState extends State<RecipesPage> {
     }
 
     return Scaffold(
+      floatingActionButton: shelf == RecipeShelf.mine
+          ? FloatingActionButton.extended(
+              onPressed: _newRecipe,
+              icon: const Icon(Icons.edit_note),
+              label: Text(l.recipeNew),
+            )
+          : null,
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.recipesTitle)),
       body: NotebookPage(
         child: RefreshIndicator(
@@ -177,7 +169,9 @@ class _RecipesPageState extends State<RecipesPage> {
               : _fetch(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(
+              bottom: 96,
+            ), // the last row clears the New recipe button
             children: [
               NotebookRow(
                 mark: Icon(Icons.search, size: 20, color: nb.inkSoft),

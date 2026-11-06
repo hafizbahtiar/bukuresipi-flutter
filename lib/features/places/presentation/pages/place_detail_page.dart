@@ -92,7 +92,9 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     if (branch == null) return;
     final router = GoRouter.of(context);
     try {
-      final saved = await context.read<PlacesController>().saveBranch(branch.id);
+      final saved = await context.read<PlacesController>().saveBranch(
+        branch.id,
+      );
       _snack(l.placeSavedToMine);
       router.replace('/places/${saved.id}');
     } catch (e) {
@@ -270,12 +272,18 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 NotebookRow(
                   mark: Icon(Icons.lock_outline, size: 20, color: nb.inkSoft),
                   onTap: () => _setPrivate(place, !place.private),
-                  trailing: Switch(value: place.private, onChanged: (v) => _setPrivate(place, v)),
+                  trailing: Switch(
+                    value: place.private,
+                    onChanged: (v) => _setPrivate(place, v),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(l.placeOnlyMe),
-                      Text(l.placeOnlyMeHint, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
+                      Text(
+                        l.placeOnlyMeHint,
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
                     ],
                   ),
                 ),

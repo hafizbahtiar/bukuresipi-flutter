@@ -540,5 +540,17 @@
   "errPasswordRequired": "Tetapkan kata laluan dahulu supaya anda masih boleh log masuk.",
   "errGoogleFailed": "Google tidak membenarkan kami log masuk anda. Cuba lagi; jika berulang, tetapan Google aplikasi perlu disemak.",
   "recipeNew": "Resipi baharu",
-  "recipeNewRow": "Tulis resipi sendiri"
+  "mapLegend": "Maksud titik di peta",
+  "legendMine": "Kedai anda",
+  "legendMineHint": "Kedai makan yang anda simpan.",
+  "legendHandPin": "Kedai anda, pin sendiri",
+  "legendHandPinHint": "Anda letak pin ini sendiri kerana peta tidak menjumpainya.",
+  "legendFamily": "Kedai keluarga anda",
+  "legendFamilyHint": "Disimpan oleh ahli keluarga anda.",
+  "legendCommunity": "Kedai lain",
+  "legendCommunityHint": "Disimpan oleh pengguna Bukuresipi lain. Ketik untuk lihat atau simpan.",
+  "legendHere": "Anda di sini",
+  "legendHereHint": "Lokasi telefon anda.",
+  "recipeEditSuggestions": "DARI KATALOG",
+  "mapShowCommunity": "Tunjuk kedai pengguna lain"
 }
