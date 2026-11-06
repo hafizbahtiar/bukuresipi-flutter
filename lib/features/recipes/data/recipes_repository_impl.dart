@@ -162,6 +162,7 @@ Recipe recipeFromJson(Map<String, dynamic> j) => Recipe(
   missing: _missing(j['missing']),
   ingredientCount: (j['ingredientCount'] as num?)?.toInt() ?? 0,
   stepCount: (j['stepCount'] as num?)?.toInt() ?? 0,
+  shareId: j['shareId'] as String?,
 );
 
 RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(

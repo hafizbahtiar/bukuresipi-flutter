@@ -13,11 +13,11 @@ final _png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
 );
 
-Future<void> _pump(WidgetTester t, FakeShares repo) async {
+Future<void> _pump(WidgetTester t, FakeShares repo, {Widget child = const ShareImage('s1')}) async {
   await t.pumpWidget(
     Provider<ShareRepository>.value(
       value: repo,
-      child: const MaterialApp(home: Scaffold(body: ShareImage('s1'))),
+      child: MaterialApp(home: Scaffold(body: child)),
     ),
   );
   await t.pumpAndSettle();
@@ -31,6 +31,15 @@ void main() {
 
   testWidgets('takes no space when there is none', (t) async {
     await _pump(t, FakeShares());
+    expect(find.byType(Image), findsNothing);
+  });
+
+  testWidgets('the taped photo in a list row: shown when there is one, nothing otherwise', (t) async {
+    await _pump(t, FakeShares()..imageBytes = _png, child: const SharePhoto('s1'));
+    expect(find.byType(Image), findsOneWidget);
+    expect(t.getSize(find.byType(Image)), const Size(52, 52));
+
+    await _pump(t, FakeShares(), child: const SharePhoto('s2'));
     expect(find.byType(Image), findsNothing);
   });
 }

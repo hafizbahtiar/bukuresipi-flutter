@@ -12,6 +12,7 @@ import '../../../shares/presentation/recent_shares.dart';
 import '../../../shares/presentation/widgets/share_reading.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 
 enum BookFilter { all, mine, family }
 
@@ -195,7 +196,15 @@ class PlaceTile extends StatelessWidget {
     final where = pinned ? (branch?.where ?? branch?.label) : l.noPin;
     final others = place.savedByOthers;
     return NotebookRow(
-      trailing: place.private ? Tooltip(message: l.placeOnlyMe, child: Icon(Icons.lock_outline, size: 18, color: nb.inkSoft)) : null,
+      trailing: place.private || place.shareId != null
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (place.private) Tooltip(message: l.placeOnlyMe, child: Icon(Icons.lock_outline, size: 18, color: nb.inkSoft)),
+                if (place.shareId case final id?) SharePhoto(id),
+              ],
+            )
+          : null,
       // Green = on the map, yellow = no pin yet (as PinMark).
       mark: Icon(
         Icons.storefront,
@@ -250,6 +259,10 @@ class RecipeTile extends StatelessWidget {
     ];
     return NotebookRow(
       mark: Icon(Icons.menu_book, size: 20, color: nb.inkSoft),
+      trailing: switch (recipe.shareId) {
+        final id? => SharePhoto(id),
+        null => null,
+      },
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
