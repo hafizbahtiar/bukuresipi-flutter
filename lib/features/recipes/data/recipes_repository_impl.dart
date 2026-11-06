@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
+import '../domain/recipe_variant.dart';
 import '../domain/recipe.dart';
 import '../domain/recipes_repository.dart';
 
@@ -100,6 +101,16 @@ class RecipesRepositoryImpl implements RecipesRepository {
   Future<RecipeDetail> get(String id) => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>('/recipes/$id')).data!;
     return recipeDetailFromJson(data);
+  });
+
+  @override
+  Future<List<RecipeVariant>> variants(String id) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/recipes/$id/variants'))
+        .data!;
+    return [
+      for (final v in (data['variants'] as List).cast<Map<String, dynamic>>())
+        recipeVariantFromJson(v),
+    ];
   });
 
   @override

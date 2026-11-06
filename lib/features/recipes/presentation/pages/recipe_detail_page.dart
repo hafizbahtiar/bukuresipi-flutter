@@ -18,6 +18,7 @@ import '../../domain/recipe.dart';
 import '../../../shopping/presentation/shopping_controller.dart';
 import '../recipes_controller.dart';
 import '../widgets/ingredient_picker.dart';
+import '../widgets/recipe_variants.dart';
 import 'recipe_edit_page.dart';
 
 /// One imported recipe as a notebook page: what the post said, with the pieces it did not give marked.
@@ -558,6 +559,11 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   style: nb.hand.copyWith(fontSize: 22, color: nb.inkSoft),
                 ),
                 child: Text(s.instruction),
+              ),
+            if (catalogue)
+              RecipeVariants(
+                recipeId: recipe.id,
+                owner: context.read<AuthController?>()?.user?.isOwner ?? false,
               ),
           ],
         ),

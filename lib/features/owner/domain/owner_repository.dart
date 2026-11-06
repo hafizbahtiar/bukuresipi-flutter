@@ -1,3 +1,4 @@
+import '../../recipes/domain/recipe_variant.dart';
 import 'owner.dart';
 
 /// Owner-only API (/owner/*). Every method throws ApiException (core/network) on failure.
@@ -46,6 +47,12 @@ abstract interface class OwnerRepository {
 
   /// Takes a public recipe off Community (its open reports close as hidden). The author still sees it.
   Future<void> hideRecipe(String recipeId);
+
+  /// Searches the web for a catalogue dish's variants (metered) and replaces the stored list.
+  /// complete = false: a usage cap stopped part of it.
+  Future<({List<RecipeVariant> variants, bool complete})> findVariants(
+    String recipeId,
+  );
 
   /// Every pinned branch, for the owner's map.
   Future<List<OwnerPlace>> places();

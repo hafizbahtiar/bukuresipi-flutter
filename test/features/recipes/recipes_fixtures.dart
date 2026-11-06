@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipes_repository.dart';
 
@@ -85,6 +86,10 @@ RecipeDetail recipeDetail({
 class FakeRecipes implements RecipesRepository {
   List<Recipe> recipes = [];
   RecipeDetail? detailResult;
+  List<RecipeVariant> variantList = const [];
+
+  @override
+  Future<List<RecipeVariant>> variants(String id) async => variantList;
   Object? error;
   Object? detailError;
   final deleted = <String>[];

@@ -1,4 +1,5 @@
 import 'recipe.dart';
+import 'recipe_variant.dart';
 
 /// The user's imported recipes. Every method throws ApiException (core/network) on failure.
 abstract interface class RecipesRepository {
@@ -24,6 +25,9 @@ abstract interface class RecipesRepository {
   Future<void> report(String id, String reason, {String? note});
 
   Future<RecipeDetail> get(String id);
+
+  /// Other web recipes for a catalogue dish, best match first (empty until the owner finds them).
+  Future<List<RecipeVariant>> variants(String id);
 
   /// Takes the recipe off this user's book.
   Future<void> delete(String id);

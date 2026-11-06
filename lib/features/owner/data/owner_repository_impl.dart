@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
+import '../../recipes/domain/recipe_variant.dart';
 import '../domain/owner.dart';
 import '../domain/owner_repository.dart';
 
@@ -140,6 +141,22 @@ class OwnerRepositoryImpl implements OwnerRepository {
       data: {'recipeId': recipeId, 'action': 'hide'},
     ),
   );
+
+  @override
+  Future<({List<RecipeVariant> variants, bool complete})> findVariants(
+    String recipeId,
+  ) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/recipes/$recipeId/variants',
+    )).data!;
+    return (
+      variants: [
+        for (final v in (j['variants'] as List).cast<Map<String, dynamic>>())
+          recipeVariantFromJson(v),
+      ],
+      complete: j['complete'] as bool? ?? true,
+    );
+  });
 
   @override
   Future<List<OwnerPlace>> places() => apiCall(() async {
