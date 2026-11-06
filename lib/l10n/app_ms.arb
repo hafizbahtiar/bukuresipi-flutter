@@ -596,5 +596,13 @@
   "emailDelayed": "Tertangguh",
   "emailBounced": "Gagal sampai",
   "emailComplained": "Ditanda spam",
-  "emailUnknown": "Tidak diketahui"
+  "emailUnknown": "Tidak diketahui",
+  "recipeEditIngredientHint": "Bahan, cth. tepung gandum",
+  "recipeEditAmount": "Jumlah",
+  "recipeEditUnit": "Unit",
+  "recipeEditNoUnit": "Tiada unit",
+  "recipeEditIngredientRequired": "Tulis nama bahan untuk jumlah ini.",
+  "recipeEditStepHint": "Apa yang dibuat dalam langkah ini",
+  "recipeEditDiscard": "Buang perubahan pada resepi ini?",
+  "recipeEditDiscardOk": "Buang"
 }
