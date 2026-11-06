@@ -566,5 +566,22 @@
   "legendOtherOwner": "Kedai lain: pin anda",
   "legendOtherOwnerHint": "Anda tetapkan pin ini sebagai pemilik; pin pengguna tidak menggantikannya.",
   "recipeHide": "Sembunyi",
-  "recipeHideConfirm": "Keluarkan resipi ini dari Komuniti? Penulisnya masih nampak; laporan terbuka ditutup sebagai disembunyi."
+  "recipeHideConfirm": "Keluarkan resipi ini dari Komuniti? Penulisnya masih nampak; laporan terbuka ditutup sebagai disembunyi.",
+  "recipeOpenOriginal": "Resepi asal",
+  "recipeStepsAtOriginal": "Cara masak: lihat resepi asal",
+  "recipeCatalogueFrom": "Katalog Bukuresipi · bahan dari {site}",
+  "variantsTitle": "Variasi resepi",
+  "variantsHint": "Resepi lain untuk hidangan ini di web. Cara masak ada di laman asal.",
+  "variantsNone": "Belum ada variasi. Cari variasi akan mencari di web (guna meter carian dan AI).",
+  "variantsFind": "Cari variasi",
+  "variantsFound": "{n, plural, =0{Tiada variasi dijumpai} other{{n} variasi dijumpai}}",
+  "variantsIncomplete": "Had penggunaan dicapai: sebahagian sahaja disemak. Cuba lagi nanti.",
+  "variantMatch": "{pct} padan",
+  "variantSure": "{pct} pasti",
+  "variantSteps": "{n} langkah",
+  "variantStepsThere": "{n} langkah, di laman resepi asal",
+  "variantStepsThereUnknown": "Cara masak ada di laman resepi asal.",
+  "variantUnlinked": "tiada dalam katalog",
+  "variantOpen": "Buka resepi",
+  "variantSave": "Simpan ke buku saya"
 }

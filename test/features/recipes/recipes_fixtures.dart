@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipes_repository.dart';
 
@@ -56,14 +57,17 @@ RecipeDetail recipeDetail({
   bool canEdit = true,
   RecipeVisibility visibility = RecipeVisibility.private,
   RecipeOwner? owner,
+  RecipeSourceType sourceType = RecipeSourceType.link,
+  String sourceUrl = 'https://www.tiktok.com/@makan/video/1',
 }) => RecipeDetail(
+  sourceType: sourceType,
   canEdit: canEdit,
   visibility: visibility,
   owner: owner,
   id: 'r-1',
   name: 'Nasi Lemak Ayam',
   createdAt: DateTime.utc(2026, 11, 2),
-  sourceUrl: 'https://www.tiktok.com/@makan/video/1',
+  sourceUrl: sourceUrl,
   missing: missing,
   ingredients: const [
     RecipeIngredient(
@@ -82,6 +86,10 @@ RecipeDetail recipeDetail({
 class FakeRecipes implements RecipesRepository {
   List<Recipe> recipes = [];
   RecipeDetail? detailResult;
+  List<RecipeVariant> variantList = const [];
+
+  @override
+  Future<List<RecipeVariant>> variants(String id) async => variantList;
   Object? error;
   Object? detailError;
   final deleted = <String>[];

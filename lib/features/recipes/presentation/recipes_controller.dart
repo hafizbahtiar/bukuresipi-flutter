@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../domain/recipe_variant.dart';
 import '../domain/recipe.dart';
 import '../domain/recipes_repository.dart';
 
@@ -84,6 +85,8 @@ class RecipesController extends ChangeNotifier {
 
   /// Throws ApiException; the detail page shows it.
   Future<RecipeDetail> detail(String id) => _repo.get(id);
+
+  Future<List<RecipeVariant>> variants(String id) => _repo.variants(id);
 
   Future<List<String>> searchIngredients(String query) =>
       _repo.searchIngredients(query);
