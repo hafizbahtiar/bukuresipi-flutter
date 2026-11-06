@@ -188,9 +188,19 @@ class OwnerRepositoryImpl implements OwnerRepository {
           email: t['email'] as String,
           lang: t['lang'] as String,
           joinedAt: dbTime(t['createdAt'] as String),
+          invitedAt: switch (t['invitedAt']) {
+            final String at => dbTime(at),
+            _ => null,
+          },
+          emailStatus: t['emailStatus'] as String?,
         ),
     ];
   });
+
+  @override
+  Future<void> inviteTester(String email) => apiCall(
+    () => _dio.post<void>('/owner/testers/invite', data: {'email': email}),
+  );
 
   @override
   Future<void> deleteRating(String ratingId) =>

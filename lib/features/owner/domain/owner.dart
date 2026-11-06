@@ -53,11 +53,19 @@ class Tester {
     required this.email,
     required this.lang,
     required this.joinedAt,
+    this.invitedAt,
+    this.emailStatus,
   });
 
   final String email;
   final String lang;
   final DateTime joinedAt;
+
+  /// When the owner pressed Done (the invite email went out); null = not invited yet.
+  final DateTime? invitedAt;
+
+  /// Resend's last event for the invite: sent, delivered, delivery_delayed, bounced, complained, opened, clicked.
+  final String? emailStatus;
 }
 
 /// A branch rated by several brand-new accounts in one week: maybe fake accounts. [ratings]: every rating on it this
