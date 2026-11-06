@@ -17,6 +17,7 @@ import '../../domain/place.dart';
 import '../places_controller.dart';
 import '../widgets/location_button.dart';
 import '../widgets/branch_edit_sheet.dart';
+import '../widgets/map_legend.dart';
 import '../widgets/nearby_carousel.dart';
 import '../widgets/nearby_sheet.dart';
 import '../widgets/notebook_rating.dart';
@@ -66,6 +67,16 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   bool _styled = false;
   late final PlacesController _places = context.read<PlacesController>();
   List<NearbyBranch> _nearby = const [];
+
+  /// Other users' restaurants on the map (the grey dots and their cards); off = only your and your family's.
+  bool _showCommunity = true;
+
+  List<NearbyBranch> get _shownNearby => _showCommunity
+      ? _nearby
+      : [
+          for (final n in _nearby)
+            if (n.saved) n,
+        ];
   String? _selectedNearbyId;
   LatLng? _here;
   LatLng? _nearbyOrigin;
@@ -367,6 +378,19 @@ class _PlacesMapPageState extends State<PlacesMapPage>
 
   /// Redraws every pin (a handful per user: no diffing needed). Nearby branches are smaller and muted, under the
   /// saved ones. A hand-set pin has a kunyit ring: not checked yet.
+  /// A circle as the legend shows it (MapMark): colours with no alpha, the alpha as opacity.
+  CircleOptions _circle(LatLng at, MapMark mark, Notebook nb) {
+    final fill = mark.fill(nb);
+    return CircleOptions(
+      geometry: at,
+      circleRadius: mark.radius,
+      circleColor: _hex(fill.withValues(alpha: 1)),
+      circleOpacity: fill.a,
+      circleStrokeWidth: mark.strokeWidth,
+      circleStrokeColor: _hex(mark.stroke(nb)),
+    );
+  }
+
   Future<void> _draw({bool fit = false}) async {
     final map = _map;
     if (map == null || !_styled || !mounted) return;
@@ -377,20 +401,13 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _hereDot = null;
     final nearby = [
       for (final n in _nearby)
-        if (!n.saved) n,
+        if (!n.saved && _showCommunity) n,
     ];
     if (nearby.isNotEmpty) {
       await map.addCircles(
         [
           for (final n in nearby)
-            CircleOptions(
-              geometry: LatLng(n.lat, n.lng),
-              circleRadius: 5,
-              circleColor: _hex(nb.inkSoft),
-              circleOpacity: 0.7,
-              circleStrokeWidth: 1,
-              circleStrokeColor: _hex(nb.paper),
-            ),
+            _circle(LatLng(n.lat, n.lng), MapMark.community, nb),
         ],
         [
           for (final n in nearby) {'nearbyBranch': n.branchId},
@@ -403,13 +420,15 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     ];
     await map.addCircles(
       [
-        for (final (_, b) in pins)
-          CircleOptions(
-            geometry: LatLng(b.lat!, b.lng!),
-            circleRadius: 8,
-            circleColor: _hex(nb.pandan),
-            circleStrokeWidth: 3,
-            circleStrokeColor: b.pinnedByUser ? _hex(nb.kunyit) : '#FFFFFF',
+        for (final (p, b) in pins)
+          _circle(
+            LatLng(b.lat!, b.lng!),
+            !p.mine
+                ? MapMark.family
+                : b.pinnedByUser
+                ? MapMark.mineHandPin
+                : MapMark.mine,
+            nb,
           ),
       ],
       [
@@ -599,7 +618,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final nb = Notebook.of(context);
     final places = context.watch<PlacesController>();
     final unpinned = places.unpinned.length;
-    final showNearby = _nearby.isNotEmpty;
+    final shownNearby = _shownNearby;
+    final showNearby = shownNearby.isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
@@ -665,6 +685,14 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                     tooltip: _tilt > 1 ? l.view2d : l.view3d,
                     onPressed: _toggleTilt,
                   ),
+                  const SizedBox(height: 8),
+                  MapLegendButton(
+                    showCommunity: _showCommunity,
+                    onShowCommunity: (on) {
+                      setState(() => _showCommunity = on);
+                      unawaited(_draw());
+                    },
+                  ),
                 ],
               ),
             ),
@@ -715,7 +743,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                 left: false,
                 right: false,
                 child: NearbyCarousel(
-                  places: _nearby,
+                  places: shownNearby,
                   selectedBranchId: _selectedNearbyId,
                   onTap: _openNearby,
                   onSelected: _focusNearby,

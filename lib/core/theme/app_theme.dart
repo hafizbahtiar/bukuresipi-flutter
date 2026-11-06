@@ -113,8 +113,13 @@ abstract final class AppTheme {
         backgroundColor: nb.pandan,
         foregroundColor: Colors.white,
         shape: const StadiumBorder(),
+        // Compact: a 44 px pill, not Material's 56 px slab.
+        extendedSizeConstraints: const BoxConstraints.tightFor(height: 44),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 16),
+        extendedIconLabelSpacing: 8,
+        iconSize: 20,
         extendedTextStyle: const TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w700,
         ),
       ),

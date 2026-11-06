@@ -48,7 +48,9 @@ class _PlacesListPageState extends State<PlacesListPage> {
     final searching = q.isNotEmpty || filter != BookFilter.all;
     final list = [
       for (final p in places.places)
-        if ((hit(p.restaurant.name) || hit(p.savedBranch?.where) || hit(p.note)) &&
+        if ((hit(p.restaurant.name) ||
+                hit(p.savedBranch?.where) ||
+                hit(p.note)) &&
             switch (filter) {
               BookFilter.all => true,
               BookFilter.mine => p.mine,
@@ -57,7 +59,10 @@ class _PlacesListPageState extends State<PlacesListPage> {
           p,
     ];
     final bookRecipes = [
-      for (final r in filter == BookFilter.family ? recipes.familyRecipes : recipes.recipes)
+      for (final r
+          in filter == BookFilter.family
+              ? recipes.familyRecipes
+              : recipes.recipes)
         if (hit(r.name)) r,
     ];
     final tools = [
@@ -74,7 +79,10 @@ class _PlacesListPageState extends State<PlacesListPage> {
           controller: _search,
           onChanged: (_) => setState(() {}),
           textInputAction: TextInputAction.search,
-          decoration: InputDecoration(hintText: l.bookSearchHint, border: InputBorder.none),
+          decoration: InputDecoration(
+            hintText: l.bookSearchHint,
+            border: InputBorder.none,
+          ),
         ),
       ),
       if (inFamily)
@@ -123,9 +131,7 @@ class _PlacesListPageState extends State<PlacesListPage> {
         if (recipes.error != null) _RecipesError(onRetry: recipes.load),
         for (final r in bookRecipes) RecipeTile(recipe: r),
       ];
-    } else if (list.isEmpty &&
-        bookRecipes.isEmpty &&
-        recipes.error != null) {
+    } else if (list.isEmpty && bookRecipes.isEmpty && recipes.error != null) {
       lines = [_RecipesError(onRetry: recipes.load)];
     } else if (list.isEmpty && bookRecipes.isEmpty && inbox.isEmpty) {
       lines = [_Note(text: l.homeEmpty)];
@@ -170,7 +176,10 @@ class _PlacesListPageState extends State<PlacesListPage> {
             // The search box once there is something to search.
             children: [
               ...inbox,
-              if (places.places.isNotEmpty || recipes.recipes.isNotEmpty || searching) ...tools,
+              if (places.places.isNotEmpty ||
+                  recipes.recipes.isNotEmpty ||
+                  searching)
+                ...tools,
               ...lines,
             ],
           ),
@@ -200,7 +209,15 @@ class PlaceTile extends StatelessWidget {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (place.private) Tooltip(message: l.placeOnlyMe, child: Icon(Icons.lock_outline, size: 18, color: nb.inkSoft)),
+                if (place.private)
+                  Tooltip(
+                    message: l.placeOnlyMe,
+                    child: Icon(
+                      Icons.lock_outline,
+                      size: 18,
+                      color: nb.inkSoft,
+                    ),
+                  ),
                 if (place.shareId case final id?) SharePhoto(id),
               ],
             )
@@ -234,7 +251,10 @@ class PlaceTile extends StatelessWidget {
               others.join(', '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: text.bodySmall?.copyWith(color: nb.pandanDeep, fontWeight: FontWeight.w600),
+              style: text.bodySmall?.copyWith(
+                color: nb.pandanDeep,
+                fontWeight: FontWeight.w600,
+              ),
             ),
         ],
       ),

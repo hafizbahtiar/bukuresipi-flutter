@@ -218,34 +218,10 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                   ],
                 ),
                 if (suggest && c == _suggestFor && _suggestions.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(40, 0, 48, 6),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        for (final name in _suggestions)
-                          ActionChip(
-                            key: ValueKey('suggest-$name'),
-                            avatar: Icon(
-                              Icons.link,
-                              size: 16,
-                              color: nb.pandanDeep,
-                            ),
-                            label: Text(name.toLowerCase()),
-                            labelStyle: TextStyle(
-                              color: nb.pandanDeep,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            backgroundColor: nb.mist,
-                            side: BorderSide(
-                              color: nb.pandan.withValues(alpha: 0.35),
-                            ),
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () => _pick(c, name),
-                          ),
-                      ],
-                    ),
+                  _Suggestions(
+                    names: _suggestions,
+                    typed: typingWord(c.text) ?? '',
+                    onPick: (name) => _pick(c, name),
                   ),
               ],
             ),
@@ -301,6 +277,115 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The autocomplete list under an ingredient row: a raised paper card attached to the field, one row per catalogue
+/// match with the typed part in bold, the best match first (as the server sorts them).
+class _Suggestions extends StatelessWidget {
+  const _Suggestions({
+    required this.names,
+    required this.typed,
+    required this.onPick,
+  });
+
+  final List<String> names;
+  final String typed;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(40, 2, 48, 8),
+      child: Material(
+        color: nb.paper,
+        elevation: 3,
+        shadowColor: nb.ink.withValues(alpha: 0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: nb.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+              child: Text(
+                l.recipeEditSuggestions,
+                style: text.labelSmall?.copyWith(
+                  color: nb.inkSoft,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+            for (final (i, name) in names.indexed) ...[
+              if (i > 0) Divider(height: 1, indent: 44, color: nb.rule),
+              InkWell(
+                key: ValueKey('suggest-$name'),
+                onTap: () => onPick(name),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.eco_outlined, size: 18, color: nb.pandan),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _bolded(
+                          name.toLowerCase(),
+                          typed.toLowerCase(),
+                          text.bodyLarge,
+                          nb,
+                        ),
+                      ),
+                      Icon(Icons.north_west, size: 16, color: nb.inkSoft),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _bolded(
+    String name,
+    String typed,
+    TextStyle? style,
+    Notebook nb,
+  ) {
+    final at = typed.isEmpty ? -1 : name.indexOf(typed);
+    if (at < 0) {
+      return Text(
+        name,
+        style: style,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    return Text.rich(
+      TextSpan(
+        style: style,
+        children: [
+          TextSpan(text: name.substring(0, at)),
+          TextSpan(
+            text: name.substring(at, at + typed.length),
+            style: TextStyle(fontWeight: FontWeight.w800, color: nb.pandanDeep),
+          ),
+          TextSpan(text: name.substring(at + typed.length)),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
