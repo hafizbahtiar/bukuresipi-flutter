@@ -503,10 +503,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                     },
                     onSubmitted: (_) => _nextIngredient(r),
                   ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      SizedBox(
-                        width: 88,
+                      Expanded(
+                        flex: 2,
                         child: TextField(
                           key: ValueKey('ingredient-amount-$i'),
                           controller: r.amount,
@@ -530,10 +531,13 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _UnitPicker(
-                        key: ValueKey('ingredient-unit-$i'),
-                        unit: r.unit,
-                        onChanged: (u) => setState(() => r.unit = u),
+                      Expanded(
+                        flex: 3,
+                        child: _UnitPicker(
+                          key: ValueKey('ingredient-unit-$i'),
+                          unit: r.unit,
+                          onChanged: (u) => setState(() => r.unit = u),
+                        ),
                       ),
                     ],
                   ),
@@ -698,48 +702,50 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   }
 }
 
-/// The unit beside an amount: a compact menu of [recipeUnits] (plus a stored spelling such as "sb"), or none.
+/// The unit beside an amount: a field that opens a sheet of [recipeUnits] (plus a stored spelling such as "sb"), or none.
 class _UnitPicker extends StatelessWidget {
   const _UnitPicker({super.key, required this.unit, required this.onChanged});
 
   final String? unit;
   final ValueChanged<String?> onChanged;
 
+  Future<void> _pick(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    FocusScope.of(context).unfocus();
+    final chosen = await showNotebookPicker<String>(
+      context,
+      title: l.recipeEditUnit,
+      options: [
+        // '' = no unit: the sheet's answer for it, so a dismissal (null) stays a dismissal.
+        '',
+        if (unit != null && !recipeUnits.contains(unit)) unit!,
+        ...recipeUnits,
+      ],
+      selected: unit ?? '',
+      label: (u) => u.isEmpty ? l.recipeEditNoUnit : u,
+    );
+    if (chosen != null) onChanged(chosen.isEmpty ? null : chosen);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
-    final options = [
-      if (unit != null && !recipeUnits.contains(unit)) unit!,
-      ...recipeUnits,
-    ];
-    return PopupMenuButton<String>(
-      tooltip: l.recipeEditUnit,
-      initialValue: unit ?? '',
-      onSelected: (u) => onChanged(u.isEmpty ? null : u),
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: '',
-          child: Text(l.recipeEditNoUnit, style: TextStyle(color: nb.inkSoft)),
+    return InkWell(
+      onTap: () => _pick(context),
+      borderRadius: BorderRadius.circular(10),
+      child: InputDecorator(
+        isEmpty: unit == null,
+        decoration: InputDecoration(
+          hintText: l.recipeEditUnit,
+          isDense: true,
+          suffixIcon: Icon(Icons.arrow_drop_down, size: 22, color: nb.inkSoft),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 24,
+            minHeight: 24,
+          ),
         ),
-        for (final u in options) PopupMenuItem(value: u, child: Text(u)),
-      ],
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 40),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: nb.line)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              unit ?? l.recipeEditUnit,
-              style: TextStyle(color: unit == null ? nb.inkSoft : null),
-            ),
-            Icon(Icons.arrow_drop_down, color: nb.inkSoft),
-          ],
-        ),
+        child: Text(unit ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }
