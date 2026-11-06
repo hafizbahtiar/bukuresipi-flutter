@@ -1460,5 +1460,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "halalSaysHalal": "The post says halal",
+  "@halalSaysHalal": {},
+  "halalSaysNotHalal": "The post says not halal",
+  "@halalSaysNotHalal": {},
+  "halalNoClaim": "No halal claim found",
+  "@halalNoClaim": {}
 }

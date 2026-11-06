@@ -14,6 +14,7 @@ import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
+import '../widgets/halal_status.dart';
 import '../widgets/branch_edit_sheet.dart';
 import '../widgets/notebook_rating.dart';
 import '../widgets/place_report_sheet.dart';
@@ -248,6 +249,9 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                           style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                         ),
                       ),
+                    HalalStatus(
+                      claim: r.halalQuote == null ? null : r.halalClaim,
+                    ),
                     if (place.shareId case final id?) ShareImage(id),
                     if (place.sourceUrl case final url?)
                       TextButton.icon(

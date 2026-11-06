@@ -554,5 +554,8 @@
   "mapShowCommunity": "Tunjuk kedai pengguna lain",
   "legendCommunityOwnerHint": "Semua kedai lain dalam Bukuresipi (pemilik sahaja).",
   "ownerPlaceSavers": "{n, plural, =0{Tiada yang simpan} other{Disimpan oleh {n} pengguna}}",
-  "ownerPlacePinSource": "Pin dari: {source}"
+  "ownerPlacePinSource": "Pin dari: {source}",
+  "halalSaysHalal": "Hantaran kata halal",
+  "halalSaysNotHalal": "Hantaran kata tidak halal",
+  "halalNoClaim": "Tiada maklumat halal"
 }
