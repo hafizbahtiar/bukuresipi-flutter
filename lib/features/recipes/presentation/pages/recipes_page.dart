@@ -10,6 +10,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../family/presentation/family_controller.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
+import 'recipe_edit_page.dart';
 
 enum RecipeShelf { mine, family, community, catalogue }
 
@@ -57,9 +58,20 @@ class _RecipesPageState extends State<RecipesPage> {
     _fetch();
   }
 
+  /// "Write your own": the editor, empty; the saved recipe opens.
+  Future<void> _newRecipe() async {
+    final router = GoRouter.of(context);
+    final saved = await Navigator.of(context).push<RecipeDetail>(
+      MaterialPageRoute(builder: (_) => const RecipeEditPage()),
+    );
+    if (saved != null) router.push('/recipes/${saved.id}');
+  }
+
   /// Community / Catalogue for the current query; [more] = the next community page.
   Future<void> _fetch({bool more = false}) async {
-    if (_shelf != RecipeShelf.community && _shelf != RecipeShelf.catalogue) return;
+    if (_shelf != RecipeShelf.community && _shelf != RecipeShelf.catalogue) {
+      return;
+    }
     final recipes = context.read<RecipesController>();
     final generation = ++_generation;
     setState(() {
@@ -68,7 +80,10 @@ class _RecipesPageState extends State<RecipesPage> {
     });
     try {
       if (_shelf == RecipeShelf.community) {
-        final page = await recipes.community(query: _query, cursor: more ? _next : null);
+        final page = await recipes.community(
+          query: _query,
+          cursor: more ? _next : null,
+        );
         if (generation != _generation) return;
         _community = more ? [..._community, ...page.recipes] : page.recipes;
         _next = page.next;
@@ -80,7 +95,9 @@ class _RecipesPageState extends State<RecipesPage> {
     } catch (_) {
       if (generation == _generation) _failed = true;
     } finally {
-      if (generation == _generation && mounted) setState(() => _loading = false);
+      if (generation == _generation && mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -91,23 +108,56 @@ class _RecipesPageState extends State<RecipesPage> {
     final recipes = context.watch<RecipesController>();
     final inFamily = context.watch<FamilyController?>()?.inFamily ?? false;
     // Leaving the family while on its shelf: back to Mine.
-    final shelf = !inFamily && _shelf == RecipeShelf.family ? RecipeShelf.mine : _shelf;
-    bool matches(String name) => _query.isEmpty || name.toLowerCase().contains(_query.toLowerCase());
+    final shelf = !inFamily && _shelf == RecipeShelf.family
+        ? RecipeShelf.mine
+        : _shelf;
+    bool matches(String name) =>
+        _query.isEmpty || name.toLowerCase().contains(_query.toLowerCase());
 
     final List<Widget> rows;
     String? empty;
     switch (shelf) {
       case RecipeShelf.mine || RecipeShelf.family:
-        final list = (shelf == RecipeShelf.mine ? recipes.recipes : recipes.familyRecipes).where((r) => matches(r.name)).toList();
-        rows = [for (final r in list) RecipeRow(recipe: r)];
-        if (list.isEmpty && recipes.loaded) empty = shelf == RecipeShelf.mine ? l.recipesEmptyMine : l.recipesEmptyFamily;
+        final list =
+            (shelf == RecipeShelf.mine
+                    ? recipes.recipes
+                    : recipes.familyRecipes)
+                .where((r) => matches(r.name))
+                .toList();
+        rows = [
+          if (shelf == RecipeShelf.mine && _query.isEmpty)
+            NotebookRow(
+              key: const ValueKey('recipe-new'),
+              mark: Icon(Icons.edit_note, size: 22, color: nb.pandanDeep),
+              onTap: _newRecipe,
+              child: Text(
+                l.recipeNewRow,
+                style: TextStyle(
+                  color: nb.pandanDeep,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          for (final r in list) RecipeRow(recipe: r),
+        ];
+        if (list.isEmpty && recipes.loaded) {
+          empty = shelf == RecipeShelf.mine
+              ? l.recipesEmptyMine
+              : l.recipesEmptyFamily;
+        }
       case RecipeShelf.community:
         rows = [
           for (final r in _community) RecipeRow(recipe: r),
           if (_next != null && !_loading)
             NotebookRow(
               onTap: () => _fetch(more: true),
-              child: Text(l.recipesLoadMore, style: TextStyle(color: nb.pandanDeep, fontWeight: FontWeight.w600)),
+              child: Text(
+                l.recipesLoadMore,
+                style: TextStyle(
+                  color: nb.pandanDeep,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
         ];
         if (_community.isEmpty && !_loading) empty = l.recipesEmptyCommunity;
@@ -120,7 +170,10 @@ class _RecipesPageState extends State<RecipesPage> {
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.recipesTitle)),
       body: NotebookPage(
         child: RefreshIndicator(
-          onRefresh: () => shelf == RecipeShelf.mine || shelf == RecipeShelf.family ? recipes.load() : _fetch(),
+          onRefresh: () =>
+              shelf == RecipeShelf.mine || shelf == RecipeShelf.family
+              ? recipes.load()
+              : _fetch(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
@@ -130,7 +183,8 @@ class _RecipesPageState extends State<RecipesPage> {
                 trailing: _search.text.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+                        tooltip: MaterialLocalizations.of(context)
+                            .deleteButtonTooltip,
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: () {
                           _search.clear();
@@ -144,21 +198,42 @@ class _RecipesPageState extends State<RecipesPage> {
                     _typed(t);
                   },
                   textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(hintText: l.recipesSearchHint, border: InputBorder.none),
+                  decoration: InputDecoration(
+                    hintText: l.recipesSearchHint,
+                    border: InputBorder.none,
+                  ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 4,
+                  4,
+                  12,
+                  4,
+                ),
                 child: NotebookSegmented<RecipeShelf>(
-                    selected: shelf,
-                    onChanged: _pick,
-                    segments: [
-                      NotebookSegment(value: RecipeShelf.mine, label: l.recipesMine),
-                      if (inFamily) NotebookSegment(value: RecipeShelf.family, label: l.recipesFamily),
-                      NotebookSegment(value: RecipeShelf.community, label: l.recipesCommunity),
-                      NotebookSegment(value: RecipeShelf.catalogue, label: l.recipesCatalogue),
-                    ],
-                  ),
+                  selected: shelf,
+                  onChanged: _pick,
+                  segments: [
+                    NotebookSegment(
+                      value: RecipeShelf.mine,
+                      label: l.recipesMine,
+                    ),
+                    if (inFamily)
+                      NotebookSegment(
+                        value: RecipeShelf.family,
+                        label: l.recipesFamily,
+                      ),
+                    NotebookSegment(
+                      value: RecipeShelf.community,
+                      label: l.recipesCommunity,
+                    ),
+                    NotebookSegment(
+                      value: RecipeShelf.catalogue,
+                      label: l.recipesCatalogue,
+                    ),
+                  ],
+                ),
               ),
               if (_failed)
                 NotebookRow(
@@ -167,8 +242,16 @@ class _RecipesPageState extends State<RecipesPage> {
                   child: Text(l.recipesLoadFailed2),
                 ),
               ...rows,
-              if (_loading) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator.adaptive())),
-              if (empty != null && !_failed) NotebookRow(minHeight: 96, child: Text(empty, style: TextStyle(color: nb.inkSoft))),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator.adaptive()),
+                ),
+              if (empty != null && !_failed)
+                NotebookRow(
+                  minHeight: 96,
+                  child: Text(empty, style: TextStyle(color: nb.inkSoft)),
+                ),
             ],
           ),
         ),
@@ -190,18 +273,30 @@ class RecipeRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final owner = recipe.owner;
     final details = [
-      if (owner != null && !owner.isMe && owner.name != null) l.recipeBy(owner.name!),
-      if (recipe.ingredientCount > 0) l.recipeIngredientCount(recipe.ingredientCount),
+      if (owner != null && !owner.isMe && owner.name != null)
+        l.recipeBy(owner.name!),
+      if (recipe.ingredientCount > 0)
+        l.recipeIngredientCount(recipe.ingredientCount),
     ];
     return NotebookRow(
-      mark: Icon(_visibilityIcon(recipe.visibility, mine: owner?.isMe ?? true), size: 20, color: nb.inkSoft),
+      mark: Icon(
+        _visibilityIcon(recipe.visibility, mine: owner?.isMe ?? true),
+        size: 20,
+        color: nb.inkSoft,
+      ),
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(recipe.name, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            recipe.name,
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
           if (details.isNotEmpty)
-            Text(details.join(' · '), style: text.bodyMedium?.copyWith(color: nb.inkSoft)),
+            Text(
+              details.join(' · '),
+              style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+            ),
         ],
       ),
     );
@@ -209,11 +304,12 @@ class RecipeRow extends StatelessWidget {
 }
 
 /// The book icon for your own, people for a family member's, a globe for a public one.
-IconData _visibilityIcon(RecipeVisibility v, {required bool mine}) => switch (v) {
-  RecipeVisibility.public => Icons.public,
-  RecipeVisibility.family => mine ? Icons.menu_book : Icons.people_outline,
-  RecipeVisibility.private => Icons.menu_book,
-};
+IconData _visibilityIcon(RecipeVisibility v, {required bool mine}) =>
+    switch (v) {
+      RecipeVisibility.public => Icons.public,
+      RecipeVisibility.family => mine ? Icons.menu_book : Icons.people_outline,
+      RecipeVisibility.private => Icons.menu_book,
+    };
 
 class _DishRow extends StatelessWidget {
   const _DishRow({required this.dish});
@@ -231,9 +327,16 @@ class _DishRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(dish.name, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
           Text(
-            [?dish.category, if (dish.ingredientCount > 0) l.recipeIngredientCount(dish.ingredientCount)].join(' · '),
+            dish.name,
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            [
+              ?dish.category,
+              if (dish.ingredientCount > 0)
+                l.recipeIngredientCount(dish.ingredientCount),
+            ].join(' · '),
             style: text.bodyMedium?.copyWith(color: nb.inkSoft),
           ),
         ],
