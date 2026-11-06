@@ -108,6 +108,16 @@ abstract final class AppTheme {
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
+      // Pandan, pill-shaped like the filled buttons: the book's one "new" action (Recipes > New recipe).
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: nb.pandan,
+        foregroundColor: Colors.white,
+        shape: const StadiumBorder(),
+        extendedTextStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: nb.paper,
         surfaceTintColor: Colors.transparent,

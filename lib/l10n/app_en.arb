@@ -1418,5 +1418,5 @@
   "errGoogleFailed": "Google didn't let us sign you in. Try again; if it keeps happening, the app's Google setup needs checking.",
   "@errGoogleFailed": {},
   "recipeNew": "New recipe",
-  "recipeNewRow": "Write your own recipe"
+  "@recipeNew": {}
 }
