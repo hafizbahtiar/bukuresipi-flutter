@@ -44,6 +44,9 @@ abstract interface class OwnerRepository {
   /// Deletes a rating and its review for good (its votes and reports too).
   Future<void> deleteRating(String ratingId);
 
+  /// Every pinned branch, for the owner's map.
+  Future<List<OwnerPlace>> places();
+
   /// Website tester signups, oldest first.
   Future<List<Tester>> testers();
 }

@@ -248,3 +248,24 @@ class FailedShare {
   final String? error;
   final String? caption;
 }
+
+/// A pinned branch on the owner's map (GET /owner/places): every restaurant, not only nearby. Counts, no names.
+class OwnerPlace {
+  const OwnerPlace({
+    required this.branchId,
+    required this.name,
+    required this.lat,
+    required this.lng,
+    required this.savers,
+    this.label,
+    this.pinSource,
+  });
+
+  final String branchId;
+  final String name;
+  final String? label;
+  final double lat;
+  final double lng;
+  final String? pinSource;
+  final int savers;
+}

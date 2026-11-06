@@ -38,10 +38,12 @@ enum MapMark {
 class MapLegendButton extends StatelessWidget {
   const MapLegendButton({
     super.key,
+    required this.owner,
     required this.showCommunity,
     required this.onShowCommunity,
   });
 
+  final bool owner;
   final bool showCommunity;
   final ValueChanged<bool> onShowCommunity;
 
@@ -61,6 +63,7 @@ class MapLegendButton extends StatelessWidget {
           onTap: () => showNotebookSheet<void>(
             context,
             builder: (_) => MapLegend(
+              owner: owner,
               showCommunity: showCommunity,
               onShowCommunity: onShowCommunity,
             ),
@@ -79,10 +82,13 @@ class MapLegendButton extends StatelessWidget {
 class MapLegend extends StatefulWidget {
   const MapLegend({
     super.key,
+    this.owner = false,
     required this.showCommunity,
     required this.onShowCommunity,
   });
 
+  /// Only the owner sees other users' restaurants, so only the owner gets that row and its switch.
+  final bool owner;
   final bool showCommunity;
   final ValueChanged<bool> onShowCommunity;
 
@@ -107,7 +113,8 @@ class _MapLegendState extends State<MapLegend> {
       (MapMark.mine, l.legendMine, l.legendMineHint),
       (MapMark.mineHandPin, l.legendHandPin, l.legendHandPinHint),
       (MapMark.family, l.legendFamily, l.legendFamilyHint),
-      (MapMark.community, l.legendCommunity, l.legendCommunityHint),
+      if (widget.owner)
+        (MapMark.community, l.legendCommunity, l.legendCommunityOwnerHint),
       (MapMark.here, l.legendHere, l.legendHereHint),
     ];
     return ListView(
@@ -134,15 +141,16 @@ class _MapLegendState extends State<MapLegend> {
               ],
             ),
           ),
-        NotebookRow(
-          mark: Icon(Icons.layers_outlined, size: 20, color: nb.inkSoft),
-          onTap: () => _set(!_community),
-          trailing: Switch(value: _community, onChanged: _set),
-          child: Text(
-            l.mapShowCommunity,
-            style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        if (widget.owner)
+          NotebookRow(
+            mark: Icon(Icons.layers_outlined, size: 20, color: nb.inkSoft),
+            onTap: () => _set(!_community),
+            trailing: Switch(value: _community, onChanged: _set),
+            child: Text(
+              l.mapShowCommunity,
+              style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
-        ),
       ],
     );
   }

@@ -134,6 +134,23 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
+  Future<List<OwnerPlace>> places() => apiCall(() async {
+    final j = await _get('/owner/places');
+    return [
+      for (final p in (j['places'] as List).cast<Map<String, dynamic>>())
+        OwnerPlace(
+          branchId: p['branchId'] as String,
+          name: p['name'] as String,
+          label: p['label'] as String?,
+          lat: (p['lat'] as num).toDouble(),
+          lng: (p['lng'] as num).toDouble(),
+          pinSource: p['pinSource'] as String?,
+          savers: p['savers'] as int,
+        ),
+    ];
+  });
+
+  @override
   Future<List<Tester>> testers() => apiCall(() async {
     final j = await _get('/owner/testers');
     return [

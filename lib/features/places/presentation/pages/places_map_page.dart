@@ -11,6 +11,8 @@ import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../auth/presentation/auth_controller.dart';
+import '../../../owner/domain/owner.dart';
+import '../../../owner/domain/owner_repository.dart';
 import '../../domain/nearby_branch.dart';
 import '../../domain/nearby_math.dart';
 import '../../domain/place.dart';
@@ -68,8 +70,22 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   late final PlacesController _places = context.read<PlacesController>();
   List<NearbyBranch> _nearby = const [];
 
-  /// Other users' restaurants on the map (the grey dots and their cards); off = only your and your family's.
-  bool _showCommunity = true;
+  /// Only the owner sees restaurants other users saved: every pinned one (GET /owner/places), switchable in the
+  /// legend. Users see their own and their family's only (other users' places: later, to be designed).
+  late final bool _owner =
+      context.read<AuthController>().user?.isOwner ?? false;
+  late bool _showCommunity = _owner;
+  List<OwnerPlace> _all = const [];
+
+  Future<void> _loadAll() async {
+    if (!_owner) return;
+    try {
+      _all = await context.read<OwnerRepository>().places();
+      if (mounted) unawaited(_draw());
+    } catch (_) {
+      // The owner's extra layer only; the map works without it.
+    }
+  }
 
   List<NearbyBranch> get _shownNearby => _showCommunity
       ? _nearby
@@ -97,7 +113,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _places.addListener(_draw);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _askLocationOnce());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _askLocationOnce();
+      _loadAll();
+    });
   }
 
   @override
@@ -401,8 +420,28 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _hereDot = null;
     final nearby = [
       for (final n in _nearby)
-        if (!n.saved && _showCommunity) n,
+        if (!n.saved && _showCommunity && _all.isEmpty) n,
     ];
+    final mineIds = {
+      for (final p in places)
+        for (final b in p.pins) b.id,
+    };
+    final all = [
+      if (_showCommunity)
+        for (final a in _all)
+          if (!mineIds.contains(a.branchId)) a,
+    ];
+    if (all.isNotEmpty) {
+      await map.addCircles(
+        [
+          for (final a in all)
+            _circle(LatLng(a.lat, a.lng), MapMark.community, nb),
+        ],
+        [
+          for (final a in all) {'ownerBranch': a.branchId},
+        ],
+      );
+    }
     if (nearby.isNotEmpty) {
       await map.addCircles(
         [
@@ -481,6 +520,22 @@ class _PlacesMapPageState extends State<PlacesMapPage>
 
   void _tapped(Circle c) {
     if (!mounted) return;
+    final ownerBranch = c.data?['ownerBranch'] as String?;
+    if (ownerBranch != null) {
+      final nearby = _nearby
+          .where((n) => n.branchId == ownerBranch)
+          .firstOrNull;
+      final all = _all.where((a) => a.branchId == ownerBranch).firstOrNull;
+      if (nearby != null) {
+        _focusNearby(nearby);
+      } else if (all != null) {
+        showNotebookSheet<void>(
+          context,
+          builder: (_) => _OwnerPlaceSheet(place: all),
+        );
+      }
+      return;
+    }
     final nearbyBranch = c.data?['nearbyBranch'] as String?;
     if (nearbyBranch != null) {
       final nearby = _nearby
@@ -687,6 +742,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                   ),
                   const SizedBox(height: 8),
                   MapLegendButton(
+                    owner: _owner,
                     showCommunity: _showCommunity,
                     onShowCommunity: (on) {
                       setState(() => _showCommunity = on);
@@ -933,6 +989,50 @@ class _PinSheet extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The owner's look at any restaurant on the map: where its pin came from and how many saved it.
+class _OwnerPlaceSheet extends StatelessWidget {
+  const _OwnerPlaceSheet({required this.place});
+
+  final OwnerPlace place;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return ListView(
+      shrinkWrap: true,
+      children: [
+        NotebookRow(
+          mark: const MapMarkDot(MapMark.community),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                place.name,
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              if (place.label != null && place.label != place.name)
+                Text(
+                  place.label!,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
+            ],
+          ),
+        ),
+        NotebookRow(
+          mark: Icon(Icons.bookmark_border, size: 20, color: nb.inkSoft),
+          child: Text(l.ownerPlaceSavers(place.savers)),
+        ),
+        NotebookRow(
+          mark: Icon(Icons.place_outlined, size: 20, color: nb.inkSoft),
+          child: Text(l.ownerPlacePinSource(place.pinSource ?? '-')),
         ),
       ],
     );

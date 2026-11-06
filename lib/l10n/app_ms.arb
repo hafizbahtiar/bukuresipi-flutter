@@ -548,9 +548,11 @@
   "legendFamily": "Kedai keluarga anda",
   "legendFamilyHint": "Disimpan oleh ahli keluarga anda.",
   "legendCommunity": "Kedai lain",
-  "legendCommunityHint": "Disimpan oleh pengguna Bukuresipi lain. Ketik untuk lihat atau simpan.",
   "legendHere": "Anda di sini",
   "legendHereHint": "Lokasi telefon anda.",
   "recipeEditSuggestions": "DARI KATALOG",
-  "mapShowCommunity": "Tunjuk kedai pengguna lain"
+  "mapShowCommunity": "Tunjuk kedai pengguna lain",
+  "legendCommunityOwnerHint": "Semua kedai lain dalam Bukuresipi (pemilik sahaja).",
+  "ownerPlaceSavers": "{n, plural, =0{Tiada yang simpan} other{Disimpan oleh {n} pengguna}}",
+  "ownerPlacePinSource": "Pin dari: {source}"
 }

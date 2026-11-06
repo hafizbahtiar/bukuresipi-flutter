@@ -19,7 +19,11 @@ void main() {
           ],
           supportedLocales: const [Locale('en'), Locale('ms')],
           home: Scaffold(
-            body: MapLegend(showCommunity: true, onShowCommunity: changes.add),
+            body: MapLegend(
+              owner: true,
+              showCommunity: true,
+              onShowCommunity: changes.add,
+            ),
           ),
         ),
       );
@@ -30,4 +34,25 @@ void main() {
       expect(t.widget<Switch>(find.byType(Switch)).value, isFalse);
     },
   );
+
+  testWidgets('a user\'s legend has no other-users row and no switch', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en'), Locale('ms')],
+        home: Scaffold(
+          body: MapLegend(showCommunity: false, onShowCommunity: (_) {}),
+        ),
+      ),
+    );
+    expect(find.byType(MapMarkDot), findsNWidgets(MapMark.values.length - 1));
+    expect(find.byType(Switch), findsNothing);
+  });
 }

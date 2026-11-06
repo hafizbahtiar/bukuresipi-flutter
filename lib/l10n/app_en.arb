@@ -1435,8 +1435,6 @@
   "@legendFamilyHint": {},
   "legendCommunity": "Other restaurants",
   "@legendCommunity": {},
-  "legendCommunityHint": "Saved by other Bukuresipi users. Tap one to see it or save it.",
-  "@legendCommunityHint": {},
   "legendHere": "You are here",
   "@legendHere": {},
   "legendHereHint": "Your phone's location.",
@@ -1444,5 +1442,23 @@
   "recipeEditSuggestions": "FROM THE CATALOGUE",
   "@recipeEditSuggestions": {},
   "mapShowCommunity": "Show other users' restaurants",
-  "@mapShowCommunity": {}
+  "@mapShowCommunity": {},
+  "legendCommunityOwnerHint": "Every other restaurant in Bukuresipi (owner only).",
+  "@legendCommunityOwnerHint": {},
+  "ownerPlaceSavers": "{n, plural, =0{Saved by no one} =1{Saved by 1 user} other{Saved by {n} users}}",
+  "@ownerPlaceSavers": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerPlacePinSource": "Pin from: {source}",
+  "@ownerPlacePinSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  }
 }

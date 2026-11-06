@@ -112,6 +112,9 @@ class FakeOwner implements OwnerRepository {
   Future<List<Tester>> testers() async => testerList;
 
   @override
+  Future<List<OwnerPlace>> places() async => const [];
+
+  @override
   Future<void> deleteRating(String ratingId) async {
     deletedRatings.add(ratingId);
     for (final b in bursts) {
