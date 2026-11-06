@@ -294,7 +294,10 @@ void main() {
         'Masak nasi.\n  Goreng ayam. ',
       );
       await t.pumpAndSettle();
-      expect(find.widgetWithText(TextField, '  Goreng ayam. '), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Goreng ayam.'),
+        findsOneWidget,
+      ); // each pasted line trimmed
 
       await t.tap(find.text('Save'));
       await t.pumpAndSettle();

@@ -54,6 +54,7 @@ RecipeDetail recipeDetail({
     RecipeStep(stepNo: 1, instruction: 'Goreng ayam hingga masak.'),
   ],
   List<RecipeAllergen> allergens = const [],
+  List<RecipeIngredient>? ingredients,
   bool canEdit = true,
   RecipeVisibility visibility = RecipeVisibility.private,
   RecipeOwner? owner,
@@ -69,15 +70,17 @@ RecipeDetail recipeDetail({
   createdAt: DateTime.utc(2026, 11, 2),
   sourceUrl: sourceUrl,
   missing: missing,
-  ingredients: const [
-    RecipeIngredient(
-      name: 'Ayam',
-      rawText: '500g ayam',
-      quantity: '500',
-      unit: 'g',
-    ),
-    RecipeIngredient(rawText: 'sedikit bahan rahsia'),
-  ],
+  ingredients:
+      ingredients ??
+      const [
+        RecipeIngredient(
+          name: 'Ayam',
+          rawText: '500g ayam',
+          quantity: '500',
+          unit: 'g',
+        ),
+        RecipeIngredient(rawText: 'sedikit bahan rahsia'),
+      ],
   steps: steps,
   allergens: allergens,
   uncheckedIngredients: 1,
