@@ -313,6 +313,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final source = recipe.sourceUrl;
+    // Catalogue dishes credit the recipe they were built from; their steps stay there (not copied).
+    final catalogue = recipe.sourceType == RecipeSourceType.catalogue;
     return Scaffold(
       appBar: AppBar(),
       extendBody: true,
@@ -321,7 +323,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           if (source case final url?)
             DockAction(
               icon: Icons.open_in_new,
-              label: l.recipeOpenSource,
+              label: catalogue ? l.recipeOpenOriginal : l.recipeOpenSource,
               onPressed: () => openLink(context, url, failed: l.openFailed),
             ),
           if (recipe.ingredients.isNotEmpty)
@@ -518,7 +520,37 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
               ),
             ],
-            if (recipe.steps.isNotEmpty) NotebookHeading(l.recipeSteps),
+            if (recipe.steps.isNotEmpty || (catalogue && source != null))
+              NotebookHeading(l.recipeSteps),
+            if (catalogue && recipe.steps.isEmpty && source != null)
+              NotebookRow(
+                mark: Icon(
+                  Icons.menu_book_outlined,
+                  size: 20,
+                  color: nb.pandanDeep,
+                ),
+                onTap: () => openLink(context, source, failed: l.openFailed),
+                trailing: Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: nb.pandanDeep,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.recipeStepsAtOriginal,
+                      style: text.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      Uri.tryParse(source)?.host ?? source,
+                      style: text.bodyMedium?.copyWith(color: nb.pandanDeep),
+                    ),
+                  ],
+                ),
+              ),
             for (final s in recipe.steps)
               NotebookRow(
                 mark: Text(
@@ -543,7 +575,12 @@ IconData visibilityIcon(RecipeVisibility v) => switch (v) {
 
 /// Who it is by and where it came from, for a recipe that is not the caller's (a shared one always shows credit).
 String? _byLine(AppLocalizations l, RecipeDetail r) {
-  if (r.sourceType == RecipeSourceType.catalogue) return l.recipeCatalogue;
+  if (r.sourceType == RecipeSourceType.catalogue) {
+    final host = Uri.tryParse(r.sourceUrl ?? '')?.host;
+    return host == null || host.isEmpty
+        ? l.recipeCatalogue
+        : l.recipeCatalogueFrom(host);
+  }
   if (r.canEdit) return null;
   return [
     if (r.owner?.name case final name?) l.recipeBy(name),

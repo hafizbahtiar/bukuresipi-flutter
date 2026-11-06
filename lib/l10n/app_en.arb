@@ -1484,5 +1484,11 @@
   "recipeHide": "Hide",
   "@recipeHide": {},
   "recipeHideConfirm": "Take this recipe off Community? Its author still sees it; open reports close as hidden.",
-  "@recipeHideConfirm": {}
+  "@recipeHideConfirm": {},
+  "recipeOpenOriginal": "Original recipe",
+  "@recipeOpenOriginal": {},
+  "recipeStepsAtOriginal": "How to cook: see the original recipe",
+  "@recipeStepsAtOriginal": {},
+  "recipeCatalogueFrom": "Bukuresipi catalogue · ingredients from {site}",
+  "@recipeCatalogueFrom": {"placeholders": {"site": {"type": "String"}}}
 }

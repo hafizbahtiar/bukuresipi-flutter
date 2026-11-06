@@ -566,5 +566,8 @@
   "legendOtherOwner": "Kedai lain: pin anda",
   "legendOtherOwnerHint": "Anda tetapkan pin ini sebagai pemilik; pin pengguna tidak menggantikannya.",
   "recipeHide": "Sembunyi",
-  "recipeHideConfirm": "Keluarkan resipi ini dari Komuniti? Penulisnya masih nampak; laporan terbuka ditutup sebagai disembunyi."
+  "recipeHideConfirm": "Keluarkan resipi ini dari Komuniti? Penulisnya masih nampak; laporan terbuka ditutup sebagai disembunyi.",
+  "recipeOpenOriginal": "Resepi asal",
+  "recipeStepsAtOriginal": "Cara masak: lihat resepi asal",
+  "recipeCatalogueFrom": "Katalog Bukuresipi · bahan dari {site}"
 }

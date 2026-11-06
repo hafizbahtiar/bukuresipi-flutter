@@ -429,4 +429,38 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'a catalogue dish credits its source and sends the steps to the original recipe',
+    (t) async {
+      final recipes = RecipesController(
+        FakeRecipes()
+          ..detailResult = recipeDetail(
+            canEdit: false,
+            missing: const [],
+            steps: const [],
+            sourceType: RecipeSourceType.catalogue,
+            sourceUrl: 'https://khairulaming.my/rendang-1-ekor-ayam',
+          ),
+      );
+      await t.pumpWidget(
+        app(
+          providers: [ChangeNotifierProvider.value(value: recipes)],
+          home: const RecipeDetailPage(id: 'r-1'),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(
+        find.text('Bukuresipi catalogue · ingredients from khairulaming.my'),
+        findsOneWidget,
+      );
+      await t.scrollUntilVisible(
+        find.text('How to cook: see the original recipe'),
+        200,
+      );
+      expect(find.text('How to cook: see the original recipe'), findsOneWidget);
+      expect(find.text('Original recipe'), findsOneWidget);
+      expect(find.text('Open video'), findsNothing);
+    },
+  );
 }
