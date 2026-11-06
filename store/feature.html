@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Play "Feature graphic" (1024 x 500): rendered to feature-<lang>.png, see README.md. Same look as the website's
+     link preview (bukuresipi-astro/scripts/og.html). No other app's name: Play's metadata policy. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Familjen+Grotesk:wght@600;700&display=block">
+<style>
+  html,body{margin:0;width:1024px;height:500px;overflow:hidden}
+  body{display:grid;grid-template-columns:560px 1fr;background:#1f4a29;color:#fff;font-family:'Familjen Grotesk',sans-serif}
+  .left{padding:56px 0 48px 64px;display:flex;flex-direction:column;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:16px;font-size:36px;font-weight:700;letter-spacing:-.035em}
+  .brand img{width:56px;height:56px;border-radius:14px}
+  h1{margin:0;font-size:50px;line-height:1.06;letter-spacing:-.025em;max-width:16ch}
+  .right{position:relative}
+  .page{position:absolute;left:24px;top:56px;width:420px;height:420px;transform:rotate(3deg);border-radius:6px 18px 18px 6px;border-left:12px solid #2f6b3b;
+    background:linear-gradient(90deg,transparent 50px,#d23c35 50px,#d23c35 53px,transparent 53px),repeating-linear-gradient(transparent 0 41px,#cfe0f1 41px 43px),#fff;
+    padding:32px 14px 0 68px;box-sizing:border-box;color:#24334f;font-family:'Caveat',cursive;font-size:31px;line-height:43px}
+  .dish{font-size:42px;color:#1f4a29;text-decoration:underline 3px #d23c35;text-underline-offset:8px}
+  mark{background:linear-gradient(transparent 22%,rgba(246,201,69,.8) 22% 88%,transparent 88%);color:inherit}
+</style></head>
+<body>
+  <div class="left">
+    <div class="brand"><img src="../assets/brand/icon.svg" alt="">bukuresipi</div>
+    <h1 id="h"></h1>
+  </div>
+  <div class="right"><div class="page">
+    <div class="dish">Ayam masak merah</div>
+    <div id="l1"></div><div id="l2"></div><div id="l3"></div>
+  </div></div>
+<script>
+  const en = new URLSearchParams(location.search).get('lang') === 'en'
+  document.getElementById('h').textContent = en ? 'Recipes and food spots you share, kept in one book.' : 'Resipi dan kedai makan yang anda kongsi, dalam satu buku.'
+  const lines = en ? [['2 whole',' chickens'],['10',' dried chillies'],['3 tbsp',' tomato sauce']] : [['2 ekor',' ayam'],['10 tangkai',' cili kering'],['3 sudu besar',' sos tomato']]
+  lines.forEach(([q, r], i) => { const d = document.getElementById('l' + (i + 1)); d.innerHTML = '- <mark></mark>'; d.querySelector('mark').textContent = q; d.append(r) })
+</script>
+</body></html>
