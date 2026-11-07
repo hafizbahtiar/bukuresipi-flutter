@@ -75,7 +75,11 @@ String? redirectFor(
   }
 }
 
-GoRouter buildRouter(AuthController auth, UpdateGate update) {
+GoRouter buildRouter(
+  AuthController auth,
+  UpdateGate update, {
+  List<NavigatorObserver> observers = const [],
+}) {
   // Website paths for email links, in both languages: /auth/reset and /en/auth/reset open the same screen.
   List<GoRoute> linkRoutes(String prefix) => [
     _page(
@@ -99,7 +103,7 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
 
   return GoRouter(
     initialLocation: '/',
-    observers: [UnfocusOnNavigation()],
+    observers: [UnfocusOnNavigation(), ...observers],
     refreshListenable: Listenable.merge([auth, update]),
     redirect: (_, state) =>
         redirectFor(state.uri.path, auth, update, uri: state.uri),

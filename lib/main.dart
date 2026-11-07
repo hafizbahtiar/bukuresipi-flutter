@@ -2,6 +2,7 @@
 // (AuthRepository, TokenStore) handed down through Provider, so tests swap them for fakes.
 import 'dart:io';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -96,19 +97,19 @@ Future<void> main() async {
     WebViewCaptionReader(),
   ); // started by the app, once the router exists
 
-  // Android only until iOS has its Firebase file; no Firebase = no pushes, the app checks while open instead.
+  // Android only until iOS has its Firebase file: pushes and Analytics share the one Firebase app.
   PushController? push;
+  NavigatorObserver? analytics;
   if (Platform.isAndroid) {
     try {
-      push = PushController(
-        await FirebasePushMessaging.start(),
-        api.dio,
-        prefs,
-        auth,
+      final messaging = await FirebasePushMessaging.start();
+      analytics = FirebaseAnalyticsObserver(
+        analytics: FirebaseAnalytics.instance,
       );
+      push = PushController(messaging, api.dio, prefs, auth);
     } catch (e) {
       debugPrint(
-        'push: Firebase did not start: $e',
+        'firebase: did not start: $e',
       ); // the log names why (e.g. google-services.json)
     }
   }
@@ -145,7 +146,7 @@ Future<void> main() async {
         Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
       ],
-      child: const BukuresipiApp(),
+      child: BukuresipiApp(navigatorObservers: [?analytics]),
     ),
   );
 }

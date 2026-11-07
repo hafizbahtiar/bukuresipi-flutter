@@ -12,7 +12,36 @@
           "package_name": "com.bukuresipi"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1092028895748-cr5a1ml69mkabaosqjc5sl475gmc6tf2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bukuresipi",
+            "certificate_hash": "cd371cc9d14efe06b713d9bf5b63856abbdbaaa3"
+          }
+        },
+        {
+          "client_id": "1092028895748-ddaqelvhu3pe67fpft78li3ei3fp3uib.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bukuresipi",
+            "certificate_hash": "6587548c22110df5264d685dafcbab63af024fc5"
+          }
+        },
+        {
+          "client_id": "1092028895748-so63migu9vacc13pqq5p417umnascpnt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bukuresipi",
+            "certificate_hash": "01d706af8f37a703be99f2806cbbeff30cc59432"
+          }
+        },
+        {
+          "client_id": "1092028895748-8ebfteg5cq7qro944eso1g0a3cmprv7s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBdr2PeGOKB-8eBrsXwyanpSr9ak4QXQJ8"
@@ -20,7 +49,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1092028895748-8ebfteg5cq7qro944eso1g0a3cmprv7s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
