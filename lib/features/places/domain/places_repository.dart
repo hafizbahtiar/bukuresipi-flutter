@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'nearby_branch.dart';
 import 'place.dart';
 import 'rating.dart';
@@ -42,6 +44,20 @@ abstract interface class PlacesRepository {
 
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
   Future<BranchSuggestion> suggestBranch(String branchId);
+
+  /// The restaurant's chosen cover photo; null = none. [cover] is the id from the DTO (cache key).
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover);
+
+  /// Owner only: the post thumbnails to pick a cover from, and the current pick.
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  );
+
+  /// Owner only: one candidate's image.
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover);
+
+  /// Owner only: picks a candidate as the cover for everyone; null clears it.
+  Future<void> setRestaurantCover(String restaurantId, String? cover);
 
   /// Community rating; the response is the branch's fresh summary.
   Future<RatingSummary> rateBranch(String branchId, int stars);

@@ -233,4 +233,23 @@ class PlacesController extends ChangeNotifier {
 
   /// Throws ApiException; the sheet shows it.
   Future<void> report(ReportDraft draft) => _repo.report(draft);
+
+  /// The restaurant's cover photo bytes, or null (none, or not loaded).
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover) =>
+      _repo.restaurantCover(restaurantId, cover);
+
+  /// Owner only. Throws ApiException.
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  ) => _repo.coverCandidates(restaurantId);
+
+  /// Owner only.
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover) =>
+      _repo.coverCandidate(restaurantId, cover);
+
+  /// Owner only: sets the cover for everyone, then reloads the saved places so the new id shows.
+  Future<void> setRestaurantCover(String restaurantId, String? cover) async {
+    await _repo.setRestaurantCover(restaurantId, cover);
+    await load();
+  }
 }

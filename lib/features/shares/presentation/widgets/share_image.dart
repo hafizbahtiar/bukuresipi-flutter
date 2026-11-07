@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../places/presentation/places_controller.dart';
 import '../../../recipes/presentation/recipes_controller.dart';
 import '../../domain/share_repository.dart';
 
@@ -189,19 +190,22 @@ class _SharePhotoState extends State<SharePhoto> {
   );
 }
 
-/// A share's photo, or a recipe's cover when [recipeId] is set, filling its box (BoxFit.cover). [fallback] shows
-/// while loading, when there is none, or on error. For cards (Home feed); the list rows use [SharePhoto].
+/// A share's photo, a recipe's cover ([recipeId]) or a restaurant's cover ([restaurantId]), filling its box
+/// (BoxFit.cover). [fallback] shows while loading, when there is none, or on error. For cards (Home feed); the list
+/// rows use [SharePhoto].
 class ShareFill extends StatefulWidget {
   const ShareFill({
     super.key,
     required this.id,
     this.recipeId,
+    this.restaurantId,
     required this.fallback,
   });
 
-  /// The share id, or the cover id when [recipeId] is set.
+  /// The share id, or the cover id when [recipeId] or [restaurantId] is set.
   final String id;
   final String? recipeId;
+  final String? restaurantId;
   final Widget fallback;
 
   @override
@@ -211,15 +215,25 @@ class ShareFill extends StatefulWidget {
 class _ShareFillState extends State<ShareFill> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => switch (widget.recipeId) {
-    final recipe? => context.read<RecipesController>().cover(recipe, widget.id),
-    null => context.read<ShareRepository>().image(widget.id),
-  }.catchError((Object _) => null);
+  Future<Uint8List?> _load() =>
+      switch ((widget.recipeId, widget.restaurantId)) {
+        (final recipe?, _) => context.read<RecipesController>().cover(
+          recipe,
+          widget.id,
+        ),
+        (_, final r?) => context.read<PlacesController>().restaurantCover(
+          r,
+          widget.id,
+        ),
+        _ => context.read<ShareRepository>().image(widget.id),
+      }.catchError((Object _) => null);
 
   @override
   void didUpdateWidget(covariant ShareFill old) {
     super.didUpdateWidget(old);
-    if (old.id != widget.id || old.recipeId != widget.recipeId) {
+    if (old.id != widget.id ||
+        old.recipeId != widget.recipeId ||
+        old.restaurantId != widget.restaurantId) {
       _bytes = _load();
     }
   }

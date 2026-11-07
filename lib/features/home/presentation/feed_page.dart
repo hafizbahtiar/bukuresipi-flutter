@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../places/domain/nearby_branch.dart';
+import '../../places/domain/rating.dart';
 import '../../shares/presentation/widgets/share_image.dart';
 import 'widgets/feed_card.dart';
 import '../../places/presentation/location.dart';
@@ -264,7 +265,12 @@ class _FeedPageState extends State<FeedPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
-    final columns = _columns(MediaQuery.sizeOf(context).width);
+    final width = MediaQuery.sizeOf(context).width;
+    final columns = _columns(width);
+    final cardHeight = FeedCard.heightFor(
+      (width - 32 - 12 * (columns - 1)) / columns,
+      MediaQuery.textScalerOf(context),
+    );
     final cuisines = {
       for (final p in _nearby)
         if (p.cuisine?.trim() case final c? when c.isNotEmpty) c,
@@ -274,27 +280,50 @@ class _FeedPageState extends State<FeedPage> {
 
     Widget place(NearbyBranch p) => FeedCard(
       key: ValueKey('feed-place-${p.branchId}'),
+      kind: l.feedKindRestaurant,
       title: p.name,
-      meta: [
-        if (p.halalClaim == 'says_halal') l.feedSaysHalal,
-        ?p.cuisine?.trim(),
-      ].join(' · '),
-      badge: '${l.feedNearMe} · ${distanceText(p.distanceM)}',
-      badgeIcon: Icons.near_me,
-      icon: Icons.storefront,
-      tint: nb.pandan,
+      subtitle: p.cuisine?.trim() ?? p.label,
+      facts: [
+        if (p.rating case RatingSummary(:final average?, :final count)
+            when count > 0)
+          FeedFact(
+            Icons.star_rounded,
+            '${average.toStringAsFixed(1)} ($count)',
+            strong: true,
+          ),
+        // A quoted claim from the post, never "certified": the words stay "Says halal".
+        if (p.halalClaim == 'says_halal')
+          FeedFact(Icons.format_quote_rounded, l.feedSaysHalal, strong: true),
+      ],
+      tag: '${l.feedNearMe} · ${distanceText(p.distanceM)}',
+      tagIcon: Icons.near_me,
+      icon: Icons.storefront_outlined,
+      photo: switch (p.cover) {
+        final cover? => (ph) => ShareFill(
+          id: cover,
+          restaurantId: p.restaurantId,
+          fallback: ph,
+        ),
+        null => null,
+      },
       onTap: () => _open(p),
     );
     Widget recipe(Recipe r) => FeedCard(
       key: ValueKey('feed-recipe-${r.id}'),
+      kind: l.feedKindRecipe,
       title: r.name,
-      meta: [
-        if (r.owner?.name case final n? when !(r.owner?.isMe ?? false))
-          l.recipeBy(n),
-        if (r.ingredientCount > 0) l.recipeIngredientCount(r.ingredientCount),
-      ].join(' · '),
-      icon: Icons.menu_book,
-      tint: nb.margin,
+      subtitle: switch (r.owner) {
+        RecipeOwner(:final name?, isMe: false) => l.recipeBy(name),
+        _ => null,
+      },
+      facts: [
+        if (r.ingredientCount > 0)
+          FeedFact(
+            Icons.format_list_bulleted,
+            l.recipeIngredientCount(r.ingredientCount),
+          ),
+      ],
+      icon: Icons.menu_book_outlined,
       photo: switch ((r.cover, r.shareId)) {
         (final cover?, _) => (ph) => ShareFill(
           id: cover,
@@ -308,13 +337,17 @@ class _FeedPageState extends State<FeedPage> {
     );
     Widget dish(Dish d) => FeedCard(
       key: ValueKey('feed-dish-${d.id}'),
+      kind: l.feedKindDish,
       title: d.name,
-      meta: [
-        ?d.category,
-        if (d.ingredientCount > 0) l.recipeIngredientCount(d.ingredientCount),
-      ].join(' · '),
+      subtitle: d.category,
+      facts: [
+        if (d.ingredientCount > 0)
+          FeedFact(
+            Icons.format_list_bulleted,
+            l.recipeIngredientCount(d.ingredientCount),
+          ),
+      ],
       icon: Icons.restaurant_menu,
-      tint: nb.kunyit,
       onTap: () => context.push('/recipes/${d.id}'),
     );
 
@@ -470,12 +503,15 @@ class _FeedPageState extends State<FeedPage> {
               if (cards.isEmpty && !loading && !_failed) note(l.feedNothing),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverGrid.count(
-                  crossAxisCount: columns,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.74,
-                  children: cards,
+                // A fixed height for the card's width, so every row lines up whatever the text.
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    mainAxisExtent: cardHeight,
+                  ),
+                  delegate: SliverChildListDelegate(cards),
                 ),
               ),
               SliverToBoxAdapter(

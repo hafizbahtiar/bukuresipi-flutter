@@ -634,5 +634,12 @@
   "feedNothing": "Tiada yang sepadan. Cuba perkataan lain.",
   "feedSearchFor": "Cari \"{query}\"",
   "mapSearchPress": "Tekan Cari untuk mencari lebih jauh.",
-  "mapSearchNewPlace": "Belum ada dalam Bukuresipi: simpan untuk menambahnya, dengan pin dari peta."
+  "mapSearchNewPlace": "Belum ada dalam Bukuresipi: simpan untuk menambahnya, dengan pin dari peta.",
+  "feedKindRestaurant": "Restoran",
+  "feedKindRecipe": "Resepi",
+  "feedKindDish": "Hidangan",
+  "coverTitle": "Foto muka depan",
+  "coverNone": "Tiada foto",
+  "coverEmpty": "Belum ada foto siaran untuk restoran ini. Kongsi siarannya dahulu.",
+  "coverSaved": "Foto disimpan untuk semua"
 }

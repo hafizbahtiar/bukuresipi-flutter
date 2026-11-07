@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
@@ -284,6 +286,58 @@ class PlacesRepositoryImpl implements PlacesRepository {
     ];
   });
 
+  // shortcut: FIFO, not LRU; a Home grid shows far fewer covers than this.
+  final _covers = <String, Future<Uint8List?>>{};
+
+  @override
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover) {
+    if (_covers.length >= 80) _covers.remove(_covers.keys.first);
+    final key = '$restaurantId/$cover';
+    return _covers[key] ??= _bytes('/places/restaurants/$restaurantId/cover')
+      ..catchError((Object _) {
+        _covers.remove(key); // a failed fetch is tried again next time
+        return null;
+      });
+  }
+
+  @override
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  ) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/places/restaurants/$restaurantId/covers',
+    )).data!;
+    return (
+      covers: (j['covers'] as List).cast<String>(),
+      current: j['current'] as String?,
+    );
+  });
+
+  @override
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover) =>
+      _bytes('/places/restaurants/$restaurantId/covers/$cover');
+
+  @override
+  Future<void> setRestaurantCover(String restaurantId, String? cover) =>
+      apiCall(
+        () => _dio.put<void>(
+          '/places/restaurants/$restaurantId/cover',
+          data: {'cover': cover},
+        ),
+      );
+
+  /// Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private. 404 = null.
+  Future<Uint8List?> _bytes(String path) => apiCall(() async {
+    final res = await _dio.get<List<int>>(
+      path,
+      options: Options(
+        responseType: ResponseType.bytes,
+        validateStatus: (s) => s == 200 || s == 404,
+      ),
+    );
+    return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+  });
+
   @override
   Future<Place> savePoi(String poiId) => apiCall(() async {
     final data = (await _dio.post<Map<String, dynamic>>(
@@ -312,6 +366,7 @@ NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   saved: j['saved'] as bool,
   placeId: j['placeId'] as String?,
   rating: ratingFromJson(j['rating']),
+  cover: j['cover'] as String?,
 );
 
 ReviewVotes reviewVotesFromJson(Object? json) {
@@ -374,6 +429,7 @@ Place placeFromJson(Map<String, dynamic> j) {
       halalClaim: r['halalClaim'] as String?,
       halalQuote: r['halalQuote'] as String?,
       halalSourceUrl: r['halalSourceUrl'] as String?,
+      cover: r['cover'] as String?,
     ),
     branches: [
       for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/places_repository.dart';
@@ -160,6 +162,29 @@ class FakePlaces implements PlacesRepository {
   }) async {
     searches.add((query, submit));
     return searchHits;
+  }
+
+  List<String> coverIds = const [];
+  String? currentCover;
+  final coverPicks = <String?>[];
+
+  @override
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover) async =>
+      null;
+
+  @override
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  ) async => (covers: coverIds, current: currentCover);
+
+  @override
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover) async =>
+      null;
+
+  @override
+  Future<void> setRestaurantCover(String restaurantId, String? cover) async {
+    coverPicks.add(cover);
+    currentCover = cover;
   }
 
   @override

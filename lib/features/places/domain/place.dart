@@ -126,6 +126,7 @@ class PlaceRestaurant {
     this.halalClaim,
     this.halalQuote,
     this.halalSourceUrl,
+    this.cover,
   });
 
   final String id;
@@ -134,6 +135,9 @@ class PlaceRestaurant {
   final String? halalClaim;
   final String? halalQuote;
   final String? halalSourceUrl;
+
+  /// The owner's chosen photo (PlacesRepository.restaurantCover); changes when another is picked. null = none.
+  final String? cover;
 }
 
 class Branch {
