@@ -1613,5 +1613,13 @@
   "mapSearchHint": "Search your map",
   "@mapSearchHint": {},
   "mapSearchNone": "No saved place matches.",
-  "@mapSearchNone": {}
+  "@mapSearchNone": {},
+  "recipeCoverAdd": "Add photo",
+  "@recipeCoverAdd": {},
+  "recipeCoverChange": "Change photo",
+  "@recipeCoverChange": {},
+  "recipeCoverRemove": "Remove photo",
+  "@recipeCoverRemove": {},
+  "recipeCoverFailed": "Recipe saved, but the photo didn't upload. Try again from Edit.",
+  "@recipeCoverFailed": {}
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'recipe.dart';
 import 'recipe_variant.dart';
 
@@ -44,6 +46,14 @@ abstract interface class RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
   });
+
+  /// The owner's photo from a local jpeg/png/webp file (5 MB max); returns the recipe with its new cover.
+  Future<RecipeDetail> setCover(String id, String path);
+
+  Future<void> removeCover(String id);
+
+  /// The photo's bytes; null = none. [cover] is the recipe's cover id (a new one per upload, so a cache never goes stale).
+  Future<Uint8List?> cover(String id, String cover);
 
   /// Replaces the name, ingredient lines and steps; returns the saved recipe.
   Future<RecipeDetail> edit(

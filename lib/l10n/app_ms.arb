@@ -606,5 +606,9 @@
   "recipeEditDiscard": "Buang perubahan pada resepi ini?",
   "recipeEditDiscardOk": "Buang",
   "mapSearchHint": "Cari dalam peta",
-  "mapSearchNone": "Tiada tempat disimpan yang sepadan."
+  "mapSearchNone": "Tiada tempat disimpan yang sepadan.",
+  "recipeCoverAdd": "Tambah foto",
+  "recipeCoverChange": "Tukar foto",
+  "recipeCoverRemove": "Buang foto",
+  "recipeCoverFailed": "Resepi disimpan, tetapi foto tidak dimuat naik. Cuba lagi melalui Sunting."
 }

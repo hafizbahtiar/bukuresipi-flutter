@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipes_repository.dart';
@@ -60,7 +62,9 @@ RecipeDetail recipeDetail({
   RecipeOwner? owner,
   RecipeSourceType sourceType = RecipeSourceType.link,
   String sourceUrl = 'https://www.tiktok.com/@makan/video/1',
+  String? cover,
 }) => RecipeDetail(
+  cover: cover,
   sourceType: sourceType,
   canEdit: canEdit,
   visibility: visibility,
@@ -87,6 +91,21 @@ RecipeDetail recipeDetail({
 );
 
 class FakeRecipes implements RecipesRepository {
+  final covers = <(String, String)>[];
+  final coversRemoved = <String>[];
+
+  @override
+  Future<RecipeDetail> setCover(String id, String path) async {
+    covers.add((id, path));
+    return detailResult!;
+  }
+
+  @override
+  Future<void> removeCover(String id) async => coversRemoved.add(id);
+
+  @override
+  Future<Uint8List?> cover(String id, String cover) async => null;
+
   List<Recipe> recipes = [];
   RecipeDetail? detailResult;
   List<RecipeVariant> variantList = const [];

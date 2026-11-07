@@ -4,13 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../recipes/presentation/recipes_controller.dart';
 import '../../domain/share_repository.dart';
 
 /// The screenshot or post thumbnail behind a share. Takes no space while loading, when there is none, or on error.
 class ShareImage extends StatefulWidget {
-  const ShareImage(this.shareId, {super.key});
+  const ShareImage(this.shareId, {super.key}) : recipeId = null;
 
+  /// A recipe's own cover photo ([cover] = its cover id) in place of a share's.
+  const ShareImage.cover(String this.recipeId, String cover, {super.key})
+    : shareId = cover;
+
+  /// The share id, or the cover id when [recipeId] is set.
   final String shareId;
+  final String? recipeId;
 
   @override
   State<ShareImage> createState() => _ShareImageState();
@@ -19,10 +26,13 @@ class ShareImage extends StatefulWidget {
 class _ShareImageState extends State<ShareImage> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => context
-      .read<ShareRepository>()
-      .image(widget.shareId)
-      .catchError((Object _) => null);
+  Future<Uint8List?> _load() => switch (widget.recipeId) {
+    final recipe? => context.read<RecipesController>().cover(
+      recipe,
+      widget.shareId,
+    ),
+    null => context.read<ShareRepository>().image(widget.shareId),
+  }.catchError((Object _) => null);
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
@@ -58,9 +68,19 @@ class _ShareImageState extends State<ShareImage> {
 /// A share's photo as a small snapshot taped into the book: white border, a strip of tape, a slight tilt (the same for
 /// a share every time, so a list looks hand-pasted, not random). Takes no space while loading or when there is none.
 class SharePhoto extends StatefulWidget {
-  const SharePhoto(this.shareId, {super.key, this.size = 52});
+  const SharePhoto(this.shareId, {super.key, this.size = 52}) : recipeId = null;
 
+  /// A recipe's own cover photo ([cover] = its cover id) in place of a share's.
+  const SharePhoto.cover(
+    String this.recipeId,
+    String cover, {
+    super.key,
+    this.size = 52,
+  }) : shareId = cover;
+
+  /// The share id, or the cover id when [recipeId] is set.
   final String shareId;
+  final String? recipeId;
   final double size;
 
   @override
@@ -70,10 +90,13 @@ class SharePhoto extends StatefulWidget {
 class _SharePhotoState extends State<SharePhoto> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => context
-      .read<ShareRepository>()
-      .image(widget.shareId)
-      .catchError((Object _) => null);
+  Future<Uint8List?> _load() => switch (widget.recipeId) {
+    final recipe? => context.read<RecipesController>().cover(
+      recipe,
+      widget.shareId,
+    ),
+    null => context.read<ShareRepository>().image(widget.shareId),
+  }.catchError((Object _) => null);
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override

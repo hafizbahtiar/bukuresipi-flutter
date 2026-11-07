@@ -86,6 +86,20 @@ class RecipesController extends ChangeNotifier {
   /// Throws ApiException; the detail page shows it.
   Future<RecipeDetail> detail(String id) => _repo.get(id);
 
+  /// The owner's photo: [path] = a local image file; returns the recipe with its new cover.
+  Future<RecipeDetail> setCover(String id, String path) async {
+    final saved = await _repo.setCover(id, path);
+    unawaited(load());
+    return saved;
+  }
+
+  Future<void> removeCover(String id) async {
+    await _repo.removeCover(id);
+    unawaited(load());
+  }
+
+  Future<Uint8List?> cover(String id, String cover) => _repo.cover(id, cover);
+
   Future<List<RecipeVariant>> variants(String id) => _repo.variants(id);
 
   Future<List<String>> searchIngredients(String query) =>

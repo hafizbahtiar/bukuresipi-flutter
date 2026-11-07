@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
@@ -11,6 +14,66 @@ class RecipesRepositoryImpl implements RecipesRepository {
   RecipesRepositoryImpl(this._dio);
 
   final Dio _dio;
+
+  static const _coverTypes = {
+    'jpg': 'jpeg',
+    'jpeg': 'jpeg',
+    'png': 'png',
+    'webp': 'webp',
+  };
+  static const _maxCoverBytes = 5 * 1024 * 1024;
+
+  @override
+  Future<RecipeDetail> setCover(String id, String path) async {
+    final subtype = _coverTypes[path.split('.').last.toLowerCase()];
+    if (subtype == null || await File(path).length() > _maxCoverBytes) {
+      throw const ApiException('invalid_image');
+    }
+    return apiCall(() async {
+      final form = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          path,
+          contentType: DioMediaType('image', subtype),
+        ),
+      });
+      return recipeDetailFromJson(
+        (await _dio.put<Map<String, dynamic>>(
+          '/recipes/$id/cover',
+          data: form,
+        )).data!,
+      );
+    });
+  }
+
+  @override
+  Future<void> removeCover(String id) =>
+      apiCall(() => _dio.delete<void>('/recipes/$id/cover'));
+
+  // Keyed by cover id: a new upload is a new key, so nothing stale is ever shown.
+  final _covers = <String, Future<Uint8List?>>{};
+
+  @override
+  Future<Uint8List?> cover(String id, String cover) {
+    // shortcut: FIFO, not LRU; fine for one book of recipes.
+    if (_covers.length >= 80) _covers.remove(_covers.keys.first);
+    return _covers['$id/$cover'] ??=
+        apiCall(() async {
+          // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
+          final res = await _dio.get<List<int>>(
+            '/recipes/$id/cover',
+            options: Options(
+              responseType: ResponseType.bytes,
+              validateStatus: (s) => s == 200 || s == 404,
+            ),
+          );
+          return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+        })..catchError((Object _) {
+          _covers.remove(
+            '$id/$cover',
+          ); // a failed fetch is tried again next time
+          return null;
+        });
+  }
 
   @override
   Future<List<Recipe>> list({bool family = false}) => apiCall(() async {
@@ -187,6 +250,7 @@ Recipe recipeFromJson(Map<String, dynamic> j) => Recipe(
   ingredientCount: (j['ingredientCount'] as num?)?.toInt() ?? 0,
   stepCount: (j['stepCount'] as num?)?.toInt() ?? 0,
   shareId: j['shareId'] as String?,
+  cover: j['cover'] as String?,
 );
 
 RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
@@ -205,6 +269,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
   createdAt: dbTime(j['createdAt'] as String),
   sourceUrl: j['sourceUrl'] as String?,
   shareId: j['shareId'] as String?,
+  cover: j['cover'] as String?,
   missing: _missing(j['missing']),
   ingredients: [
     for (final i

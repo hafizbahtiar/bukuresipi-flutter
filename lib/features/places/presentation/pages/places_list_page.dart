@@ -279,9 +279,10 @@ class RecipeTile extends StatelessWidget {
     ];
     return NotebookRow(
       mark: Icon(Icons.menu_book, size: 20, color: nb.inkSoft),
-      trailing: switch (recipe.shareId) {
-        final id? => SharePhoto(id),
-        null => null,
+      trailing: switch ((recipe.cover, recipe.shareId)) {
+        (final cover?, _) => SharePhoto.cover(recipe.id, cover),
+        (null, final id?) => SharePhoto(id),
+        _ => null,
       },
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(
