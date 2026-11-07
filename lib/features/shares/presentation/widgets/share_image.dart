@@ -172,3 +172,56 @@ class _SharePhotoState extends State<SharePhoto> {
     },
   );
 }
+
+/// A share's photo, or a recipe's cover when [recipeId] is set, filling its box (BoxFit.cover). [fallback] shows
+/// while loading, when there is none, or on error. For cards (Home feed); the list rows use [SharePhoto].
+class ShareFill extends StatefulWidget {
+  const ShareFill({
+    super.key,
+    required this.id,
+    this.recipeId,
+    required this.fallback,
+  });
+
+  /// The share id, or the cover id when [recipeId] is set.
+  final String id;
+  final String? recipeId;
+  final Widget fallback;
+
+  @override
+  State<ShareFill> createState() => _ShareFillState();
+}
+
+class _ShareFillState extends State<ShareFill> {
+  late Future<Uint8List?> _bytes = _load();
+
+  Future<Uint8List?> _load() => switch (widget.recipeId) {
+    final recipe? => context.read<RecipesController>().cover(recipe, widget.id),
+    null => context.read<ShareRepository>().image(widget.id),
+  }.catchError((Object _) => null);
+
+  @override
+  void didUpdateWidget(covariant ShareFill old) {
+    super.didUpdateWidget(old);
+    if (old.id != widget.id || old.recipeId != widget.recipeId) {
+      _bytes = _load();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _bytes,
+    builder: (context, s) => switch (s.data) {
+      final bytes? => Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        cacheWidth: 600, // a card is at most ~240 dp wide
+        excludeFromSemantics: true,
+        errorBuilder: (_, _, _) => widget.fallback,
+      ),
+      null => widget.fallback,
+    },
+  );
+}

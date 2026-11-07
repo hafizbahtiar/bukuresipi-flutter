@@ -75,8 +75,9 @@ void main() {
       await pump(t);
       expect(places.nearbyCalls.single, (3.15, 101.7, 5.0));
       expect(find.text(l.feedNearYou), findsOneWidget);
-      final near = t.getTopLeft(find.text('Warung Pak Ali')).dy;
-      expect(near, lessThan(t.getTopLeft(find.text('Kedai Sederhana')).dy));
+      // Nearest first: in the grid, left of the farther one on the same row.
+      final near = t.getTopLeft(find.text('Warung Pak Ali')).dx;
+      expect(near, lessThan(t.getTopLeft(find.text('Kedai Sederhana')).dx));
       expect(find.text('Kek Batik Viral'), findsOneWidget);
       expect(find.text('Rendang Daging'), findsOneWidget);
 

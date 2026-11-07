@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,13 +9,13 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../places/domain/nearby_branch.dart';
+import '../../shares/presentation/widgets/share_image.dart';
+import 'widgets/feed_card.dart';
 import '../../places/presentation/location.dart';
 import '../../places/presentation/places_controller.dart';
-import '../../places/presentation/widgets/nearby_carousel.dart';
 import '../../places/presentation/widgets/nearby_sheet.dart';
 import '../../recipes/domain/recipe.dart';
 import '../../recipes/presentation/recipes_controller.dart';
-import '../../recipes/presentation/widgets/recipe_rows.dart';
 
 enum FeedKind { all, recipes, restaurants }
 
@@ -41,7 +42,6 @@ class FeedPage extends StatefulWidget {
 
 class _FeedPageState extends State<FeedPage> {
   static const _nearbyKm = 5.0; // as the map
-  static const _preview = 3; // rows per section on "All"
 
   final _search = TextEditingController();
   Timer? _debounce;
@@ -171,6 +171,9 @@ class _FeedPageState extends State<FeedPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
+    // Two rows of cards per section on "All", whatever the column count.
+    final columns = _columns(MediaQuery.sizeOf(context).width);
+    final preview = columns * 2;
     final restaurants = _restaurants;
     final cuisines = {
       for (final p in _nearby)
@@ -179,56 +182,151 @@ class _FeedPageState extends State<FeedPage> {
     final showRestaurants = _kind != FeedKind.recipes;
     final showRecipes = _kind != FeedKind.restaurants;
     final all = _kind == FeedKind.all;
-    List<T> cut<T>(List<T> list) => all ? list.take(_preview).toList() : list;
+    List<T> cut<T>(List<T> list) => all ? list.take(preview).toList() : list;
 
-    Widget note(String text, {VoidCallback? onTap}) => NotebookRow(
-      onTap: onTap,
-      child: Text(text, style: TextStyle(color: nb.inkSoft)),
+    // Sections: a title (handwritten, like the book's) with "See all", then a grid of cards.
+    Widget title(String label, {FeedKind? seeAll}) => SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: nb.hand.copyWith(fontSize: 26, height: 1, color: nb.ink),
+              ),
+            ),
+            if (seeAll != null)
+              TextButton(
+                onPressed: () => setState(() => _kind = seeAll),
+                child: Text(l.feedSeeAll),
+              ),
+          ],
+        ),
+      ),
     );
-    Widget seeAll(FeedKind kind) => Align(
-      alignment: Alignment.centerRight,
-      child: TextButton(
-        onPressed: () => setState(() => _kind = kind),
-        child: Text(l.feedSeeAll),
+    Widget note(String label, {VoidCallback? onTap, IconData? icon}) =>
+        SliverToBoxAdapter(
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            leading: icon == null ? null : Icon(icon, color: nb.margin),
+            title: Text(label, style: TextStyle(color: nb.inkSoft)),
+            onTap: onTap,
+          ),
+        );
+    // 2 columns on a phone, more as the screen widens.
+    Widget grid(List<Widget> cards) => SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverGrid.count(
+        crossAxisCount: columns,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.74,
+        children: cards,
       ),
     );
 
-    final restaurantRows = <Widget>[
-      NotebookHeading(l.feedNearYou),
+    final restaurantSlivers = [
+      title(
+        l.feedNearYou,
+        seeAll: all && restaurants.length > preview
+            ? FeedKind.restaurants
+            : null,
+      ),
       if (_located == false)
-        NotebookRow(
-          mark: Icon(Icons.location_off_outlined, size: 20, color: nb.margin),
+        note(
+          l.feedLocationOff,
           onTap: _loadNearby,
-          child: Text(l.feedLocationOff),
+          icon: Icons.location_off_outlined,
         )
       else if (_located == true && restaurants.isEmpty)
         note(l.feedNoneNear)
       else
-        for (final p in cut(restaurants))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
-            child: NearbyCard(place: p, onTap: () => _open(p)),
-          ),
-      if (all && restaurants.length > _preview) seeAll(FeedKind.restaurants),
+        grid([
+          for (final p in cut(restaurants))
+            FeedCard(
+              key: ValueKey('feed-place-${p.branchId}'),
+              title: p.name,
+              meta: [distanceText(p.distanceM), ?p.cuisine?.trim()].join(' · '),
+              badge: p.halalClaim == 'says_halal' ? l.feedSaysHalal : null,
+              icon: Icons.storefront,
+              tint: nb.pandan,
+              onTap: () => _open(p),
+            ),
+        ]),
     ];
 
-    final recipeRows = <Widget>[
-      NotebookHeading(l.recipesCommunity),
+    String byLine(Recipe r) => [
+      if (r.owner?.name case final n? when !(r.owner?.isMe ?? false))
+        l.recipeBy(n),
+      if (r.ingredientCount > 0) l.recipeIngredientCount(r.ingredientCount),
+    ].join(' · ');
+
+    final recipeSlivers = [
+      title(
+        l.recipesCommunity,
+        seeAll: all && (_community.length > preview || _next != null)
+            ? FeedKind.recipes
+            : null,
+      ),
       if (_community.isEmpty && !_loading) note(l.recipesEmptyCommunity),
-      for (final r in cut(_community)) RecipeRow(recipe: r),
+      grid([
+        for (final r in cut(_community))
+          FeedCard(
+            key: ValueKey('feed-recipe-${r.id}'),
+            title: r.name,
+            meta: byLine(r),
+            icon: Icons.menu_book,
+            tint: nb.margin,
+            photo: switch ((r.cover, r.shareId)) {
+              (final cover?, _) => (ph) => ShareFill(
+                id: cover,
+                recipeId: r.id,
+                fallback: ph,
+              ),
+              (null, final id?) => (ph) => ShareFill(id: id, fallback: ph),
+              _ => null,
+            },
+            onTap: () => context.push('/recipes/${r.id}'),
+          ),
+      ]),
       if (!all && _next != null && !_loading)
-        note(l.recipesLoadMore, onTap: () => _loadRecipes(more: true)),
-      if (all && (_community.length > _preview || _next != null))
-        seeAll(FeedKind.recipes),
-      NotebookHeading(l.recipesCatalogue),
+        SliverToBoxAdapter(
+          child: Center(
+            child: TextButton(
+              onPressed: () => _loadRecipes(more: true),
+              child: Text(l.recipesLoadMore),
+            ),
+          ),
+        ),
+      title(
+        l.recipesCatalogue,
+        seeAll: all && _dishes.length > preview ? FeedKind.recipes : null,
+      ),
       if (_dishes.isEmpty && !_loading) note(l.recipesEmptyCatalogue),
-      for (final d in cut(_dishes)) DishRow(dish: d),
-      if (all && _dishes.length > _preview) seeAll(FeedKind.recipes),
+      grid([
+        for (final d in cut(_dishes))
+          FeedCard(
+            key: ValueKey('feed-dish-${d.id}'),
+            title: d.name,
+            meta: [
+              ?d.category,
+              if (d.ingredientCount > 0)
+                l.recipeIngredientCount(d.ingredientCount),
+            ].join(' · '),
+            icon: Icons.restaurant_menu,
+            tint: nb.kunyit,
+            onTap: () => context.push('/recipes/${d.id}'),
+          ),
+      ]),
     ];
 
     return Scaffold(
+      backgroundColor:
+          nb.mist, // cards on a soft page; the ruled lines stay in the Book
       appBar: AppBar(
         toolbarHeight: 76,
+        backgroundColor: nb.mist,
         title: NotebookTitle(l.navHome),
         actions: [
           IconButton(
@@ -239,44 +337,41 @@ class _FeedPageState extends State<FeedPage> {
           ),
         ],
       ),
-      body: NotebookPage(
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 24),
-            children: [
-              NotebookRow(
-                mark: Icon(Icons.search, size: 20, color: nb.inkSoft),
-                trailing: _search.text.isEmpty
-                    ? null
-                    : IconButton(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: SearchBar(
+                  controller: _search,
+                  hintText: l.feedSearchHint,
+                  leading: const Icon(Icons.search),
+                  elevation: const WidgetStatePropertyAll(0),
+                  backgroundColor: WidgetStatePropertyAll(nb.paper),
+                  side: WidgetStatePropertyAll(BorderSide(color: nb.line)),
+                  onChanged: _typed,
+                  trailing: [
+                    if (_search.text.isNotEmpty)
+                      IconButton(
                         tooltip: MaterialLocalizations.of(context)
                             .deleteButtonTooltip,
-                        icon: const Icon(Icons.close, size: 18),
+                        icon: const Icon(Icons.close),
                         onPressed: () {
                           _search.clear();
                           _typed('');
                         },
                       ),
-                child: TextField(
-                  controller: _search,
-                  onChanged: _typed,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: l.feedSearchHint,
-                    border: InputBorder.none,
-                  ),
+                  ],
                 ),
               ),
-              SingleChildScrollView(
+            ),
+            SliverToBoxAdapter(
+              child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 4,
-                  4,
-                  12,
-                  4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   spacing: 8,
                   children: [
@@ -320,23 +415,31 @@ class _FeedPageState extends State<FeedPage> {
                   ],
                 ),
               ),
-              if (_failed)
-                NotebookRow(
-                  mark: Icon(Icons.cloud_off, size: 20, color: nb.margin),
-                  onTap: _refresh,
-                  child: Text(l.recipesLoadFailed2),
-                ),
-              if (showRestaurants) ...restaurantRows,
-              if (showRecipes) ...recipeRows,
-              if (_loading || _located == null)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator.adaptive()),
-                ),
-            ],
-          ),
+            ),
+            if (_failed)
+              note(
+                l.recipesLoadFailed2,
+                onTap: _refresh,
+                icon: Icons.cloud_off,
+              ),
+            if (showRestaurants) ...restaurantSlivers,
+            if (showRecipes) ...recipeSlivers,
+            SliverToBoxAdapter(
+              child: _loading || _located == null
+                  ? const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(
+                        child: CircularProgressIndicator.adaptive(),
+                      ),
+                    )
+                  : const SizedBox(height: 24),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
+/// Columns for a width: 2 on a phone, one more per ~220 dp after that.
+int _columns(double width) => math.max(2, (width - 32) ~/ 220);
