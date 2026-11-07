@@ -7,6 +7,7 @@ import '../../../../core/settings/locale_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/google_auth.dart';
 import '../auth_controller.dart';
@@ -14,6 +15,7 @@ import '../../../family/presentation/ask.dart';
 import '../../../family/presentation/family_controller.dart';
 import '../../../push/push_controller.dart';
 import '../auth_text.dart';
+import '../widgets/avatar.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -29,6 +31,46 @@ class _AccountPageState extends State<AccountPage> {
   void _snack(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  bool _avatarBusy = false;
+
+  /// The picture: change (pick + square crop) or remove. Upload errors show; the old picture stays.
+  Future<void> _avatarMenu({required bool has}) async {
+    final l = AppLocalizations.of(context);
+    final auth = context.read<AuthController>();
+    final choice = await showNotebookSheet<String>(
+      context,
+      builder: (sheet) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.add_a_photo_outlined),
+            title: Text(has ? l.avatarChange : l.avatarAdd),
+            onTap: () => Navigator.of(sheet).pop('change'),
+          ),
+          if (has)
+            ListTile(
+              leading: const Icon(Icons.hide_image_outlined),
+              title: Text(l.avatarRemove),
+              onTap: () => Navigator.of(sheet).pop('remove'),
+            ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return;
+    final path = choice == 'change'
+        ? await pickPhoto(context, ratios: [('1:1', 1)], maxSide: 1024)
+        : null;
+    if (choice == 'change' && path == null) return;
+    setState(() => _avatarBusy = true);
+    try {
+      await (path == null ? auth.removeAvatar() : auth.setAvatar(path));
+    } catch (e) {
+      _snack(errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
   }
 
   Future<void> _resend() async {
@@ -109,6 +151,30 @@ class _AccountPageState extends State<AccountPage> {
             padding: const EdgeInsets.only(bottom: 24),
             children: [
               NotebookRow(
+                mark: Semantics(
+                  button: true,
+                  label: user.avatar == null ? l.avatarAdd : l.avatarChange,
+                  child: InkWell(
+                    key: const ValueKey('account-avatar'),
+                    customBorder: const CircleBorder(),
+                    onTap: _avatarBusy
+                        ? null
+                        : () => _avatarMenu(has: user.avatar != null),
+                    child: _avatarBusy
+                        ? const SizedBox.square(
+                            dimension: 40,
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : Avatar(
+                            userId: user.id,
+                            avatar: user.avatar,
+                            name: user.name ?? user.email,
+                          ),
+                  ),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

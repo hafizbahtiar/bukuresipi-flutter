@@ -1657,5 +1657,11 @@
   "photoFree": "Free",
   "@photoFree": {},
   "photoEditFailed": "Couldn't edit this photo. Try another one.",
-  "@photoEditFailed": {}
+  "@photoEditFailed": {},
+  "avatarAdd": "Add profile picture",
+  "@avatarAdd": {},
+  "avatarChange": "Change profile picture",
+  "@avatarChange": {},
+  "avatarRemove": "Remove profile picture",
+  "@avatarRemove": {}
 }

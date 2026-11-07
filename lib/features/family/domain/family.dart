@@ -42,10 +42,14 @@ class FamilyMember {
     required this.name,
     required this.role,
     required this.isMe,
+    this.avatar,
   });
 
   final String id;
   final String? name;
+
+  /// Profile picture id (AuthController.avatar), null = none.
+  final String? avatar;
   final String role;
   final bool isMe;
 

@@ -9,6 +9,7 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../auth/presentation/widgets/avatar.dart';
 import '../../domain/family.dart';
 import '../ask.dart';
 import '../family_controller.dart';
@@ -257,10 +258,11 @@ class _FamilyPageState extends State<FamilyPage> {
         ),
         for (final m in f.members)
           NotebookRow(
-            mark: Icon(
-              m.isOwner ? Icons.star_outline : Icons.person_outline,
-              size: 20,
-              color: nb.inkSoft,
+            mark: Avatar(
+              userId: m.id,
+              avatar: m.avatar,
+              name: m.name,
+              size: 28,
             ),
             onTap: f.isOwner && !m.isMe && !_busy
                 ? () => _memberMenu(f, m)

@@ -628,5 +628,8 @@
   "photoFlip": "Balik",
   "photoReset": "Set semula",
   "photoFree": "Bebas",
-  "photoEditFailed": "Foto ini tidak dapat disunting. Cuba foto lain."
+  "photoEditFailed": "Foto ini tidak dapat disunting. Cuba foto lain.",
+  "avatarAdd": "Tambah gambar profil",
+  "avatarChange": "Tukar gambar profil",
+  "avatarRemove": "Buang gambar profil"
 }

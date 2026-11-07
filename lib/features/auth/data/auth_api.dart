@@ -104,4 +104,33 @@ class AuthApi {
         '/auth/me',
         data: {'name': name},
       )).data!;
+
+  Future<Map<String, dynamic>> setAvatar(String path) async =>
+      (await _dio.put<Map<String, dynamic>>(
+        '/auth/me/avatar',
+        data: FormData.fromMap({
+          'image': await MultipartFile.fromFile(
+            path,
+            contentType: DioMediaType(
+              'image',
+              'jpeg',
+            ), // the editor writes JPEG
+          ),
+        }),
+      )).data!;
+
+  Future<Map<String, dynamic>> removeAvatar() async =>
+      (await _dio.delete<Map<String, dynamic>>('/auth/me/avatar')).data!;
+
+  Future<Uint8List?> avatar(String userId) async {
+    // Through Dio, not Image.network: the request needs the token; R2 is private.
+    final res = await _dio.get<List<int>>(
+      '/auth/avatar/$userId',
+      options: Options(
+        responseType: ResponseType.bytes,
+        validateStatus: (s) => s == 200 || s == 404,
+      ),
+    );
+    return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+  }
 }
