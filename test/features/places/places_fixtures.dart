@@ -147,6 +147,27 @@ class FakePlaces implements PlacesRepository {
     return nearbyResults;
   }
 
+  List<PlaceHit> searchHits = const [];
+  final searches = <(String, bool)>[];
+  final savedPois = <String>[];
+
+  @override
+  Future<List<PlaceHit>> search(
+    String query,
+    double lat,
+    double lng, {
+    bool submit = false,
+  }) async {
+    searches.add((query, submit));
+    return searchHits;
+  }
+
+  @override
+  Future<Place> savePoi(String poiId) async {
+    savedPois.add(poiId);
+    return saveBranchResult ?? place();
+  }
+
   @override
   Future<Place> saveBranch(String branchId) async {
     if (saveBranchError != null) throw saveBranchError!;

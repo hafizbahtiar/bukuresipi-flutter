@@ -252,6 +252,46 @@ class PlacesRepositoryImpl implements PlacesRepository {
     )).data!;
     return placeFromJson(data);
   });
+
+  @override
+  Future<List<PlaceHit>> search(
+    String query,
+    double lat,
+    double lng, {
+    bool submit = false,
+  }) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/places/search',
+      queryParameters: {
+        'q': query.trim(),
+        'lat': lat,
+        'lng': lng,
+        'submit': submit ? '1' : '0',
+      },
+    )).data!;
+    return [
+      for (final j in (data['items'] as List).cast<Map<String, dynamic>>())
+        PlaceHit(
+          branchId: j['branchId'] as String?,
+          poiId: j['poiId'] as String?,
+          name: j['name'] as String,
+          address: j['address'] as String?,
+          lat: (j['lat'] as num).toDouble(),
+          lng: (j['lng'] as num).toDouble(),
+          distanceM: (j['distanceM'] as num).toInt(),
+          saved: j['saved'] as bool? ?? false,
+        ),
+    ];
+  });
+
+  @override
+  Future<Place> savePoi(String poiId) => apiCall(() async {
+    final data = (await _dio.post<Map<String, dynamic>>(
+      '/places',
+      data: {'poiId': poiId},
+    )).data!;
+    return placeFromJson(data);
+  });
 }
 
 double? _num(Object? v) => v is num ? v.toDouble() : null;
