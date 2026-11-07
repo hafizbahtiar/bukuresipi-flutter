@@ -55,7 +55,10 @@ step "flutter pub get"
 flutter pub get
 step "pod install"
 if command -v pod >/dev/null; then
-  (cd ios && pod install)
+  # A stale local spec repo misses new Firebase pods: refresh it and retry. Android builds don't need pods, so a
+  # failure here only warns.
+  (cd ios && { pod install || pod install --repo-update; }) ||
+    echo "${YELLOW}pod install failed: iOS builds need it fixed; continuing${R}"
 else
   echo "${YELLOW}pod not found: skipping pod install${R}"
 fi
