@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
+import '../open_link.dart';
 import '../theme/app_theme.dart';
 
 /// While the session is being restored at launch. Same color as the native splash (pubspec flutter_native_splash),
@@ -14,6 +17,10 @@ class SplashPage extends StatelessWidget {
     body: Center(child: CircularProgressIndicator(color: Colors.white)),
   );
 }
+
+/// The app's store page; the Play app opens it (no App Store listing yet, so iOS shows no button).
+const playStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.bukuresipi';
 
 /// The API answered 426: this app version is retired.
 class UpdateRequiredPage extends StatelessWidget {
@@ -42,6 +49,16 @@ class UpdateRequiredPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(l.updateText),
+              if (Platform.isAndroid) ...[
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  key: const ValueKey('update-store'),
+                  icon: const Icon(Icons.shop_outlined),
+                  label: Text(l.updateButton),
+                  onPressed: () =>
+                      openLink(context, playStoreUrl, failed: l.openFailed),
+                ),
+              ],
             ],
           ),
         ),

@@ -90,6 +90,8 @@
   "@updateTitle": {},
   "updateText": "This version of Bukuresipi is no longer supported. Update the app from the store to continue.",
   "@updateText": {},
+  "updateButton": "Update on Google Play",
+  "@updateButton": {},
   "errInvalidEmail": "Enter a valid email address.",
   "@errInvalidEmail": {},
   "errWeakPassword": "Use 8 to 72 characters, not only spaces.",
