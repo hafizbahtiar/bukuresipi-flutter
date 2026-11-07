@@ -12,10 +12,15 @@ abstract interface class RecipesRepository {
   Future<({List<Recipe> recipes, String? next})> community({
     String? query,
     String? cursor,
+    int? limit,
   });
 
-  /// The seeded catalogue dishes, by name.
-  Future<List<Dish>> dishes({String? query});
+  /// The seeded catalogue dishes, by name, a page at a time (cursor = the last page's next).
+  Future<({List<Dish> dishes, String? next})> dishes({
+    String? query,
+    String? cursor,
+    int? limit,
+  });
 
   /// "Make my copy": the caller's own, editable copy.
   Future<RecipeDetail> copy(String id);

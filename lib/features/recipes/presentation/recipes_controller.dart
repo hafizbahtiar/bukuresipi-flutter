@@ -144,10 +144,15 @@ class RecipesController extends ChangeNotifier {
   Future<({List<Recipe> recipes, String? next})> community({
     String? query,
     String? cursor,
-  }) => _repo.community(query: query, cursor: cursor);
+    int? limit,
+  }) => _repo.community(query: query, cursor: cursor, limit: limit);
 
   /// Throws ApiException.
-  Future<List<Dish>> dishes({String? query}) => _repo.dishes(query: query);
+  Future<({List<Dish> dishes, String? next})> dishes({
+    String? query,
+    String? cursor,
+    int? limit,
+  }) => _repo.dishes(query: query, cursor: cursor, limit: limit);
 
   /// Throws ApiException. The copy is the user's: their list is reloaded.
   Future<RecipeDetail> copy(String id) async {

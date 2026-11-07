@@ -133,6 +133,7 @@ class FakeRecipes implements RecipesRepository {
   Future<({List<Recipe> recipes, String? next})> community({
     String? query,
     String? cursor,
+    int? limit,
   }) async => (
     recipes: communityList
         .where(
@@ -145,12 +146,20 @@ class FakeRecipes implements RecipesRepository {
   );
 
   @override
-  Future<List<Dish>> dishes({String? query}) async => dishList
-      .where(
-        (d) =>
-            query == null || d.name.toLowerCase().contains(query.toLowerCase()),
-      )
-      .toList();
+  Future<({List<Dish> dishes, String? next})> dishes({
+    String? query,
+    String? cursor,
+    int? limit,
+  }) async => (
+    dishes: dishList
+        .where(
+          (d) =>
+              query == null ||
+              d.name.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList(),
+    next: null,
+  );
 
   @override
   Future<RecipeDetail> copy(String id) async {

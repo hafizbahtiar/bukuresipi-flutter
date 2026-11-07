@@ -375,8 +375,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: ActionDock.clearance),
           children: [
+            // A photo opens the page edge to edge; none = the title starts the page (the owner may add one).
+            switch ((recipe.cover, recipe.shareId)) {
+              (final cover?, _) => ShareImage.cover(
+                recipe.id,
+                cover,
+                hero: true,
+              ),
+              (null, final share?) => ShareImage(share, hero: true),
+              _ => const SizedBox.shrink(),
+            },
             Padding(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
+              padding: const EdgeInsets.fromLTRB(
+                notebookGutter + 10,
+                12,
+                20,
+                0,
+              ),
               child: Text(
                 recipe.name,
                 style: text.headlineSmall?.copyWith(
@@ -396,6 +411,24 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 child: Text(
                   by,
                   style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
+              ),
+            if (recipe.canEdit && recipe.cover == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 4,
+                  6,
+                  20,
+                  0,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ActionChip(
+                    key: const ValueKey('recipe-add-cover'),
+                    avatar: const Icon(Icons.add_a_photo_outlined, size: 18),
+                    label: Text(l.recipeCoverAdd),
+                    onPressed: () => _edit(recipe),
+                  ),
                 ),
               ),
             if (recipe.canEdit)
@@ -431,19 +464,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   l.recipeHidden,
                   style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                 ),
-              ),
-            if (recipe.cover != null || recipe.shareId != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  0,
-                  20,
-                  0,
-                ),
-                child: switch (recipe.cover) {
-                  final cover? => ShareImage.cover(recipe.id, cover),
-                  null => ShareImage(recipe.shareId!),
-                },
               ),
             if (recipe.missing.isNotEmpty)
               NotebookRow(

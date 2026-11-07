@@ -99,6 +99,28 @@ void main() {
     expect(find.text('Open video'), findsOneWidget);
   });
 
+  testWidgets(
+    'no photo: the owner gets "Add photo", a reader sees just the title',
+    (t) async {
+      for (final (canEdit, chips) in [(true, 1), (false, 0)]) {
+        final recipes = RecipesController(
+          FakeRecipes()..detailResult = recipeDetail(canEdit: canEdit),
+        );
+        await t.pumpWidget(
+          app(
+            providers: [ChangeNotifierProvider.value(value: recipes)],
+            home: RecipeDetailPage(key: ValueKey(canEdit), id: 'r-1'),
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-add-cover')),
+          findsNWidgets(chips),
+        );
+      }
+    },
+  );
+
   testWidgets('a recipe with no steps shows no Steps heading', (t) async {
     final recipes = RecipesController(
       FakeRecipes()..detailResult = recipeDetail(steps: const []),

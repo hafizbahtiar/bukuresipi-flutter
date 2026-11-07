@@ -77,11 +77,21 @@ class RecipesRepositoryImpl implements RecipesRepository {
 
   @override
   Future<List<Recipe>> list({bool family = false}) => apiCall(() async {
-    final data = (await _dio.get<Map<String, dynamic>>(
-      '/recipes',
-      queryParameters: family ? {'scope': 'family'} : null,
-    )).data!;
-    final rows = data['recipes'] as List;
+    // shortcut: the book reads every page up front (50 each); page it on scroll when books get long.
+    final rows = <dynamic>[];
+    String? cursor;
+    do {
+      final data = (await _dio.get<Map<String, dynamic>>(
+        '/recipes',
+        queryParameters: {
+          'limit': 50,
+          if (family) 'scope': 'family',
+          'cursor': ?cursor,
+        },
+      )).data!;
+      rows.addAll(data['items'] as List);
+      cursor = data['next'] as String?;
+    } while (cursor != null);
     final recipes = <Recipe>[];
     for (final j in rows) {
       try {
@@ -98,17 +108,19 @@ class RecipesRepositoryImpl implements RecipesRepository {
   Future<({List<Recipe> recipes, String? next})> community({
     String? query,
     String? cursor,
+    int? limit,
   }) => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>(
       '/recipes/community',
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
         'cursor': ?cursor,
+        'limit': ?limit,
       },
     )).data!;
     return (
       recipes: [
-        for (final j in (data['recipes'] as List).cast<Map<String, dynamic>>())
+        for (final j in (data['items'] as List).cast<Map<String, dynamic>>())
           recipeFromJson(j),
       ],
       next: data['next'] as String?,
@@ -116,22 +128,31 @@ class RecipesRepositoryImpl implements RecipesRepository {
   });
 
   @override
-  Future<List<Dish>> dishes({String? query}) => apiCall(() async {
+  Future<({List<Dish> dishes, String? next})> dishes({
+    String? query,
+    String? cursor,
+    int? limit,
+  }) => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>(
       '/catalogue/dishes',
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        'cursor': ?cursor,
+        'limit': ?limit,
       },
     )).data!;
-    return [
-      for (final d in (data['dishes'] as List).cast<Map<String, dynamic>>())
-        Dish(
-          id: d['id'] as String,
-          name: d['name'] as String,
-          category: d['category'] as String?,
-          ingredientCount: (d['ingredientCount'] as num?)?.toInt() ?? 0,
-        ),
-    ];
+    return (
+      dishes: [
+        for (final d in (data['items'] as List).cast<Map<String, dynamic>>())
+          Dish(
+            id: d['id'] as String,
+            name: d['name'] as String,
+            category: d['category'] as String?,
+            ingredientCount: (d['ingredientCount'] as num?)?.toInt() ?? 0,
+          ),
+      ],
+      next: data['next'] as String?,
+    );
   });
 
   @override
