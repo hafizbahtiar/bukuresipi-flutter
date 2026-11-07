@@ -16,6 +16,7 @@ class FeedCard extends StatelessWidget {
     required this.tint,
     this.photo,
     this.badge,
+    this.badgeIcon,
     required this.onTap,
   });
 
@@ -29,6 +30,7 @@ class FeedCard extends StatelessWidget {
 
   /// A small label on the photo (e.g. "Says halal").
   final String? badge;
+  final IconData? badgeIcon;
   final VoidCallback onTap;
 
   @override
@@ -113,12 +115,20 @@ class FeedCard extends StatelessWidget {
                           color: nb.paper.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(
-                          b,
-                          style: text.labelSmall?.copyWith(
-                            color: nb.pandanDeep,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 3,
+                          children: [
+                            if (badgeIcon case final i?)
+                              Icon(i, size: 12, color: nb.pandanDeep),
+                            Text(
+                              b,
+                              style: text.labelSmall?.copyWith(
+                                color: nb.pandanDeep,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

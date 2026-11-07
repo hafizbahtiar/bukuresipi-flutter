@@ -34,7 +34,7 @@ void main() {
         (_) => (
           200,
           {
-            'recipes': [older, recipeJson],
+            'items': [older, recipeJson],
           },
         ),
       );
@@ -56,7 +56,7 @@ void main() {
       (_) => (
         200,
         {
-          'recipes': [
+          'items': [
             recipeJson,
             {'id': 'broken'},
           ],

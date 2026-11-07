@@ -27,10 +27,10 @@ Future<({double lat, double lng})?> _phone() async {
   return p == null ? null : (lat: p.latitude, lng: p.longitude);
 }
 
-/// The Home tab: restaurants near the phone (GET /places/nearby), community recipes and catalogue dishes in one
-/// page, with one search box and filters (kind, "says halal", cuisine). Built only from existing endpoints:
-/// recipes are searched on the server, restaurants filtered on the phone (the nearby list is small).
-/// shortcut: one mixed list from separate endpoints; a ranked GET /feed when the sections are not enough.
+/// The Home tab: one grid of cards, like a marketplace. Recipes (community, then catalogue dishes) load a page at a
+/// time as you scroll; every 4th card is a restaurant near the phone (GET /places/nearby, nearest first) with a
+/// "Near me" tag and its distance. One search box with suggestions; filters for kind, "says halal" and cuisine.
+/// Restaurants are filtered on the phone (the nearby list is at most 100), recipes on the server.
 class FeedPage extends StatefulWidget {
   const FeedPage({super.key, this.locate = _phone});
 
@@ -42,9 +42,10 @@ class FeedPage extends StatefulWidget {
 
 class _FeedPageState extends State<FeedPage> {
   static const _nearbyKm = 5.0; // as the map
+  static const _every = 4; // a restaurant in every 4th slot
 
-  final _search = TextEditingController();
-  Timer? _debounce;
+  final _search = SearchController();
+  final _scroll = ScrollController();
   String _query = '';
   FeedKind _kind = FeedKind.all;
   bool _halal = false;
@@ -52,10 +53,14 @@ class _FeedPageState extends State<FeedPage> {
 
   bool? _located; // null = asking
   List<NearbyBranch> _nearby = const [];
+
+  // Recipes: community pages first, then catalogue pages.
   List<Recipe> _community = const [];
-  String? _next;
   List<Dish> _dishes = const [];
-  bool _loading = true;
+  String? _cursor;
+  bool _inDishes = false;
+  bool _done = false;
+  bool _busy = false;
   bool _failed = false;
   int _generation = 0;
 
@@ -67,12 +72,12 @@ class _FeedPageState extends State<FeedPage> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _search.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  Future<void> _refresh() => Future.wait([_loadNearby(), _loadRecipes()]);
+  Future<void> _refresh() => Future.wait([_loadNearby(), _restart()]);
 
   Future<void> _loadNearby() async {
     final here = await widget.locate();
@@ -97,51 +102,76 @@ class _FeedPageState extends State<FeedPage> {
     }
   }
 
-  /// Community + catalogue for the current query; [more] = the next community page.
-  Future<void> _loadRecipes({bool more = false}) async {
-    final recipes = context.read<RecipesController>();
-    final generation = ++_generation;
+  /// From the first page, for the current query.
+  Future<void> _restart() {
+    _generation++;
     setState(() {
-      _loading = true;
+      _community = const [];
+      _dishes = const [];
+      _cursor = null;
+      _inDishes = false;
+      _done = false;
+      _busy = false;
       _failed = false;
     });
-    try {
-      final (page, dishes) = await (
-        recipes.community(query: _query, cursor: more ? _next : null),
-        more ? Future.value(_dishes) : recipes.dishes(query: _query),
-      ).wait;
-      if (generation != _generation || !mounted) return;
-      setState(() {
-        _community = more ? [..._community, ...page.recipes] : page.recipes;
-        _next = page.next;
-        _dishes = dishes;
-      });
-    } catch (_) {
-      if (generation == _generation && mounted) setState(() => _failed = true);
-    } finally {
-      if (generation == _generation && mounted) {
-        setState(() => _loading = false);
-      }
-    }
+    return _more();
   }
 
-  void _typed(String text) {
-    setState(() {}); // the clear button
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      setState(() => _query = text.trim());
-      _loadRecipes();
+  /// The next page: community until its last, then the catalogue.
+  Future<void> _more() async {
+    if (_busy || _done) return;
+    final recipes = context.read<RecipesController>();
+    final generation = _generation;
+    setState(() => _busy = true);
+    try {
+      final q = _query.isEmpty ? null : _query;
+      if (!_inDishes) {
+        final page = await recipes.community(query: q, cursor: _cursor);
+        if (generation != _generation || !mounted) return;
+        setState(() {
+          _community = [..._community, ...page.recipes];
+          _cursor = page.next;
+          _inDishes = page.next == null;
+        });
+      } else {
+        final page = await recipes.dishes(query: q, cursor: _cursor);
+        if (generation != _generation || !mounted) return;
+        setState(() {
+          _dishes = [..._dishes, ...page.dishes];
+          _cursor = page.next;
+          _done = page.next == null;
+        });
+      }
+    } catch (_) {
+      if (generation == _generation && mounted) setState(() => _failed = true);
+      return;
+    } finally {
+      if (generation == _generation && mounted) setState(() => _busy = false);
+    }
+    // A short page leaves the screen unfilled, so no scroll asks for more: ask now.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scroll.hasClients && _scroll.position.extentAfter < 800) {
+        _more();
+      }
     });
   }
+
+  void _submit(String text) {
+    if (_search.isOpen) _search.closeView(text);
+    if (text.trim() == _query) return;
+    setState(() => _query = text.trim());
+    _restart();
+  }
+
+  bool _matches(NearbyBranch p, String q) =>
+      p.name.toLowerCase().contains(q) ||
+      (p.label?.toLowerCase().contains(q) ?? false);
 
   List<NearbyBranch> get _restaurants {
     final q = _query.toLowerCase();
     return [
       for (final p in _nearby)
-        if ((q.isEmpty ||
-                p.name.toLowerCase().contains(q) ||
-                (p.label?.toLowerCase().contains(q) ?? false)) &&
+        if ((q.isEmpty || _matches(p, q)) &&
             (!_halal || p.halalClaim == 'says_halal') &&
             (_cuisine == null || p.cuisine?.trim() == _cuisine))
           p,
@@ -167,44 +197,145 @@ class _FeedPageState extends State<FeedPage> {
     );
   }
 
+  /// Suggestions as you type: nearby restaurants (on the phone), then recipes and dishes (one small server page
+  /// each, after a pause in typing), then "Search 'text'".
+  Future<Iterable<Widget>> _suggest(
+    BuildContext context,
+    SearchController c,
+  ) async {
+    final l = AppLocalizations.of(context);
+    final text = c.text.trim();
+    final q = text.toLowerCase();
+    final recipes = context.read<RecipesController>();
+    final tiles = <Widget>[
+      if (q.isNotEmpty)
+        for (final p in _nearby.where((p) => _matches(p, q)).take(3))
+          ListTile(
+            leading: const Icon(Icons.storefront),
+            title: Text(p.name),
+            subtitle: Text(distanceText(p.distanceM)),
+            onTap: () {
+              c.closeView(c.text);
+              _open(p);
+            },
+          ),
+    ];
+    if (text.length >= 2) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (c.text.trim() != text) {
+        return tiles; // typed on: the newer call answers
+      }
+      try {
+        final (community, dishes) = await (
+          recipes.community(query: text, limit: 5),
+          recipes.dishes(query: text, limit: 5),
+        ).wait;
+        for (final (id, name, icon) in [
+          for (final r in community.recipes) (r.id, r.name, Icons.menu_book),
+          for (final d in dishes.dishes) (d.id, d.name, Icons.restaurant_menu),
+        ]) {
+          tiles.add(
+            ListTile(
+              leading: Icon(icon),
+              title: Text(name),
+              onTap: () {
+                c.closeView(c.text);
+                if (mounted) this.context.push('/recipes/$id');
+              },
+            ),
+          );
+        }
+      } catch (_) {} // suggestions are a help; the search itself still works
+    }
+    if (text.isNotEmpty) {
+      tiles.add(
+        ListTile(
+          key: const ValueKey('feed-search-for'),
+          leading: const Icon(Icons.search),
+          title: Text(l.feedSearchFor(text)),
+          onTap: () => _submit(text),
+        ),
+      );
+    }
+    return tiles;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
-    // Two rows of cards per section on "All", whatever the column count.
     final columns = _columns(MediaQuery.sizeOf(context).width);
-    final preview = columns * 2;
-    final restaurants = _restaurants;
     final cuisines = {
       for (final p in _nearby)
         if (p.cuisine?.trim() case final c? when c.isNotEmpty) c,
     }.toList()..sort();
     final showRestaurants = _kind != FeedKind.recipes;
     final showRecipes = _kind != FeedKind.restaurants;
-    final all = _kind == FeedKind.all;
-    List<T> cut<T>(List<T> list) => all ? list.take(preview).toList() : list;
 
-    // Sections: a title (handwritten, like the book's) with "See all", then a grid of cards.
-    Widget title(String label, {FeedKind? seeAll}) => SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: nb.hand.copyWith(fontSize: 26, height: 1, color: nb.ink),
-              ),
-            ),
-            if (seeAll != null)
-              TextButton(
-                onPressed: () => setState(() => _kind = seeAll),
-                child: Text(l.feedSeeAll),
-              ),
-          ],
-        ),
-      ),
+    Widget place(NearbyBranch p) => FeedCard(
+      key: ValueKey('feed-place-${p.branchId}'),
+      title: p.name,
+      meta: [
+        if (p.halalClaim == 'says_halal') l.feedSaysHalal,
+        ?p.cuisine?.trim(),
+      ].join(' · '),
+      badge: '${l.feedNearMe} · ${distanceText(p.distanceM)}',
+      badgeIcon: Icons.near_me,
+      icon: Icons.storefront,
+      tint: nb.pandan,
+      onTap: () => _open(p),
     );
+    Widget recipe(Recipe r) => FeedCard(
+      key: ValueKey('feed-recipe-${r.id}'),
+      title: r.name,
+      meta: [
+        if (r.owner?.name case final n? when !(r.owner?.isMe ?? false))
+          l.recipeBy(n),
+        if (r.ingredientCount > 0) l.recipeIngredientCount(r.ingredientCount),
+      ].join(' · '),
+      icon: Icons.menu_book,
+      tint: nb.margin,
+      photo: switch ((r.cover, r.shareId)) {
+        (final cover?, _) => (ph) => ShareFill(
+          id: cover,
+          recipeId: r.id,
+          fallback: ph,
+        ),
+        (null, final id?) => (ph) => ShareFill(id: id, fallback: ph),
+        _ => null,
+      },
+      onTap: () => context.push('/recipes/${r.id}'),
+    );
+    Widget dish(Dish d) => FeedCard(
+      key: ValueKey('feed-dish-${d.id}'),
+      title: d.name,
+      meta: [
+        ?d.category,
+        if (d.ingredientCount > 0) l.recipeIngredientCount(d.ingredientCount),
+      ].join(' · '),
+      icon: Icons.restaurant_menu,
+      tint: nb.kunyit,
+      onTap: () => context.push('/recipes/${d.id}'),
+    );
+
+    final restaurants = showRestaurants ? _restaurants : const <NearbyBranch>[];
+    final stream = showRecipes
+        ? [..._community.map(recipe), ..._dishes.map(dish)]
+        : const <Widget>[];
+    final cards = <Widget>[];
+    var next = 0;
+    for (final card in stream) {
+      if (cards.length % _every == _every - 1 && next < restaurants.length) {
+        cards.add(place(restaurants[next++]));
+      }
+      cards.add(card);
+    }
+    // Recipes all shown (or not wanted): the rest of the restaurants follow.
+    if (_done || !showRecipes) {
+      cards.addAll(restaurants.skip(next).map(place));
+    }
+    final loading = (_busy && showRecipes) || _located == null;
+
     Widget note(String label, {VoidCallback? onTap, IconData? icon}) =>
         SliverToBoxAdapter(
           child: ListTile(
@@ -214,112 +345,6 @@ class _FeedPageState extends State<FeedPage> {
             onTap: onTap,
           ),
         );
-    // 2 columns on a phone, more as the screen widens.
-    Widget grid(List<Widget> cards) => SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverGrid.count(
-        crossAxisCount: columns,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.74,
-        children: cards,
-      ),
-    );
-
-    final restaurantSlivers = [
-      title(
-        l.feedNearYou,
-        seeAll: all && restaurants.length > preview
-            ? FeedKind.restaurants
-            : null,
-      ),
-      if (_located == false)
-        note(
-          l.feedLocationOff,
-          onTap: _loadNearby,
-          icon: Icons.location_off_outlined,
-        )
-      else if (_located == true && restaurants.isEmpty)
-        note(l.feedNoneNear)
-      else
-        grid([
-          for (final p in cut(restaurants))
-            FeedCard(
-              key: ValueKey('feed-place-${p.branchId}'),
-              title: p.name,
-              meta: [distanceText(p.distanceM), ?p.cuisine?.trim()].join(' · '),
-              badge: p.halalClaim == 'says_halal' ? l.feedSaysHalal : null,
-              icon: Icons.storefront,
-              tint: nb.pandan,
-              onTap: () => _open(p),
-            ),
-        ]),
-    ];
-
-    String byLine(Recipe r) => [
-      if (r.owner?.name case final n? when !(r.owner?.isMe ?? false))
-        l.recipeBy(n),
-      if (r.ingredientCount > 0) l.recipeIngredientCount(r.ingredientCount),
-    ].join(' · ');
-
-    final recipeSlivers = [
-      title(
-        l.recipesCommunity,
-        seeAll: all && (_community.length > preview || _next != null)
-            ? FeedKind.recipes
-            : null,
-      ),
-      if (_community.isEmpty && !_loading) note(l.recipesEmptyCommunity),
-      grid([
-        for (final r in cut(_community))
-          FeedCard(
-            key: ValueKey('feed-recipe-${r.id}'),
-            title: r.name,
-            meta: byLine(r),
-            icon: Icons.menu_book,
-            tint: nb.margin,
-            photo: switch ((r.cover, r.shareId)) {
-              (final cover?, _) => (ph) => ShareFill(
-                id: cover,
-                recipeId: r.id,
-                fallback: ph,
-              ),
-              (null, final id?) => (ph) => ShareFill(id: id, fallback: ph),
-              _ => null,
-            },
-            onTap: () => context.push('/recipes/${r.id}'),
-          ),
-      ]),
-      if (!all && _next != null && !_loading)
-        SliverToBoxAdapter(
-          child: Center(
-            child: TextButton(
-              onPressed: () => _loadRecipes(more: true),
-              child: Text(l.recipesLoadMore),
-            ),
-          ),
-        ),
-      title(
-        l.recipesCatalogue,
-        seeAll: all && _dishes.length > preview ? FeedKind.recipes : null,
-      ),
-      if (_dishes.isEmpty && !_loading) note(l.recipesEmptyCatalogue),
-      grid([
-        for (final d in cut(_dishes))
-          FeedCard(
-            key: ValueKey('feed-dish-${d.id}'),
-            title: d.name,
-            meta: [
-              ?d.category,
-              if (d.ingredientCount > 0)
-                l.recipeIngredientCount(d.ingredientCount),
-            ].join(' · '),
-            icon: Icons.restaurant_menu,
-            tint: nb.kunyit,
-            onTap: () => context.push('/recipes/${d.id}'),
-          ),
-      ]),
-    ];
 
     return Scaffold(
       backgroundColor:
@@ -339,102 +364,132 @@ class _FeedPageState extends State<FeedPage> {
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: SearchBar(
-                  controller: _search,
-                  hintText: l.feedSearchHint,
-                  leading: const Icon(Icons.search),
-                  elevation: const WidgetStatePropertyAll(0),
-                  backgroundColor: WidgetStatePropertyAll(nb.paper),
-                  side: WidgetStatePropertyAll(BorderSide(color: nb.line)),
-                  onChanged: _typed,
-                  trailing: [
-                    if (_search.text.isNotEmpty)
-                      IconButton(
-                        tooltip: MaterialLocalizations.of(context)
-                            .deleteButtonTooltip,
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          _search.clear();
-                          _typed('');
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  spacing: 8,
-                  children: [
-                    for (final (kind, label) in [
-                      (FeedKind.all, l.feedAll),
-                      (FeedKind.recipes, l.navRecipes),
-                      (FeedKind.restaurants, l.feedRestaurants),
-                    ])
-                      ChoiceChip(
-                        key: ValueKey('feed-kind-${kind.name}'),
-                        label: Text(label),
-                        selected: _kind == kind,
-                        onSelected: (_) => setState(() => _kind = kind),
-                      ),
-                    if (showRestaurants) ...[
-                      FilterChip(
-                        key: const ValueKey('feed-halal'),
-                        label: Text(l.feedSaysHalal),
-                        selected: _halal,
-                        onSelected: (on) => setState(() => _halal = on),
-                      ),
-                      if (cuisines.isNotEmpty)
-                        PopupMenuButton<String?>(
-                          tooltip: l.feedCuisine,
-                          initialValue: _cuisine,
-                          onSelected: (c) => setState(() => _cuisine = c),
-                          itemBuilder: (_) => [
-                            PopupMenuItem(
-                              value: null,
-                              child: Text(l.feedAnyCuisine),
-                            ),
-                            for (final c in cuisines)
-                              PopupMenuItem(value: c, child: Text(c)),
-                          ],
-                          child: Chip(
-                            label: Text(_cuisine ?? l.feedCuisine),
-                            avatar: const Icon(Icons.arrow_drop_down),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.metrics.extentAfter < 800) _more();
+            return false;
+          },
+          child: CustomScrollView(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: SearchAnchor(
+                    searchController: _search,
+                    viewHintText: l.feedSearchHint,
+                    viewOnSubmitted: _submit,
+                    suggestionsBuilder: _suggest,
+                    builder: (context, c) => SearchBar(
+                      key: const ValueKey('feed-search'),
+                      controller: c,
+                      hintText: l.feedSearchHint,
+                      leading: const Icon(Icons.search),
+                      elevation: const WidgetStatePropertyAll(0),
+                      backgroundColor: WidgetStatePropertyAll(nb.paper),
+                      side: WidgetStatePropertyAll(BorderSide(color: nb.line)),
+                      onTap: c.openView,
+                      onChanged: (_) => c.openView(),
+                      trailing: [
+                        if (_query.isNotEmpty)
+                          IconButton(
+                            tooltip: MaterialLocalizations.of(context)
+                                .deleteButtonTooltip,
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              c.clear();
+                              _submit('');
+                            },
                           ),
-                        ),
-                    ],
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-            if (_failed)
-              note(
-                l.recipesLoadFailed2,
-                onTap: _refresh,
-                icon: Icons.cloud_off,
+              SliverToBoxAdapter(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Row(
+                    spacing: 8,
+                    children: [
+                      for (final (kind, label) in [
+                        (FeedKind.all, l.feedAll),
+                        (FeedKind.recipes, l.navRecipes),
+                        (FeedKind.restaurants, l.feedRestaurants),
+                      ])
+                        ChoiceChip(
+                          key: ValueKey('feed-kind-${kind.name}'),
+                          label: Text(label),
+                          selected: _kind == kind,
+                          onSelected: (_) => setState(() => _kind = kind),
+                        ),
+                      if (showRestaurants) ...[
+                        FilterChip(
+                          key: const ValueKey('feed-halal'),
+                          label: Text(l.feedSaysHalal),
+                          selected: _halal,
+                          onSelected: (on) => setState(() => _halal = on),
+                        ),
+                        if (cuisines.isNotEmpty)
+                          PopupMenuButton<String?>(
+                            tooltip: l.feedCuisine,
+                            initialValue: _cuisine,
+                            onSelected: (c) => setState(() => _cuisine = c),
+                            itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: null,
+                                child: Text(l.feedAnyCuisine),
+                              ),
+                              for (final c in cuisines)
+                                PopupMenuItem(value: c, child: Text(c)),
+                            ],
+                            child: Chip(
+                              label: Text(_cuisine ?? l.feedCuisine),
+                              avatar: const Icon(Icons.arrow_drop_down),
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            if (showRestaurants) ...restaurantSlivers,
-            if (showRecipes) ...recipeSlivers,
-            SliverToBoxAdapter(
-              child: _loading || _located == null
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(
-                        child: CircularProgressIndicator.adaptive(),
-                      ),
-                    )
-                  : const SizedBox(height: 24),
-            ),
-          ],
+              if (_failed)
+                note(
+                  l.recipesLoadFailed2,
+                  onTap: _refresh,
+                  icon: Icons.cloud_off,
+                ),
+              if (showRestaurants && _located == false)
+                note(
+                  l.feedLocationOff,
+                  onTap: _loadNearby,
+                  icon: Icons.location_off_outlined,
+                ),
+              if (cards.isEmpty && !loading && !_failed) note(l.feedNothing),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverGrid.count(
+                  crossAxisCount: columns,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.74,
+                  children: cards,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: loading
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(
+                          child: CircularProgressIndicator.adaptive(),
+                        ),
+                      )
+                    : const SizedBox(height: 24),
+              ),
+            ],
+          ),
         ),
       ),
     );

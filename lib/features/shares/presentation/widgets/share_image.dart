@@ -9,15 +9,23 @@ import '../../domain/share_repository.dart';
 
 /// The screenshot or post thumbnail behind a share. Takes no space while loading, when there is none, or on error.
 class ShareImage extends StatefulWidget {
-  const ShareImage(this.shareId, {super.key}) : recipeId = null;
+  const ShareImage(this.shareId, {super.key, this.hero = false})
+    : recipeId = null;
 
   /// A recipe's own cover photo ([cover] = its cover id) in place of a share's.
-  const ShareImage.cover(String this.recipeId, String cover, {super.key})
-    : shareId = cover;
+  const ShareImage.cover(
+    String this.recipeId,
+    String cover, {
+    super.key,
+    this.hero = false,
+  }) : shareId = cover;
 
   /// The share id, or the cover id when [recipeId] is set.
   final String shareId;
   final String? recipeId;
+
+  /// Edge to edge at the top of a page (4:3, square corners) instead of a framed photo in the text.
+  final bool hero;
 
   @override
   State<ShareImage> createState() => _ShareImageState();
@@ -45,6 +53,14 @@ class _ShareImageState extends State<ShareImage> {
   Widget build(BuildContext context) => FutureBuilder(
     future: _bytes,
     builder: (context, s) => switch (s.data) {
+      final bytes? when widget.hero => AspectRatio(
+        aspectRatio: 4 / 3,
+        child: Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        ),
+      ),
       final bytes? => Padding(
         padding: const EdgeInsets.only(top: 12),
         child: ClipRRect(

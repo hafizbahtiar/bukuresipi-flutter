@@ -1,4 +1,5 @@
 import 'package:bukuresipi_flutter/features/home/presentation/feed_page.dart';
+import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
@@ -16,7 +17,11 @@ void main() {
   final l = lookupAppLocalizations(const Locale('en'));
   late FakePlaces places;
 
-  Future<void> pump(WidgetTester t, {bool located = true}) async {
+  Future<void> pump(
+    WidgetTester t, {
+    bool located = true,
+    int community = 1,
+  }) async {
     t.view.physicalSize = const Size(
       2400,
       6000,
@@ -28,7 +33,11 @@ void main() {
         nearbyBranch(branchId: 'b-2', name: 'Warung Pak Ali', distanceM: 300),
       ];
     final recipes = FakeRecipes()
-      ..communityList = [recipe(id: 'c-1', name: 'Kek Batik Viral')]
+      ..communityList = [
+        recipe(id: 'c-1', name: 'Kek Batik Viral'),
+        for (var i = 2; i <= community; i++)
+          recipe(id: 'c-$i', name: 'Resipi $i'),
+      ]
       ..dishList = const [
         Dish(
           id: 'd-1',
@@ -46,6 +55,10 @@ void main() {
           ),
         ),
         GoRoute(path: '/map', builder: (_, _) => const Text('the map')),
+        GoRoute(
+          path: '/recipes/:id',
+          builder: (_, st) => Text('recipe ${st.pathParameters['id']}'),
+        ),
       ],
     );
     await t.pumpWidget(
@@ -69,17 +82,25 @@ void main() {
     await t.pumpAndSettle();
   }
 
+  List<String> cardKeys(WidgetTester t) => [
+    for (final e in find.byType(FeedCard).evaluate())
+      (e.widget.key! as ValueKey<String>).value,
+  ];
+
   testWidgets(
-    'Home shows restaurants near the phone (nearest first), community recipes and dishes',
+    'one grid: community recipes, then dishes; every 4th card a nearby restaurant (nearest first) tagged Near me',
     (t) async {
-      await pump(t);
+      await pump(t, community: 3);
       expect(places.nearbyCalls.single, (3.15, 101.7, 5.0));
-      expect(find.text(l.feedNearYou), findsOneWidget);
-      // Nearest first: in the grid, left of the farther one on the same row.
-      final near = t.getTopLeft(find.text('Warung Pak Ali')).dx;
-      expect(near, lessThan(t.getTopLeft(find.text('Kedai Sederhana')).dx));
-      expect(find.text('Kek Batik Viral'), findsOneWidget);
-      expect(find.text('Rendang Daging'), findsOneWidget);
+      expect(cardKeys(t), [
+        'feed-recipe-c-1',
+        'feed-recipe-c-2',
+        'feed-recipe-c-3',
+        'feed-place-b-2', // 300 m
+        'feed-dish-d-1',
+        'feed-place-b-1', // 900 m: after the last recipe
+      ]);
+      expect(find.text('${l.feedNearMe} · 300 m'), findsOneWidget);
 
       await t.tap(find.byKey(const ValueKey('feed-kind-recipes')));
       await t.pumpAndSettle();
@@ -88,26 +109,35 @@ void main() {
         find.byKey(const ValueKey('feed-halal')),
         findsNothing,
       ); // restaurant filters only with restaurants
-      expect(find.text('Kek Batik Viral'), findsOneWidget);
 
       await t.tap(find.byKey(const ValueKey('feed-kind-restaurants')));
       await t.pumpAndSettle();
-      expect(find.text('Kek Batik Viral'), findsNothing);
-      expect(find.text('Warung Pak Ali'), findsOneWidget);
+      expect(cardKeys(t), ['feed-place-b-2', 'feed-place-b-1']);
     },
   );
 
   testWidgets(
-    'one search box: restaurants on the phone, recipes on the server',
+    'search suggests as you type (restaurants, recipes, "Search ..."); submitting filters the grid',
     (t) async {
       await pump(t);
-      await t.enterText(find.byType(TextField), 'warung');
-      await t.pump(const Duration(milliseconds: 350));
+      await t.tap(find.byKey(const ValueKey('feed-search')));
       await t.pumpAndSettle();
-      expect(find.text('Warung Pak Ali'), findsOneWidget);
-      expect(find.text('Kedai Sederhana'), findsNothing);
-      expect(find.text('Kek Batik Viral'), findsNothing);
-      expect(find.text(l.recipesEmptyCommunity), findsOneWidget);
+      await t.enterText(find.byType(TextField).last, 'warung');
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Warung Pak Ali'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('feed-search-for')));
+      await t.pumpAndSettle();
+      expect(cardKeys(t), ['feed-place-b-2']);
+
+      await t.tap(find.byKey(const ValueKey('feed-search')));
+      await t.pumpAndSettle();
+      await t.enterText(find.byType(TextField).last, 'rendang');
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pumpAndSettle();
+      await t.tap(find.widgetWithText(ListTile, 'Rendang Daging'));
+      await t.pumpAndSettle();
+      expect(find.text('recipe d-1'), findsOneWidget);
     },
   );
 

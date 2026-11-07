@@ -618,10 +618,8 @@
   "feedSaysHalal": "Kata halal",
   "feedCuisine": "Masakan",
   "feedAnyCuisine": "Semua masakan",
-  "feedNearYou": "Berdekatan",
-  "feedSeeAll": "Lihat semua",
+  "feedNearMe": "Dekat saya",
   "feedLocationOff": "Hidupkan lokasi untuk melihat restoran berdekatan. Ketik untuk cuba lagi.",
-  "feedNoneNear": "Belum ada restoran dipin berdekatan anda.",
   "photoEditTitle": "Sunting foto",
   "photoUse": "Guna foto",
   "photoRotate": "Putar",
@@ -631,5 +629,7 @@
   "photoEditFailed": "Foto ini tidak dapat disunting. Cuba foto lain.",
   "avatarAdd": "Tambah gambar profil",
   "avatarChange": "Tukar gambar profil",
-  "avatarRemove": "Buang gambar profil"
+  "avatarRemove": "Buang gambar profil",
+  "feedNothing": "Tiada yang sepadan. Cuba perkataan lain.",
+  "feedSearchFor": "Cari \"{query}\""
 }

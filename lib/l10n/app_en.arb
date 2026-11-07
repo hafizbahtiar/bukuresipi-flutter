@@ -1498,9 +1498,13 @@
     }
   },
   "variantsTitle": "Recipe variants",
+  "@variantsTitle": {},
   "variantsHint": "Other recipes for this dish on the web. Their steps are on their page.",
+  "@variantsHint": {},
   "variantsNone": "No variants yet. Find variants searches the web (uses the search and AI meters).",
+  "@variantsNone": {},
   "variantsFind": "Find variants",
+  "@variantsFind": {},
   "variantsFound": "{n, plural, =0{No variants found} =1{1 variant found} other{{n} variants found}}",
   "@variantsFound": {
     "placeholders": {
@@ -1510,6 +1514,7 @@
     }
   },
   "variantsIncomplete": "A usage cap was reached: only part was checked. Try again later.",
+  "@variantsIncomplete": {},
   "variantMatch": "{pct} match",
   "@variantMatch": {
     "placeholders": {
@@ -1636,14 +1641,10 @@
   "@feedCuisine": {},
   "feedAnyCuisine": "Any cuisine",
   "@feedAnyCuisine": {},
-  "feedNearYou": "Near you",
-  "@feedNearYou": {},
-  "feedSeeAll": "See all",
-  "@feedSeeAll": {},
+  "feedNearMe": "Near me",
+  "@feedNearMe": {},
   "feedLocationOff": "Turn on location to see restaurants near you. Tap to try again.",
   "@feedLocationOff": {},
-  "feedNoneNear": "No restaurants pinned near you yet.",
-  "@feedNoneNear": {},
   "photoEditTitle": "Edit photo",
   "@photoEditTitle": {},
   "photoUse": "Use photo",
@@ -1663,5 +1664,15 @@
   "avatarChange": "Change profile picture",
   "@avatarChange": {},
   "avatarRemove": "Remove profile picture",
-  "@avatarRemove": {}
+  "@avatarRemove": {},
+  "feedNothing": "Nothing matches. Try another word.",
+  "feedSearchFor": "Search \"{query}\"",
+  "@feedNothing": {},
+  "@feedSearchFor": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  }
 }
