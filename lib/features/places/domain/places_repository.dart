@@ -74,6 +74,18 @@ abstract interface class PlacesRepository {
   /// Saves an existing branch's restaurant to this user's map.
   Future<Place> saveBranch(String branchId);
 
+  /// Places named like [query], nearest to (lat, lng) first. [submit] = the user pressed Search: logged, and the
+  /// server may ask OpenStreetMap; while typing, our data only.
+  Future<List<PlaceHit>> search(
+    String query,
+    double lat,
+    double lng, {
+    bool submit = false,
+  });
+
+  /// Saves a search result that is not in the app yet (it becomes a restaurant).
+  Future<Place> savePoi(String poiId);
+
   /// Community suggestion; saved as an open ticket for the owner to verify.
   Future<void> report(ReportDraft draft);
 }

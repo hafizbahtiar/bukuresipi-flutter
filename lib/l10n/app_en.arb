@@ -1619,7 +1619,7 @@
   "@recipeEditDiscardOk": {},
   "mapSearchHint": "Search your map",
   "@mapSearchHint": {},
-  "mapSearchNone": "No saved place matches.",
+  "mapSearchNone": "Nothing found nearby.",
   "@mapSearchNone": {},
   "recipeCoverAdd": "Add photo",
   "@recipeCoverAdd": {},
@@ -1676,5 +1676,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "mapSearchPress": "Press Search to look further.",
+  "@mapSearchPress": {},
+  "mapSearchNewPlace": "Not in Bukuresipi yet: saving adds it, with its pin from the map.",
+  "@mapSearchNewPlace": {}
 }

@@ -563,19 +563,67 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     );
   }
 
-  /// Search the saved places: fly to the picked branch and open its sheet, as a tap on its pin does.
+  /// Search your places and others: fly to the pick. Yours (or an already saved one) opens its sheet, as a tap on
+  /// its pin does; another place opens a sheet to save it.
   Future<void> _search() async {
+    final l = AppLocalizations.of(context);
+    final centre =
+        _map?.cameraPosition?.target ?? const LatLng(3.139, 101.6869); // KL
     final hit = await showSearch(
       context: context,
-      delegate: MapSearch(_places.pinned, AppLocalizations.of(context)),
+      delegate: MapSearch(
+        _places.pinned,
+        (q, {required submit}) => _places.search(
+          q,
+          centre.latitude,
+          centre.longitude,
+          submit: submit,
+        ),
+        l,
+      ),
     );
     if (hit == null || !mounted) return;
-    final (place, branch) = hit;
+    if (hit is PlaceHit) {
+      _flyTo(hit.lat, hit.lng);
+      final saved = [
+        for (final p in _places.pinned)
+          for (final b in p.pins)
+            if (b.id == hit.branchId) (p, b),
+      ].firstOrNull;
+      if (saved != null) {
+        showNotebookSheet<void>(
+          context,
+          builder: (context) => _PinSheet(place: saved.$1, branch: saved.$2),
+        );
+        return;
+      }
+      final place = await showNotebookSheet<Place>(
+        context,
+        builder: (_) => _HitSheet(hit: hit, places: _places),
+      );
+      if (place != null && mounted) {
+        showNotebookSheet<void>(
+          context,
+          builder: (context) =>
+              _PinSheet(place: place, branch: place.savedBranch),
+        );
+      }
+      return;
+    }
+    final (place, branch) = hit as (Place, Branch);
+    _flyTo(branch.lat!, branch.lng!);
+    showNotebookSheet<void>(
+      context,
+      builder: (context) => _PinSheet(place: place, branch: branch),
+    );
+  }
+
+  void _flyTo(double lat, double lng) {
     unawaited(
       _map?.easeCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
-            target: LatLng(branch.lat!, branch.lng!),
+            target: LatLng(lat, lng),
             zoom: 15,
             bearing: _bearing,
             tilt: _tilt,
@@ -584,10 +632,6 @@ class _PlacesMapPageState extends State<PlacesMapPage>
         duration: const Duration(milliseconds: 900),
         interpolation: CameraAnimationInterpolation.easeInOut,
       ),
-    );
-    showNotebookSheet<void>(
-      context,
-      builder: (context) => _PinSheet(place: place, branch: branch),
     );
   }
 
@@ -879,6 +923,81 @@ class _Slip extends StatelessWidget {
 }
 
 /// A pin tapped on the map: the place on a notebook sheet, then open it or get directions.
+/// A search result not in your book: name, where, and Save (a place new to the app becomes a restaurant). Pops the
+/// saved Place.
+class _HitSheet extends StatefulWidget {
+  const _HitSheet({required this.hit, required this.places});
+
+  final PlaceHit hit;
+  final PlacesController places;
+
+  @override
+  State<_HitSheet> createState() => _HitSheetState();
+}
+
+class _HitSheetState extends State<_HitSheet> {
+  bool _saving = false;
+
+  Future<void> _save() async {
+    final l = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final h = widget.hit;
+    setState(() => _saving = true);
+    try {
+      final place = await (h.branchId != null
+          ? widget.places.saveBranch(h.branchId!)
+          : widget.places.savePoi(h.poiId!));
+      navigator.pop(place);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final h = widget.hit;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(h.name, style: text.titleLarge),
+          Text(
+            [distanceText(h.distanceM), ?h.address].join(' · '),
+            style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+          ),
+          if (h.poiId != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.mapSearchNewPlace,
+                style: text.bodySmall?.copyWith(color: nb.inkSoft),
+              ),
+            ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            key: const ValueKey('search-hit-save'),
+            icon: _saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.bookmark_add_outlined),
+            label: Text(l.save),
+            onPressed: _saving ? null : _save,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PinSheet extends StatelessWidget {
   const _PinSheet({required this.place, this.branch});
 

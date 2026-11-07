@@ -607,7 +607,7 @@
   "recipeEditDiscard": "Buang perubahan pada resepi ini?",
   "recipeEditDiscardOk": "Buang",
   "mapSearchHint": "Cari dalam peta",
-  "mapSearchNone": "Tiada tempat disimpan yang sepadan.",
+  "mapSearchNone": "Tiada yang dijumpai berdekatan.",
   "recipeCoverAdd": "Tambah foto",
   "recipeCoverChange": "Tukar foto",
   "recipeCoverRemove": "Buang foto",
@@ -632,5 +632,7 @@
   "avatarChange": "Tukar gambar profil",
   "avatarRemove": "Buang gambar profil",
   "feedNothing": "Tiada yang sepadan. Cuba perkataan lain.",
-  "feedSearchFor": "Cari \"{query}\""
+  "feedSearchFor": "Cari \"{query}\"",
+  "mapSearchPress": "Tekan Cari untuk mencari lebih jauh.",
+  "mapSearchNewPlace": "Belum ada dalam Bukuresipi: simpan untuk menambahnya, dengan pin dari peta."
 }
