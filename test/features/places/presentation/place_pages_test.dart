@@ -6,6 +6,7 @@ import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/recipes/presentation/pages/recipe_edit_page.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -98,6 +99,17 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Ayam Masak Merah'), findsOneWidget);
   });
+
+  testWidgets(
+    'the book has New recipe (moved from the Recipes tab): it opens the empty editor',
+    (t) async {
+      repo = FakePlaces();
+      await pump(t, const PlacesListPage());
+      await t.tap(find.byType(FloatingActionButton));
+      await t.pumpAndSettle();
+      expect(find.byType(RecipeEditPage), findsOneWidget);
+    },
+  );
 
   testWidgets('an empty book tells the user how to add to it', (t) async {
     repo = FakePlaces();

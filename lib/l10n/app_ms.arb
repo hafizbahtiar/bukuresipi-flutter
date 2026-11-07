@@ -610,5 +610,16 @@
   "recipeCoverAdd": "Tambah foto",
   "recipeCoverChange": "Tukar foto",
   "recipeCoverRemove": "Buang foto",
-  "recipeCoverFailed": "Resepi disimpan, tetapi foto tidak dimuat naik. Cuba lagi melalui Sunting."
+  "recipeCoverFailed": "Resepi disimpan, tetapi foto tidak dimuat naik. Cuba lagi melalui Sunting.",
+  "navHome": "Utama",
+  "feedSearchHint": "Cari resepi dan restoran",
+  "feedAll": "Semua",
+  "feedRestaurants": "Restoran",
+  "feedSaysHalal": "Kata halal",
+  "feedCuisine": "Masakan",
+  "feedAnyCuisine": "Semua masakan",
+  "feedNearYou": "Berdekatan",
+  "feedSeeAll": "Lihat semua",
+  "feedLocationOff": "Hidupkan lokasi untuk melihat restoran berdekatan. Ketik untuk cuba lagi.",
+  "feedNoneNear": "Belum ada restoran dipin berdekatan anda."
 }
