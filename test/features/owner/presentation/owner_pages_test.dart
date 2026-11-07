@@ -238,4 +238,37 @@ void main() {
     expect(find.text('No tester signups yet.'), findsOneWidget);
     expect(find.byTooltip('Copy all emails'), findsNothing);
   });
+
+  testWidgets(
+    'testers: Done (after confirming) emails the invite; an invited row shows where the email got to',
+    (t) async {
+      repo.testerList = [
+        Tester(
+          email: 'ali@gmail.com',
+          lang: 'ms',
+          joinedAt: DateTime.utc(2026, 11, 4),
+        ),
+        Tester(
+          email: 'siti@gmail.com',
+          lang: 'en',
+          joinedAt: DateTime.utc(2026, 11, 5),
+          invitedAt: DateTime.utc(2026, 11, 6),
+          emailStatus: 'bounced',
+        ),
+      ];
+      await pump(t, const OwnerTestersPage());
+      expect(find.text('Bounced'), findsOneWidget);
+      expect(find.text('Done'), findsOneWidget); // only the row not invited yet
+      await t.tap(find.text('Done'));
+      await t.pumpAndSettle();
+      expect(
+        find.textContaining('Add this email to the Play Console'),
+        findsOneWidget,
+      );
+      await t.tap(find.text('Done').last);
+      await t.pumpAndSettle();
+      expect(repo.invited, ['ali@gmail.com']);
+      expect(find.text('Invite sent.'), findsOneWidget);
+    },
+  );
 }

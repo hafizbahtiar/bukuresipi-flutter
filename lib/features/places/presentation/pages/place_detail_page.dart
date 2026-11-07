@@ -14,6 +14,7 @@ import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
+import '../widgets/halal_status.dart';
 import '../widgets/branch_edit_sheet.dart';
 import '../widgets/notebook_rating.dart';
 import '../widgets/place_report_sheet.dart';
@@ -92,7 +93,9 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     if (branch == null) return;
     final router = GoRouter.of(context);
     try {
-      final saved = await context.read<PlacesController>().saveBranch(branch.id);
+      final saved = await context.read<PlacesController>().saveBranch(
+        branch.id,
+      );
       _snack(l.placeSavedToMine);
       router.replace('/places/${saved.id}');
     } catch (e) {
@@ -246,6 +249,9 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                           style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                         ),
                       ),
+                    HalalStatus(
+                      claim: r.halalQuote == null ? null : r.halalClaim,
+                    ),
                     if (place.shareId case final id?) ShareImage(id),
                     if (place.sourceUrl case final url?)
                       TextButton.icon(
@@ -270,12 +276,18 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 NotebookRow(
                   mark: Icon(Icons.lock_outline, size: 20, color: nb.inkSoft),
                   onTap: () => _setPrivate(place, !place.private),
-                  trailing: Switch(value: place.private, onChanged: (v) => _setPrivate(place, v)),
+                  trailing: Switch(
+                    value: place.private,
+                    onChanged: (v) => _setPrivate(place, v),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(l.placeOnlyMe),
-                      Text(l.placeOnlyMeHint, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
+                      Text(
+                        l.placeOnlyMeHint,
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
                     ],
                   ),
                 ),

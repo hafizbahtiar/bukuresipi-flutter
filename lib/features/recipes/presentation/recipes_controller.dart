@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../domain/recipe_variant.dart';
 import '../domain/recipe.dart';
 import '../domain/recipes_repository.dart';
 
@@ -85,6 +86,22 @@ class RecipesController extends ChangeNotifier {
   /// Throws ApiException; the detail page shows it.
   Future<RecipeDetail> detail(String id) => _repo.get(id);
 
+  /// The owner's photo: [path] = a local image file; returns the recipe with its new cover.
+  Future<RecipeDetail> setCover(String id, String path) async {
+    final saved = await _repo.setCover(id, path);
+    unawaited(load());
+    return saved;
+  }
+
+  Future<void> removeCover(String id) async {
+    await _repo.removeCover(id);
+    unawaited(load());
+  }
+
+  Future<Uint8List?> cover(String id, String cover) => _repo.cover(id, cover);
+
+  Future<List<RecipeVariant>> variants(String id) => _repo.variants(id);
+
   Future<List<String>> searchIngredients(String query) =>
       _repo.searchIngredients(query);
 
@@ -93,6 +110,20 @@ class RecipesController extends ChangeNotifier {
       _repo.linkIngredient(id, index, name);
 
   /// Throws ApiException. The book list is reloaded: the name or counts may have changed.
+  Future<RecipeDetail> create({
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) async {
+    final saved = await _repo.create(
+      name: name,
+      ingredients: ingredients,
+      steps: steps,
+    );
+    unawaited(load());
+    return saved;
+  }
+
   Future<RecipeDetail> edit(
     String id, {
     required String name,
@@ -113,10 +144,15 @@ class RecipesController extends ChangeNotifier {
   Future<({List<Recipe> recipes, String? next})> community({
     String? query,
     String? cursor,
-  }) => _repo.community(query: query, cursor: cursor);
+    int? limit,
+  }) => _repo.community(query: query, cursor: cursor, limit: limit);
 
   /// Throws ApiException.
-  Future<List<Dish>> dishes({String? query}) => _repo.dishes(query: query);
+  Future<({List<Dish> dishes, String? next})> dishes({
+    String? query,
+    String? cursor,
+    int? limit,
+  }) => _repo.dishes(query: query, cursor: cursor, limit: limit);
 
   /// Throws ApiException. The copy is the user's: their list is reloaded.
   Future<RecipeDetail> copy(String id) async {

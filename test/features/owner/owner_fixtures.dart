@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 
@@ -110,6 +111,30 @@ class FakeOwner implements OwnerRepository {
 
   @override
   Future<List<Tester>> testers() async => testerList;
+
+  final invited = <String>[];
+
+  @override
+  Future<void> inviteTester(String email) async => invited.add(email);
+
+  @override
+  Future<List<OwnerPlace>> places() async => const [];
+
+  List<RecipeVariant> foundVariants = const [];
+  final variantSearches = <String>[];
+
+  @override
+  Future<({List<RecipeVariant> variants, bool complete})> findVariants(
+    String recipeId,
+  ) async {
+    variantSearches.add(recipeId);
+    return (variants: foundVariants, complete: true);
+  }
+
+  final hiddenRecipes = <String>[];
+
+  @override
+  Future<void> hideRecipe(String recipeId) async => hiddenRecipes.add(recipeId);
 
   @override
   Future<void> deleteRating(String ratingId) async {

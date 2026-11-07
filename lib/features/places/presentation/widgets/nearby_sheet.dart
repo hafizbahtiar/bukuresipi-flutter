@@ -13,6 +13,7 @@ import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
 import 'branch_edit_sheet.dart';
+import 'halal_status.dart';
 import 'notebook_rating.dart';
 import 'place_report_sheet.dart';
 
@@ -122,12 +123,20 @@ class _NearbySheetState extends State<NearbySheet> {
                   20,
                   8,
                 ),
-                child: Text(
-                  p.name,
-                  style: text.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      p.name,
+                      style: text.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
+                      ),
+                    ),
+                    HalalStatus(
+                      claim: p.halalQuote == null ? null : p.halalClaim,
+                    ),
+                  ],
                 ),
               ),
               NotebookRow(

@@ -1416,5 +1416,263 @@
   "errPasswordRequired": "Set a password first, so you can still sign in.",
   "@errPasswordRequired": {},
   "errGoogleFailed": "Google didn't let us sign you in. Try again; if it keeps happening, the app's Google setup needs checking.",
-  "@errGoogleFailed": {}
+  "@errGoogleFailed": {},
+  "recipeNew": "New recipe",
+  "@recipeNew": {},
+  "mapLegend": "What the dots mean",
+  "@mapLegend": {},
+  "legendMine": "Your place",
+  "@legendMine": {},
+  "legendMineHint": "A restaurant you saved.",
+  "@legendMineHint": {},
+  "legendHandPin": "Your place, pinned by hand",
+  "@legendHandPin": {},
+  "legendHandPinHint": "You placed this pin yourself, because the map could not find it.",
+  "@legendHandPinHint": {},
+  "legendFamily": "Your family's place",
+  "@legendFamily": {},
+  "legendFamilyHint": "Saved by someone in your family.",
+  "@legendFamilyHint": {},
+  "legendHere": "You are here",
+  "@legendHere": {},
+  "legendHereHint": "Your phone's location.",
+  "@legendHereHint": {},
+  "recipeEditSuggestions": "FROM THE CATALOGUE",
+  "@recipeEditSuggestions": {},
+  "mapShowCommunity": "Show other users' restaurants",
+  "@mapShowCommunity": {},
+  "ownerPlaceSavers": "{n, plural, =0{Saved by no one} =1{Saved by 1 user} other{Saved by {n} users}}",
+  "@ownerPlaceSavers": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerPlacePinSource": "Pin from: {source}",
+  "@ownerPlacePinSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "halalSaysHalal": "The post says halal",
+  "@halalSaysHalal": {},
+  "halalSaysNotHalal": "The post says not halal",
+  "@halalSaysNotHalal": {},
+  "halalNoClaim": "No halal claim found",
+  "@halalNoClaim": {},
+  "ownerTools": "Owner tools",
+  "@ownerTools": {},
+  "legendOtherMap": "Other restaurants: pin from a map",
+  "@legendOtherMap": {},
+  "legendOtherMapHint": "Found by the address lookup (OpenStreetMap, Overture, HERE, a Maps link).",
+  "@legendOtherMapHint": {},
+  "legendOtherWeb": "Other restaurants: pin from the web",
+  "@legendOtherWeb": {},
+  "legendOtherWebHint": "Coordinates found on a web page naming the shop. Worth a check.",
+  "@legendOtherWebHint": {},
+  "legendOtherHandPin": "Other restaurants: pinned by users",
+  "@legendOtherHandPin": {},
+  "legendOtherHandPinHint": "Users placed it by hand; it shows the pin most of them agree on.",
+  "@legendOtherHandPinHint": {},
+  "legendOtherOwner": "Other restaurants: pinned by you",
+  "@legendOtherOwner": {},
+  "legendOtherOwnerHint": "You set this pin as owner; a user's pin never replaces it.",
+  "@legendOtherOwnerHint": {},
+  "recipeHide": "Hide",
+  "@recipeHide": {},
+  "recipeHideConfirm": "Take this recipe off Community? Its author still sees it; open reports close as hidden.",
+  "@recipeHideConfirm": {},
+  "recipeOpenOriginal": "Original recipe",
+  "@recipeOpenOriginal": {},
+  "recipeStepsAtOriginal": "How to cook: see the original recipe",
+  "@recipeStepsAtOriginal": {},
+  "recipeCatalogueFrom": "Bukuresipi catalogue · ingredients from {site}",
+  "@recipeCatalogueFrom": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "variantsTitle": "Recipe variants",
+  "@variantsTitle": {},
+  "variantsHint": "Other recipes for this dish on the web. Their steps are on their page.",
+  "@variantsHint": {},
+  "variantsNone": "No variants yet. Find variants searches the web (uses the search and AI meters).",
+  "@variantsNone": {},
+  "variantsFind": "Find variants",
+  "@variantsFind": {},
+  "variantsFound": "{n, plural, =0{No variants found} =1{1 variant found} other{{n} variants found}}",
+  "@variantsFound": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "variantsIncomplete": "A usage cap was reached: only part was checked. Try again later.",
+  "@variantsIncomplete": {},
+  "variantMatch": "{pct} match",
+  "@variantMatch": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "variantSure": "{pct} sure",
+  "@variantSure": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "variantSteps": "{n, plural, =1{1 step} other{{n} steps}}",
+  "@variantSteps": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "variantStepsThere": "{n, plural, =1{1 step, on the recipe's page} other{{n} steps, on the recipe's page}}",
+  "@variantStepsThere": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "variantStepsThereUnknown": "The steps are on the recipe's page.",
+  "@variantStepsThereUnknown": {},
+  "variantUnlinked": "not in the catalogue",
+  "@variantUnlinked": {},
+  "variantOpen": "Open recipe",
+  "@variantOpen": {},
+  "variantSave": "Save to my book",
+  "@variantSave": {},
+  "ownerTesterDone": "Done",
+  "@ownerTesterDone": {},
+  "ownerTesterResend": "Send again",
+  "@ownerTesterResend": {},
+  "ownerTesterInviteConfirm": "Email {email} the link to join the test? Add this email to the Play Console closed test first.",
+  "@ownerTesterInviteConfirm": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTesterResendConfirm": "Send the invite to {email} again?",
+  "@ownerTesterResendConfirm": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTesterInvited": "Invite sent.",
+  "@ownerTesterInvited": {},
+  "ownerTesterInvitedOn": "invited {date}",
+  "@ownerTesterInvitedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "emailSent": "Sent",
+  "@emailSent": {},
+  "emailDelivered": "Delivered",
+  "@emailDelivered": {},
+  "emailOpened": "Opened",
+  "@emailOpened": {},
+  "emailDelayed": "Delayed",
+  "@emailDelayed": {},
+  "emailBounced": "Bounced",
+  "@emailBounced": {},
+  "emailComplained": "Marked spam",
+  "@emailComplained": {},
+  "emailUnknown": "Unknown",
+  "@emailUnknown": {},
+  "recipeEditIngredientHint": "Ingredient, e.g. tepung gandum",
+  "@recipeEditIngredientHint": {},
+  "recipeEditAmount": "Amount",
+  "@recipeEditAmount": {},
+  "recipeEditUnit": "Unit",
+  "@recipeEditUnit": {},
+  "recipeEditNoUnit": "No unit",
+  "@recipeEditNoUnit": {},
+  "recipeEditIngredientRequired": "Write the ingredient for this amount.",
+  "@recipeEditIngredientRequired": {},
+  "recipeEditStepHint": "What to do in this step",
+  "@recipeEditStepHint": {},
+  "recipeEditDiscard": "Discard your changes to this recipe?",
+  "@recipeEditDiscard": {},
+  "recipeEditDiscardOk": "Discard",
+  "@recipeEditDiscardOk": {},
+  "mapSearchHint": "Search your map",
+  "@mapSearchHint": {},
+  "mapSearchNone": "No saved place matches.",
+  "@mapSearchNone": {},
+  "recipeCoverAdd": "Add photo",
+  "@recipeCoverAdd": {},
+  "recipeCoverChange": "Change photo",
+  "@recipeCoverChange": {},
+  "recipeCoverRemove": "Remove photo",
+  "@recipeCoverRemove": {},
+  "recipeCoverFailed": "Recipe saved, but the photo didn't upload. Try again from Edit.",
+  "@recipeCoverFailed": {},
+  "navHome": "Home",
+  "@navHome": {},
+  "feedSearchHint": "Search recipes and restaurants",
+  "@feedSearchHint": {},
+  "feedAll": "All",
+  "@feedAll": {},
+  "feedRestaurants": "Restaurants",
+  "@feedRestaurants": {},
+  "feedSaysHalal": "Says halal",
+  "@feedSaysHalal": {},
+  "feedCuisine": "Cuisine",
+  "@feedCuisine": {},
+  "feedAnyCuisine": "Any cuisine",
+  "@feedAnyCuisine": {},
+  "feedNearMe": "Near me",
+  "@feedNearMe": {},
+  "feedLocationOff": "Turn on location to see restaurants near you. Tap to try again.",
+  "@feedLocationOff": {},
+  "photoEditTitle": "Edit photo",
+  "@photoEditTitle": {},
+  "photoUse": "Use photo",
+  "@photoUse": {},
+  "photoRotate": "Rotate",
+  "@photoRotate": {},
+  "photoFlip": "Flip",
+  "@photoFlip": {},
+  "photoReset": "Reset",
+  "@photoReset": {},
+  "photoFree": "Free",
+  "@photoFree": {},
+  "photoEditFailed": "Couldn't edit this photo. Try another one.",
+  "@photoEditFailed": {},
+  "avatarAdd": "Add profile picture",
+  "@avatarAdd": {},
+  "avatarChange": "Change profile picture",
+  "@avatarChange": {},
+  "avatarRemove": "Remove profile picture",
+  "@avatarRemove": {},
+  "feedNothing": "Nothing matches. Try another word.",
+  "feedSearchFor": "Search \"{query}\"",
+  "@feedNothing": {},
+  "@feedSearchFor": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  }
 }

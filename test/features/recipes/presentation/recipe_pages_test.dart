@@ -1,3 +1,6 @@
+import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
+import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
+import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -8,6 +11,7 @@ import 'package:bukuresipi_flutter/features/shares/presentation/recent_shares.da
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:bukuresipi_flutter/features/recipes/presentation/pages/recipe_edit_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
@@ -15,6 +19,8 @@ import 'package:provider/single_child_widget.dart';
 import '../../places/places_fixtures.dart';
 import '../../shares/presentation/share_intake_test.dart' show FakeShares;
 import '../recipes_fixtures.dart';
+import '../../../fakes.dart';
+import '../../owner/owner_fixtures.dart';
 
 Widget app({
   required List<SingleChildWidget> providers,
@@ -92,6 +98,28 @@ void main() {
     expect(find.text('Goreng ayam hingga masak.'), findsOneWidget);
     expect(find.text('Open video'), findsOneWidget);
   });
+
+  testWidgets(
+    'no photo: the owner gets "Add photo", a reader sees just the title',
+    (t) async {
+      for (final (canEdit, chips) in [(true, 1), (false, 0)]) {
+        final recipes = RecipesController(
+          FakeRecipes()..detailResult = recipeDetail(canEdit: canEdit),
+        );
+        await t.pumpWidget(
+          app(
+            providers: [ChangeNotifierProvider.value(value: recipes)],
+            home: RecipeDetailPage(key: ValueKey(canEdit), id: 'r-1'),
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-add-cover')),
+          findsNWidgets(chips),
+        );
+      }
+    },
+  );
 
   testWidgets('a recipe with no steps shows no Steps heading', (t) async {
     final recipes = RecipesController(
@@ -288,7 +316,10 @@ void main() {
         'Masak nasi.\n  Goreng ayam. ',
       );
       await t.pumpAndSettle();
-      expect(find.widgetWithText(TextField, '  Goreng ayam. '), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Goreng ayam.'),
+        findsOneWidget,
+      ); // each pasted line trimmed
 
       await t.tap(find.text('Save'));
       await t.pumpAndSettle();
@@ -300,30 +331,161 @@ void main() {
     },
   );
 
-  testWidgets('someone else\'s public recipe: no edit or remove; copy it or report it', (t) async {
-    final fake = FakeRecipes()
-      ..detailResult = recipeDetail(
-        canEdit: false,
-        visibility: RecipeVisibility.public,
-        owner: const RecipeOwner(name: 'Siti', isMe: false),
+  testWidgets(
+    'someone else\'s public recipe: no edit or remove; copy it or report it',
+    (t) async {
+      final fake = FakeRecipes()
+        ..detailResult = recipeDetail(
+          canEdit: false,
+          visibility: RecipeVisibility.public,
+          owner: const RecipeOwner(name: 'Siti', isMe: false),
+        );
+      final recipes = RecipesController(fake);
+      await t.pumpWidget(
+        app(
+          providers: [ChangeNotifierProvider.value(value: recipes)],
+          home: const RecipeDetailPage(id: 'r-1'),
+        ),
       );
-    final recipes = RecipesController(fake);
-    await t.pumpWidget(
-      app(
-        providers: [ChangeNotifierProvider.value(value: recipes)],
-        home: const RecipeDetailPage(id: 'r-1'),
-      ),
+      await t.pumpAndSettle();
+      final l = lookupAppLocalizations(const Locale('en'));
+      expect(find.textContaining(l.recipeBy('Siti')), findsOneWidget);
+      expect(find.byTooltip('Remove from my book'), findsNothing);
+      expect(find.text(l.recipeEdit), findsNothing);
+      await t.tap(find.text(l.report));
+      await t.pumpAndSettle();
+      await t.tap(find.text(l.reasonCopyright));
+      await t.pumpAndSettle();
+      expect(fake.reports, [('r-1', 'copyright')]);
+      expect(
+        find.text(l.recipeCopy),
+        findsOneWidget,
+      ); // opens the copy through the router (not in this harness)
+    },
+  );
+
+  test('typingWord and completeLine: the word being typed, and the line completed with a catalogue name', () {
+    expect(typingWord('2 cawan tep'), 'tep');
+    expect(typingWord('2 cawan tepung '), isNull);
+    expect(typingWord('2 c'), isNull);
+    expect(
+      completeLine('2 cawan tepung ga', 'Tepung gandum'),
+      '2 cawan tepung gandum',
     );
-    await t.pumpAndSettle();
-    final l = lookupAppLocalizations(const Locale('en'));
-    expect(find.textContaining(l.recipeBy('Siti')), findsOneWidget);
-    expect(find.byTooltip('Remove from my book'), findsNothing);
-    expect(find.text(l.recipeEdit), findsNothing);
-    await t.tap(find.text(l.report));
-    await t.pumpAndSettle();
-    await t.tap(find.text(l.reasonCopyright));
-    await t.pumpAndSettle();
-    expect(fake.reports, [('r-1', 'copyright')]);
-    expect(find.text(l.recipeCopy), findsOneWidget); // opens the copy through the router (not in this harness)
+    expect(completeLine('3 biji tel', 'Telur'), '3 biji telur');
+    expect(completeLine('gul', 'Gula'), 'gula');
   });
+
+  testWidgets(
+    'the editor suggests catalogue ingredients while typing; a tap completes the line',
+    (t) async {
+      final fake = FakeRecipes()
+        ..detailResult = recipeDetail()
+        ..ingredientNames = ['Tepung gandum', 'Tepung beras'];
+      await t.pumpWidget(
+        app(
+          providers: [
+            ChangeNotifierProvider.value(value: RecipesController(fake)),
+          ],
+          home: const RecipeEditPage(),
+        ),
+      );
+      await t.pumpAndSettle();
+      final ingredientRow = find.byType(TextField).at(1);
+      await t.enterText(ingredientRow, '2 cawan tep');
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pump();
+      expect(find.text('tepung beras'), findsOneWidget);
+      await t.tap(find.text('tepung gandum'));
+      await t.pump();
+      expect(
+        find.widgetWithText(TextField, '2 cawan tepung gandum'),
+        findsOneWidget,
+      );
+      expect(find.text('tepung beras'), findsNothing);
+    },
+  );
+
+  for (final owner in [true, false]) {
+    testWidgets(
+      'someone else\'s public recipe: ${owner ? 'the owner hides it' : 'a user reports it'}',
+      (t) async {
+        final auth = AuthController(
+          FakeAuthRepository()
+            ..session = true
+            ..meResult = User(
+              id: 'u-1',
+              email: 'a@example.com',
+              name: 'Ali',
+              role: owner ? 'owner' : 'user',
+              lang: 'ms',
+              emailVerified: true,
+            ),
+        );
+        await auth.restore();
+        final ownerRepo = FakeOwner();
+        final recipes = RecipesController(
+          FakeRecipes()
+            ..detailResult = recipeDetail(
+              canEdit: false,
+              visibility: RecipeVisibility.public,
+              owner: const RecipeOwner(name: 'Siti', isMe: false),
+            ),
+        );
+        await t.pumpWidget(
+          app(
+            providers: [
+              ChangeNotifierProvider.value(value: recipes),
+              ChangeNotifierProvider.value(value: auth),
+              Provider<OwnerRepository>.value(value: ownerRepo),
+            ],
+            home: const RecipeDetailPage(id: 'r-1'),
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(find.text('Hide'), owner ? findsOneWidget : findsNothing);
+        expect(find.text('Report'), owner ? findsNothing : findsOneWidget);
+        if (!owner) return;
+        await t.tap(find.text('Hide'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Hide').last);
+        await t.pumpAndSettle();
+        expect(ownerRepo.hiddenRecipes, ['r-1']);
+      },
+    );
+  }
+
+  testWidgets(
+    'a catalogue dish credits its source and sends the steps to the original recipe',
+    (t) async {
+      final recipes = RecipesController(
+        FakeRecipes()
+          ..detailResult = recipeDetail(
+            canEdit: false,
+            missing: const [],
+            steps: const [],
+            sourceType: RecipeSourceType.catalogue,
+            sourceUrl: 'https://khairulaming.my/rendang-1-ekor-ayam',
+          ),
+      );
+      await t.pumpWidget(
+        app(
+          providers: [ChangeNotifierProvider.value(value: recipes)],
+          home: const RecipeDetailPage(id: 'r-1'),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(
+        find.text('Bukuresipi catalogue · ingredients from khairulaming.my'),
+        findsOneWidget,
+      );
+      await t.scrollUntilVisible(
+        find.text('How to cook: see the original recipe'),
+        200,
+      );
+      expect(find.text('How to cook: see the original recipe'), findsOneWidget);
+      expect(find.text('Original recipe'), findsOneWidget);
+      expect(find.text('Open video'), findsNothing);
+    },
+  );
 }

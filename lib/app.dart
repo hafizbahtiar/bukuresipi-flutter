@@ -18,7 +18,10 @@ import 'features/shares/presentation/share_intake.dart';
 import 'l10n/gen/app_localizations.dart';
 
 class BukuresipiApp extends StatefulWidget {
-  const BukuresipiApp({super.key});
+  const BukuresipiApp({super.key, this.navigatorObservers = const []});
+
+  /// Screen tracking for the router: Firebase Analytics' observer, on Android.
+  final List<NavigatorObserver> navigatorObservers;
 
   @override
   State<BukuresipiApp> createState() => _BukuresipiAppState();
@@ -28,6 +31,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
   late final GoRouter _router = buildRouter(
     context.read<AuthController>(),
     context.read<UpdateGate>(),
+    observers: widget.navigatorObservers,
   );
 
   @override

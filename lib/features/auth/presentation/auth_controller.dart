@@ -76,6 +76,15 @@ class AuthController extends ChangeNotifier {
   Future<void> setName(String name) async =>
       _set(AuthStatus.signedIn, await _repo.setName(name));
 
+  Future<void> setAvatar(String path) async =>
+      _set(AuthStatus.signedIn, await _repo.setAvatar(path));
+
+  Future<void> removeAvatar() async =>
+      _set(AuthStatus.signedIn, await _repo.removeAvatar());
+
+  Future<Uint8List?> avatar(String userId, String avatar) =>
+      _repo.avatar(userId, avatar);
+
   Future<void> refreshUser() async {
     if (_status == AuthStatus.signedIn) {
       _set(AuthStatus.signedIn, await _repo.me());

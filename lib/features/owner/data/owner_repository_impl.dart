@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
+import '../../recipes/domain/recipe_variant.dart';
 import '../domain/owner.dart';
 import '../domain/owner_repository.dart';
 
@@ -134,6 +135,51 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
+  Future<void> hideRecipe(String recipeId) => apiCall(
+    () => _dio.post<void>(
+      '/owner/recipe-reports/resolve',
+      data: {'recipeId': recipeId, 'action': 'hide'},
+    ),
+  );
+
+  @override
+  Future<({List<RecipeVariant> variants, bool complete})> findVariants(
+    String recipeId,
+  ) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/recipes/$recipeId/variants',
+    )).data!;
+    return (
+      variants: [
+        for (final v in (j['variants'] as List).cast<Map<String, dynamic>>())
+          recipeVariantFromJson(v),
+      ],
+      complete: j['complete'] as bool? ?? true,
+    );
+  });
+
+  @override
+  Future<List<OwnerPlace>> places() => apiCall(() async {
+    final j = await _get('/owner/places');
+    return [
+      for (final p in (j['places'] as List).cast<Map<String, dynamic>>())
+        OwnerPlace(
+          branchId: p['branchId'] as String,
+          restaurantId: p['restaurantId'] as String,
+          name: p['name'] as String,
+          label: p['label'] as String?,
+          address: p['address'] as String?,
+          city: p['city'] as String?,
+          state: p['state'] as String?,
+          lat: (p['lat'] as num).toDouble(),
+          lng: (p['lng'] as num).toDouble(),
+          pinSource: p['pinSource'] as String?,
+          savers: p['savers'] as int,
+        ),
+    ];
+  });
+
+  @override
   Future<List<Tester>> testers() => apiCall(() async {
     final j = await _get('/owner/testers');
     return [
@@ -142,9 +188,19 @@ class OwnerRepositoryImpl implements OwnerRepository {
           email: t['email'] as String,
           lang: t['lang'] as String,
           joinedAt: dbTime(t['createdAt'] as String),
+          invitedAt: switch (t['invitedAt']) {
+            final String at => dbTime(at),
+            _ => null,
+          },
+          emailStatus: t['emailStatus'] as String?,
         ),
     ];
   });
+
+  @override
+  Future<void> inviteTester(String email) => apiCall(
+    () => _dio.post<void>('/owner/testers/invite', data: {'email': email}),
+  );
 
   @override
   Future<void> deleteRating(String ratingId) =>

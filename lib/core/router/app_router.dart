@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/places/presentation/pages/pin_picker_page.dart';
+import '../../features/places/presentation/pages/places_map_page.dart';
 import '../../features/places/presentation/pages/place_detail_page.dart';
 import '../../features/places/presentation/pages/reviews_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
@@ -75,7 +76,11 @@ String? redirectFor(
   }
 }
 
-GoRouter buildRouter(AuthController auth, UpdateGate update) {
+GoRouter buildRouter(
+  AuthController auth,
+  UpdateGate update, {
+  List<NavigatorObserver> observers = const [],
+}) {
   // Website paths for email links, in both languages: /auth/reset and /en/auth/reset open the same screen.
   List<GoRoute> linkRoutes(String prefix) => [
     _page(
@@ -99,12 +104,14 @@ GoRouter buildRouter(AuthController auth, UpdateGate update) {
 
   return GoRouter(
     initialLocation: '/',
-    observers: [UnfocusOnNavigation()],
+    observers: [UnfocusOnNavigation(), ...observers],
     refreshListenable: Listenable.merge([auth, update]),
     redirect: (_, state) =>
         redirectFor(state.uri.path, auth, update, uri: state.uri),
     routes: [
       _page(path: '/', builder: (_, _) => const HomePage()),
+      // Opened from Home's map button (no longer a tab).
+      _page(path: '/map', builder: (_, _) => const PlacesMapPage()),
       _page(path: '/splash', builder: (_, _) => const SplashPage()),
       _page(path: '/update', builder: (_, _) => const UpdateRequiredPage()),
       _page(path: '/login', builder: (_, _) => const LoginPage()),

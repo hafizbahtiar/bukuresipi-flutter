@@ -1,8 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
+import '../domain/recipe_variant.dart';
 import '../domain/recipe.dart';
 import '../domain/recipes_repository.dart';
 
@@ -11,13 +15,83 @@ class RecipesRepositoryImpl implements RecipesRepository {
 
   final Dio _dio;
 
+  static const _coverTypes = {
+    'jpg': 'jpeg',
+    'jpeg': 'jpeg',
+    'png': 'png',
+    'webp': 'webp',
+  };
+  static const _maxCoverBytes = 5 * 1024 * 1024;
+
+  @override
+  Future<RecipeDetail> setCover(String id, String path) async {
+    final subtype = _coverTypes[path.split('.').last.toLowerCase()];
+    if (subtype == null || await File(path).length() > _maxCoverBytes) {
+      throw const ApiException('invalid_image');
+    }
+    return apiCall(() async {
+      final form = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          path,
+          contentType: DioMediaType('image', subtype),
+        ),
+      });
+      return recipeDetailFromJson(
+        (await _dio.put<Map<String, dynamic>>(
+          '/recipes/$id/cover',
+          data: form,
+        )).data!,
+      );
+    });
+  }
+
+  @override
+  Future<void> removeCover(String id) =>
+      apiCall(() => _dio.delete<void>('/recipes/$id/cover'));
+
+  // Keyed by cover id: a new upload is a new key, so nothing stale is ever shown.
+  final _covers = <String, Future<Uint8List?>>{};
+
+  @override
+  Future<Uint8List?> cover(String id, String cover) {
+    // shortcut: FIFO, not LRU; fine for one book of recipes.
+    if (_covers.length >= 80) _covers.remove(_covers.keys.first);
+    return _covers['$id/$cover'] ??=
+        apiCall(() async {
+          // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
+          final res = await _dio.get<List<int>>(
+            '/recipes/$id/cover',
+            options: Options(
+              responseType: ResponseType.bytes,
+              validateStatus: (s) => s == 200 || s == 404,
+            ),
+          );
+          return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+        })..catchError((Object _) {
+          _covers.remove(
+            '$id/$cover',
+          ); // a failed fetch is tried again next time
+          return null;
+        });
+  }
+
   @override
   Future<List<Recipe>> list({bool family = false}) => apiCall(() async {
-    final data = (await _dio.get<Map<String, dynamic>>(
-      '/recipes',
-      queryParameters: family ? {'scope': 'family'} : null,
-    )).data!;
-    final rows = data['recipes'] as List;
+    // shortcut: the book reads every page up front (50 each); page it on scroll when books get long.
+    final rows = <dynamic>[];
+    String? cursor;
+    do {
+      final data = (await _dio.get<Map<String, dynamic>>(
+        '/recipes',
+        queryParameters: {
+          'limit': 50,
+          if (family) 'scope': 'family',
+          'cursor': ?cursor,
+        },
+      )).data!;
+      rows.addAll(data['items'] as List);
+      cursor = data['next'] as String?;
+    } while (cursor != null);
     final recipes = <Recipe>[];
     for (final j in rows) {
       try {
@@ -34,17 +108,19 @@ class RecipesRepositoryImpl implements RecipesRepository {
   Future<({List<Recipe> recipes, String? next})> community({
     String? query,
     String? cursor,
+    int? limit,
   }) => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>(
       '/recipes/community',
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
         'cursor': ?cursor,
+        'limit': ?limit,
       },
     )).data!;
     return (
       recipes: [
-        for (final j in (data['recipes'] as List).cast<Map<String, dynamic>>())
+        for (final j in (data['items'] as List).cast<Map<String, dynamic>>())
           recipeFromJson(j),
       ],
       next: data['next'] as String?,
@@ -52,22 +128,31 @@ class RecipesRepositoryImpl implements RecipesRepository {
   });
 
   @override
-  Future<List<Dish>> dishes({String? query}) => apiCall(() async {
+  Future<({List<Dish> dishes, String? next})> dishes({
+    String? query,
+    String? cursor,
+    int? limit,
+  }) => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>(
       '/catalogue/dishes',
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        'cursor': ?cursor,
+        'limit': ?limit,
       },
     )).data!;
-    return [
-      for (final d in (data['dishes'] as List).cast<Map<String, dynamic>>())
-        Dish(
-          id: d['id'] as String,
-          name: d['name'] as String,
-          category: d['category'] as String?,
-          ingredientCount: (d['ingredientCount'] as num?)?.toInt() ?? 0,
-        ),
-    ];
+    return (
+      dishes: [
+        for (final d in (data['items'] as List).cast<Map<String, dynamic>>())
+          Dish(
+            id: d['id'] as String,
+            name: d['name'] as String,
+            category: d['category'] as String?,
+            ingredientCount: (d['ingredientCount'] as num?)?.toInt() ?? 0,
+          ),
+      ],
+      next: data['next'] as String?,
+    );
   });
 
   @override
@@ -103,6 +188,16 @@ class RecipesRepositoryImpl implements RecipesRepository {
   });
 
   @override
+  Future<List<RecipeVariant>> variants(String id) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/recipes/$id/variants'))
+        .data!;
+    return [
+      for (final v in (data['variants'] as List).cast<Map<String, dynamic>>())
+        recipeVariantFromJson(v),
+    ];
+  });
+
+  @override
   Future<void> delete(String id) =>
       apiCall(() => _dio.delete<void>('/recipes/$id'));
 
@@ -128,6 +223,19 @@ class RecipesRepositoryImpl implements RecipesRepository {
         )).data!;
         return recipeDetailFromJson(data);
       });
+
+  @override
+  Future<RecipeDetail> create({
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) => apiCall(() async {
+    final data = (await _dio.post<Map<String, dynamic>>(
+      '/recipes',
+      data: {'name': name, 'ingredients': ingredients, 'steps': steps},
+    )).data!;
+    return recipeDetailFromJson(data);
+  });
 
   @override
   Future<RecipeDetail> edit(
@@ -162,6 +270,8 @@ Recipe recipeFromJson(Map<String, dynamic> j) => Recipe(
   missing: _missing(j['missing']),
   ingredientCount: (j['ingredientCount'] as num?)?.toInt() ?? 0,
   stepCount: (j['stepCount'] as num?)?.toInt() ?? 0,
+  shareId: j['shareId'] as String?,
+  cover: j['cover'] as String?,
 );
 
 RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
@@ -180,6 +290,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
   createdAt: dbTime(j['createdAt'] as String),
   sourceUrl: j['sourceUrl'] as String?,
   shareId: j['shareId'] as String?,
+  cover: j['cover'] as String?,
   missing: _missing(j['missing']),
   ingredients: [
     for (final i

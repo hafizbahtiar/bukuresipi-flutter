@@ -108,6 +108,7 @@ Family familyFromJson(Map<String, dynamic> j) {
           name: m['name'] as String?,
           role: m['role'] as String,
           isMe: m['isMe'] as bool,
+          avatar: m['avatar'] as String?,
         ),
     ],
     inviteExpiresAt: invite == null

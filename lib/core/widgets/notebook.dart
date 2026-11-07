@@ -256,6 +256,42 @@ Future<T?> showNotebookSheet<T>(
   );
 }
 
+/// Picks one of [options] in a sheet: the title, then a ruled row per option, the current one ticked.
+/// null = dismissed without choosing.
+Future<T?> showNotebookPicker<T>(
+  BuildContext context, {
+  required String title,
+  required List<T> options,
+  required T? selected,
+  required String Function(T) label,
+}) => showNotebookSheet<T>(
+  context,
+  builder: (sheet) {
+    final nb = Notebook.of(sheet);
+    final text = Theme.of(sheet).textTheme;
+    return ListView(
+      shrinkWrap: true,
+      padding: const EdgeInsets.only(bottom: 12),
+      children: [
+        NotebookRow(
+          child: Text(
+            title,
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        for (final option in options)
+          NotebookRow(
+            mark: option == selected
+                ? Icon(Icons.check, size: 20, color: nb.pandanDeep)
+                : null,
+            onTap: () => Navigator.of(sheet).pop(option),
+            child: Text(label(option)),
+          ),
+      ],
+    );
+  },
+);
+
 /// One button of an [ActionDock]. No [onPressed] = shown, but off.
 class DockAction {
   const DockAction({

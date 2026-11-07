@@ -1,3 +1,5 @@
+import '../../places/domain/place.dart';
+
 class OwnerStats {
   const OwnerStats({
     required this.usersTotal,
@@ -51,11 +53,19 @@ class Tester {
     required this.email,
     required this.lang,
     required this.joinedAt,
+    this.invitedAt,
+    this.emailStatus,
   });
 
   final String email;
   final String lang;
   final DateTime joinedAt;
+
+  /// When the owner pressed Done (the invite email went out); null = not invited yet.
+  final DateTime? invitedAt;
+
+  /// Resend's last event for the invite: sent, delivered, delivery_delayed, bounced, complained, opened, clicked.
+  final String? emailStatus;
 }
 
 /// A branch rated by several brand-new accounts in one week: maybe fake accounts. [ratings]: every rating on it this
@@ -247,4 +257,45 @@ class FailedShare {
   final String? sourceUrl;
   final String? error;
   final String? caption;
+}
+
+/// A pinned branch on the owner's map (GET /owner/places): every restaurant, not only nearby. Counts, no names.
+class OwnerPlace {
+  const OwnerPlace({
+    required this.branchId,
+    required this.restaurantId,
+    required this.name,
+    required this.lat,
+    required this.lng,
+    required this.savers,
+    this.label,
+    this.address,
+    this.city,
+    this.state,
+    this.pinSource,
+  });
+
+  final String branchId;
+  final String restaurantId;
+  final String name;
+  final String? label;
+  final String? address;
+  final String? city;
+  final String? state;
+  final double lat;
+  final double lng;
+  final String? pinSource;
+  final int savers;
+
+  /// As the place screens' branch, for the shared edit sheet.
+  Branch get branch => Branch(
+    id: branchId,
+    label: label,
+    address: address,
+    city: city,
+    state: state,
+    lat: lat,
+    lng: lng,
+    pinSource: pinSource,
+  );
 }

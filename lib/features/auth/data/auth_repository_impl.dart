@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +49,32 @@ class AuthRepositoryImpl implements AuthRepository {
     () async =>
         _remember((await _api.setName(name))['user'] as Map<String, dynamic>),
   );
+
+  @override
+  Future<User> setAvatar(String path) => apiCall(
+    () async =>
+        _remember((await _api.setAvatar(path))['user'] as Map<String, dynamic>),
+  );
+
+  @override
+  Future<User> removeAvatar() => apiCall(
+    () async =>
+        _remember((await _api.removeAvatar())['user'] as Map<String, dynamic>),
+  );
+
+  // Keyed by user + avatar id: a new upload is a new key, so nothing stale is shown.
+  final _avatars = <String, Future<Uint8List?>>{};
+
+  @override
+  Future<Uint8List?> avatar(String userId, String avatar) {
+    if (_avatars.length >= 40) _avatars.remove(_avatars.keys.first);
+    final key = '$userId/$avatar';
+    return _avatars[key] ??= apiCall(() => _api.avatar(userId))
+      ..catchError((Object _) {
+        _avatars.remove(key);
+        return null;
+      });
+  }
 
   @override
   Future<User> login(String email, String password) =>
@@ -152,4 +180,5 @@ User userFromJson(Map<String, dynamic> j) => User(
       j['hasPassword'] as bool? ??
       true, // a cached user from before Google sign-in
   google: j['google'] as bool? ?? false,
+  avatar: j['avatar'] as String?,
 );

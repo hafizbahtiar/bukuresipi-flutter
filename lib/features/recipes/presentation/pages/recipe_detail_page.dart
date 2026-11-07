@@ -8,7 +8,9 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../owner/domain/owner_repository.dart';
 import '../../../family/presentation/ask.dart';
 import '../../../family/presentation/family_controller.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
@@ -16,6 +18,7 @@ import '../../domain/recipe.dart';
 import '../../../shopping/presentation/shopping_controller.dart';
 import '../recipes_controller.dart';
 import '../widgets/ingredient_picker.dart';
+import '../widgets/recipe_variants.dart';
 import 'recipe_edit_page.dart';
 
 /// One imported recipe as a notebook page: what the post said, with the pieces it did not give marked.
@@ -91,18 +94,31 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     // In a family: which list, asked the first time, then remembered.
     var family = false;
     if (inFamily) {
-      final picked = shopping.lastRecipeList ?? await showNotebookSheet<bool>(
-        context,
-        builder: (sheet) => ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: 16),
-          children: [
-            NotebookRow(child: Text(l.shoppingWhichList, style: Theme.of(sheet).textTheme.titleMedium)),
-            NotebookRow(onTap: () => Navigator.of(sheet).pop(false), child: Text(l.shoppingMine)),
-            NotebookRow(onTap: () => Navigator.of(sheet).pop(true), child: Text(l.shoppingFamily)),
-          ],
-        ),
-      );
+      final picked =
+          shopping.lastRecipeList ??
+          await showNotebookSheet<bool>(
+            context,
+            builder: (sheet) => ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.only(bottom: 16),
+              children: [
+                NotebookRow(
+                  child: Text(
+                    l.shoppingWhichList,
+                    style: Theme.of(sheet).textTheme.titleMedium,
+                  ),
+                ),
+                NotebookRow(
+                  onTap: () => Navigator.of(sheet).pop(false),
+                  child: Text(l.shoppingMine),
+                ),
+                NotebookRow(
+                  onTap: () => Navigator.of(sheet).pop(true),
+                  child: Text(l.shoppingFamily),
+                ),
+              ],
+            ),
+          );
       if (picked == null) return;
       family = picked;
     }
@@ -136,15 +152,28 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       builder: (sheet) {
         final nb = Notebook.of(sheet);
         final text = Theme.of(sheet).textTheme;
-        Widget choice(RecipeVisibility v, String label, String hint) => NotebookRow(
-          mark: Icon(visibilityIcon(v), size: 20, color: v == recipe.visibility ? nb.pandan : nb.inkSoft),
-          trailing: v == recipe.visibility ? Icon(Icons.check, color: nb.pandan) : null,
-          onTap: () => Navigator.of(sheet).pop(v),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [Text(label), Text(hint, style: text.bodySmall?.copyWith(color: nb.inkSoft))],
-          ),
-        );
+        Widget choice(RecipeVisibility v, String label, String hint) =>
+            NotebookRow(
+              mark: Icon(
+                visibilityIcon(v),
+                size: 20,
+                color: v == recipe.visibility ? nb.pandan : nb.inkSoft,
+              ),
+              trailing: v == recipe.visibility
+                  ? Icon(Icons.check, color: nb.pandan)
+                  : null,
+              onTap: () => Navigator.of(sheet).pop(v),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label),
+                  Text(
+                    hint,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                ],
+              ),
+            );
         return ListView(
           shrinkWrap: true,
           padding: const EdgeInsets.only(bottom: 16),
@@ -178,7 +207,12 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         shrinkWrap: true,
         padding: const EdgeInsets.only(bottom: 16),
         children: [
-          NotebookRow(child: Text(l.recipeReportTitle, style: Theme.of(sheet).textTheme.titleMedium)),
+          NotebookRow(
+            child: Text(
+              l.recipeReportTitle,
+              style: Theme.of(sheet).textTheme.titleMedium,
+            ),
+          ),
           for (final (code, label) in [
             ('copyright', l.reasonCopyright),
             ('spam', l.reasonSpam),
@@ -186,7 +220,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ('wrong_info', l.reasonWrongInfo),
             ('other', l.reasonOther),
           ])
-            NotebookRow(onTap: () => Navigator.of(sheet).pop(code), child: Text(label)),
+            NotebookRow(
+              onTap: () => Navigator.of(sheet).pop(code),
+              child: Text(label),
+            ),
         ],
       ),
     );
@@ -194,6 +231,25 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     try {
       await recipes.report(recipe.id, reason);
       _snack(l.recipeReported);
+    } catch (e) {
+      _snack(errorText(l, e));
+    }
+  }
+
+  /// Owner: take someone's public recipe off Community without waiting for a report. Reloads to show it hidden.
+  Future<void> _hide(RecipeDetail recipe) async {
+    final l = AppLocalizations.of(context);
+    final owner = context.read<OwnerRepository>();
+    final sure = await showNotebookDialog(
+      context,
+      message: l.recipeHideConfirm,
+      tone: DialogTone.danger,
+      confirmLabel: l.recipeHide,
+    );
+    if (!sure) return;
+    try {
+      await owner.hideRecipe(recipe.id);
+      await _load();
     } catch (e) {
       _snack(errorText(l, e));
     }
@@ -258,6 +314,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final source = recipe.sourceUrl;
+    // Catalogue dishes credit the recipe they were built from; their steps stay there (not copied).
+    final catalogue = recipe.sourceType == RecipeSourceType.catalogue;
     return Scaffold(
       appBar: AppBar(),
       extendBody: true,
@@ -266,7 +324,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           if (source case final url?)
             DockAction(
               icon: Icons.open_in_new,
-              label: l.recipeOpenSource,
+              label: catalogue ? l.recipeOpenOriginal : l.recipeOpenSource,
               onPressed: () => openLink(context, url, failed: l.openFailed),
             ),
           if (recipe.ingredients.isNotEmpty)
@@ -295,12 +353,21 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               label: l.recipeCopy,
               onPressed: () => _copy(recipe),
             ),
-            if (recipe.visibility == RecipeVisibility.public && recipe.owner != null)
-              DockAction(
-                icon: Icons.flag_outlined,
-                label: l.report,
-                onPressed: () => _report(recipe),
-              ),
+            if (recipe.visibility == RecipeVisibility.public &&
+                recipe.owner != null)
+              // The owner removes it from Community directly; anyone else reports it to the owner.
+              (context.read<AuthController?>()?.user?.isOwner ?? false)
+                  ? DockAction(
+                      icon: Icons.visibility_off_outlined,
+                      label: l.recipeHide,
+                      danger: true,
+                      onPressed: recipe.hidden ? null : () => _hide(recipe),
+                    )
+                  : DockAction(
+                      icon: Icons.flag_outlined,
+                      label: l.report,
+                      onPressed: () => _report(recipe),
+                    ),
           ],
         ],
       ),
@@ -308,8 +375,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: ActionDock.clearance),
           children: [
+            // A photo opens the page edge to edge; none = the title starts the page (the owner may add one).
+            switch ((recipe.cover, recipe.shareId)) {
+              (final cover?, _) => ShareImage.cover(
+                recipe.id,
+                cover,
+                hero: true,
+              ),
+              (null, final share?) => ShareImage(share, hero: true),
+              _ => const SizedBox.shrink(),
+            },
             Padding(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
+              padding: const EdgeInsets.fromLTRB(
+                notebookGutter + 10,
+                12,
+                20,
+                0,
+              ),
               child: Text(
                 recipe.name,
                 style: text.headlineSmall?.copyWith(
@@ -320,12 +402,43 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ),
             if (_byLine(l, recipe) case final by?)
               Padding(
-                padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
-                child: Text(by, style: text.bodyMedium?.copyWith(color: nb.inkSoft)),
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 10,
+                  4,
+                  20,
+                  0,
+                ),
+                child: Text(
+                  by,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
+              ),
+            if (recipe.canEdit && recipe.cover == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 4,
+                  6,
+                  20,
+                  0,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ActionChip(
+                    key: const ValueKey('recipe-add-cover'),
+                    avatar: const Icon(Icons.add_a_photo_outlined, size: 18),
+                    label: Text(l.recipeCoverAdd),
+                    onPressed: () => _edit(recipe),
+                  ),
+                ),
               ),
             if (recipe.canEdit)
               Padding(
-                padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 6, 20, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  notebookGutter + 4,
+                  6,
+                  20,
+                  0,
+                ),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: ActionChip(
@@ -342,18 +455,15 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ),
             if (recipe.hidden)
               NotebookRow(
-                mark: Icon(Icons.visibility_off_outlined, size: 18, color: nb.margin),
-                child: Text(l.recipeHidden, style: text.bodyMedium?.copyWith(color: nb.inkSoft)),
-              ),
-            if (recipe.shareId case final id?)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  0,
-                  20,
-                  0,
+                mark: Icon(
+                  Icons.visibility_off_outlined,
+                  size: 18,
+                  color: nb.margin,
                 ),
-                child: ShareImage(id),
+                child: Text(
+                  l.recipeHidden,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
               ),
             if (recipe.missing.isNotEmpty)
               NotebookRow(
@@ -434,7 +544,37 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
               ),
             ],
-            if (recipe.steps.isNotEmpty) NotebookHeading(l.recipeSteps),
+            if (recipe.steps.isNotEmpty || (catalogue && source != null))
+              NotebookHeading(l.recipeSteps),
+            if (catalogue && recipe.steps.isEmpty && source != null)
+              NotebookRow(
+                mark: Icon(
+                  Icons.menu_book_outlined,
+                  size: 20,
+                  color: nb.pandanDeep,
+                ),
+                onTap: () => openLink(context, source, failed: l.openFailed),
+                trailing: Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: nb.pandanDeep,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.recipeStepsAtOriginal,
+                      style: text.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      Uri.tryParse(source)?.host ?? source,
+                      style: text.bodyMedium?.copyWith(color: nb.pandanDeep),
+                    ),
+                  ],
+                ),
+              ),
             for (final s in recipe.steps)
               NotebookRow(
                 mark: Text(
@@ -442,6 +582,11 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   style: nb.hand.copyWith(fontSize: 22, color: nb.inkSoft),
                 ),
                 child: Text(s.instruction),
+              ),
+            if (catalogue)
+              RecipeVariants(
+                recipeId: recipe.id,
+                owner: context.read<AuthController?>()?.user?.isOwner ?? false,
               ),
           ],
         ),
@@ -459,7 +604,12 @@ IconData visibilityIcon(RecipeVisibility v) => switch (v) {
 
 /// Who it is by and where it came from, for a recipe that is not the caller's (a shared one always shows credit).
 String? _byLine(AppLocalizations l, RecipeDetail r) {
-  if (r.sourceType == RecipeSourceType.catalogue) return l.recipeCatalogue;
+  if (r.sourceType == RecipeSourceType.catalogue) {
+    final host = Uri.tryParse(r.sourceUrl ?? '')?.host;
+    return host == null || host.isEmpty
+        ? l.recipeCatalogue
+        : l.recipeCatalogueFrom(host);
+  }
   if (r.canEdit) return null;
   return [
     if (r.owner?.name case final name?) l.recipeBy(name),

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipes_repository.dart';
 
@@ -53,35 +56,62 @@ RecipeDetail recipeDetail({
     RecipeStep(stepNo: 1, instruction: 'Goreng ayam hingga masak.'),
   ],
   List<RecipeAllergen> allergens = const [],
+  List<RecipeIngredient>? ingredients,
   bool canEdit = true,
   RecipeVisibility visibility = RecipeVisibility.private,
   RecipeOwner? owner,
+  RecipeSourceType sourceType = RecipeSourceType.link,
+  String sourceUrl = 'https://www.tiktok.com/@makan/video/1',
+  String? cover,
 }) => RecipeDetail(
+  cover: cover,
+  sourceType: sourceType,
   canEdit: canEdit,
   visibility: visibility,
   owner: owner,
   id: 'r-1',
   name: 'Nasi Lemak Ayam',
   createdAt: DateTime.utc(2026, 11, 2),
-  sourceUrl: 'https://www.tiktok.com/@makan/video/1',
+  sourceUrl: sourceUrl,
   missing: missing,
-  ingredients: const [
-    RecipeIngredient(
-      name: 'Ayam',
-      rawText: '500g ayam',
-      quantity: '500',
-      unit: 'g',
-    ),
-    RecipeIngredient(rawText: 'sedikit bahan rahsia'),
-  ],
+  ingredients:
+      ingredients ??
+      const [
+        RecipeIngredient(
+          name: 'Ayam',
+          rawText: '500g ayam',
+          quantity: '500',
+          unit: 'g',
+        ),
+        RecipeIngredient(rawText: 'sedikit bahan rahsia'),
+      ],
   steps: steps,
   allergens: allergens,
   uncheckedIngredients: 1,
 );
 
 class FakeRecipes implements RecipesRepository {
+  final covers = <(String, String)>[];
+  final coversRemoved = <String>[];
+
+  @override
+  Future<RecipeDetail> setCover(String id, String path) async {
+    covers.add((id, path));
+    return detailResult!;
+  }
+
+  @override
+  Future<void> removeCover(String id) async => coversRemoved.add(id);
+
+  @override
+  Future<Uint8List?> cover(String id, String cover) async => null;
+
   List<Recipe> recipes = [];
   RecipeDetail? detailResult;
+  List<RecipeVariant> variantList = const [];
+
+  @override
+  Future<List<RecipeVariant>> variants(String id) async => variantList;
   Object? error;
   Object? detailError;
   final deleted = <String>[];
@@ -103,6 +133,7 @@ class FakeRecipes implements RecipesRepository {
   Future<({List<Recipe> recipes, String? next})> community({
     String? query,
     String? cursor,
+    int? limit,
   }) async => (
     recipes: communityList
         .where(
@@ -115,12 +146,20 @@ class FakeRecipes implements RecipesRepository {
   );
 
   @override
-  Future<List<Dish>> dishes({String? query}) async => dishList
-      .where(
-        (d) =>
-            query == null || d.name.toLowerCase().contains(query.toLowerCase()),
-      )
-      .toList();
+  Future<({List<Dish> dishes, String? next})> dishes({
+    String? query,
+    String? cursor,
+    int? limit,
+  }) async => (
+    dishes: dishList
+        .where(
+          (d) =>
+              query == null ||
+              d.name.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList(),
+    next: null,
+  );
 
   @override
   Future<RecipeDetail> copy(String id) async {
@@ -171,6 +210,18 @@ class FakeRecipes implements RecipesRepository {
   }
 
   final edited = <(String, String, List<String>, List<String>)>[];
+
+  final created = <(String, List<String>, List<String>)>[];
+
+  @override
+  Future<RecipeDetail> create({
+    required String name,
+    required List<String> ingredients,
+    required List<String> steps,
+  }) async {
+    created.add((name, ingredients, steps));
+    return detailResult!;
+  }
 
   @override
   Future<RecipeDetail> edit(
