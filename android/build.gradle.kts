@@ -18,6 +18,11 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 }
+// geolocator_android and image_editor_common still compile as Java 8, so javac warns that 8 is obsolete. Our app is
+// Java 17; this only hides that one warning. Remove it once those plugins move past Java 8.
+subprojects {
+    tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("-Xlint:-options") }
+}
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
