@@ -604,5 +604,7 @@
   "recipeEditIngredientRequired": "Tulis nama bahan untuk jumlah ini.",
   "recipeEditStepHint": "Apa yang dibuat dalam langkah ini",
   "recipeEditDiscard": "Buang perubahan pada resepi ini?",
-  "recipeEditDiscardOk": "Buang"
+  "recipeEditDiscardOk": "Buang",
+  "mapSearchHint": "Cari dalam peta",
+  "mapSearchNone": "Tiada tempat disimpan yang sepadan."
 }

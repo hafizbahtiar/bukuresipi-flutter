@@ -1609,5 +1609,9 @@
   "recipeEditDiscard": "Discard your changes to this recipe?",
   "@recipeEditDiscard": {},
   "recipeEditDiscardOk": "Discard",
-  "@recipeEditDiscardOk": {}
+  "@recipeEditDiscardOk": {},
+  "mapSearchHint": "Search your map",
+  "@mapSearchHint": {},
+  "mapSearchNone": "No saved place matches.",
+  "@mapSearchNone": {}
 }

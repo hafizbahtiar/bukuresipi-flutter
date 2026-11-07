@@ -19,6 +19,7 @@ import '../../domain/nearby_branch.dart';
 import '../../domain/nearby_math.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../widgets/map_search.dart';
 import '../widgets/location_button.dart';
 import '../widgets/branch_edit_sheet.dart';
 import '../widgets/map_legend.dart';
@@ -562,6 +563,34 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     );
   }
 
+  /// Search the saved places: fly to the picked branch and open its sheet, as a tap on its pin does.
+  Future<void> _search() async {
+    final hit = await showSearch(
+      context: context,
+      delegate: MapSearch(_places.pinned, AppLocalizations.of(context)),
+    );
+    if (hit == null || !mounted) return;
+    final (place, branch) = hit;
+    unawaited(
+      _map?.easeCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(branch.lat!, branch.lng!),
+            zoom: 15,
+            bearing: _bearing,
+            tilt: _tilt,
+          ),
+        ),
+        duration: const Duration(milliseconds: 900),
+        interpolation: CameraAnimationInterpolation.easeInOut,
+      ),
+    );
+    showNotebookSheet<void>(
+      context,
+      builder: (context) => _PinSheet(place: place, branch: branch),
+    );
+  }
+
   /// Carousel snap / map tap: select the card and centre the map on that branch, keeping the 2D/3D angle.
   void _focusNearby(NearbyBranch place) {
     setState(() => _selectedNearbyId = place.branchId);
@@ -682,6 +711,11 @@ class _PlacesMapPageState extends State<PlacesMapPage>
         toolbarHeight: 76,
         title: NotebookTitle(l.navMap),
         actions: [
+          IconButton(
+            tooltip: l.mapSearchHint,
+            icon: const Icon(Icons.search),
+            onPressed: _search,
+          ),
           IconButton(
             tooltip: l.creditsTitle,
             icon: const Icon(Icons.info_outline),
