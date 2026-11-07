@@ -1,3 +1,5 @@
+import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
+import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/domain/review.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/reviews_page.dart';
@@ -8,6 +10,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../../../fakes.dart';
 import '../places_fixtures.dart';
 
 void main() {
@@ -44,10 +47,13 @@ void main() {
     controller = PlacesController(repo);
   });
 
-  Future<void> pump(WidgetTester t) async {
+  Future<void> pump(WidgetTester t, {AuthController? auth}) async {
     await t.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: controller,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: controller),
+          if (auth != null) ChangeNotifierProvider.value(value: auth),
+        ],
         child: const MaterialApp(
           locale: Locale('en'),
           localizationsDelegates: [
@@ -101,4 +107,41 @@ void main() {
     expect(repo.reviewReports.single.$1, 'r-1');
     expect(repo.reviewReports.single.$2, ReviewReason.offensive);
   });
+
+  testWidgets(
+    'a saver with an unconfirmed email is asked to confirm it, not to save',
+    (t) async {
+      final page = repo.reviewPage!;
+      repo.reviewPage = ReviewPage(
+        branchId: page.branchId,
+        branchName: page.branchName,
+        branchLabel: page.branchLabel,
+        rating: const RatingSummary(
+          average: 4.3,
+          count: 7,
+          mine: null,
+          canRate: false,
+          reviewCount: 1,
+          myReview: false,
+        ),
+        reviews: page.reviews,
+      );
+      final auth = AuthController(
+        FakeAuthRepository()
+          ..session = true
+          ..meResult = User(
+            id: testUser.id,
+            email: testUser.email,
+            name: testUser.name,
+            role: testUser.role,
+            lang: testUser.lang,
+            emailVerified: false,
+          ),
+      );
+      await auth.restore();
+      await pump(t, auth: auth);
+      expect(find.text('Verify your email to review.'), findsOneWidget);
+      expect(find.text('Save this place before reviewing it.'), findsNothing);
+    },
+  );
 }

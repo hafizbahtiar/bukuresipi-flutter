@@ -6,6 +6,7 @@ import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/rating.dart';
 import '../../domain/review.dart';
@@ -176,7 +177,16 @@ class _ReviewsPageState extends State<ReviewsPage> {
                       child: NotebookRating(
                         rating: page.rating,
                         onRate: _rate,
-                        hint: page.rating.canRate ? null : l.reviewNotSaved,
+                        hint: page.rating.canRate
+                            ? null
+                            // canRate needs a save and a confirmed email; name the one that is missing.
+                            : context
+                                      .watch<AuthController?>()
+                                      ?.user
+                                      ?.emailVerified ==
+                                  false
+                            ? l.reviewVerifyEmail
+                            : l.reviewNotSaved,
                       ),
                     ),
                     Padding(
