@@ -1,5 +1,6 @@
 import 'package:bukuresipi_flutter/features/home/presentation/feed_page.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
@@ -21,6 +22,7 @@ void main() {
     WidgetTester t, {
     bool located = true,
     int community = 1,
+    RatingSummary? rating,
   }) async {
     t.view.physicalSize = const Size(
       2400,
@@ -30,7 +32,12 @@ void main() {
     places = FakePlaces()
       ..nearbyResults = [
         nearbyBranch(branchId: 'b-1', name: 'Kedai Sederhana', distanceM: 900),
-        nearbyBranch(branchId: 'b-2', name: 'Warung Pak Ali', distanceM: 300),
+        nearbyBranch(
+          branchId: 'b-2',
+          name: 'Warung Pak Ali',
+          distanceM: 300,
+          rating: rating,
+        ),
       ];
     final recipes = FakeRecipes()
       ..communityList = [
@@ -115,6 +122,47 @@ void main() {
       expect(cardKeys(t), ['feed-place-b-2', 'feed-place-b-1']);
     },
   );
+
+  testWidgets(
+    'a restaurant card says what it is and its key facts: stars only when rated, the halal claim as a claim',
+    (t) async {
+      await pump(t);
+      Finder inCard(String key, Finder f) =>
+          find.descendant(of: find.byKey(ValueKey(key)), matching: f);
+      expect(
+        inCard('feed-place-b-2', find.text(l.feedKindRestaurant.toUpperCase())),
+        findsOneWidget,
+      );
+      expect(inCard('feed-place-b-2', find.text('Melayu')), findsOneWidget);
+      expect(
+        inCard('feed-place-b-2', find.text(l.feedSaysHalal)),
+        findsOneWidget,
+      );
+      expect(
+        inCard('feed-place-b-2', find.byIcon(Icons.star_rounded)),
+        findsNothing,
+      ); // no ratings yet
+      expect(
+        inCard('feed-dish-d-1', find.text(l.feedKindDish.toUpperCase())),
+        findsOneWidget,
+      );
+      expect(
+        inCard('feed-dish-d-1', find.text(l.recipeIngredientCount(9))),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('a rated restaurant shows its stars and count', (t) async {
+    await pump(t, rating: const RatingSummary(average: 4.56, count: 12));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('feed-place-b-2')),
+        matching: find.text('4.6 (12)'),
+      ),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'search suggests as you type (restaurants, recipes, "Search ..."); submitting filters the grid',

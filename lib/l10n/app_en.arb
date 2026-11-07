@@ -1680,5 +1680,19 @@
   "mapSearchPress": "Press Search to look further.",
   "@mapSearchPress": {},
   "mapSearchNewPlace": "Not in Bukuresipi yet: saving adds it, with its pin from the map.",
-  "@mapSearchNewPlace": {}
+  "@mapSearchNewPlace": {},
+  "feedKindRestaurant": "Restaurant",
+  "@feedKindRestaurant": {},
+  "feedKindRecipe": "Recipe",
+  "@feedKindRecipe": {},
+  "feedKindDish": "Dish",
+  "@feedKindDish": {},
+  "coverTitle": "Cover photo",
+  "@coverTitle": {},
+  "coverNone": "No cover",
+  "@coverNone": {},
+  "coverEmpty": "No post photos for this restaurant yet. Share a post of it first.",
+  "@coverEmpty": {},
+  "coverSaved": "Cover saved for everyone",
+  "@coverSaved": {}
 }

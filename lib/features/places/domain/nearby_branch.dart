@@ -18,6 +18,7 @@ class NearbyBranch {
     this.halalSourceUrl,
     this.placeId,
     this.rating = const RatingSummary(),
+    this.cover,
   });
 
   final String branchId;
@@ -45,6 +46,9 @@ class NearbyBranch {
   /// Community stars for this canonical branch; `canRate` is decided by the server.
   final RatingSummary rating;
 
+  /// The restaurant's cover photo id (PlacesRepository.restaurantCover); null = none.
+  final String? cover;
+
   NearbyBranch copyWith({
     bool? saved,
     String? placeId,
@@ -66,6 +70,7 @@ class NearbyBranch {
     saved: saved ?? this.saved,
     placeId: placeId ?? this.placeId,
     rating: rating ?? this.rating,
+    cover: cover,
   );
 }
 

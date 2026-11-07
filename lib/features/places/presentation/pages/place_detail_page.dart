@@ -16,6 +16,7 @@ import '../../domain/report.dart';
 import '../places_controller.dart';
 import '../widgets/halal_status.dart';
 import '../widgets/branch_edit_sheet.dart';
+import '../widgets/cover_picker_sheet.dart';
 import '../widgets/notebook_rating.dart';
 import '../widgets/place_report_sheet.dart';
 import '../widgets/unpinned_actions.dart';
@@ -197,6 +198,15 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
             ),
           if (owner)
             DockAction(
+              icon: Icons.image_outlined,
+              label: l.coverTitle,
+              onPressed: () => showNotebookSheet<void>(
+                context,
+                builder: (_) => CoverPickerSheet(restaurantId: r.id),
+              ),
+            ),
+          if (owner)
+            DockAction(
               icon: Icons.merge_type,
               label: l.checkBranches,
               onPressed: () => _checkBranches(place),
@@ -234,6 +244,22 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (r.cover case final cover?)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: ShareFill(
+                              key: ValueKey('place-cover-$cover'),
+                              id: cover,
+                              restaurantId: r.id,
+                              fallback: const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ),
                     Text(
                       r.name,
                       style: text.headlineSmall?.copyWith(
@@ -252,7 +278,8 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                     HalalStatus(
                       claim: r.halalQuote == null ? null : r.halalClaim,
                     ),
-                    if (place.shareId case final id?) ShareImage(id),
+                    if (place.shareId case final id? when r.cover == null)
+                      ShareImage(id),
                     if (place.sourceUrl case final url?)
                       TextButton.icon(
                         onPressed: () =>
