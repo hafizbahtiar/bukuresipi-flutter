@@ -61,6 +61,10 @@ void main() {
     );
     await t.pump();
     expect(t.takeException(), isNull);
+    // Home (the feed) first; the saved places are on Book. Four tabs: Map moved onto Home.
+    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    await t.tap(find.text('Book'));
+    await t.pump(); // not settle: Home's location spinner keeps animating (no location plugin in tests)
     expect(find.text('Kedai Kopi Ah Seng'), findsOneWidget);
   });
 }

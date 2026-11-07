@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/places/presentation/pages/pin_picker_page.dart';
+import '../../features/places/presentation/pages/places_map_page.dart';
 import '../../features/places/presentation/pages/place_detail_page.dart';
 import '../../features/places/presentation/pages/reviews_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
@@ -109,6 +110,8 @@ GoRouter buildRouter(
         redirectFor(state.uri.path, auth, update, uri: state.uri),
     routes: [
       _page(path: '/', builder: (_, _) => const HomePage()),
+      // Opened from Home's map button (no longer a tab).
+      _page(path: '/map', builder: (_, _) => const PlacesMapPage()),
       _page(path: '/splash', builder: (_, _) => const SplashPage()),
       _page(path: '/update', builder: (_, _) => const UpdateRequiredPage()),
       _page(path: '/login', builder: (_, _) => const LoginPage()),

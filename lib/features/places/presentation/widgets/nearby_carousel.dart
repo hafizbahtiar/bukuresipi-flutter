@@ -160,7 +160,7 @@ class _NearbyCarouselState extends State<NearbyCarousel> {
                   key: ValueKey('nearby-card-${widget.places[i].branchId}'),
                   width: _cardWidth,
                   height: NearbyCarousel.height - 4,
-                  child: _NearbyCard(
+                  child: NearbyCard(
                     place: widget.places[i],
                     selected: i == _selectedIndex,
                     onTap: () => _tapCard(i),
@@ -175,10 +175,12 @@ class _NearbyCarouselState extends State<NearbyCarousel> {
   }
 }
 
-class _NearbyCard extends StatelessWidget {
-  const _NearbyCard({
+/// One nearby restaurant: name, distance, address, cuisine and the post's halal quote. Map carousel and Home feed.
+class NearbyCard extends StatelessWidget {
+  const NearbyCard({
+    super.key,
     required this.place,
-    required this.selected,
+    this.selected = false,
     required this.onTap,
   });
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +9,7 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../family/presentation/family_controller.dart';
 import '../../../recipes/domain/recipe.dart';
+import '../../../recipes/presentation/pages/recipe_edit_page.dart';
 import '../../../recipes/presentation/recipes_controller.dart';
 import '../../../shares/presentation/recent_shares.dart';
 import '../../../shares/presentation/widgets/share_reading.dart';
@@ -33,6 +36,15 @@ class _PlacesListPageState extends State<PlacesListPage> {
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  /// "New recipe" (was on the Recipes tab): the editor, empty; the saved recipe opens.
+  Future<void> _newRecipe() async {
+    final saved = await Navigator.of(context).push<RecipeDetail>(
+      MaterialPageRoute(builder: (_) => const RecipeEditPage()),
+    );
+    if (saved == null || !mounted) return;
+    unawaited(context.push('/recipes/${saved.id}'));
   }
 
   @override
@@ -164,6 +176,11 @@ class _PlacesListPageState extends State<PlacesListPage> {
     }
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _newRecipe,
+        icon: const Icon(Icons.edit_note),
+        label: Text(l.recipeNew),
+      ),
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.homeTitle)),
       body: NotebookPage(
         child: RefreshIndicator(
@@ -172,7 +189,9 @@ class _PlacesListPageState extends State<PlacesListPage> {
               Future.wait([places.load(), recipes.load(), shared.load()]),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(
+              bottom: 96,
+            ), // the last row clears New recipe
             // The search box once there is something to search.
             children: [
               ...inbox,
@@ -279,9 +298,10 @@ class RecipeTile extends StatelessWidget {
     ];
     return NotebookRow(
       mark: Icon(Icons.menu_book, size: 20, color: nb.inkSoft),
-      trailing: switch (recipe.shareId) {
-        final id? => SharePhoto(id),
-        null => null,
+      trailing: switch ((recipe.cover, recipe.shareId)) {
+        (final cover?, _) => SharePhoto.cover(recipe.id, cover),
+        (null, final id?) => SharePhoto(id),
+        _ => null,
       },
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(

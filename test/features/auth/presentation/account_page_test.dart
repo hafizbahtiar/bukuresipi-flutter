@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
+import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/pages/account_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -63,7 +66,10 @@ void main() {
         findsNothing,
       ); // no separate row any more
       expect(find.text('Sign out'), findsOneWidget);
-      expect(find.byType(CircleAvatar), findsNothing);
+      expect(
+        find.byType(CircleAvatar),
+        findsOneWidget,
+      ); // the picture, or the initial
       expect(find.byType(SegmentedButton<String>), findsNothing);
       await t.tap(find.text('EN'));
       await t.pump();
@@ -117,4 +123,37 @@ void main() {
       isTrue,
     ); // it really is cut, not just allowed to be
   });
+
+  testWidgets(
+    'the picture: no photo shows the initial; with one, Remove sends the delete',
+    (t) async {
+      await pump(t);
+      expect(find.text('A'), findsOneWidget); // Ali's initial
+      await t.tap(find.byKey(const ValueKey('account-avatar')));
+      await t.pumpAndSettle();
+      expect(find.text('Add profile picture'), findsOneWidget);
+      expect(find.text('Remove profile picture'), findsNothing);
+      await t.tapAt(const Offset(10, 10)); // close the sheet
+      await t.pumpAndSettle();
+
+      repo.meResult = User(
+        id: testUser.id,
+        email: testUser.email,
+        name: testUser.name,
+        role: testUser.role,
+        lang: testUser.lang,
+        emailVerified: false,
+        avatar: 'av-1',
+      );
+      unawaited(
+        t.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
+      ); // completes only as frames are pumped
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('account-avatar')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Remove profile picture'));
+      await t.pumpAndSettle();
+      expect(repo.avatarsRemoved, 1);
+    },
+  );
 }

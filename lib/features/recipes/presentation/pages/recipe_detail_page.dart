@@ -432,7 +432,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                 ),
               ),
-            if (recipe.shareId case final id?)
+            if (recipe.cover != null || recipe.shareId != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   notebookGutter + 10,
@@ -440,7 +440,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   20,
                   0,
                 ),
-                child: ShareImage(id),
+                child: switch (recipe.cover) {
+                  final cover? => ShareImage.cover(recipe.id, cover),
+                  null => ShareImage(recipe.shareId!),
+                },
               ),
             if (recipe.missing.isNotEmpty)
               NotebookRow(

@@ -193,4 +193,32 @@ void main() {
       expect(find.text('open'), findsOneWidget);
     },
   );
+
+  testWidgets('removing the stored cover is sent after the recipe saves', (
+    t,
+  ) async {
+    final fake = await pumpEditor(t, recipe: recipeDetail(cover: 'c-1'));
+    expect(find.text('Change photo'), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('cover-remove')));
+    await t.pump();
+    expect(find.text('Add photo'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cover-remove')), findsNothing);
+    await t.tap(find.text('Save'));
+    await t.pumpAndSettle();
+    expect(fake.edited, hasLength(1));
+    expect(fake.coversRemoved, ['r-1']);
+    expect(fake.covers, isEmpty);
+  });
+
+  testWidgets('a new recipe offers a photo and saves without one', (t) async {
+    final fake = await pumpEditor(t);
+    expect(find.text('Add photo'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cover-remove')), findsNothing);
+    await t.enterText(find.byType(TextField).first, 'Kek Batik');
+    await t.tap(find.text('Save'));
+    await t.pumpAndSettle();
+    expect(fake.created, hasLength(1));
+    expect(fake.covers, isEmpty);
+    expect(fake.coversRemoved, isEmpty);
+  });
 }

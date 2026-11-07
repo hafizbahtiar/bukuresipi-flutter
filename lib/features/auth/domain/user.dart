@@ -9,6 +9,7 @@ class User {
     required this.emailVerified,
     this.hasPassword = true,
     this.google = false,
+    this.avatar,
   });
 
   final String id;
@@ -23,6 +24,9 @@ class User {
 
   /// Signed in with Google at least once (linked).
   final bool google;
+
+  /// Profile picture id (AuthRepository.avatar); changes on every upload. null = none.
+  final String? avatar;
 
   bool get isOwner => role == 'owner';
 }

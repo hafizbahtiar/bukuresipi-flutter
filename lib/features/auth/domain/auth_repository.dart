@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'user.dart';
 
 /// What the auth screens need. Implemented by data/auth_repository_impl.dart; tests use a fake.
@@ -13,6 +15,13 @@ abstract interface class AuthRepository {
 
   /// The display name other users see (family, a public recipe's credit); never the email.
   Future<User> setName(String name);
+
+  /// Profile picture from a local JPEG; returns the user with its new avatar id.
+  Future<User> setAvatar(String path);
+  Future<User> removeAvatar();
+
+  /// Someone's picture (yourself or a family member); null = none or not visible.
+  Future<Uint8List?> avatar(String userId, String avatar);
   Future<User> login(String email, String password);
   Future<User> register({
     required String email,

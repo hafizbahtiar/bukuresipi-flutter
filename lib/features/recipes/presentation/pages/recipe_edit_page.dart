@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,8 +8,10 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
 
@@ -17,6 +20,7 @@ import '../recipes_controller.dart';
 /// per ingredient ("2 cawan tepung gandum"): the rows are joined back and the server reads amount and unit from it.
 /// A row left as it was is sent exactly as stored, so its catalogue link stays. Pops the saved recipe.
 /// No [recipe] = a new one typed from scratch (POST /recipes), starting with one empty row in each section.
+/// The cover photo is picked here and uploaded after the recipe saves (PUT /recipes/:id/cover).
 
 /// The units the shopping list adds up and converts (bukuresipi-hono shopping/amounts.ts), in the order a cook
 /// reaches for them.
@@ -208,6 +212,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   bool _saving = false;
   bool _nameMissing = false;
 
+  /// A photo picked on this visit (a local file), or the stored one removed. Sent after the recipe saves.
+  String? _coverPath;
+  bool _coverRemoved = false;
+  String? get _shownCover => _coverRemoved ? null : widget.recipe?.cover;
+
   // Catalogue suggestions under the ingredient being typed (GET /recipes/ingredients), so the line gets linked.
   _Ingredient? _suggestFor;
   List<String> _suggestions = const [];
@@ -238,6 +247,8 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     for (final r in _ingredients) r.line,
     '|',
     for (final s in _steps) s.text.text.trim(),
+    '|',
+    '$_coverPath $_coverRemoved',
   ].join('\n');
 
   bool get _dirty => _snapshot() != _initial;
@@ -419,11 +430,80 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           steps: steps,
         ),
       };
-      navigator.pop(saved);
+      var done = saved;
+      try {
+        if (_coverPath case final path?) {
+          done = await recipes.setCover(saved.id, path);
+        } else if (_coverRemoved && widget.recipe?.cover != null) {
+          await recipes.removeCover(saved.id);
+        }
+      } catch (_) {
+        // The recipe is saved: leave the page (saving again would add a second new recipe), say the photo failed.
+        messenger.showSnackBar(SnackBar(content: Text(l.recipeCoverFailed)));
+      }
+      navigator.pop(done);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _pickCover() async {
+    final l = AppLocalizations.of(context);
+    final path = await pickPhoto(
+      context,
+      ratios: [('4:3', 4 / 3), ('1:1', 1), (l.photoFree, null)],
+    );
+    if (path != null && mounted) setState(() => _coverPath = path);
+  }
+
+  Widget _coverField(AppLocalizations l) {
+    final has = _coverPath != null || _shownCover != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_coverPath case final path?)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                File(path),
+                key: const ValueKey('cover-picked'),
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                cacheWidth: 1200,
+              ),
+            ),
+          )
+        else if (_shownCover case final cover?)
+          ShareImage.cover(widget.recipe!.id, cover),
+        Wrap(
+          spacing: 8,
+          children: [
+            TextButton.icon(
+              key: const ValueKey('cover-pick'),
+              onPressed: _saving ? null : _pickCover,
+              icon: const Icon(Icons.add_a_photo_outlined),
+              label: Text(has ? l.recipeCoverChange : l.recipeCoverAdd),
+            ),
+            if (has)
+              TextButton.icon(
+                key: const ValueKey('cover-remove'),
+                onPressed: _saving
+                    ? null
+                    : () => setState(() {
+                        _coverPath = null;
+                        _coverRemoved = widget.recipe?.cover != null;
+                      }),
+                icon: const Icon(Icons.hide_image_outlined),
+                label: Text(l.recipeCoverRemove),
+              ),
+          ],
+        ),
+      ],
+    );
   }
 
   Future<void> _leave() async {
@@ -648,6 +728,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 12, 32),
             children: [
+              _coverField(l),
               TextField(
                 controller: _name,
                 maxLength: 200,

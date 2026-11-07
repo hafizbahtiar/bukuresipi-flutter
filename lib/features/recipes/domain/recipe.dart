@@ -29,6 +29,7 @@ class Recipe {
     this.visibility = RecipeVisibility.private,
     this.owner,
     this.shareId,
+    this.cover,
   });
 
   final String id;
@@ -37,6 +38,9 @@ class Recipe {
 
   /// The share it came from: its photo is the list thumbnail (none = no photo).
   final String? shareId;
+
+  /// The owner's own photo (RecipesRepository.cover); shown before the share's. Changes on every upload.
+  final String? cover;
   final RecipeVisibility visibility;
   final RecipeOwner? owner;
 
@@ -80,6 +84,7 @@ class RecipeDetail {
     this.platform,
     this.sourceUrl,
     this.shareId,
+    this.cover,
     this.missing = const [],
     required this.ingredients,
     required this.steps,
@@ -106,6 +111,9 @@ class RecipeDetail {
 
   /// The share it was imported from: its screenshot or post thumbnail (ShareRepository.image).
   final String? shareId;
+
+  /// The owner's own photo (RecipesRepository.cover); shown before the share's. Changes on every upload.
+  final String? cover;
   final List<String> missing;
   final List<RecipeIngredient> ingredients;
   final List<RecipeStep> steps;
