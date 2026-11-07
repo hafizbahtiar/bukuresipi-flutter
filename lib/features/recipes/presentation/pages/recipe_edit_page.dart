@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
@@ -449,14 +449,12 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   }
 
   Future<void> _pickCover() async {
-    // Downsized on the phone: a 12 MP photo would pass the API's 5 MB cap only by luck.
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      imageQuality: 85,
+    final l = AppLocalizations.of(context);
+    final path = await pickPhoto(
+      context,
+      ratios: [('4:3', 4 / 3), ('1:1', 1), (l.photoFree, null)],
     );
-    if (picked != null && mounted) setState(() => _coverPath = picked.path);
+    if (path != null && mounted) setState(() => _coverPath = path);
   }
 
   Widget _coverField(AppLocalizations l) {

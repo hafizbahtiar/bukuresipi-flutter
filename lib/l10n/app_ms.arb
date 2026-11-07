@@ -621,5 +621,12 @@
   "feedNearYou": "Berdekatan",
   "feedSeeAll": "Lihat semua",
   "feedLocationOff": "Hidupkan lokasi untuk melihat restoran berdekatan. Ketik untuk cuba lagi.",
-  "feedNoneNear": "Belum ada restoran dipin berdekatan anda."
+  "feedNoneNear": "Belum ada restoran dipin berdekatan anda.",
+  "photoEditTitle": "Sunting foto",
+  "photoUse": "Guna foto",
+  "photoRotate": "Putar",
+  "photoFlip": "Balik",
+  "photoReset": "Set semula",
+  "photoFree": "Bebas",
+  "photoEditFailed": "Foto ini tidak dapat disunting. Cuba foto lain."
 }
