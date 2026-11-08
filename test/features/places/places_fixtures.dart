@@ -309,6 +309,21 @@ class FakePlaces implements PlacesRepository {
     return suggestion;
   }
 
+  /// What [pinFromMapsLink] answers; set [error] to make it throw.
+  MapsPin mapsPin = (
+    lat: 3.1994645,
+    lng: 101.6956504,
+    name: 'Port Lepak Sentul',
+  );
+  final mapsLinks = <String>[];
+
+  @override
+  Future<MapsPin> pinFromMapsLink(String url) async {
+    if (error != null) throw error!;
+    mapsLinks.add(url);
+    return mapsPin;
+  }
+
   @override
   Future<RatingSummary> rateBranch(String branchId, int stars) async {
     if (ratingError != null) throw ratingError!;

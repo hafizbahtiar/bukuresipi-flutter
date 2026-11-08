@@ -641,5 +641,13 @@
   "coverTitle": "Foto muka depan",
   "coverNone": "Tiada foto",
   "coverEmpty": "Belum ada foto siaran untuk restoran ini. Kongsi siarannya dahulu.",
-  "coverSaved": "Foto disimpan untuk semua"
+  "coverSaved": "Foto disimpan untuk semua",
+  "mapsLinkLabel": "Pautan Google Maps",
+  "mapsLinkHint": "Dalam Google Maps: Kongsi → Salin pautan, kemudian tampal di sini",
+  "mapsLinkUse": "Guna pautan",
+  "mapsLinkUsed": "Pin diambil dari pautan Google Maps. Semak, kemudian simpan.",
+  "errNotMapsLink": "Itu bukan pautan Google Maps.",
+  "errMapsNoPin": "Tiada lokasi di Malaysia dalam pautan itu. Buka kedai di Google Maps, kemudian Kongsi → Salin pautan.",
+  "pinCandidatesTitle": "Pin yang dijumpai",
+  "pinCandidateUse": "Guna"
 }

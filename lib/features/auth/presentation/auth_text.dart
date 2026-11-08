@@ -33,6 +33,8 @@ String errorText(
     'email_unverified' => l.ratingVerifyEmail,
     'owner_account' => l.errOwnerAccount,
     'list_full' => l.errShoppingListFull,
+    'not_maps_link' => l.errNotMapsLink,
+    'no_pin' => l.errMapsNoPin,
     'already_in_family' => l.errAlreadyInFamily,
     'family_full' => l.errFamilyFull,
     'google_email_unverified' => l.errGoogleEmailUnverified,
