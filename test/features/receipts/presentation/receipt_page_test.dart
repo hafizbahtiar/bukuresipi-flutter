@@ -1,0 +1,92 @@
+import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
+import 'package:bukuresipi_flutter/features/receipts/presentation/pages/receipt_page.dart';
+import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+
+import '../../places/places_fixtures.dart';
+import '../receipts_fixtures.dart';
+
+void main() {
+  Future<void> pump(WidgetTester t, FakeReceipts repo) async {
+    await t.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<ReceiptsRepository>.value(value: repo),
+          ChangeNotifierProvider(create: (_) => PlacesController(FakePlaces())),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en'), Locale('ms')],
+          home: ReceiptPage(id: 'r-1', poll: Duration(milliseconds: 10)),
+        ),
+      ),
+    );
+    await t.pump();
+  }
+
+  testWidgets('waits while reading, then the user checks the total and saves', (
+    t,
+  ) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(status: 'reading'),
+        receipt(gaps: ['totals_mismatch']),
+      ];
+    await pump(t, repo);
+    expect(find.text('Reading the receipt…'), findsOneWidget);
+    await t.pump(const Duration(milliseconds: 20));
+    await t.pump();
+    // The read is shown for checking; the unsure total is marked.
+    expect(find.text('Port Lepak Sentul'), findsOneWidget);
+    expect(find.byKey(const ValueKey('check-totals_mismatch')), findsOneWidget);
+    expect(find.widgetWithText(TextField, '41.15'), findsOneWidget);
+    await t.enterText(find.byKey(const ValueKey('receipt-total')), '40.50');
+    await t.tap(find.text('Save'));
+    await t.pump();
+    expect(repo.confirmed.single.totalSen, 4050);
+    expect(repo.confirmed.single.branchId, isNull); // the read's own place
+    expect(
+      find.text('Saved. The photo is deleted; the numbers stay.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('no place found: Save waits until the user picks one', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(place: null, gaps: ['shop']),
+      ];
+    await pump(t, repo);
+    final save = find.widgetWithText(FilledButton, 'Save');
+    expect(t.widget<FilledButton>(save).onPressed, isNull);
+    expect(find.text('Choose a place from your book'), findsOneWidget);
+  });
+
+  testWidgets('a bad amount says so and blocks Save', (t) async {
+    final repo = FakeReceipts();
+    await pump(t, repo);
+    await t.enterText(find.byKey(const ValueKey('receipt-total')), '4x');
+    await t.pump();
+    expect(find.text('Write an amount, like 41.15'), findsOneWidget);
+    expect(
+      t
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('an unreadable receipt says how to retake it', (t) async {
+    await pump(t, FakeReceipts()..answers = [receipt(status: 'failed')]);
+    expect(find.textContaining("couldn't read this receipt"), findsOneWidget);
+  });
+}

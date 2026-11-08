@@ -343,6 +343,13 @@ class _AccountPageState extends State<AccountPage> {
                   ),
                 ),
               NotebookRow(
+                key: const ValueKey('account-receipts'),
+                mark: mark(Icons.receipt_long_outlined),
+                onTap: () => context.push('/receipts'),
+                trailing: next,
+                child: Text(l.receiptsTitle),
+              ),
+              NotebookRow(
                 mark: mark(Icons.devices_outlined),
                 onTap: () => context.push('/account/sessions'),
                 trailing: next,

@@ -142,6 +142,9 @@ class ShareIntake extends ChangeNotifier {
     _maybeSend();
   }
 
+  /// From inside the app (the "+" sheet): the same path as the phone's share sheet.
+  void add(Incoming item) => _accept([item]);
+
   /// Send again after a network error.
   void retry() {
     if (_last == null || _sending) return;

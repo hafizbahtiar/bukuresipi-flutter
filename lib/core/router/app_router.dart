@@ -30,6 +30,8 @@ import '../../features/owner/presentation/pages/owner_shares_page.dart';
 import '../../features/owner/presentation/pages/owner_users_page.dart';
 import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
 import '../../features/shares/presentation/share_page.dart';
+import '../../features/receipts/presentation/pages/receipt_page.dart';
+import '../../features/receipts/presentation/pages/receipts_page.dart';
 import '../network/update_gate.dart';
 import '../widgets/system_pages.dart';
 import 'unfocus_on_navigation.dart';
@@ -136,6 +138,11 @@ GoRouter buildRouter(
       _page(path: '/account/email', builder: (_, _) => const ChangeEmailPage()),
       _page(path: '/account/sessions', builder: (_, _) => const SessionsPage()),
       _page(path: '/share', builder: (_, _) => const SharePage()),
+      _page(path: '/receipts', builder: (_, _) => const ReceiptsPage()),
+      _page(
+        path: '/receipts/:id',
+        builder: (_, state) => ReceiptPage(id: state.pathParameters['id']!),
+      ),
       _page(
         path: '/places/:id',
         builder: (_, state) => PlaceDetailPage(id: state.pathParameters['id']!),

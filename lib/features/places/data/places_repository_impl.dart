@@ -418,6 +418,7 @@ Review reviewFromJson(Map<String, dynamic> j) => Review(
   updatedAt: dbTime(j['updatedAt'] as String),
   votes: reviewVotesFromJson(j['votes']),
   reported: j['reported'] as bool? ?? false,
+  visited: j['visited'] as bool? ?? false,
 );
 
 ReviewPage reviewPageFromJson(Map<String, dynamic> j) {
