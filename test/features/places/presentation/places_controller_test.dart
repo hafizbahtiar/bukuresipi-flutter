@@ -113,7 +113,7 @@ void main() {
       repo.places = [place(id: 'a')];
       await c.setPin('b-1', 3.1, 101.7);
       expect(c.pinned.map((p) => p.id), ['a']);
-      expect(await c.locate('b-1'), isTrue);
+      expect(await c.locate('b-1'), LocateResult.found);
       repo.places = [];
       await c.deleteBranch('b-1');
       expect(c.places, isEmpty);

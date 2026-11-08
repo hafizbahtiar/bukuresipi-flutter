@@ -94,11 +94,11 @@ class PlacesController extends ChangeNotifier {
     await load();
   }
 
-  /// true = found and pinned. Throws ApiException.
-  Future<bool> locate(String branchId) async {
-    final found = await _repo.locate(branchId);
-    if (found) await load();
-    return found;
+  /// Throws ApiException. A found pin reloads the places.
+  Future<LocateResult> locate(String branchId) async {
+    final result = await _repo.locate(branchId);
+    if (result == LocateResult.found) await load();
+    return result;
   }
 
   /// Owner only. Throws ApiException.

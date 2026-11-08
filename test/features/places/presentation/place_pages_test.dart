@@ -206,6 +206,27 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.located, ['b-1']);
     expect(find.text('Found it. It is on your map now.'), findsOneWidget);
+    expect(find.widgetWithText(AlertDialog, 'Set on map'), findsNothing);
+  });
+
+  testWidgets('Find location says plainly when it was already tried today', (
+    t,
+  ) async {
+    repo = FakePlaces()
+      ..places = [place(id: 'a', lat: null)]
+      ..locateResult = LocateResult.triedToday;
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.text('Find location'));
+    await t.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.textContaining('already looked for this shop today'),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(AlertDialog, 'Set on map'), findsOneWidget);
+    await t.tap(find.widgetWithText(TextButton, 'OK'));
+    await t.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets('only the owner can delete a branch, after confirming', (

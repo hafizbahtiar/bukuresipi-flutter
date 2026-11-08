@@ -54,6 +54,9 @@ typedef PinCandidate = ({
   int? fromDraftM,
 });
 
+/// "Find location": [triedToday] = the server already looked within a day, so it searched nothing.
+enum LocateResult { found, triedToday, notFound }
+
 /// A pin read from a pasted Google Maps link; [name] when the link names the place.
 typedef MapsPin = ({double lat, double lng, String? name});
 

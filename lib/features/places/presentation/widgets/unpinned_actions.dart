@@ -23,20 +23,47 @@ class _UnpinnedActionsState extends State<UnpinnedActions> {
 
   Future<void> _find() async {
     final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    // A dialog, not a snackbar: on the map this sits in a sheet that covers the snackbar, and a found branch leaves
+    // the sheet's list (this widget is gone), so the answer goes on the navigator.
+    final nav = Navigator.of(context);
+    final pinPath = '/places/${widget.place.id}/pin/${widget.branch.id}';
     setState(() => _finding = true);
+    String message;
+    var offerPin = true;
     try {
-      final found = await context.read<PlacesController>().locate(
+      final result = await context.read<PlacesController>().locate(
         widget.branch.id,
       );
-      messenger.showSnackBar(
-        SnackBar(content: Text(found ? l.locationFound : l.locationNotFound)),
-      );
+      offerPin = result != LocateResult.found;
+      message = switch (result) {
+        LocateResult.found => l.locationFound,
+        LocateResult.triedToday => l.locationTriedToday,
+        LocateResult.notFound => l.locationNotFound,
+      };
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+      message = errorText(l, e);
     } finally {
       if (mounted) setState(() => _finding = false);
     }
+    if (!nav.mounted) return;
+    final setPin = await showDialog<bool>(
+      context: nav.context,
+      builder: (context) => AlertDialog(
+        content: Text(message),
+        actions: [
+          if (offerPin)
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.setOnMap),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l.ok),
+          ),
+        ],
+      ),
+    );
+    if (setPin == true && nav.mounted) nav.context.push(pinPath);
   }
 
   @override

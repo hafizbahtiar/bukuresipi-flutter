@@ -56,13 +56,17 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
-  Future<bool> locate(String branchId) => apiCall(() async {
+  Future<LocateResult> locate(String branchId) => apiCall(() async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/locate',
       // The server may search the web and ask the AI: longer than the usual 30 s.
       options: Options(receiveTimeout: const Duration(seconds: 90)),
     );
-    return res.data!['found'] == true;
+    return switch (res.data!['result']) {
+      'tried_today' => LocateResult.triedToday,
+      _ when res.data!['found'] == true => LocateResult.found,
+      _ => LocateResult.notFound,
+    };
   });
 
   @override
