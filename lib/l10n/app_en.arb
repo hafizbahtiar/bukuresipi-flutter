@@ -1694,5 +1694,21 @@
   "coverEmpty": "No post photos for this restaurant yet. Share a post of it first.",
   "@coverEmpty": {},
   "coverSaved": "Cover saved for everyone",
-  "@coverSaved": {}
+  "@coverSaved": {},
+  "mapsLinkLabel": "Google Maps link",
+  "@mapsLinkLabel": {},
+  "mapsLinkHint": "In Google Maps: Share → Copy link, then paste here",
+  "@mapsLinkHint": {},
+  "mapsLinkUse": "Use link",
+  "@mapsLinkUse": {},
+  "mapsLinkUsed": "Pin set from the Google Maps link. Check it, then save.",
+  "@mapsLinkUsed": {},
+  "errNotMapsLink": "That is not a Google Maps link.",
+  "@errNotMapsLink": {},
+  "errMapsNoPin": "No location in Malaysia in that link. Open the shop in Google Maps, then Share → Copy link.",
+  "@errMapsNoPin": {},
+  "pinCandidatesTitle": "Pins found",
+  "@pinCandidatesTitle": {},
+  "pinCandidateUse": "Use",
+  "@pinCandidateUse": {}
 }

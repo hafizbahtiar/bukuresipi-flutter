@@ -396,6 +396,86 @@ void main() {
     expect(repo.branchUpdates.single.lng, 101.791234);
   });
 
+  testWidgets('a user pastes a Google Maps link and the pin is filled in', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+
+    final link = find.byKey(const ValueKey('branch-maps-link'));
+    await t.ensureVisible(link);
+    await t.enterText(link, 'https://maps.app.goo.gl/AbC123');
+    await t.tap(find.text('Use link'));
+    await t.pumpAndSettle();
+
+    expect(repo.mapsLinks, ['https://maps.app.goo.gl/AbC123']);
+    String field(String key) =>
+        t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    expect(field('branch-lat'), '3.199464');
+    expect(field('branch-lng'), '101.695650');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+    expect(repo.branchUpdates.single.lat, 3.199464);
+    expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+  });
+
+  testWidgets('the owner sees every pin the draft found and can pick one', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    repo.suggestion = const BranchSuggestion(
+      draft: BranchDraft(lat: 3.2001, lng: 101.6901),
+      sources: ['here'],
+      aiUsed: false,
+      changed: true,
+      warnings: ['The pins found are up to 550 m apart'],
+      candidates: [
+        (
+          source: 'here',
+          lat: 3.2001,
+          lng: 101.6901,
+          address: null,
+          fromDraftM: 0,
+        ),
+        (
+          source: 'grab',
+          lat: 3.205,
+          lng: 101.69,
+          address: null,
+          fromDraftM: 545,
+        ),
+      ],
+    );
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    final suggest = find.text('Suggest with AI');
+    await t.ensureVisible(suggest);
+    await t.tap(suggest);
+    await t.pumpAndSettle();
+
+    expect(find.text('Pins found'), findsOneWidget);
+    expect(find.textContaining('545 m'), findsOneWidget);
+    final use = find.descendant(
+      of: find.byKey(const ValueKey('pin-grab')),
+      matching: find.text('Use'),
+    );
+    await t.ensureVisible(use);
+    await t.tap(use);
+    await t.pumpAndSettle();
+    expect(
+      t
+          .widget<TextField>(find.byKey(const ValueKey('branch-lat')))
+          .controller!
+          .text,
+      '3.205000',
+    );
+  });
+
   testWidgets('the owner can check a restaurant\'s branches; users cannot', (
     t,
   ) async {

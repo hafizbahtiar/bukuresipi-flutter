@@ -45,6 +45,9 @@ abstract interface class PlacesRepository {
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
   Future<BranchSuggestion> suggestBranch(String branchId);
 
+  /// A pasted Google Maps link -> its pin (nothing saved). Throws ApiException 'not_maps_link' / 'no_pin'.
+  Future<MapsPin> pinFromMapsLink(String url);
+
   /// The restaurant's chosen cover photo; null = none. [cover] is the id from the DTO (cache key).
   Future<Uint8List?> restaurantCover(String restaurantId, String cover);
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
@@ -7,6 +8,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/place.dart';
 import '../pages/pin_picker_page.dart';
+import '../places_controller.dart';
 
 typedef BranchEdit = ({
   String? label,
@@ -60,6 +62,8 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   bool _pinChanged = false;
   bool _saving = false;
   bool _suggesting = false;
+  bool _readingLink = false;
+  final _mapsLink = TextEditingController();
   BranchSuggestion? _suggestion;
   final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
@@ -79,6 +83,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     _state.dispose();
     _latText.dispose();
     _lngText.dispose();
+    _mapsLink.dispose();
     super.dispose();
   }
 
@@ -126,8 +131,31 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
       ),
     );
     if (picked == null || !mounted) return;
-    _latText.text = picked.latitude.toStringAsFixed(6);
-    _lngText.text = picked.longitude.toStringAsFixed(6);
+    _setPin(picked.latitude, picked.longitude);
+  }
+
+  void _setPin(double lat, double lng) {
+    _latText.text = lat.toStringAsFixed(6);
+    _lngText.text = lng.toStringAsFixed(6);
+  }
+
+  Future<void> _useMapsLink() async {
+    final url = _mapsLink.text.trim();
+    if (url.isEmpty || _readingLink) return;
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _readingLink = true);
+    try {
+      final pin = await context.read<PlacesController>().pinFromMapsLink(url);
+      if (!mounted) return;
+      _setPin(pin.lat, pin.lng);
+      setState(() => _aiFields.remove('location'));
+      messenger.showSnackBar(SnackBar(content: Text(l.mapsLinkUsed)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _readingLink = false);
+    }
   }
 
   Future<void> _suggest() async {
@@ -284,6 +312,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                         _DraftBanner(
                           suggestion: suggestion,
                           branch: widget.branch,
+                          onUsePin: (c) => _setPin(c.lat, c.lng),
                         ),
                       Align(
                         alignment: Alignment.centerRight,
@@ -374,6 +403,33 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                       ),
                     ],
                   ),
+                  TextField(
+                    key: const ValueKey('branch-maps-link'),
+                    controller: _mapsLink,
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.go,
+                    onSubmitted: (_) => _useMapsLink(),
+                    decoration: InputDecoration(
+                      labelText: l.mapsLinkLabel,
+                      helperText: l.mapsLinkHint,
+                      helperMaxLines: 2,
+                      prefixIcon: const Icon(Icons.link, size: 20),
+                      suffixIcon: _readingLink
+                          ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator.adaptive(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : TextButton(
+                              onPressed: _useMapsLink,
+                              child: Text(l.mapsLinkUse),
+                            ),
+                    ),
+                  ),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
@@ -452,10 +508,15 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
 }
 
 class _DraftBanner extends StatelessWidget {
-  const _DraftBanner({required this.suggestion, required this.branch});
+  const _DraftBanner({
+    required this.suggestion,
+    required this.branch,
+    required this.onUsePin,
+  });
 
   final BranchSuggestion suggestion;
   final Branch branch;
+  final ValueChanged<PinCandidate> onUsePin;
 
   String? _coords(double? lat, double? lng) => lat == null || lng == null
       ? null
@@ -535,6 +596,33 @@ class _DraftBanner extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Text('• $warning', style: small),
             ),
+          if (suggestion.candidates.length > 1) ...[
+            const SizedBox(height: 8),
+            Text(
+              l.pinCandidatesTitle,
+              style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            for (final c in suggestion.candidates)
+              Row(
+                key: ValueKey('pin-${c.source}'),
+                children: [
+                  Expanded(
+                    child: Text(
+                      [
+                        c.source,
+                        _coords(c.lat, c.lng),
+                        if (c.fromDraftM case final m? when m > 0) '$m m',
+                      ].join(' · '),
+                      style: small,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => onUsePin(c),
+                    child: Text(l.pinCandidateUse),
+                  ),
+                ],
+              ),
+          ],
         ],
       ),
     );

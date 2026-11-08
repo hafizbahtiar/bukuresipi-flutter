@@ -142,6 +142,9 @@ class PlacesController extends ChangeNotifier {
   Future<BranchSuggestion> suggestBranch(String branchId) =>
       _repo.suggestBranch(branchId);
 
+  /// A pasted Google Maps link -> its pin, for the edit form. Throws ApiException.
+  Future<MapsPin> pinFromMapsLink(String url) => _repo.pinFromMapsLink(url);
+
   /// Rates or clears (`stars == null`) a branch, then replaces its summary in memory without a full reload.
   Future<RatingSummary> setRating(String branchId, int? stars) async {
     try {

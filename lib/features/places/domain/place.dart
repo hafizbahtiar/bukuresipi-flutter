@@ -30,6 +30,7 @@ class BranchSuggestion {
     required this.changed,
     this.summary,
     this.warnings = const [],
+    this.candidates = const [],
   });
 
   final BranchDraft draft;
@@ -38,7 +39,23 @@ class BranchSuggestion {
   final bool changed;
   final String? summary;
   final List<String> warnings;
+
+  /// Every pin found (current, the draft's, HERE, GrabMaps), to compare before saving.
+  final List<PinCandidate> candidates;
 }
+
+/// One pin a source gave for a branch. [source]: 'current', 'draft:<source>', 'here', 'grab'.
+/// [fromDraftM] = metres from the draft's pin; null when the draft has none.
+typedef PinCandidate = ({
+  String source,
+  double lat,
+  double lng,
+  String? address,
+  int? fromDraftM,
+});
+
+/// A pin read from a pasted Google Maps link; [name] when the link names the place.
+typedef MapsPin = ({double lat, double lng, String? name});
 
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
 /// In a family the book also holds the members' saves: [mine] false = only a family member saved it.

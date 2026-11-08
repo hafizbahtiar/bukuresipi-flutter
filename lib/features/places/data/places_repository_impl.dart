@@ -130,6 +130,31 @@ class PlacesRepositoryImpl implements PlacesRepository {
       changed: j['changed'] as bool? ?? false,
       summary: j['summary'] as String?,
       warnings: ((j['warnings'] as List?) ?? const []).cast<String>(),
+      candidates: [
+        for (final c
+            in ((j['candidates'] as List?) ?? const [])
+                .cast<Map<String, dynamic>>())
+          (
+            source: c['source'] as String,
+            lat: (c['lat'] as num).toDouble(),
+            lng: (c['lng'] as num).toDouble(),
+            address: c['address'] as String?,
+            fromDraftM: (c['fromDraftM'] as num?)?.round(),
+          ),
+      ],
+    );
+  });
+
+  @override
+  Future<MapsPin> pinFromMapsLink(String url) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/maps-link',
+      data: {'url': url},
+    )).data!;
+    return (
+      lat: (j['lat'] as num).toDouble(),
+      lng: (j['lng'] as num).toDouble(),
+      name: j['name'] as String?,
     );
   });
 
