@@ -181,7 +181,18 @@ class _PlacesListPageState extends State<PlacesListPage> {
         icon: const Icon(Icons.edit_note),
         label: Text(l.recipeNew),
       ),
-      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.homeTitle)),
+      appBar: AppBar(
+        toolbarHeight: 76,
+        title: NotebookTitle(l.homeTitle),
+        actions: [
+          IconButton(
+            key: const ValueKey('book-map'),
+            tooltip: l.navMap,
+            icon: const Icon(Icons.map_outlined),
+            onPressed: () => context.push('/map'),
+          ),
+        ],
+      ),
       body: NotebookPage(
         child: RefreshIndicator(
           // Everything on the page: a new recipe or a cleared share shows without a restart.

@@ -77,6 +77,7 @@ void main() {
     await t.tap(find.text('Book'));
     await t.pump(); // not settle: Home's location spinner keeps animating (no location plugin in tests)
     expect(find.text('Kedai Kopi Ah Seng'), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-map')), findsOneWidget);
     // The tabs after "+" are one place to the right in the bar.
     await t.tap(find.text('Account'));
     await t.pump();

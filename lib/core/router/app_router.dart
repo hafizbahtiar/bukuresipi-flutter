@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
 import '../../features/places/presentation/pages/pin_picker_page.dart';
 import '../../features/places/presentation/pages/places_map_page.dart';
 import '../../features/places/presentation/pages/place_detail_page.dart';
 import '../../features/places/presentation/pages/reviews_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
+import '../../features/auth/presentation/pages/settings_page.dart';
 import '../../features/auth/presentation/pages/account_page.dart';
 import '../../features/auth/presentation/pages/change_email_page.dart';
 import '../../features/auth/presentation/pages/sessions_page.dart';
@@ -111,9 +113,22 @@ GoRouter buildRouter(
     redirect: (_, state) =>
         redirectFor(state.uri.path, auth, update, uri: state.uri),
     routes: [
-      _page(path: '/', builder: (_, _) => const HomePage()),
+      _page(
+        path: '/',
+        builder: (_, state) => HomePage(open: state.extra),
+      ),
       // Opened from Home's map button (no longer a tab).
-      _page(path: '/map', builder: (_, _) => const PlacesMapPage()),
+      _page(
+        path: '/map',
+        // ?lat=&lng= (a place's pin): the map opens there.
+        builder: (_, state) {
+          final lat = double.tryParse(state.uri.queryParameters['lat'] ?? '');
+          final lng = double.tryParse(state.uri.queryParameters['lng'] ?? '');
+          return PlacesMapPage(
+            focus: lat == null || lng == null ? null : LatLng(lat, lng),
+          );
+        },
+      ),
       _page(path: '/splash', builder: (_, _) => const SplashPage()),
       _page(path: '/update', builder: (_, _) => const UpdateRequiredPage()),
       _page(path: '/login', builder: (_, _) => const LoginPage()),
@@ -122,6 +137,7 @@ GoRouter buildRouter(
       ...linkRoutes(''),
       ...linkRoutes('/en'),
       _page(path: '/account', builder: (_, _) => const AccountPage()),
+      _page(path: '/settings', builder: (_, _) => const SettingsPage()),
       _page(path: '/credits', builder: (_, _) => const CreditsPage()),
       _page(path: '/about', builder: (_, _) => const AboutPage()),
       _page(path: '/family', builder: (_, _) => const FamilyPage()),
@@ -168,6 +184,10 @@ GoRouter buildRouter(
         path: '/owner',
         builder: (_, _) => const OwnerPage(),
         routes: [
+          _page(
+            path: 'usage',
+            builder: (_, _) => const OwnerPage(usageOnly: true),
+          ),
           _page(path: 'users', builder: (_, _) => const OwnerUsersPage()),
           _page(path: 'shares', builder: (_, _) => const OwnerSharesPage()),
           _page(path: 'reports', builder: (_, _) => const OwnerReportsPage()),

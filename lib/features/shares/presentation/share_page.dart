@@ -8,6 +8,7 @@ import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
 import '../../push/push_controller.dart';
+import '../../home/presentation/home_page.dart';
 import 'recent_shares.dart';
 import 'share_intake.dart';
 import 'widgets/share_reading.dart';
@@ -36,16 +37,21 @@ class SharePage extends StatelessWidget {
     final intake = context.watch<ShareIntake>();
     void close() {
       intake.dismiss();
-      context.go('/');
+      context.go(
+        '/',
+        extra: HomePage.homeTab,
+      ); // the Home tab, not the one left open before the share
     }
 
     Future<void> leaveApp() async {
       // Not asked yet (skipped at sign-in on an older install): ask before leaving, the push is about this share.
       await context.read<PushController?>()?.askOnce();
       if (!context.mounted) return;
+      final fromApp = intake.fromApp;
       close();
       context.read<RecentShares>().load();
-      SystemNavigator.pop(); // Android: back to the source app; iOS ignores it and the book is shown
+      // From another app: back to it (Android; iOS ignores it). From the "+" sheet: stay, on Home.
+      if (!fromApp) SystemNavigator.pop();
     }
 
     final item = intake.current;

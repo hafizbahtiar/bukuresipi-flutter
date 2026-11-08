@@ -57,7 +57,10 @@ LatLngBounds? pinBounds(List<Place> places) {
 /// The Map tab: one pin per branch with coordinates (two fingers rotate and tilt for 3D; the north button turns
 /// it back). Places without a pin are listed from the slip at the bottom, each with "Find location" / "Set on map".
 class PlacesMapPage extends StatefulWidget {
-  const PlacesMapPage({super.key, this.active = true});
+  const PlacesMapPage({super.key, this.active = true, this.focus});
+
+  /// Open centred on this point (a place's pin, from its page) instead of the user's location or all pins.
+  final LatLng? focus;
 
   /// The Map tab is visible. Location tracking runs only while this and the app are active.
   final bool active;
@@ -155,6 +158,12 @@ class _PlacesMapPageState extends State<PlacesMapPage>
 
   Future<void> _styleLoaded() async {
     _styled = true;
+    if (widget.focus case final focus?) {
+      await _draw();
+      await _map?.animateCamera(CameraUpdate.newLatLngZoom(focus, 16));
+      _cameraIdle();
+      return;
+    }
     await _draw(fit: _here == null);
     if (_here case final here?) {
       await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14));
@@ -175,6 +184,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       unawaited(_draw());
       unawaited(_loadNearby());
       _syncLocationUpdates();
+      // Opened on a place: the camera stays on it.
+      if (widget.focus != null) {
+        return;
+      }
       await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14));
       _cameraIdle();
     } finally {

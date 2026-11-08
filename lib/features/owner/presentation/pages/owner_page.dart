@@ -13,7 +13,10 @@ import '../../../../core/widgets/load_view.dart';
 
 /// Owner overview: counts, and each outside service's use this month against its cap (tap to change it).
 class OwnerPage extends StatefulWidget {
-  const OwnerPage({super.key});
+  const OwnerPage({super.key, this.usageOnly = false});
+
+  /// Only the services' usage and caps (Account > Usage), without the counts.
+  final bool usageOnly;
 
   @override
   State<OwnerPage> createState() => _OwnerPageState();
@@ -74,7 +77,10 @@ class _OwnerPageState extends State<OwnerPage> {
     final l = AppLocalizations.of(context);
     final s = _stats;
     return Scaffold(
-      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.ownerTitle)),
+      appBar: AppBar(
+        toolbarHeight: 76,
+        title: NotebookTitle(widget.usageOnly ? l.usageTitle : l.ownerTitle),
+      ),
       body: LoadView(
         loading: _loading,
         error: _error,
@@ -85,41 +91,43 @@ class _OwnerPageState extends State<OwnerPage> {
                 child: ListView(
                   padding: const EdgeInsets.only(bottom: 32),
                   children: [
-                    _Ledger(
-                      label: l.ownerUsers,
-                      value: s.usersTotal,
-                      note: l.ownerNewSuffix(s.usersNewThisWeek),
-                      onTap: () => context.push('/owner/users'),
-                    ),
-                    _Ledger(label: l.ownerSharesToday, value: s.sharesToday),
-                    _Ledger(
-                      label: l.ownerFailedToday,
-                      value: s.failedToday,
-                      warn: s.failedToday > 0,
-                      onTap: () => context.push('/owner/shares'),
-                    ),
-                    _Ledger(
-                      label: l.ownerReports,
-                      value: s.reportsOpen,
-                      note: l.ownerReportReadyCount(s.reportsReady),
-                      onTap: () => context.push('/owner/reports'),
-                    ),
-                    _Ledger(
-                      label: l.ownerReviewReports,
-                      value: s.reviewReportsOpen,
-                      onTap: () => context.push('/owner/review-reports'),
-                    ),
-                    _Ledger(
-                      label: l.ownerRatingBursts,
-                      value: s.ratingBursts,
-                      warn: s.ratingBursts > 0,
-                      onTap: () => context.push('/owner/rating-bursts'),
-                    ),
-                    _Ledger(
-                      label: l.ownerTesters,
-                      value: s.testers,
-                      onTap: () => context.push('/owner/testers'),
-                    ),
+                    if (!widget.usageOnly) ...[
+                      _Ledger(
+                        label: l.ownerUsers,
+                        value: s.usersTotal,
+                        note: l.ownerNewSuffix(s.usersNewThisWeek),
+                        onTap: () => context.push('/owner/users'),
+                      ),
+                      _Ledger(label: l.ownerSharesToday, value: s.sharesToday),
+                      _Ledger(
+                        label: l.ownerFailedToday,
+                        value: s.failedToday,
+                        warn: s.failedToday > 0,
+                        onTap: () => context.push('/owner/shares'),
+                      ),
+                      _Ledger(
+                        label: l.ownerReports,
+                        value: s.reportsOpen,
+                        note: l.ownerReportReadyCount(s.reportsReady),
+                        onTap: () => context.push('/owner/reports'),
+                      ),
+                      _Ledger(
+                        label: l.ownerReviewReports,
+                        value: s.reviewReportsOpen,
+                        onTap: () => context.push('/owner/review-reports'),
+                      ),
+                      _Ledger(
+                        label: l.ownerRatingBursts,
+                        value: s.ratingBursts,
+                        warn: s.ratingBursts > 0,
+                        onTap: () => context.push('/owner/rating-bursts'),
+                      ),
+                      _Ledger(
+                        label: l.ownerTesters,
+                        value: s.testers,
+                        onTap: () => context.push('/owner/testers'),
+                      ),
+                    ],
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
                         notebookGutter + 10,

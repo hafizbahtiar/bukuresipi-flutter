@@ -151,6 +151,16 @@ void main() {
     },
   );
 
+  test('a share from the + sheet stays in the app; one from another app goes back to it', () async {
+    final intake = await start();
+    intake.add(const Incoming.text('https://www.instagram.com/p/xyz/'));
+    await Future<void>.delayed(Duration.zero);
+    expect(intake.state, isA<ShareAccepted>());
+    expect(intake.fromApp, isTrue);
+    await share([const Incoming.text('https://www.instagram.com/p/abc/')]);
+    expect(intake.fromApp, isFalse);
+  });
+
   test('a shared image is uploaded', () async {
     await start();
     await share([const Incoming.image('/tmp/shot.jpg')]);

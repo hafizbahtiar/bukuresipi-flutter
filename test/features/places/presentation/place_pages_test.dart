@@ -548,6 +548,14 @@ void main() {
     ); // what was asked, to change and search again
   });
 
+  testWidgets('a pinned place has a map button that opens the map on its pin', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a', lat: 3.15)];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    expect(find.byKey(const ValueKey('place-map')), findsOneWidget);
+  });
+
   testWidgets('a user does not see the map search', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));

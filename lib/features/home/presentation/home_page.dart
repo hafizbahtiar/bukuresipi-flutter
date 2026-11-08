@@ -17,7 +17,14 @@ import 'feed_page.dart';
 /// anything: [showAddSheet]; it is a button, not a tab). Rebuilt after every share (the share page goes back to '/'), so it
 /// reloads the places.
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.open});
+
+  /// Pass as the route's `extra` to show the Home tab (after a share). A new object each time, so going there twice
+  /// still switches (the page keeps its state across navigations).
+  static Object get homeTab => Object();
+
+  /// The `extra` of the route; a new one = show Home.
+  final Object? open;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -50,6 +57,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   late final AppLifecycleListener _life;
+
+  @override
+  void didUpdateWidget(covariant HomePage old) {
+    super.didUpdateWidget(old);
+    if (widget.open != null && !identical(widget.open, old.open)) _tab = 0;
+  }
 
   @override
   void dispose() {

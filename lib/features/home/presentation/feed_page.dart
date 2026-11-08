@@ -324,6 +324,7 @@ class _FeedPageState extends State<FeedPage> {
           ),
       ],
       icon: Icons.menu_book_outlined,
+      drawing: recipeDrawing,
       photo: switch ((r.cover, r.shareId)) {
         (final cover?, _) => (ph) => ShareFill(
           id: cover,
@@ -348,6 +349,7 @@ class _FeedPageState extends State<FeedPage> {
           ),
       ],
       icon: Icons.restaurant_menu,
+      drawing: recipeDrawing,
       onTap: () => context.push('/recipes/${d.id}'),
     );
 

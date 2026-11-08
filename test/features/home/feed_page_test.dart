@@ -150,6 +150,21 @@ void main() {
         inCard('feed-dish-d-1', find.text(l.recipeIngredientCount(9))),
         findsOneWidget,
       );
+      // No photo: the cooking drawing, not a bare icon.
+      expect(
+        inCard(
+          'feed-dish-d-1',
+          find.byKey(const ValueKey('feed-card-drawing')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        inCard(
+          'feed-place-b-2',
+          find.byKey(const ValueKey('feed-card-drawing')),
+        ),
+        findsNothing,
+      ); // places keep their shop icon
     },
   );
 

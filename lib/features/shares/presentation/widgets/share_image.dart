@@ -82,6 +82,9 @@ class _ShareImageState extends State<ShareImage> {
   );
 }
 
+/// The cooking drawing shown for a recipe with no photo (rows, cards).
+const recipeDrawing = 'assets/images/recipe_placeholder.png';
+
 /// A share's photo as a small snapshot taped into the book: white border, a strip of tape, a slight tilt (the same for
 /// a share every time, so a list looks hand-pasted, not random). Takes no space while loading, or with no photo unless
 /// it is a recipe's ([drawing]: the cooking drawing instead).
@@ -132,8 +135,6 @@ class _SharePhotoState extends State<SharePhoto> {
           null => context.read<ShareRepository>().image(widget.shareId),
         }.catchError((Object _) => null);
 
-  static const _drawing = 'assets/images/recipe_placeholder.png';
-
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
   void didUpdateWidget(covariant SharePhoto old) {
@@ -176,7 +177,7 @@ class _SharePhotoState extends State<SharePhoto> {
                 ),
                 child: bytes == null
                     ? Image.asset(
-                        _drawing,
+                        recipeDrawing,
                         key: const ValueKey('recipe-placeholder'),
                         width: widget.size,
                         height: widget.size,

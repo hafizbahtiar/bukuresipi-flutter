@@ -1822,5 +1822,15 @@
   "errSourceOff": "This map is off (no key, or its usage cap is reached). See Owner > Usage.",
   "@errSourceOff": {},
   "errBranchLabelTaken": "Another branch of this restaurant already has this name, so they are probably the same outlet. Change the name, or use Check branches to merge them.",
-  "@errBranchLabelTaken": {}
+  "@errBranchLabelTaken": {},
+  "settingsTitle": "Settings",
+  "@settingsTitle": {},
+  "settingsSecurity": "Sign-in and security",
+  "@settingsSecurity": {},
+  "settingsApp": "App",
+  "@settingsApp": {},
+  "settingsAbout": "Info",
+  "@settingsAbout": {},
+  "usageTitle": "Usage",
+  "@usageTitle": {}
 }

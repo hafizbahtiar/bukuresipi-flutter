@@ -173,7 +173,17 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     ];
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          if (branch case Branch(hasPin: true, :final lat?, :final lng?))
+            IconButton(
+              key: const ValueKey('place-map'),
+              tooltip: l.navMap,
+              icon: const Icon(Icons.map_outlined),
+              onPressed: () => context.push('/map?lat=$lat&lng=$lng'),
+            ),
+        ],
+      ),
       extendBody: true,
       bottomNavigationBar: ActionDock(
         actions: [

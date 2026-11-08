@@ -28,6 +28,7 @@ class FeedCard extends StatelessWidget {
     this.photo,
     this.tag,
     this.tagIcon,
+    this.drawing,
   });
 
   final String kind;
@@ -35,6 +36,9 @@ class FeedCard extends StatelessWidget {
   final String? subtitle;
   final List<FeedFact> facts;
   final IconData icon;
+
+  /// An asset drawn in the photo box when there is no photo (a recipe's cooking drawing), in place of [icon].
+  final String? drawing;
 
   /// Fills the photo box; receives the placeholder to show while it loads or when there is none.
   final Widget Function(Widget placeholder)? photo;
@@ -54,7 +58,18 @@ class FeedCard extends StatelessWidget {
     final placeholder = ColoredBox(
       color: nb.mist,
       child: Center(
-        child: Icon(icon, size: 36, color: nb.inkSoft.withValues(alpha: 0.5)),
+        child: drawing == null
+            ? Icon(icon, size: 36, color: nb.inkSoft.withValues(alpha: 0.5))
+            : Padding(
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(
+                  drawing!,
+                  key: const ValueKey('feed-card-drawing'),
+                  fit: BoxFit.contain,
+                  cacheWidth: 400,
+                  excludeFromSemantics: true,
+                ),
+              ),
       ),
     );
     return Material(
