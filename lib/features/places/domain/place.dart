@@ -60,6 +60,16 @@ enum LocateResult { found, triedToday, notFound }
 /// A pin read from a pasted Google Maps link; [name] when the link names the place.
 typedef MapsPin = ({double lat, double lng, String? name});
 
+/// One hit of the owner's search on a chosen map source (osm, here, grab); [source] is the service that answered.
+typedef PinHit = ({
+  double lat,
+  double lng,
+  String address,
+  String? city,
+  String? state,
+  String source,
+});
+
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
 /// In a family the book also holds the members' saves: [mine] false = only a family member saved it.
 class Place {

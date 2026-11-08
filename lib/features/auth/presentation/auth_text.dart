@@ -34,6 +34,7 @@ String errorText(
     'owner_account' => l.errOwnerAccount,
     'list_full' => l.errShoppingListFull,
     'not_maps_link' => l.errNotMapsLink,
+    'source_off' => l.errSourceOff,
     'duplicate_receipt' => l.errDuplicateReceipt,
     'receipt_limit' => l.errReceiptLimit,
     'place_required' => l.errPlaceRequired,

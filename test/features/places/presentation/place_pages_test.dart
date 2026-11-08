@@ -497,6 +497,59 @@ void main() {
     );
   });
 
+  testWidgets('the owner picks a map, searches it and uses a hit', (t) async {
+    repo = FakePlaces()
+      ..places = [place(id: 'a')]
+      ..pinHits = const [
+        (
+          lat: 3.1591,
+          lng: 101.7122,
+          address: 'P&C Kitchen, Jalan Ampang, Kuala Lumpur',
+          city: 'Kuala Lumpur',
+          state: 'Wilayah Persekutuan Kuala Lumpur',
+          source: 'grab',
+        ),
+      ];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    final grab = find.text('AWS (Grab)');
+    await t.ensureVisible(grab);
+    await t.tap(grab);
+    await t.pump();
+    await t.tap(find.byKey(const ValueKey('pin-search-go')));
+    await t.pumpAndSettle();
+    expect(repo.pinSearches.single.$2, 'grab');
+    expect(
+      repo.pinSearches.single.$3,
+      isNull,
+    ); // empty box = the server's name + area
+    final use = find.descendant(
+      of: find.byKey(const ValueKey('pin-hit-0')),
+      matching: find.text('Use'),
+    );
+    await t.ensureVisible(use);
+    await t.tap(use);
+    await t.pumpAndSettle();
+    String field(String key) =>
+        t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    expect(field('branch-lat'), '3.159100');
+    expect(field('branch-city'), 'Kuala Lumpur');
+    expect(field('branch-state'), 'Wilayah Persekutuan Kuala Lumpur');
+    expect(
+      field('pin-search-query'),
+      'Shop, Kuala Lumpur',
+    ); // what was asked, to change and search again
+  });
+
+  testWidgets('a user does not see the map search', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('pin-search-query')), findsNothing);
+  });
+
   testWidgets('the owner can check a restaurant\'s branches; users cannot', (
     t,
   ) async {

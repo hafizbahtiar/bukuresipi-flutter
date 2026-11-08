@@ -691,5 +691,15 @@
   "errPlaceRequired": "Pilih tempat dahulu.",
   "errReceiptNotReady": "Masih membaca. Cuba sebentar lagi.",
   "reviewVisited": "Pernah datang",
-  "receiptVisitCount": "{count} lawatan"
+  "receiptVisitCount": "{count} lawatan",
+  "pinSearchTitle": "Cari di peta",
+  "pinSearchHelp": "Pilih peta untuk ditanya. Guna hasil, semak, kemudian simpan untuk Semua.",
+  "pinSearchOsm": "OpenStreetMap",
+  "pinSearchHere": "HERE",
+  "pinSearchGrab": "AWS (Grab)",
+  "pinSearchQuery": "Cari",
+  "pinSearchButton": "Cari",
+  "pinSearchNone": "Peta ini tidak menjumpai apa-apa. Cuba peta lain atau perkataan lain.",
+  "pinSearchUsed": "Pin, bandar dan negeri diisi dari peta. Semak, kemudian simpan.",
+  "errSourceOff": "Peta ini dimatikan (tiada kunci, atau had penggunaan dicapai). Lihat Pemilik > Penggunaan."
 }

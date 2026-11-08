@@ -309,6 +309,21 @@ class FakePlaces implements PlacesRepository {
     return suggestion;
   }
 
+  /// What [searchPin] answers; [pinSearches] records (branch, source, q).
+  List<PinHit> pinHits = const [];
+  final pinSearches = <(String, String, String?)>[];
+
+  @override
+  Future<({String query, List<PinHit> hits})> searchPin(
+    String branchId,
+    String source, {
+    String? q,
+  }) async {
+    if (error != null) throw error!;
+    pinSearches.add((branchId, source, q));
+    return (query: q ?? 'Shop, Kuala Lumpur', hits: pinHits);
+  }
+
   /// What [pinFromMapsLink] answers; set [error] to make it throw.
   MapsPin mapsPin = (
     lat: 3.1994645,

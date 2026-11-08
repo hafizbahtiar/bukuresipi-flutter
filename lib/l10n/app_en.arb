@@ -1800,5 +1800,25 @@
         "type": "int"
       }
     }
-  }
+  },
+  "pinSearchTitle": "Search a map",
+  "@pinSearchTitle": {},
+  "pinSearchHelp": "Pick the map to ask. Use a result, check it, then save for Everyone.",
+  "@pinSearchHelp": {},
+  "pinSearchOsm": "OpenStreetMap",
+  "@pinSearchOsm": {},
+  "pinSearchHere": "HERE",
+  "@pinSearchHere": {},
+  "pinSearchGrab": "AWS (Grab)",
+  "@pinSearchGrab": {},
+  "pinSearchQuery": "Search for",
+  "@pinSearchQuery": {},
+  "pinSearchButton": "Search",
+  "@pinSearchButton": {},
+  "pinSearchNone": "This map found nothing for this search. Try another map or other words.",
+  "@pinSearchNone": {},
+  "pinSearchUsed": "Pin, town and state filled from the map. Check them, then save.",
+  "@pinSearchUsed": {},
+  "errSourceOff": "This map is off (no key, or its usage cap is reached). See Owner > Usage.",
+  "@errSourceOff": {}
 }

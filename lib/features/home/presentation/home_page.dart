@@ -93,7 +93,8 @@ class _HomePageState extends State<HomePage> {
           ),
           NavigationDestination(
             key: const ValueKey('nav-add'),
-            icon: const Icon(Icons.add_circle, size: 36),
+            icon: const Icon(Icons.add_circle_outline),
+            selectedIcon: const Icon(Icons.add_circle),
             label: l.navAdd,
           ),
           NavigationDestination(
