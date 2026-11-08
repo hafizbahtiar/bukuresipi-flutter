@@ -53,8 +53,19 @@ class FakeReceipts implements ReceiptsRepository {
       answers[(gets++).clamp(0, answers.length - 1)];
 
   @override
-  Future<({List<Receipt> items, String? next})> list({String? cursor}) async =>
-      (items: items, next: null);
+  Future<({List<Receipt> items, String? next})> list({String? cursor}) async {
+    // pageSize set = paged like the API: the cursor is the index to start at.
+    final size = pageSize;
+    if (size == null) return (items: items, next: null);
+    final from = int.parse(cursor ?? '0');
+    final end = (from + size).clamp(0, items.length);
+    return (
+      items: items.sublist(from, end),
+      next: end < items.length ? '$end' : null,
+    );
+  }
+
+  int? pageSize;
 
   @override
   Future<Receipt> confirm(

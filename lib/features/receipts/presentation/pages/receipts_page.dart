@@ -21,10 +21,36 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
   late final _repo = context.read<ReceiptsRepository>();
   late Future<(ReceiptStats, List<Receipt>)> _data = _load();
 
+  /// Pages after the first ("Load more"); [_next] = the cursor of the page after them, null on the last.
+  final _more = <Receipt>[];
+  String? _next;
+  bool _loadingMore = false;
+
   Future<(ReceiptStats, List<Receipt>)> _load() async {
     final (stats, list) = await (_repo.stats(), _repo.list()).wait;
-    // shortcut: the first page only (20); a "more" button when people keep more than that.
+    _more.clear();
+    _next = list.next;
     return (stats, list.items);
+  }
+
+  Future<void> _loadMore() async {
+    setState(() => _loadingMore = true);
+    try {
+      final page = await _repo.list(cursor: _next);
+      if (!mounted) return;
+      setState(() {
+        _more.addAll(page.items);
+        _next = page.next;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorText(AppLocalizations.of(context), e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   Future<void> _open(String id) async {
@@ -55,7 +81,8 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
             if (data == null) {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
-            final (stats, receipts) = data;
+            final (stats, first) = data;
+            final receipts = [...first, ..._more];
             return RefreshIndicator(
               onRefresh: () async {
                 setState(() {
@@ -110,6 +137,14 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  if (_next != null)
+                    Center(
+                      child: TextButton(
+                        key: const ValueKey('receipts-more'),
+                        onPressed: _loadingMore ? null : _loadMore,
+                        child: Text(l.loadMore),
                       ),
                     ),
                 ],
