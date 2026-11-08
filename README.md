@@ -22,6 +22,31 @@ flutter test
 
 Paste the whole block into "Release notes". Play keeps each language to 500 characters.
 
+#### 1.0.4 (6)
+
+```
+<ms-MY>
+• Butang + baharu: tampal pautan, tangkapan skrin, resit atau taip resipi.
+• Resit: ambil gambar resit kedai makan, simpan lawatan dan lihat perbelanjaan anda.
+• Pautan Google Maps: tampal di laporan lokasi untuk pin yang tepat.
+• Negeri dan bandar dipilih dari senarai rasmi.
+• Butang peta di Buku dan halaman kedai.
+• Akaun dan Tetapan kini halaman berasingan.
+• Kedai bernama hampir sama tidak lagi bercampur.
+• Pembaikan dan prestasi.
+</ms-MY>
+<en-US>
+• New + button: paste a link, a screenshot, a receipt or type a recipe.
+• Receipts: snap a restaurant receipt, save the visit and see your spending.
+• Google Maps links: paste one in a location report for an exact pin.
+• State and town are picked from the official list.
+• A map button on Book and on a place's page.
+• Account and Settings are now separate pages.
+• Shops with similar names are no longer mixed up.
+• Fixes and speed.
+</en-US>
+```
+
 #### 1.0.0 (1): first closed test
 
 ```
