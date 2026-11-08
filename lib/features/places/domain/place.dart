@@ -61,6 +61,9 @@ enum LocateResult { found, triedToday, notFound }
 typedef MapsPin = ({double lat, double lng, String? name});
 
 /// One hit of the owner's search on a chosen map source (osm, here, grab); [source] is the service that answered.
+/// A state and its official towns (the server's postcode list), for the branch form's dropdowns.
+typedef AreaState = ({String name, List<String> towns});
+
 typedef PinHit = ({
   double lat,
   double lng,

@@ -45,6 +45,9 @@ abstract interface class PlacesRepository {
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
   Future<BranchSuggestion> suggestBranch(String branchId);
 
+  /// The 16 states with their towns, A-Z (the branch form's dropdowns).
+  Future<List<AreaState>> areas();
+
   /// A pasted Google Maps link -> its pin (nothing saved). Throws ApiException 'not_maps_link' / 'no_pin'.
   Future<MapsPin> pinFromMapsLink(String url);
 

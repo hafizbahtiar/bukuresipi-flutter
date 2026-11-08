@@ -324,6 +324,15 @@ class FakePlaces implements PlacesRepository {
     return (query: q ?? 'Shop, Kuala Lumpur', hits: pinHits);
   }
 
+  List<AreaState> areaList = const [
+    (name: 'Kelantan', towns: ['Ketereh', 'Kota Bharu']),
+    (name: 'Kuala Lumpur', towns: ['Kuala Lumpur', 'Setapak']),
+    (name: 'Selangor', towns: ['Kajang', 'Shah Alam']),
+  ];
+
+  @override
+  Future<List<AreaState>> areas() async => areaList;
+
   /// What [pinFromMapsLink] answers; set [error] to make it throw.
   MapsPin mapsPin = (
     lat: 3.1994645,

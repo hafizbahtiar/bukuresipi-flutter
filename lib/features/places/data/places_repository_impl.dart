@@ -176,6 +176,15 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<List<AreaState>> areas() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/places/areas')).data!;
+    return [
+      for (final s in j['states'] as List)
+        (name: s['name'] as String, towns: (s['towns'] as List).cast<String>()),
+    ];
+  });
+
+  @override
   Future<MapsPin> pinFromMapsLink(String url) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/maps-link',

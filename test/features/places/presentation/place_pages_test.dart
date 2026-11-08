@@ -275,6 +275,49 @@ void main() {
     expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
   });
 
+  testWidgets('town and state are dropdowns from the server list', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    TextEditingController ctl(String key) => t
+        .widget<TextField>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(TextField),
+          ),
+        )
+        .controller!;
+    // A town picked first brings its state.
+    final city = find.byKey(const ValueKey('branch-city'));
+    await t.ensureVisible(city);
+    await t.tap(city);
+    await t.pumpAndSettle();
+    await t.tap(find.text('Ketereh').last);
+    await t.pumpAndSettle();
+    expect(ctl('branch-state').text, 'Kelantan');
+    // Another state clears a town that is not in it; its towns are the only ones listed.
+    final state = find.byKey(const ValueKey('branch-state'));
+    await t.ensureVisible(state);
+    await t.tap(find.descendant(of: state, matching: find.byType(IconButton)));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Selangor').last);
+    await t.pumpAndSettle();
+    expect(ctl('branch-city').text, '');
+    await t.tap(city);
+    await t.pumpAndSettle();
+    expect(find.text('Kajang'), findsWidgets);
+    expect(find.text('Ketereh'), findsNothing);
+    await t.tap(find.text('Kajang').last);
+    await t.pumpAndSettle();
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+    expect(repo.branchUpdates.single.city, 'Kajang');
+    expect(repo.branchUpdates.single.state, 'Selangor');
+  });
+
   testWidgets('a user can edit a branch for themselves only', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
@@ -537,8 +580,16 @@ void main() {
     await t.ensureVisible(use);
     await t.tap(use);
     await t.pumpAndSettle();
-    String field(String key) =>
-        t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    String field(String key) => t
+        .widget<TextField>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(TextField),
+            matchRoot: true,
+          ),
+        )
+        .controller!
+        .text;
     expect(field('branch-lat'), '3.159100');
     expect(field('branch-city'), 'Kuala Lumpur');
     expect(field('branch-state'), 'Wilayah Persekutuan Kuala Lumpur');

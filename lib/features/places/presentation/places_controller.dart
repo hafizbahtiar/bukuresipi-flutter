@@ -142,6 +142,15 @@ class PlacesController extends ChangeNotifier {
   Future<BranchSuggestion> suggestBranch(String branchId) =>
       _repo.suggestBranch(branchId);
 
+  Future<List<AreaState>>? _areas;
+
+  /// The states and towns, asked once per app run (they change only with a server migration); a failure asks again.
+  Future<List<AreaState>> areas() =>
+      _areas ??= _repo.areas().catchError((Object e) {
+        _areas = null;
+        throw e;
+      });
+
   /// A pasted Google Maps link -> its pin, for the edit form. Throws ApiException.
   Future<MapsPin> pinFromMapsLink(String url) => _repo.pinFromMapsLink(url);
 

@@ -50,6 +50,11 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   );
   late final _city = TextEditingController(text: widget.branch.city ?? '');
   late final _state = TextEditingController(text: widget.branch.state ?? '');
+  // The dropdowns' lists; none (offline) = the two fields stay plain text.
+  late final Future<List<AreaState>> _areas = context
+      .read<PlacesController>()
+      .areas()
+      .catchError((Object _) => const <AreaState>[]);
   late final _latText = TextEditingController(
     text: widget.branch.lat?.toStringAsFixed(6) ?? '',
   );
@@ -481,26 +486,9 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                     label: l.branchAddress,
                     ai: _aiFields.contains('address'),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _field(
-                          key: const ValueKey('branch-city'),
-                          controller: _city,
-                          label: l.branchCity,
-                          ai: _aiFields.contains('city'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _field(
-                          key: const ValueKey('branch-state'),
-                          controller: _state,
-                          label: l.branchState,
-                          ai: _aiFields.contains('state'),
-                        ),
-                      ),
-                    ],
+                  FutureBuilder(
+                    future: _areas,
+                    builder: (context, s) => _areaFields(l, s.data ?? const []),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -610,6 +598,79 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
           ),
         ],
       ),
+    );
+  }
+
+  /// State first, then a town of that state. Both filter as you type; a town not listed is kept as typed.
+  Widget _areaFields(AppLocalizations l, List<AreaState> areas) {
+    final state = areas.where((s) => s.name == _state.text).firstOrNull;
+    final towns = state?.towns ?? [for (final s in areas) ...s.towns];
+    Widget menu(
+      String key,
+      TextEditingController controller,
+      String label,
+      Iterable<String> options, {
+      bool ai = false,
+      ValueChanged<String?>? onSelected,
+    }) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownMenu<String>(
+        key: ValueKey(key),
+        controller: controller,
+        expandedInsets: EdgeInsets.zero,
+        enableFilter: true,
+        // A listed value already in the field shows the whole list (to change it); typing filters.
+        filterCallback: (entries, filter) {
+          if (entries.any((e) => e.label == filter)) return entries;
+          final f = filter.toLowerCase();
+          return [
+            for (final e in entries)
+              if (e.label.toLowerCase().contains(f)) e,
+          ];
+        },
+        requestFocusOnTap: true,
+        menuHeight: 320,
+        label: Text(label),
+        leadingIcon: ai
+            ? const Padding(
+                padding: EdgeInsets.only(left: 8, right: 4),
+                child: _AiBadge(),
+              )
+            : null,
+        onSelected: onSelected,
+        dropdownMenuEntries: [
+          for (final o in options) DropdownMenuEntry(value: o, label: o),
+        ],
+      ),
+    );
+    return Column(
+      children: [
+        menu(
+          'branch-state',
+          _state,
+          l.branchState,
+          areas.map((s) => s.name),
+          ai: _aiFields.contains('state'),
+          // Another state: a town of the old one no longer fits.
+          onSelected: (name) => setState(() {
+            final next = areas.where((s) => s.name == name).firstOrNull;
+            if (next != null && !next.towns.contains(_city.text)) _city.clear();
+          }),
+        ),
+        menu(
+          'branch-city',
+          _city,
+          l.branchCity,
+          towns,
+          ai: _aiFields.contains('city'),
+          // A town picked before its state: the state follows.
+          onSelected: (town) => setState(() {
+            if (state != null) return;
+            final of = areas.where((s) => s.towns.contains(town)).toList();
+            if (of.length == 1) _state.text = of.single.name;
+          }),
+        ),
+      ],
     );
   }
 
