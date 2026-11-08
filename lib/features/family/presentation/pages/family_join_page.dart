@@ -72,6 +72,8 @@ class _FamilyJoinPageState extends State<FamilyJoinPage> {
               );
             }
             final p = s.data!;
+            final inThis = p.membership == 'this';
+            final blocked = p.isFull || p.membership != null;
             return ListView(
               children: [
                 NotebookRow(
@@ -94,10 +96,16 @@ class _FamilyJoinPageState extends State<FamilyJoinPage> {
                 NotebookRow(
                   minHeight: 96,
                   child: Text(
-                    p.isFull
+                    inThis
+                        ? l.familyJoinAlreadyHere
+                        : p.membership == 'other'
+                        ? l.errAlreadyInFamily
+                        : p.isFull
                         ? l.familyJoinFull(p.maxMembers)
                         : l.familyJoinBody,
-                    style: p.isFull ? TextStyle(color: nb.margin) : null,
+                    style: blocked && !inThis
+                        ? TextStyle(color: nb.margin)
+                        : null,
                   ),
                 ),
                 Padding(
@@ -110,10 +118,20 @@ class _FamilyJoinPageState extends State<FamilyJoinPage> {
                   child: Wrap(
                     spacing: 12,
                     children: [
-                      FilledButton(
-                        onPressed: _joining || p.isFull ? null : () => _join(p),
-                        child: Text(l.familyJoin),
-                      ),
+                      if (p.membership != null)
+                        FilledButton(
+                          key: const ValueKey('join-open-family'),
+                          onPressed: () => context.go('/family'),
+                          child: Text(l.familyOpen),
+                        )
+                      else
+                        FilledButton(
+                          key: const ValueKey('join-join'),
+                          onPressed: _joining || blocked
+                              ? null
+                              : () => _join(p),
+                          child: Text(l.familyJoin),
+                        ),
                       TextButton(
                         onPressed: () => context.go('/'),
                         child: Text(l.familyNotNow),

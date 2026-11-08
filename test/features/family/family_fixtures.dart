@@ -20,6 +20,7 @@ Family aFamily({
 class FakeFamily implements FamilyRepository {
   Family? current;
   String? joinError; // an ApiException code join throws
+  String? membership; // what preview says: 'this', 'other' or null
   final joined = <String>[];
   int invites = 0;
 
@@ -55,6 +56,7 @@ class FakeFamily implements FamilyRepository {
       ownerName: 'Ali',
       memberCount: token == 'full' ? 3 : 2,
       maxMembers: 3,
+      membership: membership,
     );
   }
 

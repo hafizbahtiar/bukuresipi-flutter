@@ -716,5 +716,7 @@
   "usageReports": "Laporan tempat hari ini",
   "usageShopping": "Item dalam senarai beli-belah",
   "usageMeters": "Meter perkhidmatan (AI, peta, emel)",
-  "usageResets": "Kiraan harian bermula semula pada {time}."
+  "usageResets": "Kiraan harian bermula semula pada {time}.",
+  "familyJoinAlreadyHere": "Anda sudah berada dalam keluarga ini. Kongsi pautan ini dengan orang yang anda mahu jemput.",
+  "familyOpen": "Buka keluarga"
 }

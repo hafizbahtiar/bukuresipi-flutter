@@ -1860,5 +1860,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "familyJoinAlreadyHere": "You're already in this family. Share the link with the people you want to invite.",
+  "@familyJoinAlreadyHere": {},
+  "familyOpen": "Open family",
+  "@familyOpen": {}
 }
