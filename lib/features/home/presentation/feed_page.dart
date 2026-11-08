@@ -1,4 +1,7 @@
 import 'dart:async';
+
+import '../../../core/constants/image_constant.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -324,7 +327,7 @@ class _FeedPageState extends State<FeedPage> {
           ),
       ],
       icon: Icons.menu_book_outlined,
-      drawing: recipeDrawing,
+      drawing: ImageConstant.recipePlaceholder,
       photo: switch ((r.cover, r.shareId)) {
         (final cover?, _) => (ph) => ShareFill(
           id: cover,
@@ -349,7 +352,7 @@ class _FeedPageState extends State<FeedPage> {
           ),
       ],
       icon: Icons.restaurant_menu,
-      drawing: recipeDrawing,
+      drawing: ImageConstant.recipePlaceholder,
       onTap: () => context.push('/recipes/${d.id}'),
     );
 

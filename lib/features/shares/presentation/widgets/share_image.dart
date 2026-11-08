@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import '../../../../core/constants/image_constant.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -81,9 +83,6 @@ class _ShareImageState extends State<ShareImage> {
     },
   );
 }
-
-/// The cooking drawing shown for a recipe with no photo (rows, cards).
-const recipeDrawing = 'assets/images/recipe_placeholder.png';
 
 /// A share's photo as a small snapshot taped into the book: white border, a strip of tape, a slight tilt (the same for
 /// a share every time, so a list looks hand-pasted, not random). Takes no space while loading, or with no photo unless
@@ -177,7 +176,7 @@ class _SharePhotoState extends State<SharePhoto> {
                 ),
                 child: bytes == null
                     ? Image.asset(
-                        recipeDrawing,
+                        ImageConstant.recipePlaceholder,
                         key: const ValueKey('recipe-placeholder'),
                         width: widget.size,
                         height: widget.size,

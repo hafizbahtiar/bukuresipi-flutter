@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../../../../core/constants/image_constant.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -264,7 +266,7 @@ class CoverBrand extends StatelessWidget {
         ),
         child: ClipOval(
           child: Image.asset(
-            'assets/brand/icon.png',
+            ImageConstant.appIcon,
             fit: BoxFit.cover,
             excludeFromSemantics: true,
           ),

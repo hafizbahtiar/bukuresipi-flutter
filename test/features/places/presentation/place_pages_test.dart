@@ -575,7 +575,7 @@ void main() {
       await t.pumpAndSettle();
       final r = repo.reports.single;
       expect(r.lat, closeTo(3.1994645, 1e-9));
-    expect(r.lng, closeTo(101.6956504, 1e-9));
+      expect(r.lng, closeTo(101.6956504, 1e-9));
       expect(r.note, 'https://maps.app.goo.gl/AbC123');
     },
   );
