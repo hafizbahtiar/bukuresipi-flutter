@@ -150,6 +150,32 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<({String query, List<PinHit> hits})> searchPin(
+    String branchId,
+    String source, {
+    String? q,
+  }) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/branches/$branchId/search-pin',
+      data: {'source': source, 'q': ?q},
+    )).data!;
+    return (
+      query: j['query'] as String,
+      hits: [
+        for (final h in (j['hits'] as List).cast<Map<String, dynamic>>())
+          (
+            lat: (h['lat'] as num).toDouble(),
+            lng: (h['lng'] as num).toDouble(),
+            address: h['address'] as String,
+            city: h['city'] as String?,
+            state: h['state'] as String?,
+            source: h['source'] as String,
+          ),
+      ],
+    );
+  });
+
+  @override
   Future<MapsPin> pinFromMapsLink(String url) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/maps-link',

@@ -48,6 +48,13 @@ abstract interface class PlacesRepository {
   /// A pasted Google Maps link -> its pin (nothing saved). Throws ApiException 'not_maps_link' / 'no_pin'.
   Future<MapsPin> pinFromMapsLink(String url);
 
+  /// Owner: [source] 'osm' | 'here' | 'grab'; [q] null = the shop name + area. Throws `source_off` (no key, meter off).
+  Future<({String query, List<PinHit> hits})> searchPin(
+    String branchId,
+    String source, {
+    String? q,
+  });
+
   /// The restaurant's chosen cover photo; null = none. [cover] is the id from the DTO (cache key).
   Future<Uint8List?> restaurantCover(String restaurantId, String cover);
 

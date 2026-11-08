@@ -64,6 +64,11 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   bool _suggesting = false;
   bool _readingLink = false;
   final _mapsLink = TextEditingController();
+  // Owner: search one map they pick.
+  final _pinQuery = TextEditingController();
+  String _pinSource = 'here';
+  bool _searchingPin = false;
+  List<PinHit>? _pinHits;
   BranchSuggestion? _suggestion;
   final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
@@ -84,6 +89,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     _latText.dispose();
     _lngText.dispose();
     _mapsLink.dispose();
+    _pinQuery.dispose();
     super.dispose();
   }
 
@@ -156,6 +162,127 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     } finally {
       if (mounted) setState(() => _readingLink = false);
     }
+  }
+
+  Future<void> _searchPin() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _searchingPin = true);
+    try {
+      final r = await context.read<PlacesController>().searchPin(
+        widget.branch.id,
+        _pinSource,
+        q: _text(_pinQuery),
+      );
+      if (!mounted) return;
+      setState(() {
+        _pinQuery.text =
+            r.query; // what was asked: the owner can change it and search again
+        _pinHits = r.hits;
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _searchingPin = false);
+    }
+  }
+
+  void _usePinHit(PinHit h) {
+    _setPin(h.lat, h.lng);
+    setState(() {
+      if (h.city case final city?) _city.text = city;
+      if (h.state case final state?) _state.text = state;
+      _aiFields.removeAll(['location', 'city', 'state']);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).pinSearchUsed)),
+    );
+  }
+
+  Widget _pinSearch(AppLocalizations l, Notebook nb, TextTheme text) {
+    final hits = _pinHits;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          l.pinSearchTitle,
+          style: text.labelLarge?.copyWith(color: nb.inkSoft),
+        ),
+        Text(
+          l.pinSearchHelp,
+          style: text.bodySmall?.copyWith(color: nb.inkSoft),
+        ),
+        const SizedBox(height: 6),
+        NotebookSegmented<String>(
+          selected: _pinSource,
+          onChanged: (s) => setState(() {
+            _pinSource = s;
+            _pinHits = null;
+          }),
+          segments: [
+            NotebookSegment(value: 'osm', label: l.pinSearchOsm),
+            NotebookSegment(value: 'here', label: l.pinSearchHere),
+            NotebookSegment(value: 'grab', label: l.pinSearchGrab),
+          ],
+        ),
+        TextField(
+          key: const ValueKey('pin-search-query'),
+          controller: _pinQuery,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _searchPin(),
+          decoration: InputDecoration(
+            labelText: l.pinSearchQuery,
+            suffixIcon: _searchingPin
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    ),
+                  )
+                : TextButton(
+                    key: const ValueKey('pin-search-go'),
+                    onPressed: _searchPin,
+                    child: Text(l.pinSearchButton),
+                  ),
+          ),
+        ),
+        if (hits != null && hits.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              l.pinSearchNone,
+              style: text.bodySmall?.copyWith(color: nb.inkSoft),
+            ),
+          ),
+        for (final (i, h) in (hits ?? const <PinHit>[]).indexed)
+          Row(
+            key: ValueKey('pin-hit-$i'),
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(h.address, style: text.bodyMedium),
+                    Text(
+                      [
+                        [h.city, h.state].nonNulls.join(', '),
+                        '${h.lat.toStringAsFixed(5)}, ${h.lng.toStringAsFixed(5)}',
+                      ].where((s) => s.isNotEmpty).join(' · '),
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => _usePinHit(h),
+                child: Text(l.pinCandidateUse),
+              ),
+            ],
+          ),
+      ],
+    );
   }
 
   Future<void> _suggest() async {
@@ -327,6 +454,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                         ),
                       ),
                     ],
+                    _pinSearch(l, nb, text),
                   ],
                   const SizedBox(height: 16),
                   KeyedSubtree(
