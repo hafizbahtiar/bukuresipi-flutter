@@ -29,7 +29,11 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
 
   Future<void> _open(String id) async {
     await context.push('/receipts/$id');
-    if (mounted) setState(() => _data = _load());
+    if (mounted) {
+      setState(() {
+        _data = _load();
+      });
+    }
   }
 
   @override
@@ -54,7 +58,9 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
             final (stats, receipts) = data;
             return RefreshIndicator(
               onRefresh: () async {
-                setState(() => _data = _load());
+                setState(() {
+                  _data = _load();
+                });
                 await _data;
               },
               child: ListView(

@@ -619,14 +619,17 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
         controller: controller,
         expandedInsets: EdgeInsets.zero,
         enableFilter: true,
-        // A listed value already in the field shows the whole list (to change it); typing filters.
+        // Typing filters. A listed value, or text that matches nothing (an old
+        // "Wilayah Persekutuan Kuala Lumpur"), shows the whole list to pick from.
         filterCallback: (entries, filter) {
-          if (entries.any((e) => e.label == filter)) return entries;
-          final f = filter.toLowerCase();
-          return [
+          final f = filter.trim().toLowerCase();
+          final hits = [
             for (final e in entries)
               if (e.label.toLowerCase().contains(f)) e,
           ];
+          return hits.isEmpty || entries.any((e) => e.label == filter.trim())
+              ? entries
+              : hits;
         },
         requestFocusOnTap: true,
         menuHeight: 320,
