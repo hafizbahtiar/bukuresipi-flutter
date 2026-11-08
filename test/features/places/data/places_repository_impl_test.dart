@@ -1,6 +1,7 @@
 import 'package:bukuresipi_flutter/core/network/api_client.dart';
 import 'package:bukuresipi_flutter/core/storage/token_store.dart';
 import 'package:bukuresipi_flutter/features/places/data/places_repository_impl.dart';
+import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/review.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -113,7 +114,7 @@ void main() {
             o.path.endsWith('/locate') ? (200, {'found': true}) : (204, null),
       );
       await repo.setPin('b-1', 3.2, 101.69);
-      expect(await repo.locate('b-1'), isTrue);
+      expect(await repo.locate('b-1'), LocateResult.found);
       await repo.deleteBranch('b-1');
       expect(
         [for (final r in adapter.requests) '${r.method} ${r.path}'],
@@ -335,4 +336,14 @@ void main() {
       );
     },
   );
+
+  test('find location reads why nothing was found', () async {
+    for (final (body, want) in [
+      ({'found': false, 'result': 'tried_today'}, LocateResult.triedToday),
+      ({'found': false, 'result': 'not_found'}, LocateResult.notFound),
+      ({'found': false}, LocateResult.notFound), // an API from before 'result'
+    ]) {
+      expect(await make((o) => (200, body)).locate('b-1'), want);
+    }
+  });
 }

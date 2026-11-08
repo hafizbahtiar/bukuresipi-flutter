@@ -262,16 +262,16 @@ class FakePlaces implements PlacesRepository {
     return (merged: 1, removed: 1);
   }
 
-  bool locateFinds = true;
+  LocateResult locateResult = LocateResult.found;
 
   @override
   Future<void> setPin(String branchId, double lat, double lng) async =>
       pins.add((branchId, lat, lng));
 
   @override
-  Future<bool> locate(String branchId) async {
+  Future<LocateResult> locate(String branchId) async {
     located.add(branchId);
-    return locateFinds;
+    return locateResult;
   }
 
   @override

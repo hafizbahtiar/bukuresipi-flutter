@@ -20,8 +20,8 @@ abstract interface class PlacesRepository {
   /// The user's own pin for an unpinned branch (one per user + branch; moving it replaces it).
   Future<void> setPin(String branchId, double lat, double lng);
 
-  /// Looks an unpinned branch up again on the server. true = it has a pin now.
-  Future<bool> locate(String branchId);
+  /// Looks an unpinned branch up again on the server.
+  Future<LocateResult> locate(String branchId);
 
   /// Owner only: merges branches that are the same shop and drops empty ones, for every user.
   Future<({int merged, int removed})> tidyBranches(String restaurantId);
