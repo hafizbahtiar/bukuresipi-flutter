@@ -55,6 +55,7 @@ class Review {
     required this.updatedAt,
     this.votes = const ReviewVotes(),
     this.reported = false,
+    this.visited = false,
   });
 
   final String id;
@@ -68,6 +69,9 @@ class Review {
   final ReviewVotes votes;
   final bool reported;
 
+  /// The author has a saved receipt from this restaurant.
+  final bool visited;
+
   Review copyWith({ReviewVotes? votes, bool? reported, String? text}) => Review(
     id: id,
     stars: stars,
@@ -79,6 +83,7 @@ class Review {
     updatedAt: updatedAt,
     votes: votes ?? this.votes,
     reported: reported ?? this.reported,
+    visited: visited,
   );
 }
 

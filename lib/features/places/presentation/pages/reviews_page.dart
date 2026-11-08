@@ -295,6 +295,24 @@ class _ReviewCard extends StatelessWidget {
                   style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
+              if (review.visited)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt_long, size: 14, color: nb.pandanDeep),
+                      const SizedBox(width: 2),
+                      Text(
+                        AppLocalizations.of(context).reviewVisited,
+                        style: text.labelSmall?.copyWith(
+                          color: nb.pandanDeep,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Text(date, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
             ],
           ),
