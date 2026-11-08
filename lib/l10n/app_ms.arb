@@ -710,5 +710,11 @@
   "usageTitle": "Penggunaan",
   "reportMapsLinkHint": "Terbaik: dalam Google Maps, buka tempat itu, tekan Kongsi dan salin pautan ke sini. Pin tepatnya dihantar kepada kami untuk disemak.",
   "receiptItems": "Item",
-  "updateAvailable": "Kemas kini"
+  "updateAvailable": "Kemas kini",
+  "usageShares": "Pautan dan tangkapan skrin dikongsi hari ini",
+  "usageReceipts": "Gambar resit hari ini",
+  "usageReports": "Laporan tempat hari ini",
+  "usageShopping": "Item dalam senarai beli-belah",
+  "usageMeters": "Meter perkhidmatan (AI, peta, emel)",
+  "usageResets": "Kiraan harian bermula semula pada {time}."
 }

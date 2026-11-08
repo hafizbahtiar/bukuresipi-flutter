@@ -75,8 +75,8 @@ void main() {
       expect(find.byKey(const ValueKey('account-settings')), findsOneWidget);
       expect(find.text('EN'), findsNothing);
       expect(find.text('Signed-in devices'), findsNothing);
-      // Usage is the owner's: not shown to a user.
-      expect(find.byKey(const ValueKey('account-usage')), findsNothing);
+      // Everyone has Usage (their own limits).
+      expect(find.byKey(const ValueKey('account-usage')), findsOneWidget);
     },
   );
 

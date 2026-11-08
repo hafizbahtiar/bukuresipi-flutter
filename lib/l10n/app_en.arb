@@ -1842,5 +1842,23 @@
   "updateAvailable": "Update",
   "@updateAvailable": {
     "description": "Chip on Home when Google Play has a newer version"
+  },
+  "usageShares": "Links and screenshots shared today",
+  "@usageShares": {},
+  "usageReceipts": "Receipt photos today",
+  "@usageReceipts": {},
+  "usageReports": "Place reports today",
+  "@usageReports": {},
+  "usageShopping": "Items on your shopping list",
+  "@usageShopping": {},
+  "usageMeters": "Service meters (AI, maps, email)",
+  "@usageMeters": {},
+  "usageResets": "Daily counts start again at {time}.",
+  "@usageResets": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   }
 }

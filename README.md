@@ -18,6 +18,10 @@ flutter test
 `bukuresipi-v<version>(<code>).aab` (`-dev` for a debug build). Prod needs `android/key.properties` (upload key in
 `~/Documents/Keystore`). Raise `version:` in `pubspec.yaml` before every upload: the `+code` must go up each time.
 
+Updates: Home shows an **Update** chip when Google Play has a newer version (`in_app_update`; only on a build installed
+from Play: the closed test track, not a sideloaded APK). The backend's `MIN_APP_VERSION` forces an update (426 screen);
+raise it only after this version is live on Play, or that screen has nothing to install.
+
 ### Release notes (Play Console)
 
 Paste the whole block into "Release notes". Play keeps each language to 500 characters.

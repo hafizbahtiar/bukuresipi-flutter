@@ -213,14 +213,13 @@ class _AccountPageState extends State<AccountPage> {
                   trailing: next,
                   child: Text(l.ownerTitle),
                 ),
-              if (user.isOwner)
-                NotebookRow(
-                  key: const ValueKey('account-usage'),
-                  mark: mark(Icons.speed_outlined),
-                  onTap: () => context.push('/owner/usage'),
-                  trailing: next,
-                  child: Text(l.usageTitle),
-                ),
+              NotebookRow(
+                key: const ValueKey('account-usage'),
+                mark: mark(Icons.speed_outlined),
+                onTap: () => context.push('/usage'),
+                trailing: next,
+                child: Text(l.usageTitle),
+              ),
               NotebookRow(
                 key: const ValueKey('account-settings'),
                 mark: mark(Icons.settings_outlined),

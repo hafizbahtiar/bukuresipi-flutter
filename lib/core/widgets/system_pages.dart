@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
+import '../network/update_gate.dart';
 import '../open_link.dart';
 import '../theme/app_theme.dart';
 
@@ -21,6 +22,14 @@ class SplashPage extends StatelessWidget {
 /// The app's store page; the Play app opens it (no App Store listing yet, so iOS shows no button).
 const playStoreUrl =
     'https://play.google.com/store/apps/details?id=com.bukuresipi';
+
+/// Updates the app: Google's own update screen (download and restart in the app), else the store page. Used by the
+/// Home chip (a newer version is on Play) and the screen below (this version is retired: MIN_APP_VERSION).
+Future<void> updateApp(BuildContext context) async {
+  final failed = AppLocalizations.of(context).openFailed;
+  if (await startPlayUpdate() || !context.mounted) return;
+  await openLink(context, playStoreUrl, failed: failed);
+}
 
 /// The API answered 426: this app version is retired.
 class UpdateRequiredPage extends StatelessWidget {
@@ -55,8 +64,7 @@ class UpdateRequiredPage extends StatelessWidget {
                   key: const ValueKey('update-store'),
                   icon: const Icon(Icons.shop_outlined),
                   label: Text(l.updateButton),
-                  onPressed: () =>
-                      openLink(context, playStoreUrl, failed: l.openFailed),
+                  onPressed: () => updateApp(context),
                 ),
               ],
             ],
