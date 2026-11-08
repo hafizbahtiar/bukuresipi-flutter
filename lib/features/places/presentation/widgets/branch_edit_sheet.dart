@@ -389,6 +389,30 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     }
   }
 
+  /// The owner takes ([use]) or leaves one field of the AI draft: the form gets the draft's value or the current one.
+  void _pickDraft(String field, bool use) {
+    final draft = _suggestion?.draft;
+    if (draft == null) return;
+    final b = widget.branch;
+    String fixed(double? v) => v?.toStringAsFixed(6) ?? '';
+    setState(() {
+      switch (field) {
+        case 'label':
+          _label.text = (use ? draft.label : b.label) ?? '';
+        case 'address':
+          _address.text = (use ? draft.address : b.address) ?? '';
+        case 'city':
+          _city.text = (use ? draft.city : b.city) ?? '';
+        case 'state':
+          _state.text = (use ? draft.state : b.state) ?? '';
+        case 'location':
+          _latText.text = fixed(use ? draft.lat : b.lat);
+          _lngText.text = fixed(use ? draft.lng : b.lng);
+      }
+      use ? _aiFields.add(field) : _aiFields.remove(field);
+    });
+  }
+
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -489,6 +513,8 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                         _DraftBanner(
                           suggestion: suggestion,
                           branch: widget.branch,
+                          used: _aiFields,
+                          onPick: _pickDraft,
                           onUsePin: (c) =>
                               _useFound(c.lat, c.lng, address: c.address),
                         ),
@@ -749,11 +775,17 @@ class _DraftBanner extends StatelessWidget {
   const _DraftBanner({
     required this.suggestion,
     required this.branch,
+    required this.used,
+    required this.onPick,
     required this.onUsePin,
   });
 
   final BranchSuggestion suggestion;
   final Branch branch;
+
+  /// The draft fields now in the form; [onPick] takes (field, use) from each row's tick box.
+  final Set<String> used;
+  final void Function(String field, bool use) onPick;
   final ValueChanged<PinCandidate> onUsePin;
 
   String? _coords(double? lat, double? lng) => lat == null || lng == null
@@ -767,17 +799,18 @@ class _DraftBanner extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final small = text.bodySmall?.copyWith(color: nb.inkSoft);
     final draft = suggestion.draft;
-    final rows = <(String, String?, String?)>[
-      (l.branchLabel, branch.label, draft.label),
-      (l.branchAddress, branch.address, draft.address),
-      (l.branchCity, branch.city, draft.city),
-      (l.branchState, branch.state, draft.state),
+    final rows = <(String, String, String?, String?)>[
+      ('label', l.branchLabel, branch.label, draft.label),
+      ('address', l.branchAddress, branch.address, draft.address),
+      ('city', l.branchCity, branch.city, draft.city),
+      ('state', l.branchState, branch.state, draft.state),
       (
+        'location',
         l.branchLocation,
         _coords(branch.lat, branch.lng),
         _coords(draft.lat, draft.lng),
       ),
-    ].where((row) => row.$3 != null && row.$3!.trim().isNotEmpty).toList();
+    ].where((row) => row.$4 != null && row.$4!.trim().isNotEmpty).toList();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -818,7 +851,14 @@ class _DraftBanner extends StatelessWidget {
             const SizedBox(height: 4),
             Text(l.aiDraftApplied, style: small),
             for (final row in rows)
-              _DraftField(label: row.$1, current: row.$2, suggested: row.$3!),
+              _DraftField(
+                key: ValueKey('draft-${row.$1}'),
+                label: row.$2,
+                current: row.$3,
+                suggested: row.$4!,
+                use: used.contains(row.$1),
+                onUse: (v) => onPick(row.$1, v),
+              ),
           ] else
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -869,14 +909,21 @@ class _DraftBanner extends StatelessWidget {
 
 class _DraftField extends StatelessWidget {
   const _DraftField({
+    super.key,
     required this.label,
     required this.current,
     required this.suggested,
+    required this.use,
+    required this.onUse,
   });
 
   final String label;
   final String? current;
   final String suggested;
+
+  /// Ticked = the suggestion is in the form; unticked = the current value is kept.
+  final bool use;
+  final ValueChanged<bool> onUse;
 
   @override
   Widget build(BuildContext context) {
@@ -892,6 +939,15 @@ class _DraftField extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (!same)
+                SizedBox.square(
+                  dimension: 28,
+                  child: Checkbox(
+                    value: use,
+                    semanticLabel: l.aiDraftUseField(label),
+                    onChanged: (v) => onUse(v ?? false),
+                  ),
+                ),
               Text(
                 label,
                 style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),

@@ -412,9 +412,27 @@ void main() {
     expect(find.text('AI draft — review before saving'), findsOneWidget);
     expect(find.text('Source: nominatim'), findsOneWidget);
     expect(
-      find.text('Filled into the fields below — review before saving.'),
+      find.text(
+        "Filled into the fields below — untick any you don't want, then review before saving.",
+      ),
       findsOneWidget,
     );
+    // The owner leaves the AI's address: the form goes back to the current one; ticked again, the AI's returns.
+    final address = find.descendant(
+      of: find.byKey(const ValueKey('draft-address')),
+      matching: find.byType(Checkbox),
+    );
+    await t.ensureVisible(address);
+    await t.tap(address);
+    await t.pumpAndSettle();
+    String text(String key) =>
+        t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    expect(text('branch-address'), '');
+    await t.tap(address);
+    await t.pumpAndSettle();
+    expect(text('branch-address'), 'AI Address');
+    await t.tap(address);
+    await t.pumpAndSettle();
     expect(find.text('AI'), findsWidgets);
     expect(
       t
@@ -438,7 +456,10 @@ void main() {
 
     expect(repo.branchUpdates.single.label, 'AI Label');
     expect(repo.branchUpdates.single.lat, 2.991234);
-    expect(repo.branchUpdates.single.address, 'AI Address');
+    expect(
+      repo.branchUpdates.single.address,
+      isNull,
+    ); // unticked: kept as it was (none)
     expect(repo.branchUpdates.single.city, 'AI City');
     expect(repo.branchUpdates.single.state, 'Selangor');
     expect(repo.branchUpdates.single.lng, 101.791234);

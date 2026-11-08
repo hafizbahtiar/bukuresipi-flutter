@@ -477,7 +477,7 @@
   "@aiDraftNoInfo": {},
   "aiDraftNoFields": "No field suggestions.",
   "@aiDraftNoFields": {},
-  "aiDraftApplied": "Filled into the fields below — review before saving.",
+  "aiDraftApplied": "Filled into the fields below — untick any you don't want, then review before saving.",
   "@aiDraftApplied": {},
   "aiDraftSame": "unchanged",
   "@aiDraftSame": {},
@@ -1868,5 +1868,13 @@
   "branchAddFromHit": "Add as new branch",
   "@branchAddFromHit": {},
   "branchAdded": "Branch added. Edit its name on the map if needed.",
-  "@branchAdded": {}
+  "@branchAdded": {},
+  "aiDraftUseField": "Use the suggested {field}",
+  "@aiDraftUseField": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  }
 }

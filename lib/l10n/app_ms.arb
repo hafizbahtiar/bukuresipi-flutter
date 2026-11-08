@@ -213,7 +213,7 @@
   "aiDraftSources": "Sumber: {sources}",
   "aiDraftNoInfo": "Tiada maklumat baharu ditemui.",
   "aiDraftNoFields": "Tiada cadangan field.",
-  "aiDraftApplied": "Diisi ke field di bawah — semak sebelum simpan.",
+  "aiDraftApplied": "Diisi ke medan di bawah — buang tanda pada yang anda tidak mahu, kemudian semak sebelum simpan.",
   "aiDraftSame": "tiada perubahan",
   "branchUpdated": "Cawangan dikemas kini.",
   "pinUse": "Guna lokasi ini",
@@ -720,5 +720,6 @@
   "familyJoinAlreadyHere": "Anda sudah berada dalam keluarga ini. Kongsi pautan ini dengan orang yang anda mahu jemput.",
   "familyOpen": "Buka keluarga",
   "branchAddFromHit": "Tambah sebagai cawangan baharu",
-  "branchAdded": "Cawangan ditambah. Ubah namanya di peta jika perlu."
+  "branchAdded": "Cawangan ditambah. Ubah namanya di peta jika perlu.",
+  "aiDraftUseField": "Guna {field} yang dicadangkan"
 }
