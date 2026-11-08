@@ -83,9 +83,22 @@ class _ShareImageState extends State<ShareImage> {
 }
 
 /// A share's photo as a small snapshot taped into the book: white border, a strip of tape, a slight tilt (the same for
-/// a share every time, so a list looks hand-pasted, not random). Takes no space while loading or when there is none.
+/// a share every time, so a list looks hand-pasted, not random). Takes no space while loading, or with no photo unless
+/// it is a recipe's ([drawing]: the cooking drawing instead).
 class SharePhoto extends StatefulWidget {
-  const SharePhoto(this.shareId, {super.key, this.size = 52}) : recipeId = null;
+  /// [drawing]: with no photo, the cooking drawing in its place (recipes); else nothing (places).
+  const SharePhoto(
+    this.shareId, {
+    super.key,
+    this.size = 52,
+    this.drawing = false,
+  }) : recipeId = null;
+
+  /// A recipe with no photo at all (typed, or its share's photo is gone): the cooking drawing, taped in the same way.
+  const SharePhoto.placeholder({super.key, this.size = 52})
+    : shareId = '',
+      recipeId = null,
+      drawing = true;
 
   /// A recipe's own cover photo ([cover] = its cover id) in place of a share's.
   const SharePhoto.cover(
@@ -93,12 +106,14 @@ class SharePhoto extends StatefulWidget {
     String cover, {
     super.key,
     this.size = 52,
-  }) : shareId = cover;
+  }) : shareId = cover,
+       drawing = true;
 
   /// The share id, or the cover id when [recipeId] is set.
   final String shareId;
   final String? recipeId;
   final double size;
+  final bool drawing;
 
   @override
   State<SharePhoto> createState() => _SharePhotoState();
@@ -107,13 +122,17 @@ class SharePhoto extends StatefulWidget {
 class _SharePhotoState extends State<SharePhoto> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => switch (widget.recipeId) {
-    final recipe? => context.read<RecipesController>().cover(
-      recipe,
-      widget.shareId,
-    ),
-    null => context.read<ShareRepository>().image(widget.shareId),
-  }.catchError((Object _) => null);
+  Future<Uint8List?> _load() => widget.shareId.isEmpty
+      ? Future.value(null)
+      : switch (widget.recipeId) {
+          final recipe? => context.read<RecipesController>().cover(
+            recipe,
+            widget.shareId,
+          ),
+          null => context.read<ShareRepository>().image(widget.shareId),
+        }.catchError((Object _) => null);
+
+  static const _drawing = 'assets/images/recipe_placeholder.png';
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
@@ -127,7 +146,11 @@ class _SharePhotoState extends State<SharePhoto> {
     future: _bytes,
     builder: (context, s) {
       final bytes = s.data;
-      if (bytes == null) return const SizedBox.shrink();
+      // Nothing while loading (no flash of the drawing before a real photo), nor for a place with no photo.
+      if (bytes == null &&
+          (!widget.drawing || s.connectionState != ConnectionState.done)) {
+        return const SizedBox.shrink();
+      }
       final nb = Notebook.of(context);
       final tilt = ((widget.shareId.hashCode % 5) - 2) * 0.025;
       return Padding(
@@ -151,16 +174,26 @@ class _SharePhotoState extends State<SharePhoto> {
                     ),
                   ],
                 ),
-                child: Image.memory(
-                  bytes,
-                  width: widget.size,
-                  height: widget.size,
-                  fit: BoxFit.cover,
-                  cacheWidth: (widget.size * 3).round(), // decode small: a list of full-size photos is a lot of memory
-                  semanticLabel: null,
-                  excludeFromSemantics: true,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
+                child: bytes == null
+                    ? Image.asset(
+                        _drawing,
+                        key: const ValueKey('recipe-placeholder'),
+                        width: widget.size,
+                        height: widget.size,
+                        fit: BoxFit.contain,
+                        cacheWidth: (widget.size * 3).round(),
+                        excludeFromSemantics: true,
+                      )
+                    : Image.memory(
+                        bytes,
+                        width: widget.size,
+                        height: widget.size,
+                        fit: BoxFit.cover,
+                        // decode small: a list of full-size photos is a lot of memory
+                        cacheWidth: (widget.size * 3).round(),
+                        excludeFromSemantics: true,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      ),
               ),
               Positioned(
                 top: -6,

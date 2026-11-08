@@ -300,8 +300,8 @@ class RecipeTile extends StatelessWidget {
       mark: Icon(Icons.menu_book, size: 20, color: nb.inkSoft),
       trailing: switch ((recipe.cover, recipe.shareId)) {
         (final cover?, _) => SharePhoto.cover(recipe.id, cover),
-        (null, final id?) => SharePhoto(id),
-        _ => null,
+        (null, final id?) => SharePhoto(id, drawing: true),
+        _ => const SharePhoto.placeholder(),
       },
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(

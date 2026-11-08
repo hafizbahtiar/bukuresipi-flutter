@@ -701,5 +701,6 @@
   "pinSearchButton": "Cari",
   "pinSearchNone": "Peta ini tidak menjumpai apa-apa. Cuba peta lain atau perkataan lain.",
   "pinSearchUsed": "Pin, bandar dan negeri diisi dari peta. Semak, kemudian simpan.",
-  "errSourceOff": "Peta ini dimatikan (tiada kunci, atau had penggunaan dicapai). Lihat Pemilik > Penggunaan."
+  "errSourceOff": "Peta ini dimatikan (tiada kunci, atau had penggunaan dicapai). Lihat Pemilik > Penggunaan.",
+  "errBranchLabelTaken": "Cawangan lain restoran ini sudah guna nama ini, jadi mungkin ia cawangan yang sama. Tukar nama, atau guna Semak cawangan untuk gabungkan."
 }

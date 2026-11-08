@@ -1820,5 +1820,7 @@
   "pinSearchUsed": "Pin, town and state filled from the map. Check them, then save.",
   "@pinSearchUsed": {},
   "errSourceOff": "This map is off (no key, or its usage cap is reached). See Owner > Usage.",
-  "@errSourceOff": {}
+  "@errSourceOff": {},
+  "errBranchLabelTaken": "Another branch of this restaurant already has this name, so they are probably the same outlet. Change the name, or use Check branches to merge them.",
+  "@errBranchLabelTaken": {}
 }
