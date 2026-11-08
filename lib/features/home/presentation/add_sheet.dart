@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
 import '../../receipts/domain/receipts_repository.dart';
@@ -81,35 +83,103 @@ Future<void> showAddSheet(BuildContext context) async {
   }
 }
 
-Future<String?> _askLink(BuildContext context) {
-  final l = AppLocalizations.of(context);
-  final field = TextEditingController();
-  return showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(l.addLink),
-      content: TextField(
-        key: const ValueKey('add-link-field'),
-        controller: field,
-        autofocus: true,
-        keyboardType: TextInputType.url,
-        decoration: InputDecoration(
-          labelText: l.linkFieldLabel,
-          helperText: l.addLinkHint,
-        ),
+Future<String?> _askLink(BuildContext context) =>
+    showNotebookSheet<String>(context, builder: (_) => const _LinkSheet());
+
+/// One link to add. The sheet owns its field, so the field lives until the sheet has finished closing.
+class _LinkSheet extends StatefulWidget {
+  const _LinkSheet();
+
+  @override
+  State<_LinkSheet> createState() => _LinkSheetState();
+}
+
+class _LinkSheetState extends State<_LinkSheet> {
+  final _field = TextEditingController();
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
+
+  Future<void> _paste() async {
+    final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
+    if (text != null && text.isNotEmpty && mounted) {
+      setState(() => _field.text = text);
+    }
+  }
+
+  void _add() {
+    final link = _field.text.trim();
+    if (link.isNotEmpty) Navigator.pop(context, link);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final material = MaterialLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        notebookGutter + 10,
+        0,
+        20,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, field.text.trim()),
-          child: Text(l.linkAdd),
-        ),
-      ],
-    ),
-  ).whenComplete(field.dispose);
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l.addLink,
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            key: const ValueKey('add-link-field'),
+            controller: _field,
+            autofocus: true,
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.go,
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _add(),
+            decoration: InputDecoration(
+              labelText: l.linkFieldLabel,
+              helperText: l.addLinkHint,
+              helperMaxLines: 2,
+              prefixIcon: const Icon(Icons.link, size: 20),
+              suffixIcon: TextButton.icon(
+                key: const ValueKey('add-link-paste'),
+                onPressed: _paste,
+                icon: const Icon(Icons.content_paste, size: 18),
+                label: Text(material.pasteButtonLabel),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(material.cancelButtonLabel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  key: const ValueKey('add-link-submit'),
+                  onPressed: _field.text.trim().isEmpty ? null : _add,
+                  child: Text(l.linkAdd),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 Future<void> _addReceipt(BuildContext context) async {
