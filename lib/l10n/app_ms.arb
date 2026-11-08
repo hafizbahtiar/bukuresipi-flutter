@@ -707,5 +707,6 @@
   "settingsSecurity": "Log masuk dan keselamatan",
   "settingsApp": "Aplikasi",
   "settingsAbout": "Maklumat",
-  "usageTitle": "Penggunaan"
+  "usageTitle": "Penggunaan",
+  "reportMapsLinkHint": "Terbaik: dalam Google Maps, buka tempat itu, tekan Kongsi dan salin pautan ke sini. Pin tepatnya dihantar kepada kami untuk disemak."
 }

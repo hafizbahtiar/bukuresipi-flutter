@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
@@ -7,6 +8,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/report.dart';
 import '../pages/pin_picker_page.dart';
+import '../places_controller.dart';
 
 /// A community report: pick the target/field, suggest a correction, and send it as a ticket for the owner.
 class PlaceReportSheet extends StatefulWidget {
@@ -31,13 +33,17 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
       : ReportField.location;
   final _value = TextEditingController();
   final _note = TextEditingController();
+  final _mapsLink = TextEditingController();
   LatLng? _picked;
+  String? _pickedFromLink; // the Google Maps link the pin came from: sent in the note, for the owner to open
+  bool _readingLink = false;
   bool _saving = false;
 
   @override
   void dispose() {
     _value.dispose();
     _note.dispose();
+    _mapsLink.dispose();
     super.dispose();
   }
 
@@ -119,7 +125,45 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
         ),
       ),
     );
-    if (picked != null && mounted) setState(() => _picked = picked);
+    if (picked != null && mounted) {
+      setState(() {
+        _picked = picked;
+        _pickedFromLink = null;
+      });
+    }
+  }
+
+  /// A Google Maps link the user copied from the place in Google Maps: the place's own pin (nothing saved yet).
+  Future<void> _useMapsLink() async {
+    final url = _mapsLink.text.trim();
+    if (url.isEmpty || _readingLink) return;
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _readingLink = true);
+    try {
+      final pin = await context.read<PlacesController>().pinFromMapsLink(url);
+      if (!mounted) return;
+      setState(() {
+        _picked = LatLng(pin.lat, pin.lng);
+        _pickedFromLink = url;
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _readingLink = false);
+    }
+  }
+
+  /// The user's note, with the Maps link the pin came from (the owner checks the place against it). Max 500.
+  String? get _noteText {
+    final parts = [
+      _note.text.trim(),
+      if (_field == ReportField.location && _pickedFromLink != null)
+        _pickedFromLink!,
+    ].where((s) => s.isNotEmpty);
+    final note = parts.join('\n');
+    if (note.isEmpty) return null;
+    return note.length > 500 ? note.substring(0, 500) : note;
   }
 
   Future<void> _submit() async {
@@ -138,7 +182,7 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
           lat: location ? _picked?.latitude : null,
           lng: location ? _picked?.longitude : null,
           value: location || value.isEmpty ? null : value,
-          note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+          note: _noteText,
         ),
       );
       if (!mounted) return;
@@ -229,6 +273,33 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
                     style: text.bodyMedium?.copyWith(
                       color: nb.inkSoft,
                       fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  TextField(
+                    key: const ValueKey('report-maps-link'),
+                    controller: _mapsLink,
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.go,
+                    onSubmitted: (_) => _useMapsLink(),
+                    decoration: InputDecoration(
+                      labelText: l.mapsLinkLabel,
+                      helperText: l.reportMapsLinkHint,
+                      helperMaxLines: 3,
+                      prefixIcon: const Icon(Icons.link, size: 20),
+                      suffixIcon: _readingLink
+                          ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator.adaptive(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : TextButton(
+                              onPressed: _useMapsLink,
+                              child: Text(l.mapsLinkUse),
+                            ),
                     ),
                   ),
                   Align(

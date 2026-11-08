@@ -556,6 +556,30 @@ void main() {
     expect(find.byKey(const ValueKey('place-map')), findsOneWidget);
   });
 
+  testWidgets(
+    'a report can take the pin from a Google Maps link, sent with the link',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      await t.tap(find.text('Report').last);
+      await t.pumpAndSettle();
+      final link = find.byKey(const ValueKey('report-maps-link'));
+      await t.ensureVisible(link);
+      await t.enterText(link, 'https://maps.app.goo.gl/AbC123');
+      await t.tap(find.descendant(of: link, matching: find.text('Use link')));
+      await t.pumpAndSettle();
+      expect(find.text('3.199464, 101.695650'), findsOneWidget);
+      final send = find.widgetWithText(FilledButton, 'Report');
+      await t.ensureVisible(send);
+      await t.tap(send);
+      await t.pumpAndSettle();
+      final r = repo.reports.single;
+      expect(r.lat, closeTo(3.1994645, 1e-9));
+    expect(r.lng, closeTo(101.6956504, 1e-9));
+      expect(r.note, 'https://maps.app.goo.gl/AbC123');
+    },
+  );
+
   testWidgets('a user does not see the map search', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
