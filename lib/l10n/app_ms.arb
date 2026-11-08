@@ -718,5 +718,7 @@
   "usageMeters": "Meter perkhidmatan (AI, peta, emel)",
   "usageResets": "Kiraan harian bermula semula pada {time}.",
   "familyJoinAlreadyHere": "Anda sudah berada dalam keluarga ini. Kongsi pautan ini dengan orang yang anda mahu jemput.",
-  "familyOpen": "Buka keluarga"
+  "familyOpen": "Buka keluarga",
+  "branchAddFromHit": "Tambah sebagai cawangan baharu",
+  "branchAdded": "Cawangan ditambah. Ubah namanya di peta jika perlu."
 }

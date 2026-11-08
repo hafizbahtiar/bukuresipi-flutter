@@ -42,6 +42,16 @@ abstract interface class PlacesRepository {
     BranchEditScope scope = BranchEditScope.personal,
   });
 
+  /// Owner only: another branch of [branchId]'s restaurant. Throws 'branch_label_taken'.
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  });
+
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
   Future<BranchSuggestion> suggestBranch(String branchId);
 

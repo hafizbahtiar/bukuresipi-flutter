@@ -309,6 +309,19 @@ class FakePlaces implements PlacesRepository {
     return suggestion;
   }
 
+  /// [addSiblingBranch] calls: (branch, address, lat).
+  final siblings = <(String, String?, double)>[];
+
+  @override
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  }) async => siblings.add((branchId, address, lat));
+
   /// What [searchPin] answers; [pinSearches] records (branch, source, q).
   List<PinHit> pinHits = const [];
   final pinSearches = <(String, String, String?)>[];

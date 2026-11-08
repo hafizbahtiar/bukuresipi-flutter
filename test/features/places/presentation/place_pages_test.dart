@@ -438,6 +438,9 @@ void main() {
 
     expect(repo.branchUpdates.single.label, 'AI Label');
     expect(repo.branchUpdates.single.lat, 2.991234);
+    expect(repo.branchUpdates.single.address, 'AI Address');
+    expect(repo.branchUpdates.single.city, 'AI City');
+    expect(repo.branchUpdates.single.state, 'Selangor');
     expect(repo.branchUpdates.single.lng, 101.791234);
     expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
   });
@@ -591,12 +594,29 @@ void main() {
         .controller!
         .text;
     expect(field('branch-lat'), '3.159100');
+    expect(field('branch-address'), 'P&C Kitchen, Jalan Ampang, Kuala Lumpur');
     expect(field('branch-city'), 'Kuala Lumpur');
     expect(field('branch-state'), 'Wilayah Persekutuan Kuala Lumpur');
     expect(
       field('pin-search-query'),
       'Shop, Kuala Lumpur',
     ); // what was asked, to change and search again
+
+    // Another outlet in the results: added as a new branch, the form untouched.
+    final add = find.byKey(const ValueKey('pin-hit-add-0'));
+    await t.ensureVisible(add);
+    await t.tap(add);
+    await t.pumpAndSettle();
+    expect(repo.siblings, [
+      ('b-1', 'P&C Kitchen, Jalan Ampang, Kuala Lumpur', 3.1591),
+    ]);
+    // Shown once the previous message ("Use") has gone: snack bars queue.
+    await t.pump(const Duration(seconds: 5));
+    await t.pumpAndSettle();
+    expect(
+      find.text('Branch added. Edit its name on the map if needed.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a pinned place has a map button that opens the map on its pin', (

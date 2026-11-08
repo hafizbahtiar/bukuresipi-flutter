@@ -138,6 +138,27 @@ class PlacesController extends ChangeNotifier {
     await load();
   }
 
+  /// Owner only: another branch of [branchId]'s restaurant (a pin search hit). Throws ApiException
+  /// ('branch_label_taken'); reloads the places so the new branch shows.
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  }) async {
+    await _repo.addSiblingBranch(
+      branchId,
+      address: address,
+      city: city,
+      state: state,
+      lat: lat,
+      lng: lng,
+    );
+    await load();
+  }
+
   /// Owner only. Throws ApiException; the edit sheet shows the draft for review.
   Future<BranchSuggestion> suggestBranch(String branchId) =>
       _repo.suggestBranch(branchId);

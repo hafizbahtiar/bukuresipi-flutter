@@ -150,6 +150,27 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/places/branches/$branchId/sibling',
+      data: {
+        'address': address,
+        'city': city,
+        'state': state,
+        'lat': lat,
+        'lng': lng,
+      },
+    ),
+  );
+
+  @override
   Future<({String query, List<PinHit> hits})> searchPin(
     String branchId,
     String source, {

@@ -194,16 +194,46 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     }
   }
 
-  void _usePinHit(PinHit h) {
-    _setPin(h.lat, h.lng);
+  /// "Use" on a map's result (a pin search hit or a draft's pin): its pin, address, town and state go into the form.
+  void _useFound(
+    double lat,
+    double lng, {
+    String? address,
+    String? city,
+    String? state,
+  }) {
+    _setPin(lat, lng);
     setState(() {
-      if (h.city case final city?) _city.text = city;
-      if (h.state case final state?) _state.text = state;
-      _aiFields.removeAll(['location', 'city', 'state']);
+      if (address case final a? when a.trim().isNotEmpty) _address.text = a;
+      if (city case final c?) _city.text = c;
+      if (state case final s?) _state.text = s;
+      _aiFields.removeAll(['location', 'address', 'city', 'state']);
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context).pinSearchUsed)),
     );
+  }
+
+  void _usePinHit(PinHit h) =>
+      _useFound(h.lat, h.lng, address: h.address, city: h.city, state: h.state);
+
+  /// Owner: the hit is another outlet of this shop: a new branch (the server names it shop + town; editable later).
+  Future<void> _addBranch(PinHit h) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<PlacesController>().addSiblingBranch(
+        widget.branch.id,
+        address: h.address,
+        city: h.city,
+        state: h.state,
+        lat: h.lat,
+        lng: h.lng,
+      );
+      messenger.showSnackBar(SnackBar(content: Text(l.branchAdded)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
   }
 
   Widget _pinSearch(AppLocalizations l, Notebook nb, TextTheme text) {
@@ -290,8 +320,14 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                 ),
               ),
               TextButton(
+                key: ValueKey('pin-hit-use-$i'),
                 onPressed: () => _usePinHit(h),
                 child: Text(l.pinCandidateUse),
+              ),
+              TextButton(
+                key: ValueKey('pin-hit-add-$i'),
+                onPressed: () => _addBranch(h),
+                child: Text(l.branchAddFromHit),
               ),
             ],
           ),
@@ -453,7 +489,8 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                         _DraftBanner(
                           suggestion: suggestion,
                           branch: widget.branch,
-                          onUsePin: (c) => _setPin(c.lat, c.lng),
+                          onUsePin: (c) =>
+                              _useFound(c.lat, c.lng, address: c.address),
                         ),
                       Align(
                         alignment: Alignment.centerRight,

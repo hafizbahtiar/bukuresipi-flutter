@@ -1864,5 +1864,9 @@
   "familyJoinAlreadyHere": "You're already in this family. Share the link with the people you want to invite.",
   "@familyJoinAlreadyHere": {},
   "familyOpen": "Open family",
-  "@familyOpen": {}
+  "@familyOpen": {},
+  "branchAddFromHit": "Add as new branch",
+  "@branchAddFromHit": {},
+  "branchAdded": "Branch added. Edit its name on the map if needed.",
+  "@branchAdded": {}
 }
