@@ -60,6 +60,34 @@ void main() {
     );
   });
 
+  testWidgets('the printed lines show while checking and after saving', (
+    t,
+  ) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(
+          items: [
+            (name: 'Nasi Lemak Ayam', quantity: 2, amountSen: 2580),
+            (name: 'Teh Ais', quantity: null, amountSen: 350),
+            (name: 'Diskaun', quantity: 1, amountSen: -200),
+          ],
+        ),
+      ];
+    await pump(t, repo);
+    await t.pump();
+    expect(find.text('Items'), findsOneWidget);
+    expect(find.text('2 ×'), findsOneWidget);
+    expect(find.text('Nasi Lemak Ayam'), findsOneWidget);
+    expect(find.text('RM 25.80'), findsOneWidget);
+    expect(find.text('-RM 2.00'), findsOneWidget);
+    final save = find.text('Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pump();
+    expect(find.byKey(const ValueKey('receipt-items')), findsOneWidget);
+    expect(find.text('Teh Ais'), findsOneWidget);
+  });
+
   testWidgets('no place found: Save waits until the user picks one', (t) async {
     final repo = FakeReceipts()
       ..answers = [

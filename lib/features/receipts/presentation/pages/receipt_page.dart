@@ -215,7 +215,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
   Widget _saved(BuildContext context, Receipt r) {
     final l = AppLocalizations.of(context);
     final path = _placePath(context.watch<PlacesController>());
-    return _Message(
+    final summary = _Message(
       icon: Icons.check_circle_outline,
       text: [
         r.place?.name,
@@ -225,6 +225,17 @@ class _ReceiptPageState extends State<ReceiptPage> {
       action: path == null
           ? null
           : (l.receiptRate, () => context.push('/places/$path')),
+    );
+    if (r.items.isEmpty) return summary;
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        summary,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 0),
+          child: _Items(items: r.items),
+        ),
+      ],
     );
   }
 
@@ -267,6 +278,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
                   ),
                 ),
         ),
+        if (r.items.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _Items(items: r.items),
+        ],
         const SizedBox(height: 12),
         ListTile(
           contentPadding: EdgeInsets.zero,
@@ -376,6 +391,56 @@ class _Message extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The printed lines: "2 × Nasi Lemak Ayam ... RM 25.80". As read: the user checks only the total.
+class _Items extends StatelessWidget {
+  const _Items({required this.items});
+
+  final List<ReceiptItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    String qty(double q) =>
+        q == q.roundToDouble() ? q.toInt().toString() : q.toString();
+    return Column(
+      key: const ValueKey('receipt-items'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l.receiptItems,
+          style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        for (final i in items)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 36,
+                  child: Text(
+                    i.quantity == null ? '' : '${qty(i.quantity!)} ×',
+                    style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                  ),
+                ),
+                Expanded(child: Text(i.name, style: text.bodyMedium)),
+                if (i.amountSen != null)
+                  Text(
+                    rm(i.amountSen!),
+                    style: text.bodyMedium?.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

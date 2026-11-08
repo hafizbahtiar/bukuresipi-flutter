@@ -1834,5 +1834,9 @@
   "usageTitle": "Usage",
   "@usageTitle": {},
   "reportMapsLinkHint": "Best: in Google Maps, open the place, tap Share and copy the link here. Its exact pin is sent to us to check.",
-  "@reportMapsLinkHint": {}
+  "@reportMapsLinkHint": {},
+  "receiptItems": "Items",
+  "@receiptItems": {
+    "description": "Heading over a receipt's printed lines"
+  }
 }

@@ -28,6 +28,14 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       visitedAt: visited == null ? null : DateTime.parse(visited).toLocal(),
       totalSen: j['totalSen'] as int?,
       gaps: ((j['gaps'] as List?) ?? const []).cast<String>(),
+      items: [
+        for (final i in (j['items'] as List?) ?? const [])
+          (
+            name: i['name'] as String,
+            quantity: (i['quantity'] as num?)?.toDouble(),
+            amountSen: i['amountSen'] as int?,
+          ),
+      ],
       hasImage: j['hasImage'] as bool? ?? false,
     );
   }

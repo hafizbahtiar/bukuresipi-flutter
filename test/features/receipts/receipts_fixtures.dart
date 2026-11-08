@@ -13,6 +13,7 @@ Receipt receipt({
   ),
   int? totalSen = 4115,
   List<String> gaps = const [],
+  List<ReceiptItem> items = const [],
 }) => Receipt(
   id: id,
   status: status,
@@ -21,6 +22,7 @@ Receipt receipt({
   visitedAt: DateTime(2026, 11, 8, 20, 41),
   totalSen: totalSen,
   gaps: gaps,
+  items: items,
   hasImage: status != 'saved',
 );
 
@@ -75,6 +77,7 @@ class FakeReceipts implements ReceiptsRepository {
       place: r.place,
       visitedAt: visitedAt,
       totalSen: totalSen,
+      items: r.items,
     );
   }
 

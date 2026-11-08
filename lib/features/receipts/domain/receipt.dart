@@ -1,4 +1,4 @@
-/// A photographed restaurant receipt (totals only). The server reads it ([status] 'reading'), the user checks it
+/// A photographed restaurant receipt: totals and its item lines. The server reads it ([status] 'reading'), the user checks it
 /// ('review') and saves it ('saved'); 'failed' = unreadable. The photo exists only until saved ([hasImage]).
 class Receipt {
   const Receipt({
@@ -9,6 +9,7 @@ class Receipt {
     this.visitedAt,
     this.totalSen,
     this.gaps = const [],
+    this.items = const [],
     this.hasImage = false,
   });
 
@@ -23,6 +24,9 @@ class Receipt {
 
   /// What the reader was unsure of: 'shop', 'date', 'total', 'totals_mismatch'.
   final List<String> gaps;
+
+  /// The lines as printed, in order (the detail only; a list row has none).
+  final List<ReceiptItem> items;
   final bool hasImage;
 
   bool get reading => status == 'reading';
@@ -30,6 +34,9 @@ class Receipt {
   bool get saved => status == 'saved';
   bool get failed => status == 'failed';
 }
+
+/// One printed line: [quantity] null = not printed; [amountSen] = the whole line (negative for a discount).
+typedef ReceiptItem = ({String name, double? quantity, int? amountSen});
 
 typedef ReceiptPlace = ({String restaurantId, String? branchId, String name});
 
@@ -49,9 +56,11 @@ class ReceiptStats {
   places;
 }
 
-/// "RM 41.15" from sen.
-String rm(int sen) =>
-    'RM ${sen ~/ 100}.${(sen % 100).toString().padLeft(2, '0')}';
+/// "RM 41.15" from sen; "-RM 2.00" for a discount.
+String rm(int sen) {
+  final a = sen.abs();
+  return '${sen < 0 ? '-' : ''}RM ${a ~/ 100}.${(a % 100).toString().padLeft(2, '0')}';
+}
 
 /// "41.15" -> 4115; null when it is not an amount.
 int? senOf(String text) {
