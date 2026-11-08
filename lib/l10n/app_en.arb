@@ -1838,5 +1838,9 @@
   "receiptItems": "Items",
   "@receiptItems": {
     "description": "Heading over a receipt's printed lines"
+  },
+  "updateAvailable": "Update",
+  "@updateAvailable": {
+    "description": "Chip on Home when Google Play has a newer version"
   }
 }

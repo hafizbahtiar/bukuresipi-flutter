@@ -1,10 +1,9 @@
 import 'dart:typed_data';
 
-import '../../../../core/constants/image_constant.dart';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/constants/image_constant.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../places/presentation/places_controller.dart';
 import '../../../recipes/presentation/recipes_controller.dart';

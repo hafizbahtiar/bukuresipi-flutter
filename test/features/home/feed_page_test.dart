@@ -1,4 +1,5 @@
 import 'package:bukuresipi_flutter/features/home/presentation/feed_page.dart';
+import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -23,6 +24,7 @@ void main() {
     bool located = true,
     int community = 1,
     RatingSummary? rating,
+    UpdateGate? update,
   }) async {
     t.view.physicalSize = const Size(
       2400,
@@ -73,6 +75,9 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (_) => PlacesController(places)),
           ChangeNotifierProvider(create: (_) => RecipesController(recipes)),
+          ChangeNotifierProvider.value(
+            value: update ?? UpdateGate(playHasUpdate: () async => false),
+          ),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -219,5 +224,22 @@ void main() {
     await t.tap(find.byKey(const ValueKey('feed-map')));
     await t.pumpAndSettle();
     expect(find.text('the map'), findsOneWidget);
+  });
+
+  testWidgets('a newer version on Google Play shows the Update chip', (
+    t,
+  ) async {
+    final update = UpdateGate(playHasUpdate: () async => true);
+    await pump(t, update: update);
+    expect(find.byKey(const ValueKey('update-chip')), findsNothing);
+    await update.check();
+    await t.pump();
+    expect(find.widgetWithText(ActionChip, 'Update'), findsOneWidget);
+    // No Play listing (debug build, sideloaded APK): the check fails quietly, no chip.
+    final none = UpdateGate(
+      playHasUpdate: () async => throw Exception('no Play'),
+    );
+    await none.check();
+    expect(none.available, isFalse);
   });
 }

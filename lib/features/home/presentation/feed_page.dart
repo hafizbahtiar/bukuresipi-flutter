@@ -1,13 +1,15 @@
 import 'dart:async';
 
-import '../../../core/constants/image_constant.dart';
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/constants/image_constant.dart';
+import '../../../core/network/update_gate.dart';
+import '../../../core/open_link.dart';
+import '../../../core/widgets/system_pages.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -392,6 +394,19 @@ class _FeedPageState extends State<FeedPage> {
         backgroundColor: nb.mist,
         title: NotebookTitle(l.navHome),
         actions: [
+          if (context.watch<UpdateGate>().available)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: ActionChip(
+                key: const ValueKey('update-chip'),
+                avatar: const Icon(Icons.system_update_alt, size: 18),
+                label: Text(l.updateAvailable),
+                onPressed: () async {
+                  if (await startPlayUpdate() || !context.mounted) return;
+                  await openLink(context, playStoreUrl, failed: l.openFailed);
+                },
+              ),
+            ),
           IconButton(
             key: const ValueKey('feed-map'),
             tooltip: l.navMap,

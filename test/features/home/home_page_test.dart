@@ -1,4 +1,5 @@
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
+import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/home_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -43,6 +44,9 @@ void main() {
             create: (_) => ShoppingController(FakeShopping()),
           ),
           ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
+          ChangeNotifierProvider(
+            create: (_) => UpdateGate(playHasUpdate: () async => false),
+          ),
           ChangeNotifierProvider(
             create: (_) => RecentShares(FakeShares(), onFinished: () async {}),
           ),

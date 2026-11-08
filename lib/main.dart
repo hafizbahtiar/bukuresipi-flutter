@@ -1,5 +1,6 @@
 // Composition root: the only place that builds concrete classes. Everything below depends on interfaces
 // (AuthRepository, TokenStore) handed down through Provider, so tests swap them for fakes.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -63,6 +64,7 @@ Future<void> main() async {
     ..onSessionEnded = auth.sessionEnded
     ..onUpdateRequired = update.markRequired;
   auth.restore();
+  unawaited(update.check());
   final places = PlacesController(PlacesRepositoryImpl(api.dio));
   final recipes = RecipesController(RecipesRepositoryImpl(api.dio));
   final shopping = ShoppingController(ShoppingRepositoryImpl(api.dio));

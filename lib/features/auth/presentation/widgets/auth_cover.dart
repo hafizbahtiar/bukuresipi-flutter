@@ -1,10 +1,9 @@
 import 'dart:math';
 
-import '../../../../core/constants/image_constant.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/constants/image_constant.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 

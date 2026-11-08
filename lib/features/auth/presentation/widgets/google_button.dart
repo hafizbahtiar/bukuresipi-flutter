@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/image_constant.dart';
-
 import 'package:provider/provider.dart';
 
+import '../../../../core/constants/image_constant.dart';
 import '../../../../core/settings/locale_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/gen/app_localizations.dart';
