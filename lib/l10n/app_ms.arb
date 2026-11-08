@@ -719,7 +719,7 @@
   "usageResets": "Kiraan harian bermula semula pada {time}.",
   "familyJoinAlreadyHere": "Anda sudah berada dalam keluarga ini. Kongsi pautan ini dengan orang yang anda mahu jemput.",
   "familyOpen": "Buka keluarga",
-  "branchAddFromHit": "Tambah sebagai cawangan baharu",
+  "branchAddFromHit": "Cawangan baru",
   "branchAdded": "Cawangan ditambah. Ubah namanya di peta jika perlu.",
   "aiDraftUseField": "Guna {field} yang dicadangkan"
 }

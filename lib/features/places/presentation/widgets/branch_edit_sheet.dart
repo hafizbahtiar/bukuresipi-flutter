@@ -236,6 +236,12 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     }
   }
 
+  // Two actions under each hit, on one line at phone width.
+  static final _compact = ButtonStyle(
+    visualDensity: VisualDensity.compact,
+    padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
+  );
+
   Widget _pinSearch(AppLocalizations l, Notebook nb, TextTheme text) {
     final hits = _pinHits;
     return Column(
@@ -301,35 +307,59 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
             ),
           ),
         for (final (i, h) in (hits ?? const <PinHit>[]).indexed)
-          Row(
+          // The address gets the full width; the actions sit under it, so a long label never squeezes the text.
+          Container(
             key: ValueKey('pin-hit-$i'),
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(h.address, style: text.bodyMedium),
-                    Text(
-                      [
-                        [h.city, h.state].nonNulls.join(', '),
-                        '${h.lat.toStringAsFixed(5)}, ${h.lng.toStringAsFixed(5)}',
-                      ].where((s) => s.isNotEmpty).join(' · '),
-                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                    ),
-                  ],
+            padding: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              border: i == 0 ? null : Border(top: BorderSide(color: nb.line)),
+            ),
+            margin: const EdgeInsets.only(top: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  h.address,
+                  style: text.bodyMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              TextButton(
-                key: ValueKey('pin-hit-use-$i'),
-                onPressed: () => _usePinHit(h),
-                child: Text(l.pinCandidateUse),
-              ),
-              TextButton(
-                key: ValueKey('pin-hit-add-$i'),
-                onPressed: () => _addBranch(h),
-                child: Text(l.branchAddFromHit),
-              ),
-            ],
+                Text(
+                  [
+                    [h.city, h.state].nonNulls.join(', '),
+                    '${h.lat.toStringAsFixed(5)}, ${h.lng.toStringAsFixed(5)}',
+                  ].where((s) => s.isNotEmpty).join(' · '),
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 4,
+                    children: [
+                      TextButton.icon(
+                        key: ValueKey('pin-hit-add-$i'),
+                        style: _compact,
+                        onPressed: () => _addBranch(h),
+                        icon: const Icon(
+                          Icons.add_location_alt_outlined,
+                          size: 18,
+                        ),
+                        label: Text(l.branchAddFromHit),
+                      ),
+                      FilledButton.tonalIcon(
+                        key: ValueKey('pin-hit-use-$i'),
+                        style: _compact,
+                        onPressed: () => _usePinHit(h),
+                        icon: const Icon(Icons.check, size: 18),
+                        label: Text(l.pinCandidateUse),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );
