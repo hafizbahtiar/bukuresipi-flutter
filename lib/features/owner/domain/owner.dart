@@ -222,6 +222,7 @@ class OwnerUser {
     required this.verified,
     required this.createdAt,
     required this.shares,
+    this.ban,
   });
 
   final String id;
@@ -230,6 +231,9 @@ class OwnerUser {
   final bool verified;
   final DateTime createdAt;
   final int shares;
+
+  /// The ban in force; [until] null = for good. null = not banned.
+  final ({DateTime? until, String? reason})? ban;
 }
 
 /// A share the pipeline could not finish or read. No user: the owner tunes the pipeline, not people.

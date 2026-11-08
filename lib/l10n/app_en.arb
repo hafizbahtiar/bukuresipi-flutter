@@ -1876,5 +1876,85 @@
         "type": "String"
       }
     }
-  }
+  },
+  "errBannedForGood": "This account has been suspended.",
+  "@errBannedForGood": {},
+  "errBannedUntil": "This account is suspended until {date}.",
+  "@errBannedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "errBannedReason": "Reason: {reason}",
+  "@errBannedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerBan": "Ban…",
+  "@ownerBan": {},
+  "ownerUnban": "Unban",
+  "@ownerUnban": {},
+  "ownerDeleteUser": "Delete account…",
+  "@ownerDeleteUser": {},
+  "ownerBanTitle": "Ban {email}",
+  "@ownerBanTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerBanReason": "Reason (the user sees it)",
+  "@ownerBanReason": {},
+  "ownerBanFor": "For",
+  "@ownerBanFor": {},
+  "ownerBanDays": "{n, plural, =1{1 day} other{{n} days}}",
+  "@ownerBanDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerBanForGood": "For good",
+  "@ownerBanForGood": {},
+  "ownerBanConfirm": "Ban",
+  "@ownerBanConfirm": {},
+  "ownerBanned": "Banned",
+  "@ownerBanned": {},
+  "ownerUnbanned": "Unbanned",
+  "@ownerUnbanned": {},
+  "ownerBannedUntil": "Banned until {date}",
+  "@ownerBannedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerBannedForGood": "Banned for good",
+  "@ownerBannedForGood": {},
+  "ownerDeleteTitle": "Delete {email}",
+  "@ownerDeleteTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerDeleteWhy": "Reason (kept in the log)",
+  "@ownerDeleteWhy": {},
+  "ownerDeleteBanEmail": "Also block this email and Google account from signing up again",
+  "@ownerDeleteBanEmail": {},
+  "ownerDeleteWarning": "Their recipes, places, receipts, photos and reviews are deleted. This cannot be undone.",
+  "@ownerDeleteWarning": {},
+  "ownerDeleteConfirm": "Delete for good",
+  "@ownerDeleteConfirm": {},
+  "ownerDeleted": "Account deleted",
+  "@ownerDeleted": {}
 }

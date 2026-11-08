@@ -19,6 +19,19 @@ abstract interface class OwnerRepository {
   /// Signs the user out on every device.
   Future<void> endSessions(String userId);
 
+  /// Bans for [days] (null = for good) with the [reason] the user is shown; ends their sessions.
+  /// Throws 'owner_account'.
+  Future<void> ban(String userId, {int? days, required String reason});
+
+  Future<void> unban(String userId);
+
+  /// Deletes the account and all its data. [banEmail] = its email and Google account can't sign up again.
+  Future<void> deleteUser(
+    String userId, {
+    required String reason,
+    bool banEmail = false,
+  });
+
   /// Newest first.
   Future<List<FailedShare>> failedShares();
 

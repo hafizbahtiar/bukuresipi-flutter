@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import 'password_strength.dart';
@@ -11,14 +13,31 @@ String? emailError(AppLocalizations l, String? v) =>
 String? passwordError(AppLocalizations l, String? v) =>
     checkPassword(v ?? '').length ? null : l.errWeakPassword;
 
+/// A refused sign-in: suspended until a date (or for good), and the owner's reason when given.
+String _banned(AppLocalizations l, Map<String, dynamic> data) {
+  final until = switch (data['until']) {
+    final String s => DateTime.tryParse(s)?.toLocal(),
+    _ => null,
+  };
+  final reason = (data['reason'] as String?)?.trim();
+  return [
+    until == null
+        ? l.errBannedForGood
+        : l.errBannedUntil(DateFormat.yMMMd(l.localeName).format(until)),
+    if (reason != null && reason.isNotEmpty) l.errBannedReason(reason),
+  ].join('\n');
+}
+
 /// API error code -> sentence for the user.
 String errorText(
   AppLocalizations l,
   Object error, {
   bool changingPassword = false,
 }) {
-  final code = ApiException.from(error).code;
+  final e = ApiException.from(error);
+  final code = e.code;
   return switch (code) {
+    'banned' => _banned(l, e.data),
     'invalid_credentials' =>
       changingPassword ? l.errWrongCurrentPassword : l.errInvalidCredentials,
     'email_taken' => l.errEmailTaken,
