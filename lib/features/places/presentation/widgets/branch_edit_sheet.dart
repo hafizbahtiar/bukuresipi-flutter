@@ -69,6 +69,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   String _pinSource = 'here';
   bool _searchingPin = false;
   List<PinHit>? _pinHits;
+  String? _askedQuery; // the server's default words for the last map: not carried to another map
   BranchSuggestion? _suggestion;
   final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
@@ -176,8 +177,9 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
       );
       if (!mounted) return;
       setState(() {
-        _pinQuery.text =
-            r.query; // what was asked: the owner can change it and search again
+        // What was asked: the owner can change it and search again.
+        _pinQuery.text = r.query;
+        _askedQuery = r.query;
         _pinHits = r.hits;
       });
     } catch (e) {
@@ -216,16 +218,23 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
         const SizedBox(height: 6),
         NotebookSegmented<String>(
           selected: _pinSource,
-          onChanged: (s) => setState(() {
-            _pinSource = s;
-            _pinHits = null;
-          }),
+          // Picking a map asks it at once: the choice is the search.
+          onChanged: (s) {
+            setState(() {
+              _pinSource = s;
+              _pinHits = null;
+              // Each map has its own best default (GrabMaps: the name alone); words the owner typed stay.
+              if (_pinQuery.text == _askedQuery) _pinQuery.clear();
+            });
+            _searchPin();
+          },
           segments: [
             NotebookSegment(value: 'osm', label: l.pinSearchOsm),
             NotebookSegment(value: 'here', label: l.pinSearchHere),
             NotebookSegment(value: 'grab', label: l.pinSearchGrab),
           ],
         ),
+        const SizedBox(height: 8),
         TextField(
           key: const ValueKey('pin-search-query'),
           controller: _pinQuery,

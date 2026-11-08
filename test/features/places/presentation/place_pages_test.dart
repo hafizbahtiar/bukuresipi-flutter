@@ -22,6 +22,11 @@ import '../../shares/presentation/share_intake_test.dart' show FakeShares;
 import '../places_fixtures.dart';
 import '../../recipes/recipes_fixtures.dart';
 
+/// Space between the map picker and the search box below it.
+double spacing(WidgetTester t) =>
+    t.getTopLeft(find.byKey(const ValueKey('pin-search-query'))).dy -
+    t.getBottomLeft(find.text('AWS (Grab)')).dy;
+
 void main() {
   late FakePlaces repo;
   late PlacesController places;
@@ -513,17 +518,18 @@ void main() {
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
     await t.tap(find.byTooltip('Edit branch'));
     await t.pumpAndSettle();
-    final grab = find.text('AWS (Grab)');
-    await t.ensureVisible(grab);
-    await t.tap(grab);
-    await t.pump();
-    await t.tap(find.byKey(const ValueKey('pin-search-go')));
+    // Picking a map searches it at once.
+    final osm = find.text('OpenStreetMap');
+    await t.ensureVisible(osm);
+    await t.tap(osm);
     await t.pumpAndSettle();
-    expect(repo.pinSearches.single.$2, 'grab');
-    expect(
-      repo.pinSearches.single.$3,
-      isNull,
-    ); // empty box = the server's name + area
+    expect(repo.pinSearches.last.$2, 'osm');
+    await t.tap(find.text('AWS (Grab)'));
+    await t.pumpAndSettle();
+    expect(repo.pinSearches.last.$2, 'grab');
+    // The first map's default words are not sent to the next: each map gets its own.
+    expect(repo.pinSearches.last.$3, isNull);
+    expect(spacing(t), greaterThanOrEqualTo(8));
     final use = find.descendant(
       of: find.byKey(const ValueKey('pin-hit-0')),
       matching: find.text('Use'),
