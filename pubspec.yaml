@@ -31,6 +31,7 @@ dependencies:
   firebase_analytics: ^13.0.1
   image_picker: ^1.2.4
   extended_image: ^10.1.0
+  path_provider: ^2.1.6
   image_editor: ^1.6.0
   in_app_update: ^5.0.0
 

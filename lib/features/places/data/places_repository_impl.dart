@@ -70,6 +70,18 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<void> mergeRestaurants(
+    List<String> from,
+    String into, {
+    String? name,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/places/restaurants/merge',
+      data: {'from': from, 'into': into, 'name': ?name},
+    ),
+  );
+
+  @override
   Future<({int merged, int removed})> tidyBranches(String restaurantId) =>
       apiCall(() async {
         final res = await _dio.post<Map<String, dynamic>>(

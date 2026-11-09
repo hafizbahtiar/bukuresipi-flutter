@@ -1958,5 +1958,25 @@
   "ownerDeleted": "Account deleted",
   "@ownerDeleted": {},
   "avatarView": "View photo",
-  "@avatarView": {}
+  "@avatarView": {},
+  "mergeAction": "Merge",
+  "@mergeAction": {},
+  "mergePicked": "{n, plural, =0{Pick places to merge} =1{1 picked} other{{n} picked}}",
+  "@mergePicked": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mergeTitle": "Merge into one restaurant",
+  "@mergeTitle": {},
+  "mergeKeep": "Keep this one (the others become its branches)",
+  "@mergeKeep": {},
+  "mergeName": "Name",
+  "@mergeName": {},
+  "mergeHint": "Their branches, saves, shares and receipts move to it. Everyone sees the change.",
+  "@mergeHint": {},
+  "mergeDone": "Merged",
+  "@mergeDone": {}
 }

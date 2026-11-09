@@ -6,7 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_editor_page.dart';
-import '../../../../core/widgets/photo_viewer_page.dart';
+import '../../../../core/widgets/photo_sheet.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../../../family/presentation/ask.dart';
@@ -71,7 +71,7 @@ class _AccountPageState extends State<AccountPage> {
           .catchError((Object _) => null);
       if (!mounted) return;
       if (bytes == null) return _snack(l.errUnknown);
-      return PhotoViewerPage.open(context, bytes, title: user.name);
+      return showPhotoSheet(context, bytes);
     }
     final path = choice == 'change'
         ? await pickPhoto(context, ratios: [('1:1', 1)], maxSide: 1024)

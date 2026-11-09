@@ -102,6 +102,16 @@ class PlacesController extends ChangeNotifier {
   }
 
   /// Owner only. Throws ApiException.
+  Future<void> mergeRestaurants(
+    List<String> from,
+    String into, {
+    String? name,
+  }) async {
+    await _repo.mergeRestaurants(from, into, name: name);
+    await load();
+  }
+
+  /// Owner only. Throws ApiException.
   Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
     final done = await _repo.tidyBranches(restaurantId);
     await load();

@@ -26,6 +26,9 @@ abstract interface class PlacesRepository {
   /// Owner only: merges branches that are the same shop and drops empty ones, for every user.
   Future<({int merged, int removed})> tidyBranches(String restaurantId);
 
+  /// Owner: restaurants that are one company become [into] (renamed to [name] when given).
+  Future<void> mergeRestaurants(List<String> from, String into, {String? name});
+
   /// Owner only: removes the branch for every user.
   Future<void> deleteBranch(String branchId);
 

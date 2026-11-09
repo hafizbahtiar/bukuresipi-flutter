@@ -256,6 +256,16 @@ class FakePlaces implements PlacesRepository {
     changed: false,
   );
 
+  /// (from, into, name) per merge.
+  final merges = <(List<String>, String, String?)>[];
+
+  @override
+  Future<void> mergeRestaurants(
+    List<String> from,
+    String into, {
+    String? name,
+  }) async => merges.add((from, into, name));
+
   @override
   Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
     tidied.add(restaurantId);

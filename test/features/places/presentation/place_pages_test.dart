@@ -6,12 +6,12 @@ import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
-import 'package:bukuresipi_flutter/features/recipes/presentation/pages/recipe_edit_page.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/widgets/merge_sheet.dart';
 import 'package:provider/provider.dart';
 
 import 'package:bukuresipi_flutter/features/shares/domain/share.dart';
@@ -105,16 +105,69 @@ void main() {
     expect(find.text('Ayam Masak Merah'), findsOneWidget);
   });
 
+  testWidgets('the book has no FAB; Merge is the owner\'s only', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a', name: 'Kedai A')];
+    await pump(t, const PlacesListPage());
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byKey(const ValueKey('book-merge')), findsNothing);
+  });
+
   testWidgets(
-    'the book has New recipe (moved from the Recipes tab): it opens the empty editor',
+    'the owner merges two places: recipes greyed out, the name the two share suggested',
     (t) async {
-      repo = FakePlaces();
-      await pump(t, const PlacesListPage());
-      await t.tap(find.byType(FloatingActionButton));
+      repo = FakePlaces()
+        ..places = [
+          place(id: 'a', name: 'Samurai Yakiniku Bangi'),
+          place(id: 'b', name: 'Samurai Yakiniku Setapak'),
+        ];
+      await pump(t, const PlacesListPage(), role: 'owner');
+      fakeRecipes.recipes = [recipe(id: 'r1', name: 'Ayam Masak Merah')];
+      await t.fling(
+        find.text('Samurai Yakiniku Bangi'),
+        const Offset(0, 400),
+        1000,
+      );
       await t.pumpAndSettle();
-      expect(find.byType(RecipeEditPage), findsOneWidget);
+      expect(find.text('Ayam Masak Merah'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('book-merge')));
+      await t.pumpAndSettle();
+      final next = find.byKey(const ValueKey('merge-next'));
+      expect(t.widget<FilledButton>(next).onPressed, isNull);
+      // A recipe can't be picked.
+      await t.tap(find.text('Ayam Masak Merah'), warnIfMissed: false);
+      await t.tap(find.byKey(const ValueKey('merge-r-a')));
+      await t.pump();
+      expect(t.widget<FilledButton>(next).onPressed, isNull);
+      await t.tap(find.byKey(const ValueKey('merge-r-b')));
+      await t.pump();
+      expect(find.text('2 picked'), findsOneWidget);
+      await t.tap(next);
+      await t.pumpAndSettle();
+      expect(
+        t
+            .widget<TextField>(find.byKey(const ValueKey('merge-name')))
+            .controller!
+            .text,
+        'Samurai Yakiniku',
+      );
+      await t.tap(find.byKey(const ValueKey('merge-confirm')));
+      await t.pumpAndSettle();
+      expect(repo.merges.single.$1, ['r-b']);
+      expect(repo.merges.single.$2, 'r-a');
+      expect(repo.merges.single.$3, 'Samurai Yakiniku');
+      expect(find.text('Merged'), findsOneWidget);
+      expect(find.byKey(const ValueKey('merge-next')), findsNothing);
     },
   );
+
+  test('sharedStart: the words every name starts with', () {
+    expect(
+      sharedStart(['Samurai Yakiniku Bangi', 'samurai yakiniku Setapak']),
+      'Samurai Yakiniku',
+    );
+    expect(sharedStart(['Kedai A', 'Warung B']), '');
+    expect(sharedStart(['Flow', 'Flow Bangi']), 'Flow');
+  });
 
   testWidgets('an empty book tells the user how to add to it', (t) async {
     repo = FakePlaces();

@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
-import 'dart:convert';
+import 'package:extended_image/extended_image.dart' show cacheImageFolderName;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,11 +73,46 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Uint8List?> avatar(String userId, String avatar) {
     if (_avatars.length >= 40) _avatars.remove(_avatars.keys.first);
     final key = '$userId/$avatar';
-    return _avatars[key] ??= apiCall(() => _api.avatar(userId))
+    return _avatars[key] ??= _cachedAvatar(userId, avatar)
       ..catchError((Object _) {
         _avatars.remove(key);
         return null;
       });
+  }
+
+  /// From extended_image's disk cache folder (its clearDiskCachedImages() empties it too), else downloaded
+  /// through Dio and kept there: the request needs the token, which Dio refreshes; a plain network image can't.
+  /// A new picture has a new id, so a cached file is never stale.
+  Future<Uint8List?> _cachedAvatar(String userId, String avatar) async {
+    final file = await _avatarFile(avatar);
+    if (file != null && await file.exists()) {
+      try {
+        return await file.readAsBytes();
+      } catch (_) {} // unreadable: download it again
+    }
+    final bytes = await apiCall(() => _api.avatar(userId));
+    if (bytes != null && file != null) {
+      unawaited(
+        file
+            .create(recursive: true)
+            .then((f) => f.writeAsBytes(bytes))
+            .then((_) {}, onError: (Object _) {}),
+      );
+    }
+    return bytes;
+  }
+
+  static final _avatarId = RegExp(r'^[0-9a-fA-F-]{1,64}$');
+
+  /// null = no disk (tests, web) or not an id the server gives (never a path out of the folder).
+  Future<File?> _avatarFile(String avatar) async {
+    if (!_avatarId.hasMatch(avatar)) return null;
+    try {
+      final dir = await getTemporaryDirectory();
+      return File('${dir.path}/$cacheImageFolderName/avatar-$avatar');
+    } catch (_) {
+      return null;
+    }
   }
 
   @override

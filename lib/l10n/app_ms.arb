@@ -744,5 +744,12 @@
   "ownerDeleteWarning": "Resipi, kedai, resit, gambar dan ulasan mereka dipadam. Ini tidak boleh dibatalkan.",
   "ownerDeleteConfirm": "Padam terus",
   "ownerDeleted": "Akaun dipadam",
-  "avatarView": "Lihat gambar"
+  "avatarView": "Lihat gambar",
+  "mergeAction": "Gabung",
+  "mergePicked": "{n, plural, =0{Pilih kedai untuk digabung} =1{1 dipilih} other{{n} dipilih}}",
+  "mergeTitle": "Gabung menjadi satu kedai",
+  "mergeKeep": "Kekalkan yang ini (yang lain menjadi cawangannya)",
+  "mergeName": "Nama",
+  "mergeHint": "Cawangan, simpanan, kongsian dan resitnya berpindah ke sini. Semua orang melihat perubahan ini.",
+  "mergeDone": "Digabung"
 }
