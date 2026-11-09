@@ -9,6 +9,9 @@ import 'package:bukuresipi_flutter/features/places/presentation/places_controlle
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+
+import 'dart:ui' show Tristate;
+
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/merge_sheet.dart';
@@ -161,6 +164,33 @@ void main() {
       expect(repo.merges.single.$3, 'Samurai Yakiniku');
       expect(find.text('Merged'), findsOneWidget);
       expect(find.byKey(const ValueKey('merge-next')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'back leaves merge mode, not the page; a picked place is marked selected',
+    (t) async {
+      repo = FakePlaces()
+        ..places = [
+          place(id: 'a', name: 'Samurai Yakiniku Bangi'),
+          place(id: 'b', name: 'Samurai Yakiniku Setapak'),
+        ];
+      await pump(t, const PlacesListPage(), role: 'owner');
+      await t.tap(find.byKey(const ValueKey('book-merge')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('merge-r-a')));
+      await t.pump();
+      expect(
+        t
+            .getSemantics(find.byKey(const ValueKey('merge-r-a')))
+            .flagsCollection
+            .isSelected,
+        Tristate.isTrue,
+      );
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('merge-next')), findsNothing);
+      expect(find.byKey(const ValueKey('book-merge')), findsOneWidget);
     },
   );
 
