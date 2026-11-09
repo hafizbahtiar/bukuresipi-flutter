@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512">
+<defs>
+  <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#F4FFFE"/><stop offset="0.45" stop-color="#BFE3E0"/><stop offset="1" stop-color="#76A9A5"/>
+  </linearGradient>
+  <linearGradient id="rim" x1="1" y1="1" x2="0" y2="0">
+    <stop offset="0" stop-color="#F4FFFE"/><stop offset="0.5" stop-color="#BFE3E0"/><stop offset="1" stop-color="#3E6B68"/>
+  </linearGradient>
+  <radialGradient id="face" cx="0.38" cy="0.32" r="0.8">
+    <stop offset="0" stop-color="#F4FFFE"/><stop offset="0.6" stop-color="#BFE3E0"/><stop offset="1" stop-color="#76A9A5"/>
+  </radialGradient>
+  <linearGradient id="struck" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#76A9A5"/><stop offset="1" stop-color="#3E6B68"/>
+  </linearGradient>
+  <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#88362C"/><stop offset="1" stop-color="#B5483B"/>
+  </linearGradient>
+  <filter id="drop" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.28"/>
+  </filter>
+</defs>
+<!-- ribbon tails -->
+<path d="M84,150 L118,150 L106,246 L91,232 L72,242 Z" fill="url(#ribbon)"/>
+<path d="M138,150 L172,150 L184,242 L165,232 L150,246 Z" fill="#9F3F34"/>
+<path d="M98,150 L106,150 L94,236 L88,231 Z M150,150 L158,150 L168,231 L162,236 Z" fill="#FFFFFF" opacity="0.25"/>
+<!-- medal -->
+<g filter="url(#drop)">
+  <path d="M128.00,30.00 Q141.38,18.96 151.10,33.32 Q167.05,26.49 172.33,43.02 Q189.56,40.96 189.97,58.30 Q207.08,61.18 202.59,77.94 Q218.19,85.52 209.17,100.33 Q222.00,112.00 209.17,123.67 Q218.19,138.48 202.59,146.06 Q207.08,162.82 189.97,165.70 Q189.56,183.04 172.33,180.98 Q167.05,197.51 151.10,190.68 Q141.38,205.04 128.00,194.00 Q114.62,205.04 104.90,190.68 Q88.95,197.51 83.67,180.98 Q66.44,183.04 66.03,165.70 Q48.92,162.82 53.41,146.06 Q37.81,138.48 46.83,123.67 Q34.00,112.00 46.83,100.33 Q37.81,85.52 53.41,77.94 Q48.92,61.18 66.03,58.30 Q66.44,40.96 83.67,43.02 Q88.95,26.49 104.90,33.32 Q114.62,18.96 128.00,30.00 Z" fill="url(#metal)" stroke="#3E6B68" stroke-width="2"/>
+</g>
+<circle cx="128" cy="112" r="72" fill="url(#rim)"/>
+<circle cx="128" cy="112" r="65" fill="url(#face)" stroke="#76A9A5" stroke-width="1.5"/>
+<circle cx="128" cy="112" r="60" fill="none" stroke="#F4FFFE" stroke-width="1" opacity="0.7"/>
+<!-- emblem: struck, with a light edge below right -->
+<g transform="translate(82,64) scale(0.92)">
+  <g transform="translate(2.5,2.5)" opacity="0.9">
+<path d="M36,30 C30,22 42,18 36,10 M50,30 C44,22 56,18 50,10 M64,30 C58,22 70,18 64,10" stroke="#F4FFFE" stroke-width="5" fill="none" stroke-linecap="round"/>
+<rect x="14" y="40" width="72" height="8" rx="4" fill="#F4FFFE"/>
+<rect x="44" y="34" width="12" height="7" rx="3" fill="#F4FFFE"/>
+<path d="M18,50 L82,50 L78,82 Q77,90 68,90 L32,90 Q23,90 22,82 Z" fill="#F4FFFE"/>
+<path d="M18,56 Q6,56 6,64 Q6,70 18,70 M82,56 Q94,56 94,64 Q94,70 82,70" stroke="#F4FFFE" stroke-width="5" fill="none"/>
+<path d="M28,62 L72,62" stroke="#F4FFFE" stroke-width="3" stroke-linecap="round"/></g>
+  
+<path d="M36,30 C30,22 42,18 36,10 M50,30 C44,22 56,18 50,10 M64,30 C58,22 70,18 64,10" stroke="url(#struck)" stroke-width="5" fill="none" stroke-linecap="round"/>
+<rect x="14" y="40" width="72" height="8" rx="4" fill="url(#struck)"/>
+<rect x="44" y="34" width="12" height="7" rx="3" fill="url(#struck)"/>
+<path d="M18,50 L82,50 L78,82 Q77,90 68,90 L32,90 Q23,90 22,82 Z" fill="url(#struck)"/>
+<path d="M18,56 Q6,56 6,64 Q6,70 18,70 M82,56 Q94,56 94,64 Q94,70 82,70" stroke="url(#struck)" stroke-width="5" fill="none"/>
+<path d="M28,62 L72,62" stroke="#F4FFFE" stroke-width="3" stroke-linecap="round"/>
+</g>
+<!-- shine -->
+<path d="M76,92 A56,56 0 0 1 158,58 A70,70 0 0 0 76,92 Z" fill="#FFFFFF" opacity="0.35"/>
+<!-- banner with the tier's stars -->
+<path d="M58,192 L70,186 L186,186 L198,192 L186,214 L70,214 Z" fill="#3E6B68"/>
+<path d="M70,186 L186,186 L182,210 L74,210 Z" fill="url(#struck)"/>
+<path d="M74,188 L182,188" stroke="#F4FFFE" stroke-width="1" opacity="0.6"/>
+<path d="M105.50,196.80 L107.14,200.74 L111.40,201.08 L108.15,203.86 L109.14,208.02 L105.50,205.79 L101.86,208.02 L102.85,203.86 L99.60,201.08 L103.86,200.74Z" fill="#F4FFFE" stroke="#3E6B68" stroke-width="1.2"/><path d="M120.50,196.80 L122.14,200.74 L126.40,201.08 L123.15,203.86 L124.14,208.02 L120.50,205.79 L116.86,208.02 L117.85,203.86 L114.60,201.08 L118.86,200.74Z" fill="#F4FFFE" stroke="#3E6B68" stroke-width="1.2"/><path d="M135.50,196.80 L137.14,200.74 L141.40,201.08 L138.15,203.86 L139.14,208.02 L135.50,205.79 L131.86,208.02 L132.85,203.86 L129.60,201.08 L133.86,200.74Z" fill="#F4FFFE" stroke="#3E6B68" stroke-width="1.2"/><path d="M150.50,196.80 L152.14,200.74 L156.40,201.08 L153.15,203.86 L154.14,208.02 L150.50,205.79 L146.86,208.02 L147.85,203.86 L144.60,201.08 L148.86,200.74Z" fill="#F4FFFE" stroke="#3E6B68" stroke-width="1.2"/>
+
+<path d="M176,47 Q176,58 187,58 Q176,58 176,69 Q176,58 165,58 Q176,58 176,47 Z" fill="#FFFFFF"/><path d="M66,143 Q66,150 73,150 Q66,150 66,157 Q66,150 59,150 Q66,150 66,143 Z" fill="#FFFFFF"/><path d="M190,144 Q190,150 196,150 Q190,150 190,156 Q190,150 184,150 Q190,150 190,144 Z" fill="#FFFFFF"/>
+</svg>

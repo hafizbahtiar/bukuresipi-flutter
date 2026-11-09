@@ -49,6 +49,7 @@ flutter:
   assets:
     - assets/brand/
     - assets/images/
+    - assets/badges/
 
 # App icon + native splash from assets/brand (the website logo, bukuresipi-astro/public/favicon.svg).
 # Regenerate: dart run flutter_launcher_icons && dart run flutter_native_splash:create
