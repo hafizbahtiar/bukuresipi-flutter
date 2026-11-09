@@ -1978,5 +1978,9 @@
   "mergeHint": "Their branches, saves, shares and receipts move to it. Everyone sees the change.",
   "@mergeHint": {},
   "mergeDone": "Merged",
-  "@mergeDone": {}
+  "@mergeDone": {},
+  "receiptSavedChip": "Saved",
+  "@receiptSavedChip": {},
+  "receiptPhotoZoom": "Tap to zoom",
+  "@receiptPhotoZoom": {}
 }

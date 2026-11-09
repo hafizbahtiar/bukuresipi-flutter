@@ -751,5 +751,7 @@
   "mergeKeep": "Kekalkan yang ini (yang lain menjadi cawangannya)",
   "mergeName": "Nama",
   "mergeHint": "Cawangan, simpanan, kongsian dan resitnya berpindah ke sini. Semua orang melihat perubahan ini.",
-  "mergeDone": "Digabung"
+  "mergeDone": "Digabung",
+  "receiptSavedChip": "Disimpan",
+  "receiptPhotoZoom": "Ketik untuk zum"
 }
