@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
@@ -827,26 +827,17 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     );
   }
 
-  /// Search your places and others: fly to the pick. Yours (or an already saved one) opens its sheet, as a tap on
-  /// its pin does; another place opens a sheet to save it.
-  Future<void> _search() async {
-    final l = AppLocalizations.of(context);
+  /// Others' places near the map's centre, for the search bar.
+  Future<List<PlaceHit>> _searchNear(String q, {required bool submit}) {
     final centre =
         _map?.cameraPosition?.target ?? const LatLng(3.139, 101.6869); // KL
-    final hit = await showSearch(
-      context: context,
-      delegate: MapSearch(
-        _places.pinned,
-        (q, {required submit}) => _places.search(
-          q,
-          centre.latitude,
-          centre.longitude,
-          submit: submit,
-        ),
-        l,
-      ),
-    );
-    if (hit == null || !mounted) return;
+    return _places.search(q, centre.latitude, centre.longitude, submit: submit);
+  }
+
+  /// A search pick: fly there. Yours (or an already saved one) opens its sheet, as a tap on its pin does; another
+  /// place opens a sheet to save it.
+  Future<void> _picked(Object hit) async {
+    if (!mounted) return;
     if (hit is PlaceHit) {
       _flyTo(hit.lat, hit.lng);
       final saved = [
@@ -1014,143 +1005,163 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final unpinned = places.unpinned.length;
     final shownNearby = _shownNearby;
     final showNearby = shownNearby.isNotEmpty;
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 76,
-        title: NotebookTitle(l.navMap),
-        actions: [
-          IconButton(
-            tooltip: l.mapSearchHint,
-            icon: const Icon(Icons.search),
-            onPressed: _search,
-          ),
-          IconButton(
-            tooltip: l.creditsTitle,
-            icon: const Icon(Icons.info_outline),
-            onPressed: () => context.push('/credits'),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          MapLibreMap(
-            styleString: mapStyle,
-            initialCameraPosition: malaysiaCamera,
-            onMapCreated: _created,
-            onStyleLoadedCallback: _styleLoaded,
-            onCameraIdle: _cameraIdle,
-            // Pan, pinch-zoom, two-finger rotate and two-finger tilt (3D) all on.
-            rotateGesturesEnabled: true,
-            scrollGesturesEnabled: true,
-            zoomGesturesEnabled: true,
-            tiltGesturesEnabled: true,
-            dragEnabled: true,
-            doubleClickZoomEnabled: true,
-            compassEnabled: false, // our own north button: always there, on the notebook's paper
-            // No per-frame camera stream: the page queries the camera on idle (compass + tilt).
-            trackCameraPosition: false,
-            // The native location component is created before permission is granted and does not
-            // reliably start afterwards; _draw paints our own dot as soon as we have a fix.
-            myLocationEnabled: false,
-            // Pins are style layers (_addLayers); annotations are only the you-are-here dot.
-            annotationOrder: const [AnnotationType.circle],
-            annotationConsumeTapEvents: const [AnnotationType.circle],
-            logoEnabled: false,
-            // The credit OpenStreetMap needs stays, as a faint "i" in the corner.
-            attributionButtonPosition: AttributionButtonPosition.topLeft,
-            attributionButtonMargins: const Point(8, 8),
-            attributionButtonColor: nb.ink.withValues(alpha: 0.3),
-          ),
-          if (_map != null)
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Column(
-                children: [
-                  NorthButton(
-                    bearing: _bearing,
-                    tooltip: l.northUp,
-                    onPressed: _northUp,
-                  ),
-                  const SizedBox(height: 8),
-                  LocationButton(
-                    tooltip: l.myLocation,
-                    onPressed: _myLocation,
-                    busy: _locating,
-                  ),
-                  const SizedBox(height: 8),
-                  ViewModeButton(
-                    threeD: _tilt > 1,
-                    tooltip: _tilt > 1 ? l.view2d : l.view3d,
-                    onPressed: _toggleTilt,
-                  ),
-                  const SizedBox(height: 8),
-                  MapLegendButton(
-                    owner: _owner,
-                    showCommunity: _showCommunity,
-                    onShowCommunity: (on) {
-                      setState(() => _showCommunity = on);
-                      unawaited(_draw());
-                    },
-                  ),
-                ],
-              ),
+    // No app bar: the search bar floats on the map, the buttons below it.
+    // The keyboard covers the map (resizing a native map view stutters); the cards at the bottom ride above it.
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final belowBar =
+        MediaQuery.paddingOf(context).top + 8 + MapSearchBar.height + 12;
+    // The credit "i" sits bottom left, above whatever holds the bottom.
+    // shortcut: the slip's height is a guess (~52); a large font may cover the "i" until the slip is measured.
+    final bottomUsed = unpinned > 0
+        ? (showNearby ? NearbyCarousel.height + 32 : 16) + 52
+        : (showNearby ? NearbyCarousel.height + 16 : 0);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: Theme.of(context).brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        // The keyboard covers the map instead of resizing it: a native map view re-laid out every frame stutters.
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          children: [
+            MapLibreMap(
+              styleString: mapStyle,
+              initialCameraPosition: malaysiaCamera,
+              onMapCreated: _created,
+              onStyleLoadedCallback: _styleLoaded,
+              onCameraIdle: _cameraIdle,
+              // Pan, pinch-zoom, two-finger rotate and two-finger tilt (3D) all on.
+              rotateGesturesEnabled: true,
+              scrollGesturesEnabled: true,
+              zoomGesturesEnabled: true,
+              tiltGesturesEnabled: true,
+              dragEnabled: true,
+              doubleClickZoomEnabled: true,
+              compassEnabled: false, // our own north button: always there, on the notebook's paper
+              // No per-frame camera stream: the page queries the camera on idle (compass + tilt).
+              trackCameraPosition: false,
+              // The native location component is created before permission is granted and does not
+              // reliably start afterwards; _draw paints our own dot as soon as we have a fix.
+              myLocationEnabled: false,
+              // Pins are style layers (_addLayers); annotations are only the you-are-here dot.
+              annotationOrder: const [AnnotationType.circle],
+              annotationConsumeTapEvents: const [AnnotationType.circle],
+              logoEnabled: false,
+              // The credit OpenStreetMap needs stays, as a faint "i" in the bottom-left corner.
+              attributionButtonPosition: AttributionButtonPosition.bottomLeft,
+              attributionButtonMargins: Point(8, bottomUsed + 8),
+              attributionButtonColor: nb.ink.withValues(alpha: 0.3),
             ),
-          if (places.loaded &&
-              places.pinned.isEmpty &&
-              _nearby.isEmpty &&
-              _here == null)
-            Positioned(
-              left: 16,
-              right: 16,
-              top: 48,
-              child: _Slip(
-                child: Text(l.mapEmpty, textAlign: TextAlign.center),
+            if (_map != null)
+              Positioned(
+                top: belowBar,
+                right: 12,
+                child: Column(
+                  children: [
+                    NorthButton(
+                      bearing: _bearing,
+                      tooltip: l.northUp,
+                      onPressed: _northUp,
+                    ),
+                    const SizedBox(height: 8),
+                    LocationButton(
+                      tooltip: l.myLocation,
+                      onPressed: _myLocation,
+                      busy: _locating,
+                    ),
+                    const SizedBox(height: 8),
+                    ViewModeButton(
+                      threeD: _tilt > 1,
+                      tooltip: _tilt > 1 ? l.view2d : l.view3d,
+                      onPressed: _toggleTilt,
+                    ),
+                    const SizedBox(height: 8),
+                    MapLegendButton(
+                      owner: _owner,
+                      showCommunity: _showCommunity,
+                      onShowCommunity: (on) {
+                        setState(() => _showCommunity = on);
+                        unawaited(_draw());
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          if (unpinned > 0)
-            Positioned(
-              left: 16,
-              right: 16,
-              // The nearby cards have the bottom; the unpinned slip sits just above them.
-              bottom: showNearby ? NearbyCarousel.height + 32 : 16,
-              child: SafeArea(
+            if (places.loaded &&
+                places.pinned.isEmpty &&
+                _nearby.isEmpty &&
+                _here == null)
+              Positioned(
+                left: 16,
+                right: 72,
+                top: belowBar,
                 child: _Slip(
-                  onTap: _showUnpinned,
-                  child: Row(
-                    children: [
-                      const PinMark(pinned: false),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          l.unpinnedCount(unpinned),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                  child: Text(l.mapEmpty, textAlign: TextAlign.center),
+                ),
+              ),
+            if (unpinned > 0)
+              Positioned(
+                left: 16,
+                right: 16,
+                // The nearby cards have the bottom; the unpinned slip sits just above them.
+                bottom:
+                    keyboard + (showNearby ? NearbyCarousel.height + 32 : 16),
+                child: SafeArea(
+                  child: _Slip(
+                    onTap: _showUnpinned,
+                    child: Row(
+                      children: [
+                        const PinMark(pinned: false),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            l.unpinnedCount(unpinned),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
-                      ),
-                      Icon(Icons.expand_less, color: nb.inkSoft),
-                    ],
+                        Icon(Icons.expand_less, color: nb.inkSoft),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            if (showNearby)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: keyboard + 16,
+                child: SafeArea(
+                  top: false,
+                  left: false,
+                  right: false,
+                  child: NearbyCarousel(
+                    places: shownNearby,
+                    selectedBranchId: _selectedNearbyId,
+                    onTap: _openNearby,
+                    onSelected: _focusNearby,
+                  ),
+                ),
+              ),
+            // Last: its results drop over everything else.
+            Positioned(
+              top: 0,
+              left: 12,
+              right: 12,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: MapSearchBar(
+                    places: places.pinned,
+                    search: _searchNear,
+                    onPicked: _picked,
+                    reserveBottom: showNearby ? NearbyCarousel.height + 24 : 0,
                   ),
                 ),
               ),
             ),
-          if (showNearby)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 16,
-              child: SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                child: NearbyCarousel(
-                  places: shownNearby,
-                  selectedBranchId: _selectedNearbyId,
-                  onTap: _openNearby,
-                  onSelected: _focusNearby,
-                ),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
