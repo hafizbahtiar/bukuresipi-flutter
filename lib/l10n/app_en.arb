@@ -1982,5 +1982,81 @@
   "receiptSavedChip": "Saved",
   "@receiptSavedChip": {},
   "receiptPhotoZoom": "Tap to zoom",
-  "@receiptPhotoZoom": {}
+  "@receiptPhotoZoom": {},
+  "badgesTitle": "Badges",
+  "@badgesTitle": {},
+  "badgesEarned": "{n} of {total} earned",
+  "@badgesEarned": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "badgesHelp": "Earned by using Bukuresipi. Only you see them; a badge stays once earned.",
+  "@badgesHelp": {},
+  "badgeExplorer": "Explorer",
+  "@badgeExplorer": {},
+  "badgeTraveller": "Traveller",
+  "@badgeTraveller": {},
+  "badgeRegular": "Regular",
+  "@badgeRegular": {},
+  "badgeCook": "Cook",
+  "@badgeCook": {},
+  "badgeCritic": "Critic",
+  "@badgeCritic": {},
+  "badgeHelper": "Helper",
+  "@badgeHelper": {},
+  "badgeExplorerHow": "Places saved in your book",
+  "@badgeExplorerHow": {},
+  "badgeTravellerHow": "States with a place you saved",
+  "@badgeTravellerHow": {},
+  "badgeRegularHow": "Receipts you confirmed",
+  "@badgeRegularHow": {},
+  "badgeCookHow": "Recipes in your book",
+  "@badgeCookHow": {},
+  "badgeCriticHow": "Reviews you wrote (with words)",
+  "@badgeCriticHow": {},
+  "badgeHelperHow": "Pins and reports that fix the map (up to 5 a day count)",
+  "@badgeHelperHow": {},
+  "tierBronze": "Bronze",
+  "@tierBronze": {},
+  "tierSilver": "Silver",
+  "@tierSilver": {},
+  "tierGold": "Gold",
+  "@tierGold": {},
+  "tierPlatinum": "Platinum",
+  "@tierPlatinum": {},
+  "tierDiamond": "Diamond",
+  "@tierDiamond": {},
+  "badgeNone": "Not yet",
+  "@badgeNone": {},
+  "badgeTop": "Top tier reached",
+  "@badgeTop": {},
+  "badgeProgress": "{count} / {next}",
+  "@badgeProgress": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeYourCount": "You have {n}",
+  "@badgeYourCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeNew": "New badge!",
+  "@badgeNew": {},
+  "badgeNice": "Nice!",
+  "@badgeNice": {}
 }

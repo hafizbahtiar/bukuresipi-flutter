@@ -232,6 +232,13 @@ class _AccountPageState extends State<AccountPage> {
                   child: Text(l.ownerTitle),
                 ),
               NotebookRow(
+                key: const ValueKey('account-badges'),
+                mark: mark(Icons.military_tech_outlined),
+                onTap: () => context.push('/badges'),
+                trailing: next,
+                child: Text(l.badgesTitle),
+              ),
+              NotebookRow(
                 key: const ValueKey('account-usage'),
                 mark: mark(Icons.speed_outlined),
                 onTap: () => context.push('/usage'),

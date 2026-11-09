@@ -7,6 +7,7 @@ import '../../features/places/presentation/pages/places_map_page.dart';
 import '../../features/places/presentation/pages/place_detail_page.dart';
 import '../../features/places/presentation/pages/reviews_page.dart';
 import '../../features/auth/presentation/auth_controller.dart';
+import '../../features/achievements/presentation/pages/badges_page.dart';
 import '../../features/auth/presentation/pages/usage_page.dart';
 import '../../features/auth/presentation/pages/settings_page.dart';
 import '../../features/auth/presentation/pages/account_page.dart';
@@ -140,6 +141,7 @@ GoRouter buildRouter(
       _page(path: '/account', builder: (_, _) => const AccountPage()),
       _page(path: '/settings', builder: (_, _) => const SettingsPage()),
       _page(path: '/usage', builder: (_, _) => const UsagePage()),
+      _page(path: '/badges', builder: (_, _) => const BadgesPage()),
       _page(path: '/credits', builder: (_, _) => const CreditsPage()),
       _page(path: '/about', builder: (_, _) => const AboutPage()),
       _page(path: '/family', builder: (_, _) => const FamilyPage()),
