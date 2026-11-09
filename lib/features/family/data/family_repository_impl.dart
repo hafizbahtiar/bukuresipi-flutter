@@ -57,6 +57,7 @@ class FamilyRepositoryImpl implements FamilyRepository {
       ownerName: j['ownerName'] as String?,
       memberCount: (j['memberCount'] as num).toInt(),
       maxMembers: (j['maxMembers'] as num?)?.toInt() ?? familyMaxFallback,
+      membership: j['membership'] as String?,
     );
   });
 

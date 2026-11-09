@@ -1,5 +1,7 @@
 import 'package:bukuresipi_flutter/features/home/presentation/feed_page.dart';
+import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
@@ -21,6 +23,8 @@ void main() {
     WidgetTester t, {
     bool located = true,
     int community = 1,
+    RatingSummary? rating,
+    UpdateGate? update,
   }) async {
     t.view.physicalSize = const Size(
       2400,
@@ -30,7 +34,12 @@ void main() {
     places = FakePlaces()
       ..nearbyResults = [
         nearbyBranch(branchId: 'b-1', name: 'Kedai Sederhana', distanceM: 900),
-        nearbyBranch(branchId: 'b-2', name: 'Warung Pak Ali', distanceM: 300),
+        nearbyBranch(
+          branchId: 'b-2',
+          name: 'Warung Pak Ali',
+          distanceM: 300,
+          rating: rating,
+        ),
       ];
     final recipes = FakeRecipes()
       ..communityList = [
@@ -66,6 +75,9 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (_) => PlacesController(places)),
           ChangeNotifierProvider(create: (_) => RecipesController(recipes)),
+          ChangeNotifierProvider.value(
+            value: update ?? UpdateGate(playHasUpdate: () async => false),
+          ),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -117,6 +129,62 @@ void main() {
   );
 
   testWidgets(
+    'a restaurant card says what it is and its key facts: stars only when rated, the halal claim as a claim',
+    (t) async {
+      await pump(t);
+      Finder inCard(String key, Finder f) =>
+          find.descendant(of: find.byKey(ValueKey(key)), matching: f);
+      expect(
+        inCard('feed-place-b-2', find.text(l.feedKindRestaurant.toUpperCase())),
+        findsOneWidget,
+      );
+      expect(inCard('feed-place-b-2', find.text('Melayu')), findsOneWidget);
+      expect(
+        inCard('feed-place-b-2', find.text(l.feedSaysHalal)),
+        findsOneWidget,
+      );
+      expect(
+        inCard('feed-place-b-2', find.byIcon(Icons.star_rounded)),
+        findsNothing,
+      ); // no ratings yet
+      expect(
+        inCard('feed-dish-d-1', find.text(l.feedKindDish.toUpperCase())),
+        findsOneWidget,
+      );
+      expect(
+        inCard('feed-dish-d-1', find.text(l.recipeIngredientCount(9))),
+        findsOneWidget,
+      );
+      // No photo: the cooking drawing, not a bare icon.
+      expect(
+        inCard(
+          'feed-dish-d-1',
+          find.byKey(const ValueKey('feed-card-drawing')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        inCard(
+          'feed-place-b-2',
+          find.byKey(const ValueKey('feed-card-drawing')),
+        ),
+        findsNothing,
+      ); // places keep their shop icon
+    },
+  );
+
+  testWidgets('a rated restaurant shows its stars and count', (t) async {
+    await pump(t, rating: const RatingSummary(average: 4.56, count: 12));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('feed-place-b-2')),
+        matching: find.text('4.6 (12)'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
     'search suggests as you type (restaurants, recipes, "Search ..."); submitting filters the grid',
     (t) async {
       await pump(t);
@@ -156,5 +224,22 @@ void main() {
     await t.tap(find.byKey(const ValueKey('feed-map')));
     await t.pumpAndSettle();
     expect(find.text('the map'), findsOneWidget);
+  });
+
+  testWidgets('a newer version on Google Play shows the Update chip', (
+    t,
+  ) async {
+    final update = UpdateGate(playHasUpdate: () async => true);
+    await pump(t, update: update);
+    expect(find.byKey(const ValueKey('update-chip')), findsNothing);
+    await update.check();
+    await t.pump();
+    expect(find.widgetWithText(ActionChip, 'Update'), findsOneWidget);
+    // No Play listing (debug build, sideloaded APK): the check fails quietly, no chip.
+    final none = UpdateGate(
+      playHasUpdate: () async => throw Exception('no Play'),
+    );
+    await none.check();
+    expect(none.available, isFalse);
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/places_repository.dart';
@@ -147,6 +149,50 @@ class FakePlaces implements PlacesRepository {
     return nearbyResults;
   }
 
+  List<PlaceHit> searchHits = const [];
+  final searches = <(String, bool)>[];
+  final savedPois = <String>[];
+
+  @override
+  Future<List<PlaceHit>> search(
+    String query,
+    double lat,
+    double lng, {
+    bool submit = false,
+  }) async {
+    searches.add((query, submit));
+    return searchHits;
+  }
+
+  List<String> coverIds = const [];
+  String? currentCover;
+  final coverPicks = <String?>[];
+
+  @override
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover) async =>
+      null;
+
+  @override
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  ) async => (covers: coverIds, current: currentCover);
+
+  @override
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover) async =>
+      null;
+
+  @override
+  Future<void> setRestaurantCover(String restaurantId, String? cover) async {
+    coverPicks.add(cover);
+    currentCover = cover;
+  }
+
+  @override
+  Future<Place> savePoi(String poiId) async {
+    savedPois.add(poiId);
+    return saveBranchResult ?? place();
+  }
+
   @override
   Future<Place> saveBranch(String branchId) async {
     if (saveBranchError != null) throw saveBranchError!;
@@ -210,22 +256,32 @@ class FakePlaces implements PlacesRepository {
     changed: false,
   );
 
+  /// (from, into, name) per merge.
+  final merges = <(List<String>, String, String?)>[];
+
+  @override
+  Future<void> mergeRestaurants(
+    List<String> from,
+    String into, {
+    String? name,
+  }) async => merges.add((from, into, name));
+
   @override
   Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
     tidied.add(restaurantId);
     return (merged: 1, removed: 1);
   }
 
-  bool locateFinds = true;
+  LocateResult locateResult = LocateResult.found;
 
   @override
   Future<void> setPin(String branchId, double lat, double lng) async =>
       pins.add((branchId, lat, lng));
 
   @override
-  Future<bool> locate(String branchId) async {
+  Future<LocateResult> locate(String branchId) async {
     located.add(branchId);
-    return locateFinds;
+    return locateResult;
   }
 
   @override
@@ -261,6 +317,58 @@ class FakePlaces implements PlacesRepository {
     if (error != null) throw error!;
     suggested.add(branchId);
     return suggestion;
+  }
+
+  /// [addSiblingBranch] calls: (branch, address, lat).
+  final siblings = <(String, String?, double)>[];
+
+  @override
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  }) async => siblings.add((branchId, address, lat));
+
+  /// What [searchPin] answers; [pinSearches] records (branch, source, q).
+  List<PinHit> pinHits = const [];
+  final pinSearches = <(String, String, String?)>[];
+
+  @override
+  Future<({String query, List<PinHit> hits})> searchPin(
+    String branchId,
+    String source, {
+    String? q,
+  }) async {
+    if (error != null) throw error!;
+    pinSearches.add((branchId, source, q));
+    return (query: q ?? 'Shop, Kuala Lumpur', hits: pinHits);
+  }
+
+  List<AreaState> areaList = const [
+    (name: 'Kelantan', towns: ['Ketereh', 'Kota Bharu']),
+    (name: 'Kuala Lumpur', towns: ['Kuala Lumpur', 'Setapak']),
+    (name: 'Selangor', towns: ['Kajang', 'Shah Alam']),
+  ];
+
+  @override
+  Future<List<AreaState>> areas() async => areaList;
+
+  /// What [pinFromMapsLink] answers; set [error] to make it throw.
+  MapsPin mapsPin = (
+    lat: 3.1994645,
+    lng: 101.6956504,
+    name: 'Port Lepak Sentul',
+  );
+  final mapsLinks = <String>[];
+
+  @override
+  Future<MapsPin> pinFromMapsLink(String url) async {
+    if (error != null) throw error!;
+    mapsLinks.add(url);
+    return mapsPin;
   }
 
   @override

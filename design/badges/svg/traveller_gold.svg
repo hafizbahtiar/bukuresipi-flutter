@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512">
+<defs>
+  <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFF1B8"/><stop offset="0.45" stop-color="#F0C23B"/><stop offset="1" stop-color="#B5830F"/>
+  </linearGradient>
+  <linearGradient id="rim" x1="1" y1="1" x2="0" y2="0">
+    <stop offset="0" stop-color="#FFF1B8"/><stop offset="0.5" stop-color="#F0C23B"/><stop offset="1" stop-color="#7A5507"/>
+  </linearGradient>
+  <radialGradient id="face" cx="0.38" cy="0.32" r="0.8">
+    <stop offset="0" stop-color="#FFF1B8"/><stop offset="0.6" stop-color="#F0C23B"/><stop offset="1" stop-color="#B5830F"/>
+  </radialGradient>
+  <linearGradient id="struck" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#B5830F"/><stop offset="1" stop-color="#7A5507"/>
+  </linearGradient>
+  <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#235288"/><stop offset="1" stop-color="#2F6DB5"/>
+  </linearGradient>
+  <filter id="drop" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.28"/>
+  </filter>
+</defs>
+<!-- ribbon tails -->
+<path d="M84,150 L118,150 L106,246 L91,232 L72,242 Z" fill="url(#ribbon)"/>
+<path d="M138,150 L172,150 L184,242 L165,232 L150,246 Z" fill="#29609F"/>
+<path d="M98,150 L106,150 L94,236 L88,231 Z M150,150 L158,150 L168,231 L162,236 Z" fill="#FFFFFF" opacity="0.25"/>
+<!-- medal -->
+<g filter="url(#drop)">
+  <path d="M128.00,30.00 Q142.70,19.16 153.34,34.01 Q170.68,28.25 176.20,45.66 Q194.47,45.53 194.34,63.80 Q211.75,69.32 205.99,86.66 Q220.84,97.30 210.00,112.00 Q220.84,126.70 205.99,137.34 Q211.75,154.68 194.34,160.20 Q194.47,178.47 176.20,178.34 Q170.68,195.75 153.34,189.99 Q142.70,204.84 128.00,194.00 Q113.30,204.84 102.66,189.99 Q85.32,195.75 79.80,178.34 Q61.53,178.47 61.66,160.20 Q44.25,154.68 50.01,137.34 Q35.16,126.70 46.00,112.00 Q35.16,97.30 50.01,86.66 Q44.25,69.32 61.66,63.80 Q61.53,45.53 79.80,45.66 Q85.32,28.25 102.66,34.01 Q113.30,19.16 128.00,30.00 Z" fill="url(#metal)" stroke="#7A5507" stroke-width="2"/>
+</g>
+<circle cx="128" cy="112" r="72" fill="url(#rim)"/>
+<circle cx="128" cy="112" r="65" fill="url(#face)" stroke="#B5830F" stroke-width="1.5"/>
+<circle cx="128" cy="112" r="60" fill="none" stroke="#FFF1B8" stroke-width="1" opacity="0.7"/>
+<!-- emblem: struck, with a light edge below right -->
+<g transform="translate(82,64) scale(0.92)">
+  <g transform="translate(2.5,2.5)" opacity="0.9">
+<path d="M10,30 L36,20 L64,30 L90,20 L90,80 L64,90 L36,80 L10,90 Z" fill="#FFF1B8"/>
+<path d="M36,20 L36,80 M64,30 L64,90" stroke="#FFF1B8" stroke-width="3"/>
+<path d="M16,66 Q30,52 44,62 T76,50" stroke="#FFF1B8" stroke-width="3" fill="none" stroke-dasharray="5 4" stroke-linecap="round"/>
+<path d="M66,10 C52,10 46,22 50,32 C54,42 66,54 66,54 C66,54 78,42 82,32 C86,22 80,10 66,10 Z" fill="#FFF1B8" stroke="#FFF1B8" stroke-width="3"/>
+<circle cx="66" cy="27" r="6" fill="#FFF1B8"/></g>
+  
+<path d="M10,30 L36,20 L64,30 L90,20 L90,80 L64,90 L36,80 L10,90 Z" fill="url(#struck)"/>
+<path d="M36,20 L36,80 M64,30 L64,90" stroke="#FFF1B8" stroke-width="3"/>
+<path d="M16,66 Q30,52 44,62 T76,50" stroke="#FFF1B8" stroke-width="3" fill="none" stroke-dasharray="5 4" stroke-linecap="round"/>
+<path d="M66,10 C52,10 46,22 50,32 C54,42 66,54 66,54 C66,54 78,42 82,32 C86,22 80,10 66,10 Z" fill="url(#struck)" stroke="#FFF1B8" stroke-width="3"/>
+<circle cx="66" cy="27" r="6" fill="#FFF1B8"/>
+</g>
+<!-- shine -->
+<path d="M76,92 A56,56 0 0 1 158,58 A70,70 0 0 0 76,92 Z" fill="#FFFFFF" opacity="0.35"/>
+<!-- banner with the tier's stars -->
+<path d="M58,192 L70,186 L186,186 L198,192 L186,214 L70,214 Z" fill="#7A5507"/>
+<path d="M70,186 L186,186 L182,210 L74,210 Z" fill="url(#struck)"/>
+<path d="M74,188 L182,188" stroke="#FFF1B8" stroke-width="1" opacity="0.6"/>
+<path d="M113.00,196.80 L114.64,200.74 L118.90,201.08 L115.65,203.86 L116.64,208.02 L113.00,205.79 L109.36,208.02 L110.35,203.86 L107.10,201.08 L111.36,200.74Z" fill="#FFF1B8" stroke="#7A5507" stroke-width="1.2"/><path d="M128.00,196.80 L129.64,200.74 L133.90,201.08 L130.65,203.86 L131.64,208.02 L128.00,205.79 L124.36,208.02 L125.35,203.86 L122.10,201.08 L126.36,200.74Z" fill="#FFF1B8" stroke="#7A5507" stroke-width="1.2"/><path d="M143.00,196.80 L144.64,200.74 L148.90,201.08 L145.65,203.86 L146.64,208.02 L143.00,205.79 L139.36,208.02 L140.35,203.86 L137.10,201.08 L141.36,200.74Z" fill="#FFF1B8" stroke="#7A5507" stroke-width="1.2"/>
+
+
+</svg>

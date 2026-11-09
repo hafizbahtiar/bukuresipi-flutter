@@ -7,8 +7,10 @@ import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/load_view.dart';
+import '../../../../core/widgets/notebook.dart';
+import '../widgets/user_action_sheets.dart';
 
-/// Owner: users, newest first, searchable by email. The one action is ending a user's sessions.
+/// Owner: users, newest first, searchable by email. Actions: end their sessions, ban / unban, delete the account.
 class OwnerUsersPage extends StatefulWidget {
   const OwnerUsersPage({super.key});
 
@@ -56,9 +58,10 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
 
   Future<void> _open(OwnerUser u) async {
     final l = AppLocalizations.of(context);
-    final repo = context.read<OwnerRepository>();
-    final messenger = ScaffoldMessenger.of(context);
-    final end = await showModalBottomSheet<bool>(
+    final error = Theme.of(context).colorScheme.error;
+    // The owner account is never banned or deleted (the API refuses it too).
+    final other = u.role != 'owner';
+    final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -67,18 +70,97 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
           children: [
             _UserTile(user: u),
             ListTile(
-              leading: Icon(
-                Icons.logout,
-                color: Theme.of(context).colorScheme.error,
-              ),
+              key: const ValueKey('user-logout'),
+              leading: Icon(Icons.logout, color: error),
               title: Text(l.ownerEndSessions),
-              onTap: () => Navigator.pop(context, true),
+              onTap: () => Navigator.pop(context, 'logout'),
             ),
+            if (other && u.ban != null)
+              ListTile(
+                key: const ValueKey('user-unban'),
+                leading: const Icon(Icons.lock_open),
+                title: Text(l.ownerUnban),
+                onTap: () => Navigator.pop(context, 'unban'),
+              )
+            else if (other)
+              ListTile(
+                key: const ValueKey('user-ban'),
+                leading: Icon(Icons.block, color: error),
+                title: Text(l.ownerBan),
+                onTap: () => Navigator.pop(context, 'ban'),
+              ),
+            if (other)
+              ListTile(
+                key: const ValueKey('user-delete'),
+                leading: Icon(Icons.delete_forever_outlined, color: error),
+                title: Text(l.ownerDeleteUser, style: TextStyle(color: error)),
+                onTap: () => Navigator.pop(context, 'delete'),
+              ),
           ],
         ),
       ),
     );
-    if (end != true || !mounted) return;
+    if (!mounted) return;
+    switch (action) {
+      case 'logout':
+        await _endSessions(u);
+      case 'ban':
+        await _ban(u);
+      case 'unban':
+        await _run(
+          () => context.read<OwnerRepository>().unban(u.id),
+          l.ownerUnbanned,
+        );
+      case 'delete':
+        await _delete(u);
+    }
+  }
+
+  /// Runs an owner action, says it worked (or why not) and reloads the list.
+  Future<void> _run(Future<void> Function() call, String done) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await call();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+      await _load();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+  }
+
+  Future<void> _ban(OwnerUser u) async {
+    final l = AppLocalizations.of(context);
+    final repo = context.read<OwnerRepository>();
+    final r = await showNotebookSheet<({int? days, String reason})>(
+      context,
+      builder: (_) => BanSheet(email: u.email),
+    );
+    if (r == null || !mounted) return;
+    await _run(
+      () => repo.ban(u.id, days: r.days, reason: r.reason),
+      l.ownerBanned,
+    );
+  }
+
+  Future<void> _delete(OwnerUser u) async {
+    final l = AppLocalizations.of(context);
+    final repo = context.read<OwnerRepository>();
+    final r = await showNotebookSheet<({String reason, bool banEmail})>(
+      context,
+      builder: (_) => DeleteUserSheet(email: u.email),
+    );
+    if (r == null || !mounted) return;
+    await _run(
+      () => repo.deleteUser(u.id, reason: r.reason, banEmail: r.banEmail),
+      l.ownerDeleted,
+    );
+  }
+
+  Future<void> _endSessions(OwnerUser u) async {
+    final l = AppLocalizations.of(context);
+    final repo = context.read<OwnerRepository>();
+    final messenger = ScaffoldMessenger.of(context);
     final yes = await showNotebookDialog(
       context,
       message: l.ownerEndSessionsConfirm(u.email),
@@ -167,9 +249,18 @@ class _UserTile extends StatelessWidget {
             if (!user.verified) l.ownerUnverified,
             if (user.role == 'owner') l.ownerTitle,
           ].join(', '),
+          if (user.ban case final ban?)
+            ban.until == null
+                ? l.ownerBannedForGood
+                : l.ownerBannedUntil(
+                    MaterialLocalizations.of(context)
+                        .formatMediumDate(ban.until!.toLocal()),
+                  ),
         ].join('\n'),
       ),
-      trailing: user.verified
+      trailing: user.ban != null
+          ? Icon(Icons.block, color: Theme.of(context).colorScheme.error)
+          : user.verified
           ? null
           : Icon(
               Icons.mark_email_unread_outlined,

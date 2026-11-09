@@ -1,4 +1,5 @@
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
+import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/home_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -44,6 +45,9 @@ void main() {
           ),
           ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
           ChangeNotifierProvider(
+            create: (_) => UpdateGate(playHasUpdate: () async => false),
+          ),
+          ChangeNotifierProvider(
             create: (_) => RecentShares(FakeShares(), onFinished: () async {}),
           ),
         ],
@@ -61,10 +65,29 @@ void main() {
     );
     await t.pump();
     expect(t.takeException(), isNull);
-    // Home (the feed) first; the saved places are on Book. Four tabs: Map moved onto Home.
-    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    // Home (the feed) first; the saved places are on Book. Four tabs and "+" in the middle.
+    expect(find.byType(NavigationDestination), findsNWidgets(5));
+    // "+" opens the add sheet and is not a tab: Home stays selected.
+    await t.tap(find.byKey(const ValueKey('nav-add')));
+    await t.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('add-receipt')), findsOneWidget);
+    expect(find.byKey(const ValueKey('add-link')), findsOneWidget);
+    expect(
+      t.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      0,
+    );
+    await t.tapAt(const Offset(10, 10)); // close the sheet
+    await t.pump(const Duration(milliseconds: 400));
     await t.tap(find.text('Book'));
     await t.pump(); // not settle: Home's location spinner keeps animating (no location plugin in tests)
     expect(find.text('Kedai Kopi Ah Seng'), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-map')), findsOneWidget);
+    // The tabs after "+" are one place to the right in the bar.
+    await t.tap(find.text('Account'));
+    await t.pump();
+    expect(
+      t.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      4,
+    );
   });
 }

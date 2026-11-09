@@ -10,12 +10,21 @@ import '../../recipes/presentation/recipes_controller.dart';
 import '../../shopping/presentation/pages/shopping_page.dart';
 import '../../shopping/presentation/shopping_controller.dart';
 import '../../shares/presentation/recent_shares.dart';
+import 'add_sheet.dart';
 import 'feed_page.dart';
 
-/// Signed-in home: Home (feed, with the map button), Book, Shopping and Account tabs. Rebuilt after every share (the share page goes back to '/'), so it
+/// Signed-in home: Home (feed, with the map button), Book, Shopping and Account tabs, and "+" in the middle (add
+/// anything: [showAddSheet]; it is a button, not a tab). Rebuilt after every share (the share page goes back to '/'), so it
 /// reloads the places.
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.open});
+
+  /// Pass as the route's `extra` to show the Home tab (after a share). A new object each time, so going there twice
+  /// still switches (the page keeps its state across navigations).
+  static Object get homeTab => Object();
+
+  /// The `extra` of the route; a new one = show Home.
+  final Object? open;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -50,6 +59,12 @@ class _HomePageState extends State<HomePage> {
   late final AppLifecycleListener _life;
 
   @override
+  void didUpdateWidget(covariant HomePage old) {
+    super.didUpdateWidget(old);
+    if (widget.open != null && !identical(widget.open, old.open)) _tab = 0;
+  }
+
+  @override
   void dispose() {
     _life.dispose();
     super.dispose();
@@ -69,8 +84,15 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        // Index 2 is "+": the tabs after it sit one place to the right.
+        selectedIndex: _tab < 2 ? _tab : _tab + 1,
+        onDestinationSelected: (i) {
+          if (i == 2) {
+            showAddSheet(context);
+          } else {
+            setState(() => _tab = i < 2 ? i : i - 1);
+          }
+        },
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
@@ -81,6 +103,12 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.menu_book_outlined),
             selectedIcon: const Icon(Icons.menu_book),
             label: l.navBook,
+          ),
+          NavigationDestination(
+            key: const ValueKey('nav-add'),
+            icon: const Icon(Icons.add_circle_outline),
+            selectedIcon: const Icon(Icons.add_circle),
+            label: l.navAdd,
           ),
           NavigationDestination(
             icon: const Icon(Icons.shopping_basket_outlined),

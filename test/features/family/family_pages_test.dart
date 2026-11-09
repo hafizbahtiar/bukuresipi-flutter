@@ -129,6 +129,30 @@ void main() {
     expect(find.text(l.familyInvite), findsNothing);
   });
 
+  testWidgets('your own family\'s link: no Join, Open family instead', (
+    t,
+  ) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    repo
+      ..membership = 'this'
+      ..current = aFamily();
+    await pump(t, '/family/join?t=abc');
+    expect(find.text(l.familyJoinAlreadyHere), findsOneWidget);
+    expect(find.byKey(const ValueKey('join-join')), findsNothing);
+    await t.tap(find.byKey(const ValueKey('join-open-family')));
+    await t.pumpAndSettle();
+    expect(find.byType(FamilyPage), findsOneWidget);
+    expect(repo.joined, isEmpty);
+  });
+
+  testWidgets('in another family: told to leave it first, no Join', (t) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    repo.membership = 'other';
+    await pump(t, '/family/join?t=abc');
+    expect(find.text(l.errAlreadyInFamily), findsOneWidget);
+    expect(find.byKey(const ValueKey('join-join')), findsNothing);
+  });
+
   testWidgets('a full family\'s link says so and cannot be joined', (t) async {
     final l = lookupAppLocalizations(const Locale('en'));
     await pump(t, '/family/join?t=full');

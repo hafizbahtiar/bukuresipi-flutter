@@ -18,6 +18,7 @@ class NearbyBranch {
     this.halalSourceUrl,
     this.placeId,
     this.rating = const RatingSummary(),
+    this.cover,
   });
 
   final String branchId;
@@ -45,6 +46,9 @@ class NearbyBranch {
   /// Community stars for this canonical branch; `canRate` is decided by the server.
   final RatingSummary rating;
 
+  /// The restaurant's cover photo id (PlacesRepository.restaurantCover); null = none.
+  final String? cover;
+
   NearbyBranch copyWith({
     bool? saved,
     String? placeId,
@@ -66,6 +70,7 @@ class NearbyBranch {
     saved: saved ?? this.saved,
     placeId: placeId ?? this.placeId,
     rating: rating ?? this.rating,
+    cover: cover,
   );
 }
 
@@ -73,4 +78,28 @@ class NearbyBranch {
 String distanceText(int meters) {
   if (meters < 1000) return '$meters m';
   return '${(meters / 1000).toStringAsFixed(1)} km';
+}
+
+/// A map search result (GET /places/search): a branch in the app ([branchId]), or a place not in the app yet
+/// ([poiId]: Overture or OpenStreetMap), saved with PlacesController.savePoi.
+class PlaceHit {
+  const PlaceHit({
+    this.branchId,
+    this.poiId,
+    required this.name,
+    this.address,
+    required this.lat,
+    required this.lng,
+    required this.distanceM,
+    this.saved = false,
+  });
+
+  final String? branchId;
+  final String? poiId;
+  final String name;
+  final String? address;
+  final double lat;
+  final double lng;
+  final int distanceM;
+  final bool saved;
 }

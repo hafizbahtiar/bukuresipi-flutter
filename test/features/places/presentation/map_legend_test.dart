@@ -29,7 +29,7 @@ void main() {
       );
       expect(find.byType(MapMarkDot), findsWidgets);
       await t.scrollUntilVisible(find.byType(Switch), 200);
-    await t.tap(find.byType(Switch));
+      await t.tap(find.byType(Switch));
       await t.pump();
       expect(changes, [false]);
       expect(t.widget<Switch>(find.byType(Switch)).value, isFalse);
@@ -53,7 +53,10 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(MapMarkDot), findsNWidgets(MapMark.values.where((m) => !m.ownerOnly).length));
+    expect(
+      find.byType(MapMarkDot),
+      findsNWidgets(MapMark.values.where((m) => !m.ownerOnly).length),
+    );
     expect(find.byType(Switch), findsNothing);
   });
 }

@@ -6,12 +6,12 @@ import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
-import 'package:bukuresipi_flutter/features/recipes/presentation/pages/recipe_edit_page.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/widgets/merge_sheet.dart';
 import 'package:provider/provider.dart';
 
 import 'package:bukuresipi_flutter/features/shares/domain/share.dart';
@@ -21,6 +21,11 @@ import '../../../fakes.dart';
 import '../../shares/presentation/share_intake_test.dart' show FakeShares;
 import '../places_fixtures.dart';
 import '../../recipes/recipes_fixtures.dart';
+
+/// Space between the map picker and the search box below it.
+double spacing(WidgetTester t) =>
+    t.getTopLeft(find.byKey(const ValueKey('pin-search-query'))).dy -
+    t.getBottomLeft(find.text('AWS (Grab)')).dy;
 
 void main() {
   late FakePlaces repo;
@@ -100,16 +105,69 @@ void main() {
     expect(find.text('Ayam Masak Merah'), findsOneWidget);
   });
 
+  testWidgets('the book has no FAB; Merge is the owner\'s only', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a', name: 'Kedai A')];
+    await pump(t, const PlacesListPage());
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byKey(const ValueKey('book-merge')), findsNothing);
+  });
+
   testWidgets(
-    'the book has New recipe (moved from the Recipes tab): it opens the empty editor',
+    'the owner merges two places: recipes greyed out, the name the two share suggested',
     (t) async {
-      repo = FakePlaces();
-      await pump(t, const PlacesListPage());
-      await t.tap(find.byType(FloatingActionButton));
+      repo = FakePlaces()
+        ..places = [
+          place(id: 'a', name: 'Samurai Yakiniku Bangi'),
+          place(id: 'b', name: 'Samurai Yakiniku Setapak'),
+        ];
+      await pump(t, const PlacesListPage(), role: 'owner');
+      fakeRecipes.recipes = [recipe(id: 'r1', name: 'Ayam Masak Merah')];
+      await t.fling(
+        find.text('Samurai Yakiniku Bangi'),
+        const Offset(0, 400),
+        1000,
+      );
       await t.pumpAndSettle();
-      expect(find.byType(RecipeEditPage), findsOneWidget);
+      expect(find.text('Ayam Masak Merah'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('book-merge')));
+      await t.pumpAndSettle();
+      final next = find.byKey(const ValueKey('merge-next'));
+      expect(t.widget<FilledButton>(next).onPressed, isNull);
+      // A recipe can't be picked.
+      await t.tap(find.text('Ayam Masak Merah'), warnIfMissed: false);
+      await t.tap(find.byKey(const ValueKey('merge-r-a')));
+      await t.pump();
+      expect(t.widget<FilledButton>(next).onPressed, isNull);
+      await t.tap(find.byKey(const ValueKey('merge-r-b')));
+      await t.pump();
+      expect(find.text('2 picked'), findsOneWidget);
+      await t.tap(next);
+      await t.pumpAndSettle();
+      expect(
+        t
+            .widget<TextField>(find.byKey(const ValueKey('merge-name')))
+            .controller!
+            .text,
+        'Samurai Yakiniku',
+      );
+      await t.tap(find.byKey(const ValueKey('merge-confirm')));
+      await t.pumpAndSettle();
+      expect(repo.merges.single.$1, ['r-b']);
+      expect(repo.merges.single.$2, 'r-a');
+      expect(repo.merges.single.$3, 'Samurai Yakiniku');
+      expect(find.text('Merged'), findsOneWidget);
+      expect(find.byKey(const ValueKey('merge-next')), findsNothing);
     },
   );
+
+  test('sharedStart: the words every name starts with', () {
+    expect(
+      sharedStart(['Samurai Yakiniku Bangi', 'samurai yakiniku Setapak']),
+      'Samurai Yakiniku',
+    );
+    expect(sharedStart(['Kedai A', 'Warung B']), '');
+    expect(sharedStart(['Flow', 'Flow Bangi']), 'Flow');
+  });
 
   testWidgets('an empty book tells the user how to add to it', (t) async {
     repo = FakePlaces();
@@ -206,6 +264,27 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.located, ['b-1']);
     expect(find.text('Found it. It is on your map now.'), findsOneWidget);
+    expect(find.widgetWithText(AlertDialog, 'Set on map'), findsNothing);
+  });
+
+  testWidgets('Find location says plainly when it was already tried today', (
+    t,
+  ) async {
+    repo = FakePlaces()
+      ..places = [place(id: 'a', lat: null)]
+      ..locateResult = LocateResult.triedToday;
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.text('Find location'));
+    await t.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.textContaining('already looked for this shop today'),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(AlertDialog, 'Set on map'), findsOneWidget);
+    await t.tap(find.widgetWithText(TextButton, 'OK'));
+    await t.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets('only the owner can delete a branch, after confirming', (
@@ -247,6 +326,49 @@ void main() {
     expect(repo.branchUpdates.single.lat, isNull);
     expect(repo.branchUpdates.single.lng, isNull);
     expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
+  });
+
+  testWidgets('town and state are dropdowns from the server list', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    TextEditingController ctl(String key) => t
+        .widget<TextField>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(TextField),
+          ),
+        )
+        .controller!;
+    // A town picked first brings its state.
+    final city = find.byKey(const ValueKey('branch-city'));
+    await t.ensureVisible(city);
+    await t.tap(city);
+    await t.pumpAndSettle();
+    await t.tap(find.text('Ketereh').last);
+    await t.pumpAndSettle();
+    expect(ctl('branch-state').text, 'Kelantan');
+    // Another state clears a town that is not in it; its towns are the only ones listed.
+    final state = find.byKey(const ValueKey('branch-state'));
+    await t.ensureVisible(state);
+    await t.tap(find.descendant(of: state, matching: find.byType(IconButton)));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Selangor').last);
+    await t.pumpAndSettle();
+    expect(ctl('branch-city').text, '');
+    await t.tap(city);
+    await t.pumpAndSettle();
+    expect(find.text('Kajang'), findsWidgets);
+    expect(find.text('Ketereh'), findsNothing);
+    await t.tap(find.text('Kajang').last);
+    await t.pumpAndSettle();
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+    expect(repo.branchUpdates.single.city, 'Kajang');
+    expect(repo.branchUpdates.single.state, 'Selangor');
   });
 
   testWidgets('a user can edit a branch for themselves only', (t) async {
@@ -343,9 +465,27 @@ void main() {
     expect(find.text('AI draft — review before saving'), findsOneWidget);
     expect(find.text('Source: nominatim'), findsOneWidget);
     expect(
-      find.text('Filled into the fields below — review before saving.'),
+      find.text(
+        "Filled into the fields below — untick any you don't want, then review before saving.",
+      ),
       findsOneWidget,
     );
+    // The owner leaves the AI's address: the form goes back to the current one; ticked again, the AI's returns.
+    final address = find.descendant(
+      of: find.byKey(const ValueKey('draft-address')),
+      matching: find.byType(Checkbox),
+    );
+    await t.ensureVisible(address);
+    await t.tap(address);
+    await t.pumpAndSettle();
+    String text(String key) =>
+        t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    expect(text('branch-address'), '');
+    await t.tap(address);
+    await t.pumpAndSettle();
+    expect(text('branch-address'), 'AI Address');
+    await t.tap(address);
+    await t.pumpAndSettle();
     expect(find.text('AI'), findsWidgets);
     expect(
       t
@@ -369,6 +509,12 @@ void main() {
 
     expect(repo.branchUpdates.single.label, 'AI Label');
     expect(repo.branchUpdates.single.lat, 2.991234);
+    expect(
+      repo.branchUpdates.single.address,
+      isNull,
+    ); // unticked: kept as it was (none)
+    expect(repo.branchUpdates.single.city, 'AI City');
+    expect(repo.branchUpdates.single.state, 'Selangor');
     expect(repo.branchUpdates.single.lng, 101.791234);
     expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
   });
@@ -394,6 +540,197 @@ void main() {
 
     expect(repo.branchUpdates.single.lat, 2.991234);
     expect(repo.branchUpdates.single.lng, 101.791234);
+  });
+
+  testWidgets('a user pastes a Google Maps link and the pin is filled in', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+
+    final link = find.byKey(const ValueKey('branch-maps-link'));
+    await t.ensureVisible(link);
+    await t.enterText(link, 'https://maps.app.goo.gl/AbC123');
+    await t.tap(find.text('Use link'));
+    await t.pumpAndSettle();
+
+    expect(repo.mapsLinks, ['https://maps.app.goo.gl/AbC123']);
+    String field(String key) =>
+        t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    expect(field('branch-lat'), '3.199464');
+    expect(field('branch-lng'), '101.695650');
+    final save = find.widgetWithText(FilledButton, 'Save');
+    await t.ensureVisible(save);
+    await t.tap(save);
+    await t.pumpAndSettle();
+    expect(repo.branchUpdates.single.lat, 3.199464);
+    expect(repo.branchUpdates.single.scope, BranchEditScope.personal);
+  });
+
+  testWidgets('the owner sees every pin the draft found and can pick one', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    repo.suggestion = const BranchSuggestion(
+      draft: BranchDraft(lat: 3.2001, lng: 101.6901),
+      sources: ['here'],
+      aiUsed: false,
+      changed: true,
+      warnings: ['The pins found are up to 550 m apart'],
+      candidates: [
+        (
+          source: 'here',
+          lat: 3.2001,
+          lng: 101.6901,
+          address: null,
+          fromDraftM: 0,
+        ),
+        (
+          source: 'grab',
+          lat: 3.205,
+          lng: 101.69,
+          address: null,
+          fromDraftM: 545,
+        ),
+      ],
+    );
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    final suggest = find.text('Suggest with AI');
+    await t.ensureVisible(suggest);
+    await t.tap(suggest);
+    await t.pumpAndSettle();
+
+    expect(find.text('Pins found'), findsOneWidget);
+    expect(find.textContaining('545 m'), findsOneWidget);
+    final use = find.descendant(
+      of: find.byKey(const ValueKey('pin-grab')),
+      matching: find.text('Use'),
+    );
+    await t.ensureVisible(use);
+    await t.tap(use);
+    await t.pumpAndSettle();
+    expect(
+      t
+          .widget<TextField>(find.byKey(const ValueKey('branch-lat')))
+          .controller!
+          .text,
+      '3.205000',
+    );
+  });
+
+  testWidgets('the owner picks a map, searches it and uses a hit', (t) async {
+    repo = FakePlaces()
+      ..places = [place(id: 'a')]
+      ..pinHits = const [
+        (
+          lat: 3.1591,
+          lng: 101.7122,
+          address: 'P&C Kitchen, Jalan Ampang, Kuala Lumpur',
+          city: 'Kuala Lumpur',
+          state: 'Wilayah Persekutuan Kuala Lumpur',
+          source: 'grab',
+        ),
+      ];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    // Picking a map searches it at once.
+    final osm = find.text('OpenStreetMap');
+    await t.ensureVisible(osm);
+    await t.tap(osm);
+    await t.pumpAndSettle();
+    expect(repo.pinSearches.last.$2, 'osm');
+    await t.tap(find.text('AWS (Grab)'));
+    await t.pumpAndSettle();
+    expect(repo.pinSearches.last.$2, 'grab');
+    // The first map's default words are not sent to the next: each map gets its own.
+    expect(repo.pinSearches.last.$3, isNull);
+    expect(spacing(t), greaterThanOrEqualTo(8));
+    final use = find.descendant(
+      of: find.byKey(const ValueKey('pin-hit-0')),
+      matching: find.text('Use'),
+    );
+    await t.ensureVisible(use);
+    await t.tap(use);
+    await t.pumpAndSettle();
+    String field(String key) => t
+        .widget<TextField>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(TextField),
+            matchRoot: true,
+          ),
+        )
+        .controller!
+        .text;
+    expect(field('branch-lat'), '3.159100');
+    expect(field('branch-address'), 'P&C Kitchen, Jalan Ampang, Kuala Lumpur');
+    expect(field('branch-city'), 'Kuala Lumpur');
+    expect(field('branch-state'), 'Wilayah Persekutuan Kuala Lumpur');
+    expect(
+      field('pin-search-query'),
+      'Shop, Kuala Lumpur',
+    ); // what was asked, to change and search again
+
+    // Another outlet in the results: added as a new branch, the form untouched.
+    final add = find.byKey(const ValueKey('pin-hit-add-0'));
+    await t.ensureVisible(add);
+    await t.tap(add);
+    await t.pumpAndSettle();
+    expect(repo.siblings, [
+      ('b-1', 'P&C Kitchen, Jalan Ampang, Kuala Lumpur', 3.1591),
+    ]);
+    // Shown once the previous message ("Use") has gone: snack bars queue.
+    await t.pump(const Duration(seconds: 5));
+    await t.pumpAndSettle();
+    expect(
+      find.text('Branch added. Edit its name on the map if needed.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a pinned place has a map button that opens the map on its pin', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a', lat: 3.15)];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    expect(find.byKey(const ValueKey('place-map')), findsOneWidget);
+  });
+
+  testWidgets(
+    'a report can take the pin from a Google Maps link, sent with the link',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      await t.tap(find.text('Report').last);
+      await t.pumpAndSettle();
+      final link = find.byKey(const ValueKey('report-maps-link'));
+      await t.ensureVisible(link);
+      await t.enterText(link, 'https://maps.app.goo.gl/AbC123');
+      await t.tap(find.descendant(of: link, matching: find.text('Use link')));
+      await t.pumpAndSettle();
+      expect(find.text('3.199464, 101.695650'), findsOneWidget);
+      final send = find.widgetWithText(FilledButton, 'Report');
+      await t.ensureVisible(send);
+      await t.tap(send);
+      await t.pumpAndSettle();
+      final r = repo.reports.single;
+      expect(r.lat, closeTo(3.1994645, 1e-9));
+      expect(r.lng, closeTo(101.6956504, 1e-9));
+      expect(r.note, 'https://maps.app.goo.gl/AbC123');
+    },
+  );
+
+  testWidgets('a user does not see the map search', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.tap(find.byTooltip('Edit branch'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('pin-search-query')), findsNothing);
   });
 
   testWidgets('the owner can check a restaurant\'s branches; users cannot', (

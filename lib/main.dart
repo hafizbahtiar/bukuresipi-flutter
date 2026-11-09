@@ -1,5 +1,6 @@
 // Composition root: the only place that builds concrete classes. Everything below depends on interfaces
 // (AuthRepository, TokenStore) handed down through Provider, so tests swap them for fakes.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -31,6 +32,8 @@ import 'features/recipes/data/recipes_repository_impl.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
 import 'features/shopping/data/shopping_repository_impl.dart';
 import 'features/shopping/presentation/shopping_controller.dart';
+import 'features/receipts/data/receipts_repository_impl.dart';
+import 'features/receipts/domain/receipts_repository.dart';
 import 'features/shares/data/plugin_incoming_shares.dart';
 import 'features/shares/data/webview_caption_reader.dart';
 import 'features/shares/data/share_repository_impl.dart';
@@ -61,6 +64,7 @@ Future<void> main() async {
     ..onSessionEnded = auth.sessionEnded
     ..onUpdateRequired = update.markRequired;
   auth.restore();
+  unawaited(update.check());
   final places = PlacesController(PlacesRepositoryImpl(api.dio));
   final recipes = RecipesController(RecipesRepositoryImpl(api.dio));
   final shopping = ShoppingController(ShoppingRepositoryImpl(api.dio));
@@ -80,6 +84,7 @@ Future<void> main() async {
     }
   });
   final ShareRepository shareRepo = ShareRepositoryImpl(api.dio);
+  final ReceiptsRepository receiptsRepo = ReceiptsRepositoryImpl(api.dio);
   final recent = RecentShares(
     shareRepo,
     onFinished: () async {
@@ -137,6 +142,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: update),
         Provider<ShareRepository>.value(value: shareRepo),
+        Provider<ReceiptsRepository>.value(value: receiptsRepo),
         ChangeNotifierProvider.value(value: shares),
         ChangeNotifierProvider.value(value: places),
         ChangeNotifierProvider.value(value: recipes),

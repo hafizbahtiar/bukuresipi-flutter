@@ -3,7 +3,7 @@ import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/data/google_auth.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
-import 'package:bukuresipi_flutter/features/auth/presentation/pages/account_page.dart';
+import 'package:bukuresipi_flutter/features/auth/presentation/pages/settings_page.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/pages/delete_account_page.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/pages/login_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -89,7 +89,10 @@ void main() {
     t,
   ) async {
     await pump(t, const LoginPage(), google: _FakeGoogle());
-    expect(find.image(const AssetImage('assets/brand/google_g.png')), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/brand/google_g.png')),
+      findsOneWidget,
+    );
     await t.tap(find.text('Continue with Google'));
     await t.pumpAndSettle();
     expect(repo.googleTokens, ['google-id-token']);
@@ -121,7 +124,7 @@ void main() {
   testWidgets(
     'a Google-only account: "Set a password", and changing the email waits for one',
     (t) async {
-      await pump(t, const AccountPage(), user: _googleOnly);
+      await pump(t, const SettingsPage(), user: _googleOnly);
       expect(find.text('Set a password'), findsOneWidget);
       expect(find.text('Change password'), findsNothing);
       expect(
@@ -152,7 +155,12 @@ void main() {
   testWidgets(
     'Account > Google: link with the Google sheet, then unlink after asking',
     (t) async {
-      await pump(t, const AccountPage(), google: _FakeGoogle(), user: testUser);
+      await pump(
+        t,
+        const SettingsPage(),
+        google: _FakeGoogle(),
+        user: testUser,
+      );
       expect(
         find.text('Link your Google account to sign in with one tap'),
         findsOneWidget,
@@ -177,7 +185,7 @@ void main() {
   ) async {
     await pump(
       t,
-      const AccountPage(),
+      const SettingsPage(),
       google: _FakeGoogle(),
       user: _googleOnly,
     );
@@ -193,7 +201,7 @@ void main() {
   testWidgets('no Google on this phone and not linked: no Google row', (
     t,
   ) async {
-    await pump(t, const AccountPage(), user: testUser);
+    await pump(t, const SettingsPage(), user: testUser);
     expect(find.text('Google'), findsNothing);
   });
 }

@@ -1,7 +1,7 @@
 name: bukuresipi_flutter
 description: "Bukuresipi: recipes and places to eat from social media posts."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-version: 1.0.2+4
+version: 1.0.9+11
 
 environment:
   sdk: ^3.13.7
@@ -31,7 +31,9 @@ dependencies:
   firebase_analytics: ^13.0.1
   image_picker: ^1.2.4
   extended_image: ^10.1.0
+  path_provider: ^2.1.6
   image_editor: ^1.6.0
+  in_app_update: ^5.0.0
 
 dev_dependencies:
   flutter_test:
@@ -46,6 +48,8 @@ flutter:
   generate: true
   assets:
     - assets/brand/
+    - assets/images/
+    - assets/badges/
 
 # App icon + native splash from assets/brand (the website logo, bukuresipi-astro/public/favicon.svg).
 # Regenerate: dart run flutter_launcher_icons && dart run flutter_native_splash:create

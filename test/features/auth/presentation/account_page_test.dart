@@ -1,9 +1,14 @@
+import 'dart:convert';
+
+import 'package:extended_image/extended_image.dart';
+
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/pages/account_page.dart';
+import 'package:bukuresipi_flutter/features/auth/presentation/pages/settings_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -17,7 +22,7 @@ void main() {
   late LocaleController locale;
   late FakeAuthRepository repo;
 
-  Future<void> pump(WidgetTester t) async {
+  Future<void> pump(WidgetTester t, [Widget page = const AccountPage()]) async {
     SharedPreferences.setMockInitialValues({});
     locale = LocaleController(await SharedPreferences.getInstance());
     repo = FakeAuthRepository()..session = true;
@@ -33,22 +38,22 @@ void main() {
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider.value(value: locale),
         ],
-        child: const MaterialApp(
-          locale: Locale('en'),
-          localizationsDelegates: [
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
           ],
-          supportedLocales: [Locale('en'), Locale('ms')],
-          home: AccountPage(),
+          supportedLocales: const [Locale('en'), Locale('ms')],
+          home: page,
         ),
       ),
     );
   }
 
   testWidgets(
-    'the account page: who, email not confirmed yet (resend), language, sign out',
+    'the account page: who, email not confirmed yet (resend), sign out; the rest is in Settings',
     (t) async {
       await pump(t);
       expect(
@@ -70,15 +75,25 @@ void main() {
         find.byType(CircleAvatar),
         findsOneWidget,
       ); // the picture, or the initial
-      expect(find.byType(SegmentedButton<String>), findsNothing);
-      await t.tap(find.text('EN'));
-      await t.pump();
-      expect(locale.lang, 'en');
-      await t.tap(find.text('BM'));
-      await t.pump();
-      expect(locale.lang, 'ms');
+      // Settings (language, email, password, devices, about) has its own page now.
+      expect(find.byKey(const ValueKey('account-settings')), findsOneWidget);
+      expect(find.text('EN'), findsNothing);
+      expect(find.text('Signed-in devices'), findsNothing);
+      // Everyone has Usage (their own limits).
+      expect(find.byKey(const ValueKey('account-usage')), findsOneWidget);
     },
   );
+
+  testWidgets('settings: language switch', (t) async {
+    await pump(t, const SettingsPage());
+    expect(find.byType(SegmentedButton<String>), findsNothing);
+    await t.tap(find.text('EN'));
+    await t.pump();
+    expect(locale.lang, 'en');
+    await t.tap(find.text('BM'));
+    await t.pump();
+    expect(locale.lang, 'ms');
+  });
 
   testWidgets('sign out asks first', (t) async {
     await pump(t);
@@ -94,8 +109,8 @@ void main() {
     expect(repo.clears, 1);
   });
 
-  testWidgets('the account page links to About and the credits', (t) async {
-    await pump(t);
+  testWidgets('settings links to About and the credits', (t) async {
+    await pump(t, const SettingsPage());
     expect(find.text('About'), findsOneWidget);
     expect(find.text('Credits'), findsOneWidget);
   });
@@ -149,6 +164,20 @@ void main() {
         t.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
       ); // completes only as frames are pumped
       await t.pumpAndSettle();
+      // View photo opens it (pinch to zoom).
+      repo.avatarBytes = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      );
+      await t.tap(find.byKey(const ValueKey('account-avatar')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('View photo'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-viewer')), findsOneWidget);
+      // In a sheet: a swipe down is the photo's slide-out (it closes the sheet); a tap outside closes it too.
+      expect(find.byType(ExtendedImageSlidePage), findsOneWidget);
+      await t.tapAt(const Offset(10, 10));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-viewer')), findsNothing);
       await t.tap(find.byKey(const ValueKey('account-avatar')));
       await t.pumpAndSettle();
       await t.tap(find.text('Remove profile picture'));

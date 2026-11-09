@@ -87,7 +87,10 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<Uint8List?> avatar(String userId, String avatar) async => null;
+  Future<Uint8List?> avatar(String userId, String avatar) async => avatarBytes;
+
+  /// What every avatar download returns (null = none).
+  Uint8List? avatarBytes;
 
   @override
   Future<User> setName(String name) async {

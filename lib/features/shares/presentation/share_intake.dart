@@ -97,8 +97,8 @@ class ShareIntake extends ChangeNotifier {
 
   Future<void> start() async {
     _auth.addListener(_maybeSend);
-    _accept(await _source.initial());
-    _sub = _source.stream.listen(_accept);
+    _fromPhone(await _source.initial());
+    _sub = _source.stream.listen(_fromPhone);
   }
 
   void _set(ShareState s, {bool show = false}) {
@@ -141,6 +141,21 @@ class ShareIntake extends ChangeNotifier {
     onShow?.call();
     _maybeSend();
   }
+
+  /// From inside the app (the "+" sheet): the same path as the phone's share sheet.
+  void add(Incoming item) {
+    _fromApp = true;
+    _accept([item]);
+  }
+
+  void _fromPhone(List<Incoming> items) {
+    if (items.isNotEmpty) _fromApp = false;
+    _accept(items);
+  }
+
+  /// The last share came from the "+" sheet, not another app: when it is accepted, stay in the app.
+  bool get fromApp => _fromApp;
+  bool _fromApp = false;
 
   /// Send again after a network error.
   void retry() {

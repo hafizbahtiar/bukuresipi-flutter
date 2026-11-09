@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/network/api_client.dart';
 import '../domain/session.dart';
+import '../domain/usage.dart';
 
 /// /api/v1/auth/* calls, raw JSON in and out. Errors surface as DioException (mapped by the repository).
 class AuthApi {
@@ -92,6 +93,10 @@ class AuthApi {
         Session.fromJson(s as Map<String, dynamic>),
     ];
   }
+
+  /// The caller's limits: GET /usage.
+  Future<Usage> usage() async =>
+      Usage.fromJson((await _dio.get<Map<String, dynamic>>('/usage')).data!);
 
   Future<void> endSession(String id) => _dio.delete<void>('/auth/sessions/$id');
   Future<void> endOtherSessions() => _dio.delete<void>('/auth/sessions/others');

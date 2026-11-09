@@ -149,6 +149,72 @@ void main() {
     expect(repo.loggedOut, ['u-ali@b.c']);
   });
 
+  testWidgets('the owner bans a user for 30 days with a reason', (t) async {
+    repo.users = [ownerUser('ali@b.c')];
+    await pump(t, const OwnerUsersPage());
+    await t.tap(find.text('ali@b.c'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('user-ban')));
+    await t.pumpAndSettle();
+    final confirm = find.byKey(const ValueKey('ban-confirm'));
+    // A reason first: Ban stays off until there is one.
+    expect(t.widget<FilledButton>(confirm).onPressed, isNull);
+    await t.enterText(
+      find.byKey(const ValueKey('action-reason')),
+      'Spam reviews',
+    );
+    await t.tap(find.byKey(const ValueKey('ban-days-30')));
+    await t.pump();
+    await t.tap(confirm);
+    await t.pumpAndSettle();
+    expect(repo.bans, [('u-ali@b.c', 30, 'Spam reviews')]);
+  });
+
+  testWidgets(
+    'a banned user shows it and can be unbanned; the owner row has no ban or delete',
+    (t) async {
+      repo.users = [
+        ownerUser('ali@b.c', ban: (until: null, reason: 'Fake')),
+        ownerUser('me@b.c', role: 'owner'),
+      ];
+      await pump(t, const OwnerUsersPage());
+      expect(find.textContaining('Banned for good'), findsOneWidget);
+      await t.tap(find.text('ali@b.c'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('user-ban')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('user-unban')));
+      await t.pumpAndSettle();
+      expect(repo.unbans, ['u-ali@b.c']);
+      await t.tap(find.text('me@b.c'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('user-ban')), findsNothing);
+      expect(find.byKey(const ValueKey('user-delete')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'deleting a user needs a reason; blocking the email is on by default',
+    (t) async {
+      repo.users = [ownerUser('ali@b.c')];
+      await pump(t, const OwnerUsersPage());
+      await t.tap(find.text('ali@b.c'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('user-delete')));
+      await t.pumpAndSettle();
+      expect(
+        find.text(
+          'Their recipes, places, receipts, photos and reviews are deleted. This cannot be undone.',
+        ),
+        findsOneWidget,
+      );
+      await t.enterText(find.byKey(const ValueKey('action-reason')), 'Abuse');
+      await t.pump();
+      await t.tap(find.byKey(const ValueKey('delete-confirm')));
+      await t.pumpAndSettle();
+      expect(repo.deleted, [('u-ali@b.c', 'Abuse', true)]);
+    },
+  );
+
   testWidgets(
     'rating bursts list who rated; the owner deletes one after confirming',
     (t) async {

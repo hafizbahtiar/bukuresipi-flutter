@@ -94,11 +94,21 @@ class PlacesController extends ChangeNotifier {
     await load();
   }
 
-  /// true = found and pinned. Throws ApiException.
-  Future<bool> locate(String branchId) async {
-    final found = await _repo.locate(branchId);
-    if (found) await load();
-    return found;
+  /// Throws ApiException. A found pin reloads the places.
+  Future<LocateResult> locate(String branchId) async {
+    final result = await _repo.locate(branchId);
+    if (result == LocateResult.found) await load();
+    return result;
+  }
+
+  /// Owner only. Throws ApiException.
+  Future<void> mergeRestaurants(
+    List<String> from,
+    String into, {
+    String? name,
+  }) async {
+    await _repo.mergeRestaurants(from, into, name: name);
+    await load();
   }
 
   /// Owner only. Throws ApiException.
@@ -138,9 +148,48 @@ class PlacesController extends ChangeNotifier {
     await load();
   }
 
+  /// Owner only: another branch of [branchId]'s restaurant (a pin search hit). Throws ApiException
+  /// ('branch_label_taken'); reloads the places so the new branch shows.
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  }) async {
+    await _repo.addSiblingBranch(
+      branchId,
+      address: address,
+      city: city,
+      state: state,
+      lat: lat,
+      lng: lng,
+    );
+    await load();
+  }
+
   /// Owner only. Throws ApiException; the edit sheet shows the draft for review.
   Future<BranchSuggestion> suggestBranch(String branchId) =>
       _repo.suggestBranch(branchId);
+
+  Future<List<AreaState>>? _areas;
+
+  /// The states and towns, asked once per app run (they change only with a server migration); a failure asks again.
+  Future<List<AreaState>> areas() =>
+      _areas ??= _repo.areas().catchError((Object e) {
+        _areas = null;
+        throw e;
+      });
+
+  /// A pasted Google Maps link -> its pin, for the edit form. Throws ApiException.
+  Future<MapsPin> pinFromMapsLink(String url) => _repo.pinFromMapsLink(url);
+
+  Future<({String query, List<PinHit> hits})> searchPin(
+    String branchId,
+    String source, {
+    String? q,
+  }) => _repo.searchPin(branchId, source, q: q);
 
   /// Rates or clears (`stars == null`) a branch, then replaces its summary in memory without a full reload.
   Future<RatingSummary> setRating(String branchId, int? stars) async {
@@ -216,6 +265,40 @@ class PlacesController extends ChangeNotifier {
     return place;
   }
 
+  /// Throws ApiException.
+  Future<List<PlaceHit>> search(
+    String query,
+    double lat,
+    double lng, {
+    bool submit = false,
+  }) => _repo.search(query, lat, lng, submit: submit);
+
+  /// Saves a search result not in the app yet, then reloads the saved places for the map.
+  Future<Place> savePoi(String poiId) async {
+    final place = await _repo.savePoi(poiId);
+    await load();
+    return place;
+  }
+
   /// Throws ApiException; the sheet shows it.
   Future<void> report(ReportDraft draft) => _repo.report(draft);
+
+  /// The restaurant's cover photo bytes, or null (none, or not loaded).
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover) =>
+      _repo.restaurantCover(restaurantId, cover);
+
+  /// Owner only. Throws ApiException.
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  ) => _repo.coverCandidates(restaurantId);
+
+  /// Owner only.
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover) =>
+      _repo.coverCandidate(restaurantId, cover);
+
+  /// Owner only: sets the cover for everyone, then reloads the saved places so the new id shows.
+  Future<void> setRestaurantCover(String restaurantId, String? cover) async {
+    await _repo.setRestaurantCover(restaurantId, cover);
+    await load();
+  }
 }

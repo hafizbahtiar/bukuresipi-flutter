@@ -63,12 +63,16 @@ class InvitePreview {
     required this.ownerName,
     required this.memberCount,
     this.maxMembers = familyMaxFallback,
+    this.membership,
   });
 
   final String familyName;
   final String? ownerName;
   final int memberCount;
   final int maxMembers;
+
+  /// 'this' = the viewer is already in this family (their own link); 'other' = in another one; null = can join.
+  final String? membership;
 
   bool get isFull => memberCount >= maxMembers;
 }

@@ -397,8 +397,10 @@
   "@findingLocation": {},
   "locationFound": "Found it. It is on your map now.",
   "@locationFound": {},
-  "locationNotFound": "Not found. You can set it on the map yourself.",
+  "locationNotFound": "We looked on the maps and the web, but couldn't find this shop. Set it on the map yourself, or paste its Google Maps link in Edit.",
   "@locationNotFound": {},
+  "locationTriedToday": "We already looked for this shop today and found nothing, so we didn't search again. Set it on the map yourself, or try again tomorrow.",
+  "@locationTriedToday": {},
   "pinPickTitle": "Where is it?",
   "@pinPickTitle": {},
   "pinPickHint": "Move the map until the pin is on the right spot.",
@@ -475,7 +477,7 @@
   "@aiDraftNoInfo": {},
   "aiDraftNoFields": "No field suggestions.",
   "@aiDraftNoFields": {},
-  "aiDraftApplied": "Filled into the fields below — review before saving.",
+  "aiDraftApplied": "Filled into the fields below — untick any you don't want, then review before saving.",
   "@aiDraftApplied": {},
   "aiDraftSame": "unchanged",
   "@aiDraftSame": {},
@@ -1619,7 +1621,7 @@
   "@recipeEditDiscardOk": {},
   "mapSearchHint": "Search your map",
   "@mapSearchHint": {},
-  "mapSearchNone": "No saved place matches.",
+  "mapSearchNone": "Nothing found nearby.",
   "@mapSearchNone": {},
   "recipeCoverAdd": "Add photo",
   "@recipeCoverAdd": {},
@@ -1676,5 +1678,385 @@
         "type": "String"
       }
     }
-  }
+  },
+  "mapSearchPress": "Press Search to look further.",
+  "@mapSearchPress": {},
+  "mapSearchNewPlace": "Not in Bukuresipi yet: saving adds it, with its pin from the map.",
+  "@mapSearchNewPlace": {},
+  "feedKindRestaurant": "Restaurant",
+  "@feedKindRestaurant": {},
+  "feedKindRecipe": "Recipe",
+  "@feedKindRecipe": {},
+  "feedKindDish": "Dish",
+  "@feedKindDish": {},
+  "coverTitle": "Cover photo",
+  "@coverTitle": {},
+  "coverNone": "No cover",
+  "@coverNone": {},
+  "coverEmpty": "No post photos for this restaurant yet. Share a post of it first.",
+  "@coverEmpty": {},
+  "coverSaved": "Cover saved for everyone",
+  "@coverSaved": {},
+  "mapsLinkLabel": "Google Maps link",
+  "@mapsLinkLabel": {},
+  "mapsLinkHint": "In Google Maps: Share → Copy link, then paste here",
+  "@mapsLinkHint": {},
+  "mapsLinkUse": "Use link",
+  "@mapsLinkUse": {},
+  "mapsLinkUsed": "Pin set from the Google Maps link. Check it, then save.",
+  "@mapsLinkUsed": {},
+  "errNotMapsLink": "That is not a Google Maps link.",
+  "@errNotMapsLink": {},
+  "errMapsNoPin": "No location in Malaysia in that link. Open the shop in Google Maps, then Share → Copy link.",
+  "@errMapsNoPin": {},
+  "pinCandidatesTitle": "Pins found",
+  "@pinCandidatesTitle": {},
+  "pinCandidateUse": "Use",
+  "@pinCandidateUse": {},
+  "navAdd": "Add",
+  "@navAdd": {},
+  "addTitle": "Add to your book",
+  "@addTitle": {},
+  "addLink": "Paste a link",
+  "@addLink": {},
+  "addLinkHint": "TikTok, Instagram, Facebook, YouTube, Google Maps or a website",
+  "@addLinkHint": {},
+  "addScreenshot": "Screenshot or photo",
+  "@addScreenshot": {},
+  "addScreenshotHint": "A post, menu or signboard",
+  "@addScreenshotHint": {},
+  "addReceipt": "Receipt",
+  "@addReceipt": {},
+  "addReceiptHint": "Snap a restaurant receipt to track visits and spending",
+  "@addReceiptHint": {},
+  "addRecipe": "Type a recipe",
+  "@addRecipe": {},
+  "addRecipeHint": "Your own recipe, from scratch",
+  "@addRecipeHint": {},
+  "linkFieldLabel": "Link",
+  "@linkFieldLabel": {},
+  "linkAdd": "Add",
+  "@linkAdd": {},
+  "receiptsTitle": "Receipts and spending",
+  "@receiptsTitle": {},
+  "receiptsEmpty": "No receipts yet. Tap + and pick Receipt.",
+  "@receiptsEmpty": {},
+  "receiptSnap": "Snap a receipt",
+  "@receiptSnap": {},
+  "receiptFromGallery": "From photos",
+  "@receiptFromGallery": {},
+  "receiptReading": "Reading the receipt…",
+  "@receiptReading": {},
+  "receiptReadingHelp": "This takes a few seconds. You can leave; it keeps reading.",
+  "@receiptReadingHelp": {},
+  "receiptCheckHelp": "We read it, you check it. Nothing counts until you save.",
+  "@receiptCheckHelp": {},
+  "receiptCheckThis": "Check this",
+  "@receiptCheckThis": {},
+  "receiptTotal": "Total (RM)",
+  "@receiptTotal": {},
+  "receiptTotalInvalid": "Write an amount, like 41.15",
+  "@receiptTotalInvalid": {},
+  "receiptDate": "Date and time",
+  "@receiptDate": {},
+  "receiptPlace": "Place",
+  "@receiptPlace": {},
+  "receiptChoosePlace": "Choose a place from your book",
+  "@receiptChoosePlace": {},
+  "receiptSaved": "Saved. The photo is deleted; the numbers stay.",
+  "@receiptSaved": {},
+  "receiptRate": "Rate your visit",
+  "@receiptRate": {},
+  "receiptFailed": "We couldn't read this receipt. Try a sharper photo, flat and in good light.",
+  "@receiptFailed": {},
+  "receiptDelete": "Delete",
+  "@receiptDelete": {},
+  "receiptDeleted": "Receipt deleted.",
+  "@receiptDeleted": {},
+  "receiptToCheck": "To check",
+  "@receiptToCheck": {},
+  "spendingTitle": "Spending, last 12 months",
+  "@spendingTitle": {},
+  "spendingSpent": "Spent",
+  "@spendingSpent": {},
+  "spendingVisits": "Visits",
+  "@spendingVisits": {},
+  "spendingTopPlaces": "Top places",
+  "@spendingTopPlaces": {},
+  "errDuplicateReceipt": "You already added this receipt.",
+  "@errDuplicateReceipt": {},
+  "errReceiptLimit": "That's 10 receipts today. Try again tomorrow.",
+  "@errReceiptLimit": {},
+  "errPlaceRequired": "Choose the place first.",
+  "@errPlaceRequired": {},
+  "errReceiptNotReady": "Still reading. Try again in a moment.",
+  "@errReceiptNotReady": {},
+  "reviewVisited": "Visited",
+  "@reviewVisited": {},
+  "receiptVisitCount": "{count, plural, =1{1 visit} other{{count} visits}}",
+  "@receiptVisitCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pinSearchTitle": "Search a map",
+  "@pinSearchTitle": {},
+  "pinSearchHelp": "Pick the map to ask. Use a result, check it, then save for Everyone.",
+  "@pinSearchHelp": {},
+  "pinSearchOsm": "OpenStreetMap",
+  "@pinSearchOsm": {},
+  "pinSearchHere": "HERE",
+  "@pinSearchHere": {},
+  "pinSearchGrab": "AWS (Grab)",
+  "@pinSearchGrab": {},
+  "pinSearchQuery": "Search for",
+  "@pinSearchQuery": {},
+  "pinSearchButton": "Search",
+  "@pinSearchButton": {},
+  "pinSearchNone": "This map found nothing for this search. Try another map or other words.",
+  "@pinSearchNone": {},
+  "pinSearchUsed": "Pin, town and state filled from the map. Check them, then save.",
+  "@pinSearchUsed": {},
+  "errSourceOff": "This map is off (no key, or its usage cap is reached). See Owner > Usage.",
+  "@errSourceOff": {},
+  "errBranchLabelTaken": "Another branch of this restaurant already has this name, so they are probably the same outlet. Change the name, or use Check branches to merge them.",
+  "@errBranchLabelTaken": {},
+  "settingsTitle": "Settings",
+  "@settingsTitle": {},
+  "settingsSecurity": "Sign-in and security",
+  "@settingsSecurity": {},
+  "settingsApp": "App",
+  "@settingsApp": {},
+  "settingsAbout": "Info",
+  "@settingsAbout": {},
+  "usageTitle": "Usage",
+  "@usageTitle": {},
+  "reportMapsLinkHint": "Best: in Google Maps, open the place, tap Share and copy the link here. Its exact pin is sent to us to check.",
+  "@reportMapsLinkHint": {},
+  "receiptItems": "Items",
+  "@receiptItems": {
+    "description": "Heading over a receipt's printed lines"
+  },
+  "updateAvailable": "Update",
+  "@updateAvailable": {
+    "description": "Chip on Home when Google Play has a newer version"
+  },
+  "usageShares": "Links and screenshots shared today",
+  "@usageShares": {},
+  "usageReceipts": "Receipt photos today",
+  "@usageReceipts": {},
+  "usageReports": "Place reports today",
+  "@usageReports": {},
+  "usageShopping": "Items on your shopping list",
+  "@usageShopping": {},
+  "usageMeters": "Service meters (AI, maps, email)",
+  "@usageMeters": {},
+  "usageResets": "Daily counts start again at {time}.",
+  "@usageResets": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinAlreadyHere": "You're already in this family. Share the link with the people you want to invite.",
+  "@familyJoinAlreadyHere": {},
+  "familyOpen": "Open family",
+  "@familyOpen": {},
+  "branchAddFromHit": "New branch",
+  "@branchAddFromHit": {},
+  "branchAdded": "Branch added. Edit its name on the map if needed.",
+  "@branchAdded": {},
+  "aiDraftUseField": "Use the suggested {field}",
+  "@aiDraftUseField": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "errBannedForGood": "This account has been suspended.",
+  "@errBannedForGood": {},
+  "errBannedUntil": "This account is suspended until {date}.",
+  "@errBannedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "errBannedReason": "Reason: {reason}",
+  "@errBannedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerBan": "Ban…",
+  "@ownerBan": {},
+  "ownerUnban": "Unban",
+  "@ownerUnban": {},
+  "ownerDeleteUser": "Delete account…",
+  "@ownerDeleteUser": {},
+  "ownerBanTitle": "Ban {email}",
+  "@ownerBanTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerBanReason": "Reason (the user sees it)",
+  "@ownerBanReason": {},
+  "ownerBanFor": "For",
+  "@ownerBanFor": {},
+  "ownerBanDays": "{n, plural, =1{1 day} other{{n} days}}",
+  "@ownerBanDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerBanForGood": "For good",
+  "@ownerBanForGood": {},
+  "ownerBanConfirm": "Ban",
+  "@ownerBanConfirm": {},
+  "ownerBanned": "Banned",
+  "@ownerBanned": {},
+  "ownerUnbanned": "Unbanned",
+  "@ownerUnbanned": {},
+  "ownerBannedUntil": "Banned until {date}",
+  "@ownerBannedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerBannedForGood": "Banned for good",
+  "@ownerBannedForGood": {},
+  "ownerDeleteTitle": "Delete {email}",
+  "@ownerDeleteTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerDeleteWhy": "Reason (kept in the log)",
+  "@ownerDeleteWhy": {},
+  "ownerDeleteBanEmail": "Also block this email and Google account from signing up again",
+  "@ownerDeleteBanEmail": {},
+  "ownerDeleteWarning": "Their recipes, places, receipts, photos and reviews are deleted. This cannot be undone.",
+  "@ownerDeleteWarning": {},
+  "ownerDeleteConfirm": "Delete for good",
+  "@ownerDeleteConfirm": {},
+  "ownerDeleted": "Account deleted",
+  "@ownerDeleted": {},
+  "avatarView": "View photo",
+  "@avatarView": {},
+  "mergeAction": "Merge",
+  "@mergeAction": {},
+  "mergePicked": "{n, plural, =0{Pick places to merge} =1{1 picked} other{{n} picked}}",
+  "@mergePicked": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mergeTitle": "Merge into one restaurant",
+  "@mergeTitle": {},
+  "mergeKeep": "Keep this one (the others become its branches)",
+  "@mergeKeep": {},
+  "mergeName": "Name",
+  "@mergeName": {},
+  "mergeHint": "Their branches, saves, shares and receipts move to it. Everyone sees the change.",
+  "@mergeHint": {},
+  "mergeDone": "Merged",
+  "@mergeDone": {},
+  "receiptSavedChip": "Saved",
+  "@receiptSavedChip": {},
+  "receiptPhotoZoom": "Tap to zoom",
+  "@receiptPhotoZoom": {},
+  "badgesTitle": "Badges",
+  "@badgesTitle": {},
+  "badgesEarned": "{n} of {total} earned",
+  "@badgesEarned": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "badgesHelp": "Earned by using Bukuresipi. Only you see them; a badge stays once earned.",
+  "@badgesHelp": {},
+  "badgeExplorer": "Explorer",
+  "@badgeExplorer": {},
+  "badgeTraveller": "Traveller",
+  "@badgeTraveller": {},
+  "badgeRegular": "Regular",
+  "@badgeRegular": {},
+  "badgeCook": "Cook",
+  "@badgeCook": {},
+  "badgeCritic": "Critic",
+  "@badgeCritic": {},
+  "badgeHelper": "Helper",
+  "@badgeHelper": {},
+  "badgeExplorerHow": "Places saved in your book",
+  "@badgeExplorerHow": {},
+  "badgeTravellerHow": "States with a place you saved",
+  "@badgeTravellerHow": {},
+  "badgeRegularHow": "Receipts you confirmed",
+  "@badgeRegularHow": {},
+  "badgeCookHow": "Recipes in your book",
+  "@badgeCookHow": {},
+  "badgeCriticHow": "Reviews you wrote (with words)",
+  "@badgeCriticHow": {},
+  "badgeHelperHow": "Pins and reports that fix the map (up to 5 a day count)",
+  "@badgeHelperHow": {},
+  "tierBronze": "Bronze",
+  "@tierBronze": {},
+  "tierSilver": "Silver",
+  "@tierSilver": {},
+  "tierGold": "Gold",
+  "@tierGold": {},
+  "tierPlatinum": "Platinum",
+  "@tierPlatinum": {},
+  "tierDiamond": "Diamond",
+  "@tierDiamond": {},
+  "badgeNone": "Not yet",
+  "@badgeNone": {},
+  "badgeTop": "Top tier reached",
+  "@badgeTop": {},
+  "badgeProgress": "{count} / {next}",
+  "@badgeProgress": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeYourCount": "You have {n}",
+  "@badgeYourCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeNew": "New badge!",
+  "@badgeNew": {},
+  "badgeNice": "Nice!",
+  "@badgeNice": {}
 }

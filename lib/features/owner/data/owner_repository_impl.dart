@@ -70,6 +70,16 @@ class OwnerRepositoryImpl implements OwnerRepository {
           verified: u['verified'] as bool,
           createdAt: dbTime(u['createdAt'] as String),
           shares: u['shares'] as int,
+          ban: switch (u['ban']) {
+            final Map<String, dynamic> b => (
+              until: switch (b['until']) {
+                final String s => DateTime.parse(s),
+                _ => null,
+              },
+              reason: b['reason'] as String?,
+            ),
+            _ => null,
+          },
         ),
     ];
   });
@@ -77,6 +87,31 @@ class OwnerRepositoryImpl implements OwnerRepository {
   @override
   Future<void> endSessions(String userId) =>
       apiCall(() => _dio.post<void>('/owner/users/$userId/logout'));
+
+  @override
+  Future<void> ban(String userId, {int? days, required String reason}) =>
+      apiCall(
+        () => _dio.post<void>(
+          '/owner/users/$userId/ban',
+          data: {'days': ?days, 'reason': reason},
+        ),
+      );
+
+  @override
+  Future<void> unban(String userId) =>
+      apiCall(() => _dio.delete<void>('/owner/users/$userId/ban'));
+
+  @override
+  Future<void> deleteUser(
+    String userId, {
+    required String reason,
+    bool banEmail = false,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/owner/users/$userId/delete',
+      data: {'reason': reason, 'ban': banEmail},
+    ),
+  );
 
   @override
   Future<List<ReportTicket>> reports({String status = 'open'}) =>

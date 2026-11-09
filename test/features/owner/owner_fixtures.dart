@@ -10,15 +10,21 @@ Meter meter({
 }) =>
     Meter(code: code, name: 'Nominatim', used: used, cap: cap, active: active);
 
-OwnerUser ownerUser(String email, {bool verified = true, int shares = 0}) =>
-    OwnerUser(
-      id: 'u-$email',
-      email: email,
-      role: 'user',
-      verified: verified,
-      createdAt: DateTime.utc(2026, 11, 1),
-      shares: shares,
-    );
+OwnerUser ownerUser(
+  String email, {
+  bool verified = true,
+  int shares = 0,
+  String role = 'user',
+  ({DateTime? until, String? reason})? ban,
+}) => OwnerUser(
+  id: 'u-$email',
+  email: email,
+  role: role,
+  verified: verified,
+  createdAt: DateTime.utc(2026, 11, 1),
+  shares: shares,
+  ban: ban,
+);
 
 class FakeOwner implements OwnerRepository {
   OwnerStats stats = OwnerStats(
@@ -75,6 +81,27 @@ class FakeOwner implements OwnerRepository {
 
   @override
   Future<void> endSessions(String userId) async => loggedOut.add(userId);
+
+  /// (user, days, reason); days null = for good.
+  final bans = <(String, int?, String)>[];
+  final unbans = <String>[];
+
+  /// (user, reason, banEmail).
+  final deleted = <(String, String, bool)>[];
+
+  @override
+  Future<void> ban(String userId, {int? days, required String reason}) async =>
+      bans.add((userId, days, reason));
+
+  @override
+  Future<void> unban(String userId) async => unbans.add(userId);
+
+  @override
+  Future<void> deleteUser(
+    String userId, {
+    required String reason,
+    bool banEmail = false,
+  }) async => deleted.add((userId, reason, banEmail));
 
   @override
   Future<List<FailedShare>> failedShares() async => shares;

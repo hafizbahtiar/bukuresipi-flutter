@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'package:provider/provider.dart';
 
+import '../../../../core/constants/image_constant.dart';
 import '../../../../core/settings/locale_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -74,7 +76,7 @@ class _GoogleButtonState extends State<GoogleButton> {
               children: [
                 // Google's own "G" (the 2025 gradient), cut from its sign-in asset pack
                 // (developers.google.com/identity/branding-guidelines); 20 dp, as the guidelines say.
-                Image.asset('assets/brand/google_g.png', width: 20, height: 20),
+                Image.asset(ImageConstant.googleLogo, width: 20, height: 20),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(

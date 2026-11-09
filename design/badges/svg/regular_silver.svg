@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512">
+<defs>
+  <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.45" stop-color="#C9D0D9"/><stop offset="1" stop-color="#8A939F"/>
+  </linearGradient>
+  <linearGradient id="rim" x1="1" y1="1" x2="0" y2="0">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#C9D0D9"/><stop offset="1" stop-color="#565E69"/>
+  </linearGradient>
+  <radialGradient id="face" cx="0.38" cy="0.32" r="0.8">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.6" stop-color="#C9D0D9"/><stop offset="1" stop-color="#8A939F"/>
+  </radialGradient>
+  <linearGradient id="struck" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8A939F"/><stop offset="1" stop-color="#565E69"/>
+  </linearGradient>
+  <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#976220"/><stop offset="1" stop-color="#C9822B"/>
+  </linearGradient>
+  <filter id="drop" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.28"/>
+  </filter>
+</defs>
+<!-- ribbon tails -->
+<path d="M84,150 L118,150 L106,246 L91,232 L72,242 Z" fill="url(#ribbon)"/>
+<path d="M138,150 L172,150 L184,242 L165,232 L150,246 Z" fill="#B17226"/>
+<path d="M98,150 L106,150 L94,236 L88,231 Z M150,150 L158,150 L168,231 L162,236 Z" fill="#FFFFFF" opacity="0.25"/>
+<!-- medal -->
+<g filter="url(#drop)">
+  <path d="M128.00,30.00 Q144.32,19.43 156.05,34.95 Q175.00,30.59 180.71,49.18 Q200.01,51.58 199.01,71.00 Q216.33,79.85 208.75,97.76 Q222.00,112.00 208.75,126.24 Q216.33,144.15 199.01,153.00 Q200.01,172.42 180.71,174.82 Q175.00,193.41 156.05,189.05 Q144.32,204.57 128.00,194.00 Q111.68,204.57 99.95,189.05 Q81.00,193.41 75.29,174.82 Q55.99,172.42 56.99,153.00 Q39.67,144.15 47.25,126.24 Q34.00,112.00 47.25,97.76 Q39.67,79.85 56.99,71.00 Q55.99,51.58 75.29,49.18 Q81.00,30.59 99.95,34.95 Q111.68,19.43 128.00,30.00 Z" fill="url(#metal)" stroke="#565E69" stroke-width="2"/>
+</g>
+<circle cx="128" cy="112" r="72" fill="url(#rim)"/>
+<circle cx="128" cy="112" r="65" fill="url(#face)" stroke="#8A939F" stroke-width="1.5"/>
+<circle cx="128" cy="112" r="60" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.7"/>
+<!-- emblem: struck, with a light edge below right -->
+<g transform="translate(82,64) scale(0.92)">
+  <g transform="translate(2.5,2.5)" opacity="0.9">
+<path d="M24,10 L76,10 L76,92 L69.5,86 L63,92 L56.5,86 L50,92 L43.5,86 L37,92 L30.5,86 L24,92 Z" fill="#FFFFFF"/>
+<rect x="33" y="22" width="34" height="5" rx="2.5" fill="#FFFFFF"/>
+<rect x="33" y="36" width="22" height="4" rx="2" fill="#FFFFFF"/><rect x="59" y="36" width="8" height="4" rx="2" fill="#FFFFFF"/>
+<rect x="33" y="47" width="18" height="4" rx="2" fill="#FFFFFF"/><rect x="59" y="47" width="8" height="4" rx="2" fill="#FFFFFF"/>
+<rect x="33" y="58" width="24" height="4" rx="2" fill="#FFFFFF"/><rect x="59" y="58" width="8" height="4" rx="2" fill="#FFFFFF"/>
+<path d="M33,69 L67,69" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 3"/>
+<rect x="33" y="74" width="14" height="5" rx="2.5" fill="#FFFFFF"/><rect x="55" y="74" width="12" height="5" rx="2.5" fill="#FFFFFF"/></g>
+  
+<path d="M24,10 L76,10 L76,92 L69.5,86 L63,92 L56.5,86 L50,92 L43.5,86 L37,92 L30.5,86 L24,92 Z" fill="url(#struck)"/>
+<rect x="33" y="22" width="34" height="5" rx="2.5" fill="#FFFFFF"/>
+<rect x="33" y="36" width="22" height="4" rx="2" fill="#FFFFFF"/><rect x="59" y="36" width="8" height="4" rx="2" fill="#FFFFFF"/>
+<rect x="33" y="47" width="18" height="4" rx="2" fill="#FFFFFF"/><rect x="59" y="47" width="8" height="4" rx="2" fill="#FFFFFF"/>
+<rect x="33" y="58" width="24" height="4" rx="2" fill="#FFFFFF"/><rect x="59" y="58" width="8" height="4" rx="2" fill="#FFFFFF"/>
+<path d="M33,69 L67,69" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 3"/>
+<rect x="33" y="74" width="14" height="5" rx="2.5" fill="#FFFFFF"/><rect x="55" y="74" width="12" height="5" rx="2.5" fill="#FFFFFF"/>
+</g>
+<!-- shine -->
+<path d="M76,92 A56,56 0 0 1 158,58 A70,70 0 0 0 76,92 Z" fill="#FFFFFF" opacity="0.35"/>
+<!-- banner with the tier's stars -->
+<path d="M58,192 L70,186 L186,186 L198,192 L186,214 L70,214 Z" fill="#565E69"/>
+<path d="M70,186 L186,186 L182,210 L74,210 Z" fill="url(#struck)"/>
+<path d="M74,188 L182,188" stroke="#FFFFFF" stroke-width="1" opacity="0.6"/>
+<path d="M120.50,196.80 L122.14,200.74 L126.40,201.08 L123.15,203.86 L124.14,208.02 L120.50,205.79 L116.86,208.02 L117.85,203.86 L114.60,201.08 L118.86,200.74Z" fill="#FFFFFF" stroke="#565E69" stroke-width="1.2"/><path d="M135.50,196.80 L137.14,200.74 L141.40,201.08 L138.15,203.86 L139.14,208.02 L135.50,205.79 L131.86,208.02 L132.85,203.86 L129.60,201.08 L133.86,200.74Z" fill="#FFFFFF" stroke="#565E69" stroke-width="1.2"/>
+
+
+</svg>

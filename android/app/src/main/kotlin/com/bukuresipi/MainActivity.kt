@@ -2,6 +2,7 @@ package com.bukuresipi
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -24,6 +25,11 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Reopened from Recents (or recreated after Android closed the app), the activity gets the share intent it
+        // first started with: receive_sharing_intent would hand the old share over again and the share screen would
+        // open for a post sent long ago. Swap it for a plain launch before super (the plugin reads it on attach).
+        val replayed = savedInstanceState != null || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (replayed && intent.action in SHARE_ACTIONS) intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         super.onCreate(savedInstanceState)
         // The API sends share pushes on channel "share_ready" (bukuresipi-hono src/lib/push.ts). High importance = a
         // heads-up banner; the user can still lower or mute it in system settings. Android never raises an existing
@@ -34,5 +40,9 @@ class MainActivity : FlutterActivity() {
             val channel = NotificationChannel("share_ready", getString(R.string.channel_shares), NotificationManager.IMPORTANCE_HIGH)
             manager.createNotificationChannel(channel)
         }
+    }
+
+    private companion object {
+        val SHARE_ACTIONS = setOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)
     }
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'nearby_branch.dart';
 import 'place.dart';
 import 'rating.dart';
@@ -18,11 +20,14 @@ abstract interface class PlacesRepository {
   /// The user's own pin for an unpinned branch (one per user + branch; moving it replaces it).
   Future<void> setPin(String branchId, double lat, double lng);
 
-  /// Looks an unpinned branch up again on the server. true = it has a pin now.
-  Future<bool> locate(String branchId);
+  /// Looks an unpinned branch up again on the server.
+  Future<LocateResult> locate(String branchId);
 
   /// Owner only: merges branches that are the same shop and drops empty ones, for every user.
   Future<({int merged, int removed})> tidyBranches(String restaurantId);
+
+  /// Owner: restaurants that are one company become [into] (renamed to [name] when given).
+  Future<void> mergeRestaurants(List<String> from, String into, {String? name});
 
   /// Owner only: removes the branch for every user.
   Future<void> deleteBranch(String branchId);
@@ -40,8 +45,45 @@ abstract interface class PlacesRepository {
     BranchEditScope scope = BranchEditScope.personal,
   });
 
+  /// Owner only: another branch of [branchId]'s restaurant. Throws 'branch_label_taken'.
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  });
+
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
   Future<BranchSuggestion> suggestBranch(String branchId);
+
+  /// The 16 states with their towns, A-Z (the branch form's dropdowns).
+  Future<List<AreaState>> areas();
+
+  /// A pasted Google Maps link -> its pin (nothing saved). Throws ApiException 'not_maps_link' / 'no_pin'.
+  Future<MapsPin> pinFromMapsLink(String url);
+
+  /// Owner: [source] 'osm' | 'here' | 'grab'; [q] null = the shop name + area. Throws `source_off` (no key, meter off).
+  Future<({String query, List<PinHit> hits})> searchPin(
+    String branchId,
+    String source, {
+    String? q,
+  });
+
+  /// The restaurant's chosen cover photo; null = none. [cover] is the id from the DTO (cache key).
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover);
+
+  /// Owner only: the post thumbnails to pick a cover from, and the current pick.
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  );
+
+  /// Owner only: one candidate's image.
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover);
+
+  /// Owner only: picks a candidate as the cover for everyone; null clears it.
+  Future<void> setRestaurantCover(String restaurantId, String? cover);
 
   /// Community rating; the response is the branch's fresh summary.
   Future<RatingSummary> rateBranch(String branchId, int stars);
@@ -73,6 +115,18 @@ abstract interface class PlacesRepository {
 
   /// Saves an existing branch's restaurant to this user's map.
   Future<Place> saveBranch(String branchId);
+
+  /// Places named like [query], nearest to (lat, lng) first. [submit] = the user pressed Search: logged, and the
+  /// server may ask OpenStreetMap; while typing, our data only.
+  Future<List<PlaceHit>> search(
+    String query,
+    double lat,
+    double lng, {
+    bool submit = false,
+  });
+
+  /// Saves a search result that is not in the app yet (it becomes a restaurant).
+  Future<Place> savePoi(String poiId);
 
   /// Community suggestion; saved as an open ticket for the owner to verify.
   Future<void> report(ReportDraft draft);

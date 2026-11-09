@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
@@ -54,14 +56,30 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
-  Future<bool> locate(String branchId) => apiCall(() async {
+  Future<LocateResult> locate(String branchId) => apiCall(() async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/locate',
       // The server may search the web and ask the AI: longer than the usual 30 s.
       options: Options(receiveTimeout: const Duration(seconds: 90)),
     );
-    return res.data!['found'] == true;
+    return switch (res.data!['result']) {
+      'tried_today' => LocateResult.triedToday,
+      _ when res.data!['found'] == true => LocateResult.found,
+      _ => LocateResult.notFound,
+    };
   });
+
+  @override
+  Future<void> mergeRestaurants(
+    List<String> from,
+    String into, {
+    String? name,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/places/restaurants/merge',
+      data: {'from': from, 'into': into, 'name': ?name},
+    ),
+  );
 
   @override
   Future<({int merged, int removed})> tidyBranches(String restaurantId) =>
@@ -128,6 +146,87 @@ class PlacesRepositoryImpl implements PlacesRepository {
       changed: j['changed'] as bool? ?? false,
       summary: j['summary'] as String?,
       warnings: ((j['warnings'] as List?) ?? const []).cast<String>(),
+      candidates: [
+        for (final c
+            in ((j['candidates'] as List?) ?? const [])
+                .cast<Map<String, dynamic>>())
+          (
+            source: c['source'] as String,
+            lat: (c['lat'] as num).toDouble(),
+            lng: (c['lng'] as num).toDouble(),
+            address: c['address'] as String?,
+            fromDraftM: (c['fromDraftM'] as num?)?.round(),
+          ),
+      ],
+    );
+  });
+
+  @override
+  Future<void> addSiblingBranch(
+    String branchId, {
+    String? address,
+    String? city,
+    String? state,
+    required double lat,
+    required double lng,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/places/branches/$branchId/sibling',
+      data: {
+        'address': address,
+        'city': city,
+        'state': state,
+        'lat': lat,
+        'lng': lng,
+      },
+    ),
+  );
+
+  @override
+  Future<({String query, List<PinHit> hits})> searchPin(
+    String branchId,
+    String source, {
+    String? q,
+  }) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/branches/$branchId/search-pin',
+      data: {'source': source, 'q': ?q},
+    )).data!;
+    return (
+      query: j['query'] as String,
+      hits: [
+        for (final h in (j['hits'] as List).cast<Map<String, dynamic>>())
+          (
+            lat: (h['lat'] as num).toDouble(),
+            lng: (h['lng'] as num).toDouble(),
+            address: h['address'] as String,
+            city: h['city'] as String?,
+            state: h['state'] as String?,
+            source: h['source'] as String,
+          ),
+      ],
+    );
+  });
+
+  @override
+  Future<List<AreaState>> areas() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/places/areas')).data!;
+    return [
+      for (final s in j['states'] as List)
+        (name: s['name'] as String, towns: (s['towns'] as List).cast<String>()),
+    ];
+  });
+
+  @override
+  Future<MapsPin> pinFromMapsLink(String url) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/maps-link',
+      data: {'url': url},
+    )).data!;
+    return (
+      lat: (j['lat'] as num).toDouble(),
+      lng: (j['lng'] as num).toDouble(),
+      name: j['name'] as String?,
     );
   });
 
@@ -252,6 +351,98 @@ class PlacesRepositoryImpl implements PlacesRepository {
     )).data!;
     return placeFromJson(data);
   });
+
+  @override
+  Future<List<PlaceHit>> search(
+    String query,
+    double lat,
+    double lng, {
+    bool submit = false,
+  }) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/places/search',
+      queryParameters: {
+        'q': query.trim(),
+        'lat': lat,
+        'lng': lng,
+        'submit': submit ? '1' : '0',
+      },
+    )).data!;
+    return [
+      for (final j in (data['items'] as List).cast<Map<String, dynamic>>())
+        PlaceHit(
+          branchId: j['branchId'] as String?,
+          poiId: j['poiId'] as String?,
+          name: j['name'] as String,
+          address: j['address'] as String?,
+          lat: (j['lat'] as num).toDouble(),
+          lng: (j['lng'] as num).toDouble(),
+          distanceM: (j['distanceM'] as num).toInt(),
+          saved: j['saved'] as bool? ?? false,
+        ),
+    ];
+  });
+
+  // shortcut: FIFO, not LRU; a Home grid shows far fewer covers than this.
+  final _covers = <String, Future<Uint8List?>>{};
+
+  @override
+  Future<Uint8List?> restaurantCover(String restaurantId, String cover) {
+    if (_covers.length >= 80) _covers.remove(_covers.keys.first);
+    final key = '$restaurantId/$cover';
+    return _covers[key] ??= _bytes('/places/restaurants/$restaurantId/cover')
+      ..catchError((Object _) {
+        _covers.remove(key); // a failed fetch is tried again next time
+        return null;
+      });
+  }
+
+  @override
+  Future<({List<String> covers, String? current})> coverCandidates(
+    String restaurantId,
+  ) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/places/restaurants/$restaurantId/covers',
+    )).data!;
+    return (
+      covers: (j['covers'] as List).cast<String>(),
+      current: j['current'] as String?,
+    );
+  });
+
+  @override
+  Future<Uint8List?> coverCandidate(String restaurantId, String cover) =>
+      _bytes('/places/restaurants/$restaurantId/covers/$cover');
+
+  @override
+  Future<void> setRestaurantCover(String restaurantId, String? cover) =>
+      apiCall(
+        () => _dio.put<void>(
+          '/places/restaurants/$restaurantId/cover',
+          data: {'cover': cover},
+        ),
+      );
+
+  /// Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private. 404 = null.
+  Future<Uint8List?> _bytes(String path) => apiCall(() async {
+    final res = await _dio.get<List<int>>(
+      path,
+      options: Options(
+        responseType: ResponseType.bytes,
+        validateStatus: (s) => s == 200 || s == 404,
+      ),
+    );
+    return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+  });
+
+  @override
+  Future<Place> savePoi(String poiId) => apiCall(() async {
+    final data = (await _dio.post<Map<String, dynamic>>(
+      '/places',
+      data: {'poiId': poiId},
+    )).data!;
+    return placeFromJson(data);
+  });
 }
 
 double? _num(Object? v) => v is num ? v.toDouble() : null;
@@ -272,6 +463,7 @@ NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   saved: j['saved'] as bool,
   placeId: j['placeId'] as String?,
   rating: ratingFromJson(j['rating']),
+  cover: j['cover'] as String?,
 );
 
 ReviewVotes reviewVotesFromJson(Object? json) {
@@ -294,6 +486,7 @@ Review reviewFromJson(Map<String, dynamic> j) => Review(
   updatedAt: dbTime(j['updatedAt'] as String),
   votes: reviewVotesFromJson(j['votes']),
   reported: j['reported'] as bool? ?? false,
+  visited: j['visited'] as bool? ?? false,
 );
 
 ReviewPage reviewPageFromJson(Map<String, dynamic> j) {
@@ -320,7 +513,12 @@ Place placeFromJson(Map<String, dynamic> j) {
     savedBy: [
       for (final s
           in (j['savedBy'] as List? ?? const []).cast<Map<String, dynamic>>())
-        (name: s['name'] as String?, isMe: s['isMe'] as bool),
+        (
+          name: s['name'] as String?,
+          isMe: s['isMe'] as bool,
+          userId: s['userId'] as String?,
+          avatar: s['avatar'] as String?,
+        ),
     ],
     note: j['note'] as String?,
     createdAt: dbTime(j['createdAt'] as String),
@@ -334,6 +532,7 @@ Place placeFromJson(Map<String, dynamic> j) {
       halalClaim: r['halalClaim'] as String?,
       halalQuote: r['halalQuote'] as String?,
       halalSourceUrl: r['halalSourceUrl'] as String?,
+      cover: r['cover'] as String?,
     ),
     branches: [
       for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())

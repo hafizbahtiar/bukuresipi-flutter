@@ -30,6 +30,7 @@ class BranchSuggestion {
     required this.changed,
     this.summary,
     this.warnings = const [],
+    this.candidates = const [],
   });
 
   final BranchDraft draft;
@@ -38,7 +39,39 @@ class BranchSuggestion {
   final bool changed;
   final String? summary;
   final List<String> warnings;
+
+  /// Every pin found (current, the draft's, HERE, GrabMaps), to compare before saving.
+  final List<PinCandidate> candidates;
 }
+
+/// One pin a source gave for a branch. [source]: 'current', 'draft:<source>', 'here', 'grab'.
+/// [fromDraftM] = metres from the draft's pin; null when the draft has none.
+typedef PinCandidate = ({
+  String source,
+  double lat,
+  double lng,
+  String? address,
+  int? fromDraftM,
+});
+
+/// "Find location": [triedToday] = the server already looked within a day, so it searched nothing.
+enum LocateResult { found, triedToday, notFound }
+
+/// A pin read from a pasted Google Maps link; [name] when the link names the place.
+typedef MapsPin = ({double lat, double lng, String? name});
+
+/// One hit of the owner's search on a chosen map source (osm, here, grab); [source] is the service that answered.
+/// A state and its official towns (the server's postcode list), for the branch form's dropdowns.
+typedef AreaState = ({String name, List<String> towns});
+
+typedef PinHit = ({
+  double lat,
+  double lng,
+  String address,
+  String? city,
+  String? state,
+  String source,
+});
 
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
 /// In a family the book also holds the members' saves: [mine] false = only a family member saved it.
@@ -65,8 +98,10 @@ class Place {
   /// "Only me": the caller's save is kept out of the family book.
   final bool private;
 
-  /// Who saved it, the caller first (name null + isMe: "You").
-  final List<({String? name, bool isMe})> savedBy;
+  /// Who saved it, the caller first (name null + isMe: "You"). A family member also has [userId] + [avatar]
+  /// (their photo, for the map pin).
+  final List<({String? name, bool isMe, String? userId, String? avatar})>
+  savedBy;
 
   /// The family members who saved it (not the caller).
   List<String> get savedByOthers => [
@@ -126,6 +161,7 @@ class PlaceRestaurant {
     this.halalClaim,
     this.halalQuote,
     this.halalSourceUrl,
+    this.cover,
   });
 
   final String id;
@@ -134,6 +170,9 @@ class PlaceRestaurant {
   final String? halalClaim;
   final String? halalQuote;
   final String? halalSourceUrl;
+
+  /// The owner's chosen photo (PlacesRepository.restaurantCover); changes when another is picked. null = none.
+  final String? cover;
 }
 
 class Branch {

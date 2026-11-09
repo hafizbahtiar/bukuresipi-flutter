@@ -7,14 +7,16 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
+import '../../../auth/presentation/auth_text.dart';
 import '../../../family/presentation/family_controller.dart';
 import '../../../recipes/domain/recipe.dart';
-import '../../../recipes/presentation/pages/recipe_edit_page.dart';
 import '../../../recipes/presentation/recipes_controller.dart';
 import '../../../shares/presentation/recent_shares.dart';
 import '../../../shares/presentation/widgets/share_reading.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../widgets/merge_sheet.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 
 enum BookFilter { all, mine, family }
@@ -32,19 +34,38 @@ class _PlacesListPageState extends State<PlacesListPage> {
   final _search = TextEditingController();
   BookFilter _filter = BookFilter.all;
 
+  /// Owner's Merge: the restaurants picked (null = not merging). Recipes can't be picked.
+  Set<String>? _merging;
+
+  Future<void> _merge(List<Place> picked) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final places = context.read<PlacesController>();
+    final r = await showNotebookSheet<({String into, String? name})>(
+      context,
+      builder: (_) => MergeSheet(places: picked),
+    );
+    if (r == null || !mounted) return;
+    try {
+      await places.mergeRestaurants(
+        [
+          for (final p in picked)
+            if (p.restaurant.id != r.into) p.restaurant.id,
+        ],
+        r.into,
+        name: r.name,
+      );
+      if (mounted) setState(() => _merging = null);
+      messenger.showSnackBar(SnackBar(content: Text(l.mergeDone)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+  }
+
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
-  }
-
-  /// "New recipe" (was on the Recipes tab): the editor, empty; the saved recipe opens.
-  Future<void> _newRecipe() async {
-    final saved = await Navigator.of(context).push<RecipeDetail>(
-      MaterialPageRoute(builder: (_) => const RecipeEditPage()),
-    );
-    if (saved == null || !mounted) return;
-    unawaited(context.push('/recipes/${saved.id}'));
   }
 
   @override
@@ -58,6 +79,8 @@ class _PlacesListPageState extends State<PlacesListPage> {
     final q = _search.text.trim().toLowerCase();
     bool hit(String? s) => q.isEmpty || (s?.toLowerCase().contains(q) ?? false);
     final searching = q.isNotEmpty || filter != BookFilter.all;
+    final merging = _merging;
+    final isOwner = context.watch<AuthController?>()?.user?.isOwner ?? false;
     final list = [
       for (final p in places.places)
         if ((hit(p.restaurant.name) ||
@@ -156,7 +179,18 @@ class _PlacesListPageState extends State<PlacesListPage> {
             FreshHighlight(
               key: ValueKey('place-${p.id}'),
               fresh: shared.isFresh(p.restaurant.id),
-              child: PlaceTile(place: p),
+              child: merging == null
+                  ? PlaceTile(place: p)
+                  : _Pickable(
+                      key: ValueKey('merge-${p.restaurant.id}'),
+                      picked: merging.contains(p.restaurant.id),
+                      onTap: () => setState(() {
+                        if (!merging.remove(p.restaurant.id)) {
+                          merging.add(p.restaurant.id);
+                        }
+                      }),
+                      child: PlaceTile(place: p),
+                    ),
             ),
           ),
         for (final r in bookRecipes)
@@ -165,7 +199,15 @@ class _PlacesListPageState extends State<PlacesListPage> {
             FreshHighlight(
               key: ValueKey('recipe-${r.id}'),
               fresh: shared.isFresh(r.id),
-              child: RecipeTile(recipe: r),
+              // Merging is for places: a recipe stays greyed out and can't be picked.
+              child: merging == null
+                  ? RecipeTile(recipe: r)
+                  : IgnorePointer(
+                      child: Opacity(
+                        opacity: 0.35,
+                        child: RecipeTile(recipe: r),
+                      ),
+                    ),
             ),
           ),
       ]..sort((a, b) => b.$1.compareTo(a.$1));
@@ -175,13 +217,53 @@ class _PlacesListPageState extends State<PlacesListPage> {
       ];
     }
 
+    final picked = [
+      if (merging != null)
+        for (final p in places.places)
+          if (merging.contains(p.restaurant.id)) p,
+    ];
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _newRecipe,
-        icon: const Icon(Icons.edit_note),
-        label: Text(l.recipeNew),
-      ),
-      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.homeTitle)),
+      appBar: merging != null
+          ? AppBar(
+              toolbarHeight: 76,
+              leading: IconButton(
+                key: const ValueKey('merge-cancel'),
+                tooltip: MaterialLocalizations.of(context).cancelButtonLabel,
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _merging = null),
+              ),
+              title: Text(l.mergePicked(picked.length)),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: FilledButton(
+                    key: const ValueKey('merge-next'),
+                    onPressed: picked.length < 2 ? null : () => _merge(picked),
+                    child: Text(l.mergeAction),
+                  ),
+                ),
+              ],
+            )
+          : AppBar(
+              toolbarHeight: 76,
+              title: NotebookTitle(l.homeTitle),
+              actions: [
+                // Owner: one company saved under several names becomes one restaurant.
+                if (isOwner)
+                  IconButton(
+                    key: const ValueKey('book-merge'),
+                    tooltip: l.mergeAction,
+                    icon: const Icon(Icons.merge_type),
+                    onPressed: () => setState(() => _merging = {}),
+                  ),
+                IconButton(
+                  key: const ValueKey('book-map'),
+                  tooltip: l.navMap,
+                  icon: const Icon(Icons.map_outlined),
+                  onPressed: () => context.push('/map'),
+                ),
+              ],
+            ),
       body: NotebookPage(
         child: RefreshIndicator(
           // Everything on the page: a new recipe or a cleared share shows without a restart.
@@ -189,9 +271,7 @@ class _PlacesListPageState extends State<PlacesListPage> {
               Future.wait([places.load(), recipes.load(), shared.load()]),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(
-              bottom: 96,
-            ), // the last row clears New recipe
+            padding: const EdgeInsets.only(bottom: 24),
             // The search box once there is something to search.
             children: [
               ...inbox,
@@ -300,8 +380,8 @@ class RecipeTile extends StatelessWidget {
       mark: Icon(Icons.menu_book, size: 20, color: nb.inkSoft),
       trailing: switch ((recipe.cover, recipe.shareId)) {
         (final cover?, _) => SharePhoto.cover(recipe.id, cover),
-        (null, final id?) => SharePhoto(id),
-        _ => null,
+        (null, final id?) => SharePhoto(id, drawing: true),
+        _ => const SharePhoto.placeholder(),
       },
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(
@@ -366,4 +446,38 @@ class _Note extends StatelessWidget {
       style: Notebook.of(context).hand.copyWith(fontSize: 24, height: 1.25),
     ),
   );
+}
+
+/// A place in Merge mode: a tap picks it (tick on the right); its own taps are off.
+class _Pickable extends StatelessWidget {
+  const _Pickable({
+    super.key,
+    required this.picked,
+    required this.onTap,
+    required this.child,
+  });
+
+  final bool picked;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Expanded(child: IgnorePointer(child: child)),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Icon(
+              picked ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: picked ? nb.pandan : nb.inkSoft,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
