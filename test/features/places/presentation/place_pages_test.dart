@@ -133,6 +133,10 @@ void main() {
       await t.pumpAndSettle();
       final next = find.byKey(const ValueKey('merge-next'));
       expect(t.widget<FilledButton>(next).onPressed, isNull);
+      expect(
+        find.text('Tap 2 or more places that are the same company.'),
+        findsOneWidget,
+      );
       // A recipe can't be picked.
       await t.tap(find.text('Ayam Masak Merah'), warnIfMissed: false);
       await t.tap(find.byKey(const ValueKey('merge-r-a')));

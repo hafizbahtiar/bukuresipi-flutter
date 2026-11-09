@@ -779,5 +779,6 @@
   "badgeProgress": "{count} / {next}",
   "badgeYourCount": "Anda ada {n}",
   "badgeNew": "Lencana baru!",
-  "badgeNice": "Hebat!"
+  "badgeNice": "Hebat!",
+  "mergeNeedTwo": "Ketik 2 atau lebih kedai yang sama syarikat."
 }

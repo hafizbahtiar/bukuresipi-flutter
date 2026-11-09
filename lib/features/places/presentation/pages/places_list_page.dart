@@ -233,16 +233,6 @@ class _PlacesListPageState extends State<PlacesListPage> {
                 onPressed: () => setState(() => _merging = null),
               ),
               title: Text(l.mergePicked(picked.length)),
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: FilledButton(
-                    key: const ValueKey('merge-next'),
-                    onPressed: picked.length < 2 ? null : () => _merge(picked),
-                    child: Text(l.mergeAction),
-                  ),
-                ),
-              ],
             )
           : AppBar(
               toolbarHeight: 76,
@@ -263,6 +253,43 @@ class _PlacesListPageState extends State<PlacesListPage> {
                   onPressed: () => context.push('/map'),
                 ),
               ],
+            ),
+      // Merge mode: the button at the bottom, where the thumb is, with what to do next.
+      bottomNavigationBar: merging == null
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (picked.length < 2)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          l.mergeNeedTwo,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        key: const ValueKey('merge-next'),
+                        icon: const Icon(Icons.merge_type),
+                        onPressed: picked.length < 2
+                            ? null
+                            : () => _merge(picked),
+                        label: Text(
+                          picked.length < 2
+                              ? l.mergeAction
+                              : '${l.mergeAction} (${picked.length})',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
       body: NotebookPage(
         child: RefreshIndicator(
