@@ -36,14 +36,18 @@ class MapSearchBar extends StatefulWidget {
     required this.places,
     required this.search,
     required this.onPicked,
+    this.reserveBottom = 0,
   });
 
   final List<Place> places;
   final PlaceSearch search;
   final ValueChanged<Object> onPicked;
 
+  /// Space the results leave free above the keyboard (the page's nearby cards).
+  final double reserveBottom;
+
   /// The bar's own height: the page lays its buttons out below it.
-  static const height = 52.0;
+  static const height = 44.0;
 
   @override
   State<MapSearchBar> createState() => _MapSearchBarState();
@@ -132,6 +136,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
                     key: const ValueKey('map-search-back'),
                     tooltip: MaterialLocalizations.of(context)
                         .backButtonTooltip,
+                    iconSize: 20,
                     icon: const BackButtonIcon(),
                     onPressed: () => _focus.hasFocus || _open
                         ? _close()
@@ -157,8 +162,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
                           duration: _morph,
                           curve: Curves.easeOutCubic,
                           padding: EdgeInsets.only(
-                            left: typing ? 20 : 48,
-                            right: typing ? 52 : 20,
+                            left: typing ? 16 : 40,
+                            right: typing ? 40 : 16,
                           ),
                           child: Align(
                             alignment: Alignment.centerLeft,
@@ -192,7 +197,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            padding: EdgeInsets.zero,
                             child: IconButton(
                               key: ValueKey(
                                 typing ? 'map-search-clear' : 'map-search-icon',
@@ -202,6 +207,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
                                         .deleteButtonTooltip
                                   : l.mapSearchHint,
                               color: nb.inkSoft,
+                              iconSize: 20,
+                              visualDensity: VisualDensity.compact,
                               onPressed: typing
                                   ? _text.clear
                                   : _focus.requestFocus,
@@ -259,6 +266,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
                         maxHeight:
                             (mq.size.height -
                                     mq.viewInsets.bottom -
+                                    widget.reserveBottom -
                                     mq.padding.top -
                                     MapSearchBar.height -
                                     40)

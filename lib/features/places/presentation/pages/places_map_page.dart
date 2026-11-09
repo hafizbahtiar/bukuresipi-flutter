@@ -1006,6 +1006,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final shownNearby = _shownNearby;
     final showNearby = shownNearby.isNotEmpty;
     // No app bar: the search bar floats on the map, the buttons below it.
+    // The keyboard covers the map (resizing a native map view stutters); the cards at the bottom ride above it.
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final belowBar =
         MediaQuery.paddingOf(context).top + 8 + MapSearchBar.height + 12;
     // The credit "i" sits bottom left, above whatever holds the bottom.
@@ -1102,7 +1104,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                 left: 16,
                 right: 16,
                 // The nearby cards have the bottom; the unpinned slip sits just above them.
-                bottom: showNearby ? NearbyCarousel.height + 32 : 16,
+                bottom:
+                    keyboard + (showNearby ? NearbyCarousel.height + 32 : 16),
                 child: SafeArea(
                   child: _Slip(
                     onTap: _showUnpinned,
@@ -1126,7 +1129,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: 16,
+                bottom: keyboard + 16,
                 child: SafeArea(
                   top: false,
                   left: false,
@@ -1152,6 +1155,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                     places: places.pinned,
                     search: _searchNear,
                     onPicked: _picked,
+                    reserveBottom: showNearby ? NearbyCarousel.height + 24 : 0,
                   ),
                 ),
               ),
