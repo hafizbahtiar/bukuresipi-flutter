@@ -90,4 +90,36 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('map-search-results')), findsNothing);
   });
+
+  testWidgets(
+    '✕ clears the field and keeps searching; the round back button closes it',
+    (t) async {
+      await t.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [Notebook.light]),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: MapSearchBar(
+              places: const [],
+              search: (q, {required submit}) async => const <PlaceHit>[],
+              onPicked: (_) {},
+            ),
+          ),
+        ),
+      );
+      expect(find.byKey(const ValueKey('map-search-back')), findsNothing);
+      await t.enterText(find.byType(TextField), 'nasi');
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('map-search-back')), findsOneWidget);
+
+      await t.tap(find.byKey(const ValueKey('map-search-clear')));
+      await t.pumpAndSettle();
+      expect(find.text('nasi'), findsNothing);
+      expect(find.byKey(const ValueKey('map-search-back')), findsOneWidget);
+
+      await t.tap(find.byKey(const ValueKey('map-search-back')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('map-search-back')), findsNothing);
+    },
+  );
 }
