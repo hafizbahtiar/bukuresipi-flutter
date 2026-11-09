@@ -76,15 +76,13 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   MapLibreMapController? _map;
   bool _styled = false;
 
-  /// Zoomed out past a town (below [_farZoom]): every pin is a small dot and no faces, as map apps do.
-  bool _far = true;
-  static const _farZoom = 11.0;
+  /// The pins' source and layers (added on every style load), and each feature's tap data by feature id.
+  bool _layers = false;
+  final _features = <String, Map<String, dynamic>>{};
 
-  /// Face images added to the style, by avatar id (false = could not load: the plain dot stays).
-  final _faces = <String, Future<bool>>{};
-
-  /// Bumped by every redraw: a slow face load from an older one adds nothing.
-  int _drawGen = 0;
+  /// Face images in the style, by avatar id, and the ones loading (a loaded one redraws).
+  final _faceReady = <String>{};
+  final _faceLoading = <String>{};
   late final PlacesController _places = context.read<PlacesController>();
   List<NearbyBranch> _nearby = const [];
 
@@ -143,7 +141,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _positionSub?.cancel();
     _places.removeListener(_draw);
     _map?.onCircleTapped.remove(_tapped);
-    _map?.onSymbolTapped.remove(_symbolTapped);
+    _map?.onFeatureTapped.remove(_featureTapped);
     super.dispose();
   }
 
@@ -169,16 +167,16 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     setState(
       () => _map = c
         ..onCircleTapped.add(_tapped)
-        ..onSymbolTapped.add(_symbolTapped),
+        ..onFeatureTapped.add(_featureTapped),
     );
   }
 
   Future<void> _styleLoaded() async {
     _styled = true;
-    _faces.clear(); // a new style has none of the images
-    // Faces never hide each other or the map's labels.
-    await _map?.setSymbolIconAllowOverlap(true);
-    await _map?.setSymbolIconIgnorePlacement(true);
+    // A new style has none of our source, layers or images.
+    _layers = false;
+    _faceReady.clear();
+    _faceLoading.clear();
     if (widget.focus case final focus?) {
       await _draw();
       await _map?.animateCamera(CameraUpdate.newLatLngZoom(focus, 16));
@@ -342,11 +340,6 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     if (!mounted || camera == null) return;
     _setBearing(camera.bearing);
     _setTilt(camera.tilt);
-    final far = camera.zoom < _farZoom;
-    if (far != _far) {
-      _far = far;
-      unawaited(_draw());
-    }
   }
 
   void _setBearing(double bearing) {
@@ -437,18 +430,167 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   String _hex(Color c) =>
       '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
-  /// Redraws every pin (a handful per user: no diffing needed). Nearby branches are smaller and muted, under the
-  /// saved ones. A hand-set pin has a kunyit ring: not checked yet.
-  /// A circle as the legend shows it (MapMark): colours with no alpha, the alpha as opacity.
-  CircleOptions _circle(LatLng at, MapMark mark, Notebook nb) {
+  static const _source = 'pins';
+  static const _clusterLayer = 'pins-cluster';
+  static const _countLayer = 'pins-count';
+  static const _dotLayer = 'pins-dot';
+  static const _faceLayer = 'pins-face';
+
+  /// A pin as the legend shows it (MapMark), for the dot layer: colours with no alpha, the alpha as opacity.
+  Map<String, dynamic> _mark(MapMark mark, Notebook nb) {
     final fill = mark.fill(nb);
-    return CircleOptions(
-      geometry: at,
-      circleRadius: _far ? mark.radius * 0.45 : mark.radius,
-      circleColor: _hex(fill.withValues(alpha: 1)),
-      circleOpacity: fill.a,
-      circleStrokeWidth: _far ? min(mark.strokeWidth, 1.5) : mark.strokeWidth,
-      circleStrokeColor: _hex(mark.stroke(nb)),
+    return {
+      'fill': _hex(fill.withValues(alpha: 1)),
+      'opacity': fill.a,
+      'stroke': _hex(mark.stroke(nb)),
+      'r': mark.radius,
+      'sw': mark.strokeWidth,
+    };
+  }
+
+  /// Every pin is one feature of one clustered GeoJSON source; the style animates the rest. Zoomed out, pins
+  /// merge into clusters with a count (green when one is in your book); between zoom 9 and 12 a dot grows from a
+  /// small dot to full size; a family member's photo fades in over their dot from 10.5 to 11.5, the dot's size.
+  Future<void> _addLayers(MapLibreMapController map, Notebook nb) async {
+    await map.addSource(
+      _source,
+      const GeojsonSourceProperties(
+        data: {'type': 'FeatureCollection', 'features': []},
+        cluster: true,
+        clusterMaxZoom: 11,
+        clusterRadius: 44,
+        // How many of a cluster's pins are in your book (yours or family's).
+        clusterProperties: {
+          'book': [
+            '+',
+            [
+              'case',
+              ['get', 'book'],
+              1,
+              0,
+            ],
+          ],
+        },
+      ),
+    );
+    const clustered = ['has', 'point_count'];
+    await map.addCircleLayer(
+      _source,
+      _clusterLayer,
+      CircleLayerProperties(
+        circleRadius: const [
+          'step',
+          ['get', 'point_count'],
+          14,
+          10,
+          17,
+          50,
+          21,
+        ],
+        circleColor: [
+          'case',
+          [
+            '>',
+            ['get', 'book'],
+            0,
+          ],
+          _hex(nb.pandan),
+          '#7B8A80',
+        ],
+        circleOpacity: 0.92,
+        circleStrokeColor: '#FFFFFF',
+        circleStrokeWidth: 2,
+      ),
+      filter: clustered,
+    );
+    await map.addSymbolLayer(
+      _source,
+      _countLayer,
+      const SymbolLayerProperties(
+        textField: ['get', 'point_count_abbreviated'],
+        textFont: ['Noto Sans Bold'], // in the OpenFreeMap style's glyphs
+        textSize: 12,
+        textColor: '#FFFFFF',
+        textAllowOverlap: true,
+        textIgnorePlacement: true,
+      ),
+      filter: clustered,
+    );
+    await map.addCircleLayer(
+      _source,
+      _dotLayer,
+      const CircleLayerProperties(
+        circleRadius: [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          [
+            '*',
+            ['get', 'r'],
+            0.45,
+          ],
+          12,
+          ['get', 'r'],
+        ],
+        circleStrokeWidth: [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          [
+            'min',
+            ['get', 'sw'],
+            1.5,
+          ],
+          12,
+          ['get', 'sw'],
+        ],
+        circleColor: ['get', 'fill'],
+        circleOpacity: ['get', 'opacity'],
+        circleStrokeColor: ['get', 'stroke'],
+        circleSortKey: ['get', 'z'], // your book's pins over the others
+      ),
+      filter: [
+        '!',
+        ['has', 'point_count'],
+      ],
+    );
+    await map.addSymbolLayer(
+      _source,
+      _faceLayer,
+      const SymbolLayerProperties(
+        iconImage: ['get', 'face'],
+        // The image is the full dot's size: it shrinks with the dot.
+        iconSize: [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          0.45,
+          12,
+          1,
+        ],
+        iconOpacity: [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          10.5,
+          0,
+          11.5,
+          1,
+        ],
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+      ),
+      filter: [
+        'all',
+        [
+          '!',
+          ['has', 'point_count'],
+        ],
+        ['has', 'face'],
+      ],
     );
   }
 
@@ -457,13 +599,16 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     if (map == null || !_styled || !mounted) return;
     final nb = Notebook.of(context);
     final places = _places.pinned;
-    final gen = ++_drawGen;
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final ring = MapMark.family.stroke(nb);
-    await map.clearCircles();
-    await map.clearSymbols();
-    _hereHalo = null;
-    _hereDot = null;
+    if (!_layers) {
+      _layers = true;
+      try {
+        await _addLayers(map, nb);
+      } catch (_) {
+        _layers = false;
+        return;
+      }
+      if (!mounted) return;
+    }
     final nearby = [
       for (final n in _nearby)
         if (!n.saved && _showCommunity && _all.isEmpty) n,
@@ -477,88 +622,84 @@ class _PlacesMapPageState extends State<PlacesMapPage>
         for (final a in _all)
           if (!mineIds.contains(a.branchId)) a,
     ];
-    if (all.isNotEmpty) {
-      await map.addCircles(
-        [
-          for (final a in all)
-            _circle(LatLng(a.lat, a.lng), MapMark.forSource(a.pinSource), nb),
-        ],
-        [
-          for (final a in all) {'ownerBranch': a.branchId},
-        ],
+    final features = <Map<String, dynamic>>[];
+    _features.clear();
+    void add(
+      double lat,
+      double lng,
+      Map<String, dynamic> props,
+      Map<String, dynamic> tap,
+    ) {
+      final id = 'f${features.length}';
+      _features[id] = tap;
+      features.add({
+        'type': 'Feature',
+        'id': id,
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [lng, lat],
+        },
+        'properties': props,
+      });
+    }
+
+    for (final a in all) {
+      add(
+        a.lat,
+        a.lng,
+        {..._mark(MapMark.forSource(a.pinSource), nb), 'z': 0, 'book': false},
+        {'ownerBranch': a.branchId},
       );
     }
-    if (nearby.isNotEmpty) {
-      await map.addCircles(
-        [
-          for (final n in nearby)
-            _circle(LatLng(n.lat, n.lng), MapMark.otherMap, nb),
-        ],
-        [
-          for (final n in nearby) {'nearbyBranch': n.branchId},
-        ],
+    for (final n in nearby) {
+      add(
+        n.lat,
+        n.lng,
+        {..._mark(MapMark.otherMap, nb), 'z': 0, 'book': false},
+        {'nearbyBranch': n.branchId},
       );
     }
-    final pins = [
-      for (final p in places)
-        for (final b in p.pins) (p, b),
-    ];
-    await map.addCircles(
-      [
-        for (final (p, b) in pins)
-          _circle(
-            LatLng(b.lat!, b.lng!),
-            !p.mine
-                ? MapMark.family
-                : b.pinnedByUser
-                ? MapMark.mineHandPin
-                : MapMark.mine,
-            nb,
-          ),
-      ],
-      [
-        for (final (p, b) in pins) {'place': p.id, 'branch': b.id},
-      ],
-    );
-    // A family member's pin shows their photo over its dot (close in only).
-    final faces = [
-      if (!_far)
-        for (final (p, b) in pins)
-          if (!p.mine)
-            if (p.savedBy
-                    .where(
-                      (s) => !s.isMe && s.avatar != null && s.userId != null,
-                    )
-                    .firstOrNull
-                case final s?)
-              (p, b, s.userId!, s.avatar!),
-    ];
-    if (faces.isNotEmpty) {
-      final ok = await Future.wait([
-        for (final (_, _, user, avatar) in faces)
-          _face(user, avatar, ring, dpr),
-      ]);
-      if (gen != _drawGen || !mounted) return;
-      final shown = [
-        for (var i = 0; i < faces.length; i++)
-          if (ok[i]) faces[i],
-      ];
-      if (shown.isNotEmpty) {
-        await map.addSymbols(
-          [
-            for (final (_, b, _, avatar) in shown)
-              SymbolOptions(
-                geometry: LatLng(b.lat!, b.lng!),
-                iconImage: 'face-$avatar',
-              ),
-          ],
-          [
-            for (final (p, b, _, _) in shown) {'place': p.id, 'branch': b.id},
-          ],
+    final ring = MapMark.family.stroke(nb);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    for (final p in places) {
+      // A family member's save shows their photo once it is in the style.
+      final saver = p.mine
+          ? null
+          : p.savedBy
+                .where((s) => !s.isMe && s.avatar != null && s.userId != null)
+                .firstOrNull;
+      if (saver != null) _loadFace(saver.userId!, saver.avatar!, ring, dpr);
+      for (final b in p.pins) {
+        add(
+          b.lat!,
+          b.lng!,
+          {
+            ..._mark(
+              !p.mine
+                  ? MapMark.family
+                  : b.pinnedByUser
+                  ? MapMark.mineHandPin
+                  : MapMark.mine,
+              nb,
+            ),
+            'z': 1,
+            'book': true,
+            if (saver != null && _faceReady.contains(saver.avatar))
+              'face': 'face-${saver.avatar}',
+          },
+          {'place': p.id, 'branch': b.id},
         );
       }
     }
-    if (gen != _drawGen) return;
+    // New data replaces the old in place: no clear-and-redraw flicker.
+    await map.setGeoJsonSource(_source, {
+      'type': 'FeatureCollection',
+      'features': features,
+    });
+    if (!mounted) return;
+    await map.clearCircles();
+    _hereHalo = null;
+    _hereDot = null;
     final here = _here;
     if (here != null) {
       final hereCircles = await map.addCircles(
@@ -590,7 +731,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final box = pinBounds(places);
     if (box == null) return;
     final single = box.southwest == box.northeast;
-    await map.moveCamera(
+    await map.animateCamera(
       single
           ? CameraUpdate.newLatLngZoom(box.southwest, 14)
           : CameraUpdate.newLatLngBounds(
@@ -600,23 +741,48 @@ class _PlacesMapPageState extends State<PlacesMapPage>
               right: 48,
               bottom: 120,
             ),
+      duration: const Duration(milliseconds: 700),
     );
   }
 
-  /// A face: its photo, round, in the family ring; added to the style once per avatar.
-  Future<bool> _face(String userId, String avatar, Color ring, double dpr) =>
-      _faces[avatar] ??= () async {
-        final bytes = await context.read<AuthController>().avatar(
-          userId,
-          avatar,
-        );
+  /// A face: the photo, round, in the family ring, added to the style once; then the pins are drawn again.
+  void _loadFace(String userId, String avatar, Color ring, double dpr) {
+    if (_faceReady.contains(avatar) || !_faceLoading.add(avatar)) return;
+    final auth = context.read<AuthController>();
+    unawaited(() async {
+      try {
+        final bytes = await auth.avatar(userId, avatar);
         final map = _map;
-        if (bytes == null || map == null) return false;
+        if (bytes == null || map == null || !mounted) return;
         await map.addImage('face-$avatar', await _roundFace(bytes, ring, dpr));
-        return true;
-      }().catchError((Object _) => false);
+        _faceReady.add(avatar);
+        if (mounted) unawaited(_draw());
+      } catch (_) {
+        // No photo: the plain dot stays.
+      }
+    }());
+  }
 
-  void _symbolTapped(Symbol s) => _onTap(s.data);
+  /// A cluster zooms in on itself; a pin acts as its circle did.
+  Future<void> _featureTapped(
+    Point<double> point,
+    LatLng at,
+    String id,
+    String layer,
+    Annotation? annotation,
+  ) async {
+    if (layer == _clusterLayer || layer == _countLayer) {
+      final map = _map;
+      final zoom = (await map?.queryCameraPosition())?.zoom ?? 9;
+      await map?.animateCamera(
+        CameraUpdate.newLatLngZoom(at, zoom + 2),
+        duration: const Duration(milliseconds: 500),
+      );
+    } else if (layer == _dotLayer || layer == _faceLayer) {
+      _onTap(_features[id]);
+    }
+  }
+
   void _tapped(Circle c) => _onTap(c.data);
 
   void _onTap(Map<dynamic, dynamic>? data) {
@@ -886,15 +1052,9 @@ class _PlacesMapPageState extends State<PlacesMapPage>
             // The native location component is created before permission is granted and does not
             // reliably start afterwards; _draw paints our own dot as soon as we have a fix.
             myLocationEnabled: false,
-            // Circles for pins, symbols for family faces; the other managers cost frame time for nothing.
-            annotationOrder: const [
-              AnnotationType.circle,
-              AnnotationType.symbol,
-            ],
-            annotationConsumeTapEvents: const [
-              AnnotationType.circle,
-              AnnotationType.symbol,
-            ],
+            // Pins are style layers (_addLayers); annotations are only the you-are-here dot.
+            annotationOrder: const [AnnotationType.circle],
+            annotationConsumeTapEvents: const [AnnotationType.circle],
             logoEnabled: false,
             // The credit OpenStreetMap needs stays, as a faint "i" in the corner.
             attributionButtonPosition: AttributionButtonPosition.topLeft,
@@ -1410,11 +1570,11 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
   }
 }
 
-/// 34 points across: [ring] round the photo, cropped to a circle. PNG at the screen's pixel ratio (the map
+/// 22 points across, the family dot's full size (radius 8 + ring 3): [ring] round the photo, cropped to a circle. PNG at the screen's pixel ratio (the map
 /// reads an image at that ratio on Android and iOS), so it stays sharp.
 Future<Uint8List> _roundFace(Uint8List photo, Color ring, double dpr) async {
-  final size = (34 * dpr).round();
-  final border = 2.5 * dpr;
+  final size = (22 * dpr).round();
+  final border = 3 * dpr;
   final codec = await ui.instantiateImageCodec(
     photo,
     targetWidth: size,
