@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -77,6 +78,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
     super.dispose();
   }
 
+  static const _morph = Duration(milliseconds: 260);
+
   bool get _open => _query.isNotEmpty && (_focus.hasFocus || _submitted);
 
   Future<List<PlaceHit>> _ask(String q, bool submit) => _asked[(q, submit)] ??=
@@ -105,6 +108,7 @@ class _MapSearchBarState extends State<MapSearchBar> {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final mq = MediaQuery.of(context);
+    final typing = _text.text.isNotEmpty;
     return PopScope(
       canPop: !_open && !_focus.hasFocus,
       onPopInvokedWithResult: (popped, _) {
@@ -116,32 +120,28 @@ class _MapSearchBarState extends State<MapSearchBar> {
         children: [
           Row(
             children: [
-              // Back, outside the field, while searching: it closes the search (the field's ✕ only clears it).
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOutCubic,
-                child: _focus.hasFocus || _open
-                    ? Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Material(
-                          color: nb.paper,
-                          elevation: 3,
-                          shadowColor: nb.ink.withValues(alpha: 0.3),
-                          shape: CircleBorder(side: BorderSide(color: nb.line)),
-                          child: SizedBox.square(
-                            dimension: MapSearchBar.height,
-                            child: IconButton(
-                              key: const ValueKey('map-search-back'),
-                              tooltip: MaterialLocalizations.of(context)
-                                  .backButtonTooltip,
-                              icon: const BackButtonIcon(),
-                              onPressed: _close,
-                            ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox(height: MapSearchBar.height),
+              // Back, outside the field, always there: while searching it closes the search, else it leaves the map.
+              Material(
+                color: nb.paper,
+                elevation: 3,
+                shadowColor: nb.ink.withValues(alpha: 0.3),
+                shape: CircleBorder(side: BorderSide(color: nb.line)),
+                child: SizedBox.square(
+                  dimension: MapSearchBar.height,
+                  child: IconButton(
+                    key: const ValueKey('map-search-back'),
+                    tooltip: MaterialLocalizations.of(context)
+                        .backButtonTooltip,
+                    icon: const BackButtonIcon(),
+                    onPressed: () => _focus.hasFocus || _open
+                        ? _close()
+                        : context.canPop()
+                        ? context.pop()
+                        : context.go('/'),
+                  ),
+                ),
               ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Material(
                   color: nb.paper,
@@ -150,44 +150,82 @@ class _MapSearchBarState extends State<MapSearchBar> {
                   shape: StadiumBorder(side: BorderSide(color: nb.line)),
                   child: SizedBox(
                     height: MapSearchBar.height,
-                    child: Row(
+                    // One icon: a search glass on the left that turns into ✕ and slides right once you type.
+                    child: Stack(
                       children: [
-                        const SizedBox(width: 16),
-                        Icon(Icons.search, color: nb.inkSoft),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            key: const ValueKey('map-search'),
-                            controller: _text,
-                            focusNode: _focus,
-                            textInputAction: TextInputAction.search,
-                            // The pill is the field's box: no border or fill of its own, focused or not.
-                            decoration: InputDecoration(
-                              hintText: l.mapSearchHint,
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              disabledBorder: InputBorder.none,
-                              errorBorder: InputBorder.none,
-                              focusedErrorBorder: InputBorder.none,
-                              filled: false,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
+                        AnimatedPadding(
+                          duration: _morph,
+                          curve: Curves.easeOutCubic,
+                          padding: EdgeInsets.only(
+                            left: typing ? 20 : 48,
+                            right: typing ? 52 : 20,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextField(
+                              key: const ValueKey('map-search'),
+                              controller: _text,
+                              focusNode: _focus,
+                              textInputAction: TextInputAction.search,
+                              // The pill is the field's box: no border or fill of its own, focused or not.
+                              decoration: InputDecoration(
+                                hintText: l.mapSearchHint,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
+                                errorBorder: InputBorder.none,
+                                focusedErrorBorder: InputBorder.none,
+                                filled: false,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              onSubmitted: (_) =>
+                                  setState(() => _submitted = true),
                             ),
-                            onSubmitted: (_) =>
-                                setState(() => _submitted = true),
                           ),
                         ),
-                        if (_text.text.isNotEmpty)
-                          IconButton(
-                            key: const ValueKey('map-search-clear'),
-                            tooltip: MaterialLocalizations.of(context)
-                                .deleteButtonTooltip,
-                            icon: const Icon(Icons.close),
-                            onPressed: _text.clear,
-                          )
-                        else
-                          const SizedBox(width: 16),
+                        AnimatedAlign(
+                          duration: _morph,
+                          curve: Curves.easeOutCubic,
+                          alignment: typing
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: IconButton(
+                              key: ValueKey(
+                                typing ? 'map-search-clear' : 'map-search-icon',
+                              ),
+                              tooltip: typing
+                                  ? MaterialLocalizations.of(context)
+                                        .deleteButtonTooltip
+                                  : l.mapSearchHint,
+                              color: nb.inkSoft,
+                              onPressed: typing
+                                  ? _text.clear
+                                  : _focus.requestFocus,
+                              icon: AnimatedSwitcher(
+                                duration: _morph,
+                                transitionBuilder: (child, a) =>
+                                    RotationTransition(
+                                      turns: Tween(
+                                        begin: 0.75,
+                                        end: 1.0,
+                                      ).animate(a),
+                                      child: FadeTransition(
+                                        opacity: a,
+                                        child: child,
+                                      ),
+                                    ),
+                                child: Icon(
+                                  typing ? Icons.close : Icons.search,
+                                  key: ValueKey(typing),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

@@ -1018,6 +1018,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
           ? SystemUiOverlayStyle.light
           : SystemUiOverlayStyle.dark,
       child: Scaffold(
+        // The keyboard covers the map instead of resizing it: a native map view re-laid out every frame stutters.
+        resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
             MapLibreMap(
