@@ -4,6 +4,7 @@ import 'package:bukuresipi_flutter/features/places/presentation/widgets/map_sear
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import '../places_fixtures.dart';
 
@@ -92,34 +93,50 @@ void main() {
   });
 
   testWidgets(
-    '✕ clears the field and keeps searching; the round back button closes it',
+    'the glass turns into ✕ while typing and clears; back closes the search, then leaves the page',
     (t) async {
-      await t.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(extensions: const [Notebook.light]),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          home: Scaffold(
-            body: MapSearchBar(
-              places: const [],
-              search: (q, {required submit}) async => const <PlaceHit>[],
-              onPicked: (_) {},
+      final router = GoRouter(
+        initialLocation: '/map',
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const Text('home')),
+          GoRoute(
+            path: '/map',
+            builder: (_, _) => Scaffold(
+              body: MapSearchBar(
+                places: const [],
+                search: (q, {required submit}) async => const <PlaceHit>[],
+                onPicked: (_) {},
+              ),
             ),
           ),
+        ],
+      );
+      await t.pumpWidget(
+        MaterialApp.router(
+          theme: ThemeData(extensions: const [Notebook.light]),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          routerConfig: router,
         ),
       );
-      expect(find.byKey(const ValueKey('map-search-back')), findsNothing);
+      expect(find.byKey(const ValueKey('map-search-back')), findsOneWidget);
+      expect(find.byKey(const ValueKey('map-search-clear')), findsNothing);
       await t.enterText(find.byType(TextField), 'nasi');
       await t.pumpAndSettle();
-      expect(find.byKey(const ValueKey('map-search-back')), findsOneWidget);
-
       await t.tap(find.byKey(const ValueKey('map-search-clear')));
       await t.pumpAndSettle();
       expect(find.text('nasi'), findsNothing);
-      expect(find.byKey(const ValueKey('map-search-back')), findsOneWidget);
+      expect(find.byKey(const ValueKey('map-search-icon')), findsOneWidget);
 
-      await t.tap(find.byKey(const ValueKey('map-search-back')));
+      await t.tap(
+        find.byKey(const ValueKey('map-search-back')),
+      ); // still focused: closes the search
       await t.pumpAndSettle();
-      expect(find.byKey(const ValueKey('map-search-back')), findsNothing);
+      expect(find.text('home'), findsNothing);
+      await t.tap(
+        find.byKey(const ValueKey('map-search-back')),
+      ); // nothing open: leaves
+      await t.pumpAndSettle();
+      expect(find.text('home'), findsOneWidget);
     },
   );
 }
