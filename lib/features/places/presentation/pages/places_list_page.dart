@@ -37,6 +37,9 @@ class _PlacesListPageState extends State<PlacesListPage> {
   /// Owner's Merge: the restaurants picked (null = not merging). Recipes can't be picked.
   Set<String>? _merging;
 
+  /// The merge request is running: the button shows a spinner and can't be tapped again.
+  bool _mergeBusy = false;
+
   Future<void> _merge(List<Place> picked) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -46,6 +49,7 @@ class _PlacesListPageState extends State<PlacesListPage> {
       builder: (_) => MergeSheet(places: picked),
     );
     if (r == null || !mounted) return;
+    setState(() => _mergeBusy = true);
     try {
       await places.mergeRestaurants(
         [
@@ -59,6 +63,8 @@ class _PlacesListPageState extends State<PlacesListPage> {
       messenger.showSnackBar(SnackBar(content: Text(l.mergeDone)));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _mergeBusy = false);
     }
   }
 
@@ -137,10 +143,12 @@ class _PlacesListPageState extends State<PlacesListPage> {
     final shared = context.watch<RecentShares>();
     // Shares the server is still reading, or could not read (last 24 h), above the saved places.
     final inbox = [
-      for (final s in shared.reading)
-        ReadingShareRow(key: ValueKey('reading-${s.id}'), share: s),
-      for (final s in shared.failed)
-        ShareProblemRow(key: ValueKey('problem-${s.id}'), share: s),
+      if (merging == null)
+        for (final s in shared.reading)
+          ReadingShareRow(key: ValueKey('reading-${s.id}'), share: s),
+      if (merging == null)
+        for (final s in shared.failed)
+          ShareProblemRow(key: ValueKey('problem-${s.id}'), share: s),
     ];
 
     final List<Widget> lines;
@@ -222,65 +230,108 @@ class _PlacesListPageState extends State<PlacesListPage> {
         for (final p in places.places)
           if (merging.contains(p.restaurant.id)) p,
     ];
-    return Scaffold(
-      appBar: merging != null
-          ? AppBar(
-              toolbarHeight: 76,
-              leading: IconButton(
-                key: const ValueKey('merge-cancel'),
-                tooltip: MaterialLocalizations.of(context).cancelButtonLabel,
-                icon: const Icon(Icons.close),
-                onPressed: () => setState(() => _merging = null),
-              ),
-              title: Text(l.mergePicked(picked.length)),
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: FilledButton(
-                    key: const ValueKey('merge-next'),
-                    onPressed: picked.length < 2 ? null : () => _merge(picked),
-                    child: Text(l.mergeAction),
-                  ),
+    return PopScope(
+      // Back leaves merge mode first, not the page.
+      canPop: merging == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_mergeBusy) setState(() => _merging = null);
+      },
+      child: Scaffold(
+        appBar: merging != null
+            ? AppBar(
+                toolbarHeight: 76,
+                leading: IconButton(
+                  key: const ValueKey('merge-cancel'),
+                  tooltip: MaterialLocalizations.of(context).cancelButtonLabel,
+                  icon: const Icon(Icons.close),
+                  onPressed: _mergeBusy
+                      ? null
+                      : () => setState(() => _merging = null),
                 ),
-              ],
-            )
-          : AppBar(
-              toolbarHeight: 76,
-              title: NotebookTitle(l.homeTitle),
-              actions: [
-                // Owner: one company saved under several names becomes one restaurant.
-                if (isOwner)
+                title: Text(l.mergePicked(picked.length)),
+              )
+            : AppBar(
+                toolbarHeight: 76,
+                title: NotebookTitle(l.homeTitle),
+                actions: [
+                  // Owner: one company saved under several names becomes one restaurant.
+                  if (isOwner)
+                    IconButton(
+                      key: const ValueKey('book-merge'),
+                      tooltip: l.mergeAction,
+                      icon: const Icon(Icons.merge_type),
+                      onPressed: () => setState(() => _merging = {}),
+                    ),
                   IconButton(
-                    key: const ValueKey('book-merge'),
-                    tooltip: l.mergeAction,
-                    icon: const Icon(Icons.merge_type),
-                    onPressed: () => setState(() => _merging = {}),
+                    key: const ValueKey('book-map'),
+                    tooltip: l.navMap,
+                    icon: const Icon(Icons.map_outlined),
+                    onPressed: () => context.push('/map'),
                   ),
-                IconButton(
-                  key: const ValueKey('book-map'),
-                  tooltip: l.navMap,
-                  icon: const Icon(Icons.map_outlined),
-                  onPressed: () => context.push('/map'),
+                ],
+              ),
+        // Merge mode: the button at the bottom, where the thumb is, with what to do next.
+        bottomNavigationBar: merging == null
+            ? null
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (picked.length < 2)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            l.mergeNeedTwo,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          key: const ValueKey('merge-next'),
+                          icon: _mergeBusy
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.merge_type),
+                          onPressed: picked.length < 2 || _mergeBusy
+                              ? null
+                              : () => _merge(picked),
+                          label: Text(
+                            picked.length < 2
+                                ? l.mergeAction
+                                : '${l.mergeAction} (${picked.length})',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
+        body: NotebookPage(
+          child: RefreshIndicator(
+            // Everything on the page: a new recipe or a cleared share shows without a restart.
+            onRefresh: () =>
+                Future.wait([places.load(), recipes.load(), shared.load()]),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 24),
+              // The search box once there is something to search.
+              children: [
+                ...inbox,
+                if (places.places.isNotEmpty ||
+                    recipes.recipes.isNotEmpty ||
+                    searching)
+                  ...tools,
+                ...lines,
               ],
             ),
-      body: NotebookPage(
-        child: RefreshIndicator(
-          // Everything on the page: a new recipe or a cleared share shows without a restart.
-          onRefresh: () =>
-              Future.wait([places.load(), recipes.load(), shared.load()]),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 24),
-            // The search box once there is something to search.
-            children: [
-              ...inbox,
-              if (places.places.isNotEmpty ||
-                  recipes.recipes.isNotEmpty ||
-                  searching)
-                ...tools,
-              ...lines,
-            ],
           ),
         ),
       ),
@@ -464,19 +515,27 @@ class _Pickable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nb = Notebook.of(context);
-    return InkWell(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Expanded(child: IgnorePointer(child: child)),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Icon(
-              picked ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: picked ? nb.pandan : nb.inkSoft,
-            ),
+    return Semantics(
+      selected: picked,
+      button: true,
+      child: Material(
+        // A picked place stands out on the whole line, not only by its tick.
+        color: picked ? nb.pandan.withValues(alpha: 0.10) : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Row(
+            children: [
+              Expanded(child: IgnorePointer(child: child)),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Icon(
+                  picked ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: picked ? nb.pandan : nb.inkSoft,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

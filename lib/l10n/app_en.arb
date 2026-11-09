@@ -2058,5 +2058,7 @@
   "badgeNew": "New badge!",
   "@badgeNew": {},
   "badgeNice": "Nice!",
-  "@badgeNice": {}
+  "@badgeNice": {},
+  "mergeNeedTwo": "Tap 2 or more places that are the same company.",
+  "@mergeNeedTwo": {}
 }
