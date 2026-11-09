@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -73,6 +75,16 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     with WidgetsBindingObserver {
   MapLibreMapController? _map;
   bool _styled = false;
+
+  /// Zoomed out past a town (below [_farZoom]): every pin is a small dot and no faces, as map apps do.
+  bool _far = true;
+  static const _farZoom = 11.0;
+
+  /// Face images added to the style, by avatar id (false = could not load: the plain dot stays).
+  final _faces = <String, Future<bool>>{};
+
+  /// Bumped by every redraw: a slow face load from an older one adds nothing.
+  int _drawGen = 0;
   late final PlacesController _places = context.read<PlacesController>();
   List<NearbyBranch> _nearby = const [];
 
@@ -131,6 +143,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _positionSub?.cancel();
     _places.removeListener(_draw);
     _map?.onCircleTapped.remove(_tapped);
+    _map?.onSymbolTapped.remove(_symbolTapped);
     super.dispose();
   }
 
@@ -153,11 +166,19 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   }
 
   void _created(MapLibreMapController c) {
-    setState(() => _map = c..onCircleTapped.add(_tapped));
+    setState(
+      () => _map = c
+        ..onCircleTapped.add(_tapped)
+        ..onSymbolTapped.add(_symbolTapped),
+    );
   }
 
   Future<void> _styleLoaded() async {
     _styled = true;
+    _faces.clear(); // a new style has none of the images
+    // Faces never hide each other or the map's labels.
+    await _map?.setSymbolIconAllowOverlap(true);
+    await _map?.setSymbolIconIgnorePlacement(true);
     if (widget.focus case final focus?) {
       await _draw();
       await _map?.animateCamera(CameraUpdate.newLatLngZoom(focus, 16));
@@ -321,6 +342,11 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     if (!mounted || camera == null) return;
     _setBearing(camera.bearing);
     _setTilt(camera.tilt);
+    final far = camera.zoom < _farZoom;
+    if (far != _far) {
+      _far = far;
+      unawaited(_draw());
+    }
   }
 
   void _setBearing(double bearing) {
@@ -418,10 +444,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final fill = mark.fill(nb);
     return CircleOptions(
       geometry: at,
-      circleRadius: mark.radius,
+      circleRadius: _far ? mark.radius * 0.45 : mark.radius,
       circleColor: _hex(fill.withValues(alpha: 1)),
       circleOpacity: fill.a,
-      circleStrokeWidth: mark.strokeWidth,
+      circleStrokeWidth: _far ? min(mark.strokeWidth, 1.5) : mark.strokeWidth,
       circleStrokeColor: _hex(mark.stroke(nb)),
     );
   }
@@ -431,7 +457,11 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     if (map == null || !_styled || !mounted) return;
     final nb = Notebook.of(context);
     final places = _places.pinned;
+    final gen = ++_drawGen;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final ring = MapMark.family.stroke(nb);
     await map.clearCircles();
+    await map.clearSymbols();
     _hereHalo = null;
     _hereDot = null;
     final nearby = [
@@ -490,6 +520,45 @@ class _PlacesMapPageState extends State<PlacesMapPage>
         for (final (p, b) in pins) {'place': p.id, 'branch': b.id},
       ],
     );
+    // A family member's pin shows their photo over its dot (close in only).
+    final faces = [
+      if (!_far)
+        for (final (p, b) in pins)
+          if (!p.mine)
+            if (p.savedBy
+                    .where(
+                      (s) => !s.isMe && s.avatar != null && s.userId != null,
+                    )
+                    .firstOrNull
+                case final s?)
+              (p, b, s.userId!, s.avatar!),
+    ];
+    if (faces.isNotEmpty) {
+      final ok = await Future.wait([
+        for (final (_, _, user, avatar) in faces)
+          _face(user, avatar, ring, dpr),
+      ]);
+      if (gen != _drawGen || !mounted) return;
+      final shown = [
+        for (var i = 0; i < faces.length; i++)
+          if (ok[i]) faces[i],
+      ];
+      if (shown.isNotEmpty) {
+        await map.addSymbols(
+          [
+            for (final (_, b, _, avatar) in shown)
+              SymbolOptions(
+                geometry: LatLng(b.lat!, b.lng!),
+                iconImage: 'face-$avatar',
+              ),
+          ],
+          [
+            for (final (p, b, _, _) in shown) {'place': p.id, 'branch': b.id},
+          ],
+        );
+      }
+    }
+    if (gen != _drawGen) return;
     final here = _here;
     if (here != null) {
       final hereCircles = await map.addCircles(
@@ -534,9 +603,25 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     );
   }
 
-  void _tapped(Circle c) {
+  /// A face: its photo, round, in the family ring; added to the style once per avatar.
+  Future<bool> _face(String userId, String avatar, Color ring, double dpr) =>
+      _faces[avatar] ??= () async {
+        final bytes = await context.read<AuthController>().avatar(
+          userId,
+          avatar,
+        );
+        final map = _map;
+        if (bytes == null || map == null) return false;
+        await map.addImage('face-$avatar', await _roundFace(bytes, ring, dpr));
+        return true;
+      }().catchError((Object _) => false);
+
+  void _symbolTapped(Symbol s) => _onTap(s.data);
+  void _tapped(Circle c) => _onTap(c.data);
+
+  void _onTap(Map<dynamic, dynamic>? data) {
     if (!mounted) return;
-    final ownerBranch = c.data?['ownerBranch'] as String?;
+    final ownerBranch = data?['ownerBranch'] as String?;
     if (ownerBranch != null) {
       final nearby = _nearby
           .where((n) => n.branchId == ownerBranch)
@@ -552,7 +637,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       }
       return;
     }
-    final nearbyBranch = c.data?['nearbyBranch'] as String?;
+    final nearbyBranch = data?['nearbyBranch'] as String?;
     if (nearbyBranch != null) {
       final nearby = _nearby
           .where((n) => n.branchId == nearbyBranch)
@@ -561,10 +646,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       if (nearby != null) _focusNearby(nearby);
       return;
     }
-    final place = _places.byId(c.data?['place'] as String? ?? '');
+    final place = _places.byId(data?['place'] as String? ?? '');
     if (place == null) return;
     final branch =
-        place.branches.where((b) => b.id == c.data?['branch']).firstOrNull ??
+        place.branches.where((b) => b.id == data?['branch']).firstOrNull ??
         place.savedBranch;
     final nearby = _nearby.where((n) => n.branchId == branch?.id).firstOrNull;
     if (nearby != null) {
@@ -801,9 +886,15 @@ class _PlacesMapPageState extends State<PlacesMapPage>
             // The native location component is created before permission is granted and does not
             // reliably start afterwards; _draw paints our own dot as soon as we have a fix.
             myLocationEnabled: false,
-            // Only circles are used; the other annotation managers cost frame time for nothing.
-            annotationOrder: const [AnnotationType.circle],
-            annotationConsumeTapEvents: const [AnnotationType.circle],
+            // Circles for pins, symbols for family faces; the other managers cost frame time for nothing.
+            annotationOrder: const [
+              AnnotationType.circle,
+              AnnotationType.symbol,
+            ],
+            annotationConsumeTapEvents: const [
+              AnnotationType.circle,
+              AnnotationType.symbol,
+            ],
             logoEnabled: false,
             // The credit OpenStreetMap needs stays, as a faint "i" in the corner.
             attributionButtonPosition: AttributionButtonPosition.topLeft,
@@ -1317,4 +1408,27 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
       ],
     );
   }
+}
+
+/// 34 points across: [ring] round the photo, cropped to a circle. PNG at the screen's pixel ratio (the map
+/// reads an image at that ratio on Android and iOS), so it stays sharp.
+Future<Uint8List> _roundFace(Uint8List photo, Color ring, double dpr) async {
+  final size = (34 * dpr).round();
+  final border = 2.5 * dpr;
+  final codec = await ui.instantiateImageCodec(
+    photo,
+    targetWidth: size,
+    targetHeight: size, // the picture is a square crop already
+  );
+  final image = (await codec.getNextFrame()).image;
+  final rec = ui.PictureRecorder();
+  final canvas = Canvas(rec);
+  final c = Offset(size / 2, size / 2);
+  canvas.drawCircle(c, size / 2, Paint()..color = ring);
+  final inner = Rect.fromCircle(center: c, radius: size / 2 - border);
+  canvas.clipPath(Path()..addOval(inner));
+  paintImage(canvas: canvas, rect: inner, image: image, fit: BoxFit.cover);
+  final out = await rec.endRecording().toImage(size, size);
+  final png = await out.toByteData(format: ui.ImageByteFormat.png);
+  return png!.buffer.asUint8List();
 }

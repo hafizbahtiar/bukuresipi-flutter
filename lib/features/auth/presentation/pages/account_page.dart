@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_editor_page.dart';
+import '../../../../core/widgets/photo_viewer_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../auth_controller.dart';
 import '../../../family/presentation/ask.dart';
@@ -31,7 +32,8 @@ class _AccountPageState extends State<AccountPage> {
 
   bool _avatarBusy = false;
 
-  /// The picture: change (pick + square crop) or remove. Upload errors show; the old picture stays.
+  /// The picture: view it full size, change (pick + square crop) or remove. Upload errors show; the old
+  /// picture stays.
   Future<void> _avatarMenu({required bool has}) async {
     final l = AppLocalizations.of(context);
     final auth = context.read<AuthController>();
@@ -40,6 +42,13 @@ class _AccountPageState extends State<AccountPage> {
       builder: (sheet) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (has)
+            ListTile(
+              key: const ValueKey('avatar-view'),
+              leading: const Icon(Icons.photo_outlined),
+              title: Text(l.avatarView),
+              onTap: () => Navigator.of(sheet).pop('view'),
+            ),
           ListTile(
             leading: const Icon(Icons.add_a_photo_outlined),
             title: Text(has ? l.avatarChange : l.avatarAdd),
@@ -55,6 +64,15 @@ class _AccountPageState extends State<AccountPage> {
       ),
     );
     if (choice == null || !mounted) return;
+    if (choice == 'view') {
+      final user = auth.user!;
+      final bytes = await auth
+          .avatar(user.id, user.avatar!)
+          .catchError((Object _) => null);
+      if (!mounted) return;
+      if (bytes == null) return _snack(l.errUnknown);
+      return PhotoViewerPage.open(context, bytes, title: user.name);
+    }
     final path = choice == 'change'
         ? await pickPhoto(context, ratios: [('1:1', 1)], maxSide: 1024)
         : null;

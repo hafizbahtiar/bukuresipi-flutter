@@ -743,5 +743,6 @@
   "ownerDeleteBanEmail": "Juga sekat emel dan akaun Google ini daripada mendaftar semula",
   "ownerDeleteWarning": "Resipi, kedai, resit, gambar dan ulasan mereka dipadam. Ini tidak boleh dibatalkan.",
   "ownerDeleteConfirm": "Padam terus",
-  "ownerDeleted": "Akaun dipadam"
+  "ownerDeleted": "Akaun dipadam",
+  "avatarView": "Lihat gambar"
 }

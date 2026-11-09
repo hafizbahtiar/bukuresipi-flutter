@@ -501,7 +501,12 @@ Place placeFromJson(Map<String, dynamic> j) {
     savedBy: [
       for (final s
           in (j['savedBy'] as List? ?? const []).cast<Map<String, dynamic>>())
-        (name: s['name'] as String?, isMe: s['isMe'] as bool),
+        (
+          name: s['name'] as String?,
+          isMe: s['isMe'] as bool,
+          userId: s['userId'] as String?,
+          avatar: s['avatar'] as String?,
+        ),
     ],
     note: j['note'] as String?,
     createdAt: dbTime(j['createdAt'] as String),

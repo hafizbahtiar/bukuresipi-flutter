@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
@@ -159,6 +160,17 @@ void main() {
       unawaited(
         t.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
       ); // completes only as frames are pumped
+      await t.pumpAndSettle();
+      // View photo opens it full screen (pinch to zoom).
+      repo.avatarBytes = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      );
+      await t.tap(find.byKey(const ValueKey('account-avatar')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('View photo'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-viewer')), findsOneWidget);
+      await t.tap(find.byType(CloseButton));
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('account-avatar')));
       await t.pumpAndSettle();

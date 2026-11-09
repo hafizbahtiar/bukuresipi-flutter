@@ -98,8 +98,10 @@ class Place {
   /// "Only me": the caller's save is kept out of the family book.
   final bool private;
 
-  /// Who saved it, the caller first (name null + isMe: "You").
-  final List<({String? name, bool isMe})> savedBy;
+  /// Who saved it, the caller first (name null + isMe: "You"). A family member also has [userId] + [avatar]
+  /// (their photo, for the map pin).
+  final List<({String? name, bool isMe, String? userId, String? avatar})>
+  savedBy;
 
   /// The family members who saved it (not the caller).
   List<String> get savedByOthers => [
