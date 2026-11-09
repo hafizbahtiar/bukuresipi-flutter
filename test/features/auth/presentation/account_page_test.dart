@@ -1,4 +1,7 @@
 import 'dart:convert';
+
+import 'package:extended_image/extended_image.dart';
+
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
@@ -170,8 +173,11 @@ void main() {
       await t.tap(find.text('View photo'));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('photo-viewer')), findsOneWidget);
+      // Swiping up or down closes it (extended_image's slide-out page); the close button does too.
+      expect(find.byType(ExtendedImageSlidePage), findsOneWidget);
       await t.tap(find.byType(CloseButton));
       await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('photo-viewer')), findsNothing);
       await t.tap(find.byKey(const ValueKey('account-avatar')));
       await t.pumpAndSettle();
       await t.tap(find.text('Remove profile picture'));
