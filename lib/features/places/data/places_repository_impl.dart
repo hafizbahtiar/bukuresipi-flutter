@@ -545,6 +545,7 @@ Place placeFromJson(Map<String, dynamic> j) {
           lat: _num(b['lat']),
           lng: _num(b['lng']),
           pinSource: b['pinSource'] as String?,
+          closed: b['closedAt'] != null,
           rating: ratingFromJson(b['rating']),
         ),
     ],

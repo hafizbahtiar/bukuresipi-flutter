@@ -451,6 +451,15 @@ class _BranchRow extends StatelessWidget {
             branch.label ?? branch.where ?? '-',
             style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
+          if (branch.closed)
+            Text(
+              l.branchClosed,
+              key: ValueKey('branch-closed-${branch.id}'),
+              style: text.bodySmall?.copyWith(
+                color: nb.margin,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           for (final n in notes)
             Text(n, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
           Padding(

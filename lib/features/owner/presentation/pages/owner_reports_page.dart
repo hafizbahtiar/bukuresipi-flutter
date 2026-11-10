@@ -92,6 +92,7 @@ class _OwnerReportsPageState extends State<OwnerReportsPage> {
     'state' => l.reportFieldState,
     'name' => l.reportFieldName,
     'cuisine' => l.reportFieldCuisine,
+    'status' => l.reportFieldStatus,
     _ => field,
   };
 

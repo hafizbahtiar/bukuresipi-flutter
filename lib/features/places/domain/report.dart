@@ -3,7 +3,16 @@ import 'place.dart';
 
 enum ReportTarget { branch, restaurant }
 
-enum ReportField { location, label, address, city, state, name, cuisine }
+enum ReportField {
+  location,
+  label,
+  address,
+  city,
+  state,
+  name,
+  cuisine,
+  status,
+}
 
 class ReportBranch {
   const ReportBranch({
@@ -14,6 +23,7 @@ class ReportBranch {
     this.state,
     this.lat,
     this.lng,
+    this.closed = false,
   });
 
   final String id;
@@ -23,6 +33,9 @@ class ReportBranch {
   final String? state;
   final double? lat;
   final double? lng;
+
+  /// Permanently closed (a `status` report the owner applied).
+  final bool closed;
 
   String get title => label ?? address ?? 'Branch';
 }
@@ -58,6 +71,7 @@ class ReportSubject {
           state: b.state,
           lat: b.lat,
           lng: b.lng,
+          closed: b.closed,
         ),
     ],
   );
