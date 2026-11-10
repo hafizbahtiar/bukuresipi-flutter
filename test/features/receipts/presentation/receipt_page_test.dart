@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 import 'package:bukuresipi_flutter/features/receipts/presentation/pages/receipt_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -90,9 +91,30 @@ void main() {
       ..answers = [
         receipt(
           items: [
-            (name: 'Nasi Lemak Ayam', quantity: 2, amountSen: 2580),
-            (name: 'Teh Ais', quantity: null, amountSen: 350),
-            (name: 'Diskaun', quantity: 1, amountSen: -200),
+            (
+              name: 'Nasi Lemak Ayam',
+              quantity: 2,
+              amountSen: 2580,
+              kcal: null,
+              kcalSource: null,
+              eaten: 0,
+            ),
+            (
+              name: 'Teh Ais',
+              quantity: null,
+              amountSen: 350,
+              kcal: null,
+              kcalSource: null,
+              eaten: 0,
+            ),
+            (
+              name: 'Diskaun',
+              quantity: 1,
+              amountSen: -200,
+              kcal: null,
+              kcalSource: null,
+              eaten: 0,
+            ),
           ],
           charges: [
             (kind: 'subtotal', name: null, amountSen: 2730),
@@ -208,5 +230,78 @@ void main() {
   testWidgets('an unreadable receipt says how to retake it', (t) async {
     await pump(t, FakeReceipts()..answers = [receipt(status: 'failed')]);
     expect(find.textContaining("couldn't read this receipt"), findsOneWidget);
+  });
+
+  ReceiptItem line(double? quantity, {int? kcal, double eaten = 0}) => (
+    name: 'Nasi Lemak',
+    quantity: quantity,
+    amountSen: 800,
+    kcal: kcal,
+    kcalSource: kcal == null ? null : 'ai',
+    eaten: eaten,
+  );
+
+  testWidgets('ticking a line sends it and shows what was eaten', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(status: 'saved', items: [line(null, kcal: 640)]),
+        receipt(
+          status: 'saved',
+          items: [line(null, kcal: 640, eaten: 1)],
+          eatenKcal: 640,
+          hasEstimate: true,
+        ),
+      ];
+    await pump(t, repo);
+    expect(find.text('640 kcal · AI estimate'), findsOneWidget);
+    expect(
+      find.text('Tick what you ate to count its calories.'),
+      findsOneWidget,
+    );
+    await t.ensureVisible(find.byKey(const ValueKey('eaten-0')));
+    await t.tap(find.byType(Checkbox));
+    await t.pump();
+    expect(repo.eaten.single, (id: 'r-1', position: 0, eaten: 1.0));
+    expect(find.text('You ate: 640 kcal'), findsOneWidget);
+    expect(find.text('AI estimate'), findsOneWidget); // the chip
+  });
+
+  testWidgets('a line of 3 counts up to 3, no further', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(status: 'saved', items: [line(3, eaten: 3)]),
+      ];
+    await pump(t, repo);
+    await t.ensureVisible(find.byKey(const ValueKey('eaten-0')));
+    expect(
+      t
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.add))
+          .onPressed,
+      isNull,
+    );
+    await t.tap(find.widgetWithIcon(IconButton, Icons.remove));
+    await t.pump();
+    expect(repo.eaten.single.eaten, 2);
+  });
+
+  testWidgets('counting calories polls until the server is done', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(status: 'saved', items: [line(1)], caloriesPending: true),
+        receipt(status: 'saved', items: [line(1, kcal: 200)]),
+      ];
+    await pump(t, repo);
+    expect(find.text('Counting calories…'), findsOneWidget);
+    await t.pump(const Duration(milliseconds: 20));
+    await t.pump();
+    expect(find.text('Counting calories…'), findsNothing);
+    expect(find.text('200 kcal · AI estimate'), findsOneWidget);
+  });
+
+  testWidgets('a receipt that is not from a restaurant says so', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [receipt(status: 'failed', reason: 'not_restaurant')];
+    await pump(t, repo);
+    expect(find.textContaining('Not a restaurant receipt'), findsOneWidget);
   });
 }

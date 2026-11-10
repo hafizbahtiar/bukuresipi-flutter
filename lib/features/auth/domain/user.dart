@@ -10,6 +10,7 @@ class User {
     this.hasPassword = true,
     this.google = false,
     this.avatar,
+    this.kcalTarget,
   });
 
   final String id;
@@ -27,6 +28,9 @@ class User {
 
   /// Profile picture id (AuthRepository.avatar); changes on every upload. null = none.
   final String? avatar;
+
+  /// The daily calorie target the user set (Receipts); null = none.
+  final int? kcalTarget;
 
   bool get isOwner => role == 'owner';
 }

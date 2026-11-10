@@ -2084,9 +2084,13 @@
   "mergeNeedTwo": "Tap 2 or more places that are the same company.",
   "@mergeNeedTwo": {},
   "ownerReasonInactive": "Not active",
+  "@ownerReasonInactive": {},
   "ownerReasonTester": "Test account (Google Play)",
+  "@ownerReasonTester": {},
   "ownerReasonSpam": "Spam or fake",
+  "@ownerReasonSpam": {},
   "ownerReasonAsked": "They asked",
+  "@ownerReasonAsked": {},
   "ownerPicked": "{count} picked",
   "@ownerPicked": {
     "placeholders": {
@@ -2096,6 +2100,7 @@
     }
   },
   "ownerPickAll": "Pick all shown",
+  "@ownerPickAll": {},
   "ownerAccounts": "{count} accounts",
   "@ownerAccounts": {
     "placeholders": {
@@ -2141,5 +2146,56 @@
   "receiptRescanHint": "No items or charges kept for this receipt. Scan it again with + to add them.",
   "@receiptRescanHint": {},
   "shoppingTabList": "List",
-  "shoppingTabReceipts": "Receipts"
+  "@shoppingTabList": {},
+  "shoppingTabReceipts": "Receipts",
+  "@shoppingTabReceipts": {},
+  "receiptNotRestaurant": "Not a restaurant receipt. Only receipts from places that sell food or drinks can be saved.",
+  "@receiptNotRestaurant": {},
+  "caloriesYouAte": "You ate: {kcal} kcal",
+  "@caloriesYouAte": {
+    "placeholders": {
+      "kcal": {
+        "type": "String"
+      }
+    }
+  },
+  "caloriesTickHint": "Tick what you ate to count its calories.",
+  "@caloriesTickHint": {},
+  "caloriesCounting": "Counting calories…",
+  "@caloriesCounting": {},
+  "caloriesUnknown": "Some ticked items have no calories yet.",
+  "@caloriesUnknown": {},
+  "caloriesAiEstimate": "AI estimate",
+  "@caloriesAiEstimate": {},
+  "caloriesDisclaimer": "Estimates from the Ministry of Health food table and AI; portions vary. Not medical advice.",
+  "@caloriesDisclaimer": {},
+  "caloriesKcal": "{kcal} kcal",
+  "@caloriesKcal": {
+    "placeholders": {
+      "kcal": {
+        "type": "String"
+      }
+    }
+  },
+  "caloriesToday": "Calories today",
+  "@caloriesToday": {},
+  "caloriesTodayOf": "{kcal} / {target} kcal",
+  "@caloriesTodayOf": {
+    "placeholders": {
+      "kcal": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "caloriesSetTarget": "Set a daily target",
+  "@caloriesSetTarget": {},
+  "caloriesChangeTarget": "Change target",
+  "@caloriesChangeTarget": {},
+  "caloriesTarget": "Daily target (kcal)",
+  "@caloriesTarget": {},
+  "caloriesTargetRange": "500 to 10,000 kcal. Leave empty for none.",
+  "@caloriesTargetRange": {}
 }

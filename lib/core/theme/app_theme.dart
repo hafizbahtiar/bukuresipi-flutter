@@ -227,6 +227,20 @@ class Notebook extends ThemeExtension<Notebook> {
   );
 
   @override
-  Notebook lerp(Notebook? other, double t) =>
-      t < 0.5 || other == null ? this : other;
+  // Blends every colour, so a light/dark switch fades the whole notebook (MaterialApp animates the theme).
+  Notebook lerp(Notebook? other, double t) => other == null
+      ? this
+      : Notebook(
+          paper: Color.lerp(paper, other.paper, t)!,
+          ink: Color.lerp(ink, other.ink, t)!,
+          inkSoft: Color.lerp(inkSoft, other.inkSoft, t)!,
+          rule: Color.lerp(rule, other.rule, t)!,
+          margin: Color.lerp(margin, other.margin, t)!,
+          pandan: Color.lerp(pandan, other.pandan, t)!,
+          pandanDeep: Color.lerp(pandanDeep, other.pandanDeep, t)!,
+          mist: Color.lerp(mist, other.mist, t)!,
+          kunyit: Color.lerp(kunyit, other.kunyit, t)!,
+          line: Color.lerp(line, other.line, t)!,
+          hand: TextStyle.lerp(hand, other.hand, t)!,
+        );
 }
