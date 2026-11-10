@@ -825,5 +825,10 @@
         "type": "int"
       }
     }
-  }
+  },
+  "receiptSubtotal": "Jumlah kecil",
+  "receiptDiscount": "Diskaun",
+  "receiptService": "Caj perkhidmatan",
+  "receiptTax": "SST",
+  "receiptRounding": "Pembundaran"
 }

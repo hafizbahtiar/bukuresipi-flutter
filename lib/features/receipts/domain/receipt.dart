@@ -10,6 +10,7 @@ class Receipt {
     this.totalSen,
     this.gaps = const [],
     this.items = const [],
+    this.charges = const [],
     this.hasImage = false,
   });
 
@@ -27,6 +28,9 @@ class Receipt {
 
   /// The lines as printed, in order (the detail only; a list row has none).
   final List<ReceiptItem> items;
+
+  /// The bill's lines between the items and the total, in bill order (the detail only).
+  final List<ReceiptCharge> charges;
   final bool hasImage;
 
   bool get reading => status == 'reading';
@@ -37,6 +41,10 @@ class Receipt {
 
 /// One printed line: [quantity] null = not printed; [amountSen] = the whole line (negative for a discount).
 typedef ReceiptItem = ({String name, double? quantity, int? amountSen});
+
+/// [kind]: 'subtotal', 'discount', 'service', 'tax' (SST), 'other' ([name] as printed) or 'rounding';
+/// [amountSen] negative when it takes money off.
+typedef ReceiptCharge = ({String kind, String? name, int amountSen});
 
 typedef ReceiptPlace = ({String restaurantId, String? branchId, String name});
 

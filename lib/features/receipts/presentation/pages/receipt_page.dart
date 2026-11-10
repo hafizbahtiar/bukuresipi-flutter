@@ -326,9 +326,9 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
-        if (r.items.isNotEmpty) ...[
+        if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(items: r.items, totalSen: r.totalSen),
+          _Items(items: r.items, charges: r.charges, totalSen: r.totalSen),
         ],
         const SizedBox(height: 16),
         Row(
@@ -478,9 +478,9 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
-        if (r.items.isNotEmpty) ...[
+        if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(items: r.items, totalSen: r.totalSen),
+          _Items(items: r.items, charges: r.charges, totalSen: r.totalSen),
         ],
       ],
     );
@@ -876,9 +876,14 @@ class _Message extends StatelessWidget {
 /// The printed lines on a slip of receipt paper: "2 × Nasi Lemak Ayam ... RM 25.80", a dashed rule, then the
 /// total the user saves (the lines are as read; only the total is checked).
 class _Items extends StatelessWidget {
-  const _Items({required this.items, required this.totalSen});
+  const _Items({
+    required this.items,
+    required this.charges,
+    required this.totalSen,
+  });
 
   final List<ReceiptItem> items;
+  final List<ReceiptCharge> charges;
   final int? totalSen;
 
   @override
@@ -891,6 +896,21 @@ class _Items extends StatelessWidget {
     );
     String qty(double q) =>
         q == q.roundToDouble() ? q.toInt().toString() : q.toString();
+    String label(ReceiptCharge c) => switch (c.kind) {
+      'subtotal' => l.receiptSubtotal,
+      'discount' => l.receiptDiscount,
+      'service' => l.receiptService,
+      'tax' => l.receiptTax,
+      'rounding' => l.receiptRounding,
+      _ => c.name ?? '',
+    };
+    final dashes = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: CustomPaint(
+        size: const Size(double.infinity, 1),
+        painter: _Dashes(nb.line),
+      ),
+    );
     return PhysicalShape(
       clipper: const _TornEdge(),
       color: nb.paper,
@@ -937,14 +957,32 @@ class _Items extends StatelessWidget {
                   ],
                 ),
               ),
-            if (totalSen != null) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: CustomPaint(
-                  size: const Size(double.infinity, 1),
-                  painter: _Dashes(nb.line),
+            if (charges.isNotEmpty) ...[
+              dashes,
+              for (final c in charges)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          label(c),
+                          style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                        ),
+                      ),
+                      Text(
+                        rm(c.amountSen),
+                        style: figures?.copyWith(
+                          color: c.amountSen < 0 ? nb.pandan : nb.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+            ],
+            if (totalSen != null) ...[
+              dashes,
               Row(
                 children: [
                   Expanded(

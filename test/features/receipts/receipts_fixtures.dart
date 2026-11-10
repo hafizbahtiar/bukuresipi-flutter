@@ -14,6 +14,7 @@ Receipt receipt({
   int? totalSen = 4115,
   List<String> gaps = const [],
   List<ReceiptItem> items = const [],
+  List<ReceiptCharge> charges = const [],
 }) => Receipt(
   id: id,
   status: status,
@@ -23,6 +24,7 @@ Receipt receipt({
   totalSen: totalSen,
   gaps: gaps,
   items: items,
+  charges: charges,
   hasImage: status != 'saved',
 );
 
