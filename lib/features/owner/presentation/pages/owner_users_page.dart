@@ -24,8 +24,14 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Object? _error;
   bool _loading = true;
 
-  /// Users picked for a bulk delete (long-press starts picking); empty = not picking.
+  /// Picking users for a bulk delete: the Select button or a long-press starts it.
+  bool _picking = false;
   final _picked = <String>{};
+
+  void _stopPicking() => setState(() {
+    _picking = false;
+    _picked.clear();
+  });
 
   @override
   void initState() {
@@ -164,9 +170,10 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   /// Long-press or, while picking, a tap: picks or unpicks [u]. The owner account is never picked.
   void _toggle(OwnerUser u) {
     if (u.role == 'owner') return;
-    setState(
-      () => _picked.contains(u.id) ? _picked.remove(u.id) : _picked.add(u.id),
-    );
+    setState(() {
+      _picking = true;
+      _picked.contains(u.id) ? _picked.remove(u.id) : _picked.add(u.id);
+    });
   }
 
   /// One reason for every picked account, then each deleted in turn (the API has no bulk call); failures are counted.
@@ -175,6 +182,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final repo = context.read<OwnerRepository>();
     final messenger = ScaffoldMessenger.of(context);
     final ids = [..._picked];
+    if (ids.isEmpty) return;
     final r = await showNotebookSheet<({String reason, bool banEmail})>(
       context,
       builder: (_) => DeleteUserSheet(email: l.ownerAccounts(ids.length)),
@@ -198,7 +206,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
         ),
       ),
     );
-    setState(_picked.clear);
+    _stopPicking();
     await _load();
   }
 
@@ -225,12 +233,12 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final users = _users;
-    final picking = _picked.isNotEmpty;
+    final picking = _picking;
     return PopScope(
       // Back while picking stops picking first.
       canPop: !picking,
       onPopInvokedWithResult: (popped, _) {
-        if (!popped) setState(_picked.clear);
+        if (!popped) _stopPicking();
       },
       child: Scaffold(
         appBar: AppBar(
@@ -239,11 +247,18 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
                   key: const ValueKey('pick-cancel'),
                   icon: const Icon(Icons.close),
                   tooltip: MaterialLocalizations.of(context).cancelButtonLabel,
-                  onPressed: () => setState(_picked.clear),
+                  onPressed: _stopPicking,
                 )
               : null,
           title: Text(picking ? l.ownerPicked(_picked.length) : l.ownerUsers),
           actions: [
+            if (!picking)
+              TextButton.icon(
+                key: const ValueKey('pick-start'),
+                icon: const Icon(Icons.checklist),
+                label: Text(l.ownerSelect),
+                onPressed: () => setState(() => _picking = true),
+              ),
             if (picking) ...[
               IconButton(
                 key: const ValueKey('pick-all'),
@@ -263,7 +278,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 tooltip: l.ownerDeleteUser,
-                onPressed: _deletePicked,
+                onPressed: _picked.isEmpty ? null : _deletePicked,
               ),
             ],
           ],

@@ -248,7 +248,7 @@ void main() {
   );
 
   testWidgets(
-    'bulk delete: long-press picks, tap picks more, the owner account never; one preset reason for all',
+    'bulk delete: Select, tap to pick, the owner account never; one preset reason for all',
     (t) async {
       repo.users = [
         ownerUser('a@b.c'),
@@ -257,7 +257,11 @@ void main() {
         ownerUser('me@b.c', role: 'owner'),
       ];
       await pump(t, const OwnerUsersPage());
-      await t.longPress(find.text('a@b.c'));
+      // Select starts picking (a long-press does too, picking that user).
+      await t.tap(find.byKey(const ValueKey('pick-start')));
+      await t.pumpAndSettle();
+      expect(find.text('0 picked'), findsOneWidget);
+      await t.tap(find.text('a@b.c'));
       await t.pumpAndSettle();
       expect(find.text('1 picked'), findsOneWidget);
       await t.tap(find.text('b@b.c'));
