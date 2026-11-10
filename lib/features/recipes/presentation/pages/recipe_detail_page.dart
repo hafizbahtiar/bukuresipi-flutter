@@ -731,9 +731,15 @@ class _PinnedBar extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) => ColoredBox(
     color: Notebook.of(context).paper,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
-      child: Align(child: child),
+    // Opaque (rows scroll under it), so it draws the page's margin itself.
+    child: Stack(
+      children: [
+        const NotebookMargin(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+          child: Align(child: child),
+        ),
+      ],
     ),
   );
 

@@ -213,7 +213,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
     final review = r != null && r.inReview && _error == null;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.addReceipt),
+        toolbarHeight: 76,
+        title: NotebookTitle(l.addReceipt),
         actions: [
           if (r != null && !r.saved)
             IconButton(

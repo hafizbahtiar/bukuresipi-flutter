@@ -55,8 +55,9 @@ class FeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
+    // The home page is mist too: the photo box takes the container surface so an empty one still reads as a box.
     final placeholder = ColoredBox(
-      color: nb.mist,
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: Center(
         child: drawing == null
             ? Icon(icon, size: 36, color: nb.inkSoft.withValues(alpha: 0.5))
