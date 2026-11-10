@@ -825,5 +825,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "ownerSelect": "Pilih"
 }

@@ -84,6 +84,12 @@ class _DeleteUserSheetState extends State<DeleteUserSheet> {
     return _Form(
       title: l.ownerDeleteTitle(widget.email),
       reason: _reason,
+      presets: [
+        l.ownerReasonInactive,
+        l.ownerReasonTester,
+        l.ownerReasonSpam,
+        l.ownerReasonAsked,
+      ],
       reasonLabel: l.ownerDeleteWhy,
       onChanged: () => setState(() {}),
       danger: true,
@@ -94,23 +100,6 @@ class _DeleteUserSheetState extends State<DeleteUserSheet> {
         banEmail: _banEmail,
       )),
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: [
-            for (final (i, reason) in [
-              l.ownerReasonInactive,
-              l.ownerReasonTester,
-              l.ownerReasonSpam,
-              l.ownerReasonAsked,
-            ].indexed)
-              ActionChip(
-                key: ValueKey('delete-reason-$i'),
-                label: Text(reason),
-                onPressed: () => setState(() => _reason.text = reason),
-              ),
-          ],
-        ),
         CheckboxListTile(
           key: const ValueKey('delete-ban-email'),
           contentPadding: EdgeInsets.zero,
@@ -140,9 +129,13 @@ class _Form extends StatelessWidget {
     required this.confirmLabel,
     required this.onConfirm,
     required this.children,
+    this.presets = const [],
   });
 
   final String title;
+
+  /// Tap-to-fill reasons, shown above the field; with presets the keyboard waits for a tap on the field.
+  final List<String> presets;
   final TextEditingController reason;
   final String reasonLabel;
   final VoidCallback onChanged;
@@ -157,60 +150,90 @@ class _Form extends StatelessWidget {
     final material = MaterialLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final ready = reason.text.trim().length >= 3;
+    // The keyboard's room sits below everything: the sheet rises above the keyboard, the buttons stay in sight,
+    // and on a small phone the form between the title and the buttons scrolls instead of running under it.
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        notebookGutter + 10,
-        0,
-        20,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            key: const ValueKey('action-reason'),
-            controller: reason,
-            autofocus: true,
-            maxLength: 500,
-            minLines: 1,
-            maxLines: 3,
-            textCapitalization: TextCapitalization.sentences,
-            onChanged: (_) => onChanged(),
-            decoration: InputDecoration(labelText: reasonLabel),
-          ),
-          const SizedBox(height: 8),
-          ...children,
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(material.cancelButtonLabel),
-                ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 16),
+                  if (presets.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        for (final (i, preset) in presets.indexed)
+                          ChoiceChip(
+                            key: ValueKey('delete-reason-$i'),
+                            label: Text(preset),
+                            selected: reason.text.trim() == preset,
+                            onSelected: (_) {
+                              reason.text = preset;
+                              onChanged();
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextField(
+                    key: const ValueKey('action-reason'),
+                    controller: reason,
+                    autofocus: presets.isEmpty,
+                    maxLength: 500,
+                    minLines: 1,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
+                    onChanged: (_) => onChanged(),
+                    decoration: InputDecoration(labelText: reasonLabel),
+                  ),
+                  const SizedBox(height: 8),
+                  ...children,
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  key: confirmKey,
-                  style: danger
-                      ? FilledButton.styleFrom(
-                          backgroundColor: scheme.error,
-                          foregroundColor: scheme.onError,
-                        )
-                      : null,
-                  onPressed: ready ? onConfirm : null,
-                  child: Text(confirmLabel),
+            ),
+          ),
+          // Always in sight, just above the keyboard: only the form above scrolls.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(material.cancelButtonLabel),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    key: confirmKey,
+                    style: danger
+                        ? FilledButton.styleFrom(
+                            backgroundColor: scheme.error,
+                            foregroundColor: scheme.onError,
+                          )
+                        : null,
+                    onPressed: ready ? onConfirm : null,
+                    child: Text(confirmLabel),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
