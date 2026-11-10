@@ -24,6 +24,15 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Object? _error;
   bool _loading = true;
 
+  /// Picking users for a bulk delete: the Select button or a long-press starts it.
+  bool _picking = false;
+  final _picked = <String>{};
+
+  void _stopPicking() => setState(() {
+    _picking = false;
+    _picked.clear();
+  });
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +56,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
         setState(() {
           _users = users;
           _error = null;
+          _picked.retainAll(users.map((u) => u.id)); // gone ones unpicked
         });
       }
     } catch (e) {
@@ -157,6 +167,49 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     );
   }
 
+  /// Long-press or, while picking, a tap: picks or unpicks [u]. The owner account is never picked.
+  void _toggle(OwnerUser u) {
+    if (u.role == 'owner') return;
+    setState(() {
+      _picking = true;
+      _picked.contains(u.id) ? _picked.remove(u.id) : _picked.add(u.id);
+    });
+  }
+
+  /// One reason for every picked account, then each deleted in turn (the API has no bulk call); failures are counted.
+  Future<void> _deletePicked() async {
+    final l = AppLocalizations.of(context);
+    final repo = context.read<OwnerRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+    final ids = [..._picked];
+    if (ids.isEmpty) return;
+    final r = await showNotebookSheet<({String reason, bool banEmail})>(
+      context,
+      builder: (_) => DeleteUserSheet(email: l.ownerAccounts(ids.length)),
+    );
+    if (r == null || !mounted) return;
+    var failed = 0;
+    for (final id in ids) {
+      try {
+        await repo.deleteUser(id, reason: r.reason, banEmail: r.banEmail);
+      } catch (_) {
+        failed++;
+      }
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          [
+            l.ownerDeletedMany(ids.length - failed),
+            if (failed > 0) l.ownerDeleteFailed(failed),
+          ].join('. '),
+        ),
+      ),
+    );
+    _stopPicking();
+    await _load();
+  }
+
   Future<void> _endSessions(OwnerUser u) async {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
@@ -180,59 +233,112 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final users = _users;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.ownerUsers),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(64),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
-              controller: _search,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.search,
-              autocorrect: false,
-              decoration: InputDecoration(
-                hintText: l.ownerSearchEmail,
-                prefixIcon: const Icon(Icons.search),
-                isDense: true,
+    final picking = _picking;
+    return PopScope(
+      // Back while picking stops picking first.
+      canPop: !picking,
+      onPopInvokedWithResult: (popped, _) {
+        if (!popped) _stopPicking();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: picking
+              ? IconButton(
+                  key: const ValueKey('pick-cancel'),
+                  icon: const Icon(Icons.close),
+                  tooltip: MaterialLocalizations.of(context).cancelButtonLabel,
+                  onPressed: _stopPicking,
+                )
+              : null,
+          title: Text(picking ? l.ownerPicked(_picked.length) : l.ownerUsers),
+          actions: [
+            if (picking) ...[
+              IconButton(
+                key: const ValueKey('pick-all'),
+                icon: const Icon(Icons.select_all),
+                tooltip: l.ownerPickAll,
+                onPressed: () => setState(
+                  () => _picked.addAll([
+                    for (final u in users ?? <OwnerUser>[])
+                      if (u.role != 'owner') u.id,
+                  ]),
+                ),
               ),
-              onSubmitted: (_) => _load(),
+              IconButton(
+                key: const ValueKey('pick-delete'),
+                icon: Icon(
+                  Icons.delete_forever_outlined,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                tooltip: l.ownerDeleteUser,
+                onPressed: _picked.isEmpty ? null : _deletePicked,
+              ),
+            ],
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(64),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: TextField(
+                controller: _search,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.search,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  hintText: l.ownerSearchEmail,
+                  prefixIcon: const Icon(Icons.search),
+                  isDense: true,
+                ),
+                onSubmitted: (_) => _load(),
+              ),
             ),
           ),
         ),
-      ),
-      body: LoadView(
-        loading: _loading,
-        error: _error,
-        onReload: _load,
-        child: users == null
-            ? null
-            : users.isEmpty
-            ? ListView(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(l.ownerNoUsers, textAlign: TextAlign.center),
+        body: LoadView(
+          loading: _loading,
+          error: _error,
+          onReload: _load,
+          child: users == null
+              ? null
+              : users.isEmpty
+              ? ListView(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(l.ownerNoUsers, textAlign: TextAlign.center),
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  itemCount: users.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (_, i) => _UserTile(
+                    user: users[i],
+                    picked: picking ? _picked.contains(users[i].id) : null,
+                    onTap: () => picking ? _toggle(users[i]) : _open(users[i]),
+                    onLongPress: () => _toggle(users[i]),
                   ),
-                ],
-              )
-            : ListView.separated(
-                itemCount: users.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, i) =>
-                    _UserTile(user: users[i], onTap: () => _open(users[i])),
-              ),
+                ),
+        ),
       ),
     );
   }
 }
 
 class _UserTile extends StatelessWidget {
-  const _UserTile({required this.user, this.onTap});
+  const _UserTile({
+    required this.user,
+    this.onTap,
+    this.onLongPress,
+    this.picked,
+  });
 
   final OwnerUser user;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  /// null = not picking; else a tick box (none for the owner account, which is never picked).
+  final bool? picked;
 
   @override
   Widget build(BuildContext context) {
@@ -240,6 +346,10 @@ class _UserTile extends StatelessWidget {
     final joined = MaterialLocalizations.of(context)
         .formatMediumDate(user.createdAt.toLocal());
     return ListTile(
+      leading: picked == null || user.role == 'owner'
+          ? null
+          : Checkbox(value: picked, onChanged: (_) => onTap?.call()),
+      selected: picked ?? false,
       title: Text(user.email),
       subtitle: Text(
         [
@@ -267,6 +377,7 @@ class _UserTile extends StatelessWidget {
               color: Theme.of(context).colorScheme.outline,
             ),
       onTap: onTap,
+      onLongPress: onLongPress,
     );
   }
 }

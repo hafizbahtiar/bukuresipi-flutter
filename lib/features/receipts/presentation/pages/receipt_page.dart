@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_sheet.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -138,10 +140,12 @@ class _ReceiptPageState extends State<ReceiptPage> {
     );
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool update = false}) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final places = context.read<PlacesController>();
+    // maybeOf: page tests pump it without a router.
+    final router = GoRouter.maybeOf(context);
     setState(() => _saving = true);
     try {
       final r = await _repo.confirm(
@@ -149,9 +153,33 @@ class _ReceiptPageState extends State<ReceiptPage> {
         totalSen: senOf(_total.text)!,
         visitedAt: _at!,
         branchId: _branchId,
+        update: update,
       );
       unawaited(places.load()); // the place is in the book now
-      if (mounted) setState(() => _r = r);
+      if (r.id != widget.id) {
+        // A rescan: this read went into the receipt saved before, and this one is gone.
+        messenger.showSnackBar(SnackBar(content: Text(l.receiptUpdated)));
+        router?.pushReplacement('/receipts/${r.id}');
+      } else if (mounted) {
+        setState(() => _r = r);
+      }
+    } on ApiException catch (e) {
+      // Saved before: offer to update that one with this scan's items and charges.
+      if (!update &&
+          e.code == 'duplicate_receipt' &&
+          e.data['existingId'] != null &&
+          mounted) {
+        setState(() => _saving = false);
+        final yes = await showNotebookDialog(
+          context,
+          title: l.receiptRescanTitle,
+          message: l.receiptRescanBody,
+          confirmLabel: l.receiptRescanUpdate,
+        );
+        if (yes && mounted) return _save(update: true);
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
@@ -326,9 +354,17 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
-        if (r.items.isNotEmpty) ...[
+        if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(items: r.items, totalSen: r.totalSen),
+          _Items(items: r.items, charges: r.charges, totalSen: r.totalSen),
+        ] else ...[
+          // Saved before items and charges were read: a new scan of the same receipt fills them in.
+          const SizedBox(height: 16),
+          Text(
+            l.receiptRescanHint,
+            key: const ValueKey('receipt-rescan-hint'),
+            style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+          ),
         ],
         const SizedBox(height: 16),
         Row(
@@ -478,9 +514,9 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
-        if (r.items.isNotEmpty) ...[
+        if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(items: r.items, totalSen: r.totalSen),
+          _Items(items: r.items, charges: r.charges, totalSen: r.totalSen),
         ],
       ],
     );
@@ -876,9 +912,14 @@ class _Message extends StatelessWidget {
 /// The printed lines on a slip of receipt paper: "2 × Nasi Lemak Ayam ... RM 25.80", a dashed rule, then the
 /// total the user saves (the lines are as read; only the total is checked).
 class _Items extends StatelessWidget {
-  const _Items({required this.items, required this.totalSen});
+  const _Items({
+    required this.items,
+    required this.charges,
+    required this.totalSen,
+  });
 
   final List<ReceiptItem> items;
+  final List<ReceiptCharge> charges;
   final int? totalSen;
 
   @override
@@ -891,6 +932,21 @@ class _Items extends StatelessWidget {
     );
     String qty(double q) =>
         q == q.roundToDouble() ? q.toInt().toString() : q.toString();
+    String label(ReceiptCharge c) => switch (c.kind) {
+      'subtotal' => l.receiptSubtotal,
+      'discount' => l.receiptDiscount,
+      'service' => l.receiptService,
+      'tax' => l.receiptTax,
+      'rounding' => l.receiptRounding,
+      _ => c.name ?? '',
+    };
+    final dashes = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: CustomPaint(
+        size: const Size(double.infinity, 1),
+        painter: _Dashes(nb.line),
+      ),
+    );
     return PhysicalShape(
       clipper: const _TornEdge(),
       color: nb.paper,
@@ -937,14 +993,32 @@ class _Items extends StatelessWidget {
                   ],
                 ),
               ),
-            if (totalSen != null) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: CustomPaint(
-                  size: const Size(double.infinity, 1),
-                  painter: _Dashes(nb.line),
+            if (charges.isNotEmpty) ...[
+              dashes,
+              for (final c in charges)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          label(c),
+                          style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                        ),
+                      ),
+                      Text(
+                        rm(c.amountSen),
+                        style: figures?.copyWith(
+                          color: c.amountSen < 0 ? nb.pandan : nb.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+            ],
+            if (totalSen != null) ...[
+              dashes,
               Row(
                 children: [
                   Expanded(

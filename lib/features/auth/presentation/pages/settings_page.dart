@@ -8,6 +8,7 @@ import '../../../../core/settings/theme_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/widgets/pill_switch.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../push/push_controller.dart';
 import '../../data/google_auth.dart';
@@ -190,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
             NotebookRow(
               mark: mark(Icons.translate),
               onTap: () => locale.setLang(locale.lang == 'ms' ? 'en' : 'ms'),
-              trailing: _Choice(
+              trailing: PillSwitch(
                 value: locale.lang,
                 onChanged: locale.setLang,
                 options: const [
@@ -202,7 +203,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             NotebookRow(
               mark: mark(Icons.contrast),
-              trailing: _Choice(
+              trailing: PillSwitch(
                 value: theme.mode,
                 onChanged: theme.setMode,
                 options: [
@@ -272,66 +273,3 @@ class _Section extends StatelessWidget {
 
 /// BM / EN, the chosen one marked with a kunyit highlighter stroke.
 /// A small inline choice: each option is (value, what it shows, its name for screen readers when it shows an icon).
-class _Choice<T> extends StatelessWidget {
-  const _Choice({
-    required this.value,
-    required this.onChanged,
-    required this.options,
-  });
-
-  final T value;
-  final ValueChanged<T> onChanged;
-  final List<(T, Widget, String?)> options;
-
-  @override
-  Widget build(BuildContext context) {
-    final nb = Notebook.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final (code, shown, name) in options)
-          Semantics(
-            button: true,
-            selected: code == value,
-            label: name,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(6),
-              onTap: () => onChanged(code),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: code == value
-                      ? nb.kunyit.withValues(alpha: 0.55)
-                      : null,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: IconTheme.merge(
-                  data: IconThemeData(
-                    color: code == value ? nb.ink : nb.inkSoft,
-                  ),
-                  child: DefaultTextStyle.merge(
-                    style: TextStyle(
-                      fontWeight: code == value
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color: code == value ? nb.ink : nb.inkSoft,
-                    ),
-                    child: name == null
-                        ? shown
-                        : Tooltip(
-                            message: name,
-                            child: ExcludeSemantics(child: shown),
-                          ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}

@@ -788,5 +788,54 @@
   "badgeYourCount": "Anda ada {n}",
   "badgeNew": "Lencana baru!",
   "badgeNice": "Hebat!",
-  "mergeNeedTwo": "Ketik 2 atau lebih kedai yang sama syarikat."
+  "mergeNeedTwo": "Ketik 2 atau lebih kedai yang sama syarikat.",
+  "ownerReasonInactive": "Tidak aktif",
+  "ownerReasonTester": "Akaun ujian (Google Play)",
+  "ownerReasonSpam": "Spam atau palsu",
+  "ownerReasonAsked": "Mereka minta",
+  "ownerPicked": "{count} dipilih",
+  "@ownerPicked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerPickAll": "Pilih semua yang dipaparkan",
+  "ownerAccounts": "{count} akaun",
+  "@ownerAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDeletedMany": "{count} akaun dipadam",
+  "@ownerDeletedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDeleteFailed": "{count} tidak dapat dipadam",
+  "@ownerDeleteFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptSubtotal": "Jumlah kecil",
+  "receiptDiscount": "Diskaun",
+  "receiptService": "Caj perkhidmatan",
+  "receiptTax": "SST",
+  "receiptRounding": "Pembundaran",
+  "receiptRescanTitle": "Sudah disimpan",
+  "receiptRescanBody": "Anda pernah simpan resit ini. Kemas kini dengan item dan caj daripada imbasan ini?",
+  "receiptRescanUpdate": "Kemas kini",
+  "receiptUpdated": "Resit dikemas kini",
+  "receiptRescanHint": "Tiada item atau caj disimpan untuk resit ini. Imbas sekali lagi dengan + untuk menambahnya.",
+  "shoppingTabList": "Senarai",
+  "shoppingTabReceipts": "Resit"
 }

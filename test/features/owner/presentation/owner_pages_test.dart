@@ -248,6 +248,40 @@ void main() {
   );
 
   testWidgets(
+    'bulk delete: long-press, tap to pick, the owner account never; one preset reason for all',
+    (t) async {
+      repo.users = [
+        ownerUser('a@b.c'),
+        ownerUser('b@b.c'),
+        ownerUser('c@b.c'),
+        ownerUser('me@b.c', role: 'owner'),
+      ];
+      await pump(t, const OwnerUsersPage());
+      // A long-press starts picking, with that user picked.
+      await t.longPress(find.text('a@b.c'));
+      await t.pumpAndSettle();
+      expect(find.text('1 picked'), findsOneWidget);
+      await t.tap(find.text('b@b.c'));
+      await t.tap(find.text('me@b.c')); // the owner: not picked, no sheet
+      await t.pumpAndSettle();
+      expect(find.text('2 picked'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('pick-delete')));
+      await t.pumpAndSettle();
+      expect(find.text('Delete 2 accounts'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('delete-reason-1')));
+      await t.pump();
+      await t.tap(find.byKey(const ValueKey('delete-confirm')));
+      await t.pumpAndSettle();
+      expect(repo.deleted, [
+        ('u-a@b.c', 'Test account (Google Play)', true),
+        ('u-b@b.c', 'Test account (Google Play)', true),
+      ]);
+      expect(find.text('2 accounts deleted'), findsOneWidget);
+      expect(find.text('Users'), findsOneWidget); // picking ended
+    },
+  );
+
+  testWidgets(
     'rating bursts list who rated; the owner deletes one after confirming',
     (t) async {
       repo.bursts = [

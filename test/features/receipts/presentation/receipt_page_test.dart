@@ -7,6 +7,7 @@ import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../places/places_fixtures.dart';
@@ -60,6 +61,8 @@ void main() {
       find.text('Saved. The photo is deleted; the numbers stay.'),
       findsOneWidget,
     );
+    // No items or charges read: how to add them.
+    expect(find.byKey(const ValueKey('receipt-rescan-hint')), findsOneWidget);
   });
 
   testWidgets('reading with the photo shows it being scanned', (t) async {
@@ -91,6 +94,13 @@ void main() {
             (name: 'Teh Ais', quantity: null, amountSen: 350),
             (name: 'Diskaun', quantity: 1, amountSen: -200),
           ],
+          charges: [
+            (kind: 'subtotal', name: null, amountSen: 2730),
+            (kind: 'service', name: null, amountSen: 273),
+            (kind: 'tax', name: null, amountSen: 164),
+            (kind: 'other', name: 'Takeaway Charge', amountSen: 100),
+            (kind: 'rounding', name: null, amountSen: -2),
+          ],
         ),
       ];
     await pump(t, repo);
@@ -100,6 +110,16 @@ void main() {
     expect(find.text('Nasi Lemak Ayam'), findsOneWidget);
     expect(find.text('RM 25.80'), findsOneWidget);
     expect(find.text('-RM 2.00'), findsOneWidget);
+    for (final s in [
+      'Subtotal',
+      'Service charge',
+      'SST',
+      'Takeaway Charge',
+      'Rounding',
+      '-RM 0.02',
+    ]) {
+      expect(find.text(s), findsOneWidget);
+    }
     final save = find.text('Save');
     await t.ensureVisible(save);
     await t.tap(save);
@@ -107,6 +127,58 @@ void main() {
     expect(find.byKey(const ValueKey('receipt-items')), findsOneWidget);
     expect(find.text('Teh Ais'), findsOneWidget);
   });
+
+  testWidgets(
+    'a rescan of a saved receipt: Save offers Update, which opens the saved one',
+    (t) async {
+      final repo = FakeReceipts()..duplicateOf = 'r-0';
+      final router = GoRouter(
+        initialLocation: '/receipts/r-1',
+        routes: [
+          GoRoute(
+            path: '/receipts/:id',
+            builder: (_, s) => ReceiptPage(
+              id: s.pathParameters['id']!,
+              poll: const Duration(milliseconds: 10),
+            ),
+          ),
+        ],
+      );
+      await t.pumpWidget(
+        MultiProvider(
+          providers: [
+            Provider<ReceiptsRepository>.value(value: repo),
+            ChangeNotifierProvider(
+              create: (_) => PlacesController(FakePlaces()),
+            ),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('ms')],
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      expect(find.text('Already saved'), findsOneWidget);
+      expect(repo.confirmed, isEmpty);
+      await t.tap(find.text('Update'));
+      await t.pumpAndSettle();
+      expect(repo.confirmed.single.id, 'r-1');
+      expect(find.text('Receipt updated'), findsOneWidget);
+      expect(
+        router.routerDelegate.currentConfiguration.uri.path,
+        '/receipts/r-0',
+      );
+    },
+  );
 
   testWidgets('no place found: Save waits until the user picks one', (t) async {
     final repo = FakeReceipts()

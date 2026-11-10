@@ -248,7 +248,11 @@ Future<T?> showNotebookSheet<T>(
     builder: (context) => SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+          // Sheets pad themselves for the keyboard: that padding gets room too, so the form is not squeezed under it.
+          maxHeight:
+              (MediaQuery.sizeOf(context).height * 0.75 +
+                      MediaQuery.viewInsetsOf(context).bottom)
+                  .clamp(0, MediaQuery.sizeOf(context).height * 0.95),
         ),
         child: NotebookPage(child: builder(context)),
       ),

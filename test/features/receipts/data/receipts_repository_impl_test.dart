@@ -44,6 +44,38 @@ void main() {
       expect(r.totalSen, 4115);
       expect(r.gaps, ['totals_mismatch']);
       expect(r.inReview, isTrue);
+      expect(r.charges, isEmpty); // a list row has none
+    },
+  );
+
+  test(
+    'charges in bill order: missing ones skipped, other lines before rounding',
+    () async {
+      final r = await make(
+        (_) => (
+          200,
+          {
+            ...json,
+            'charges': {
+              'subtotalSen': 2980,
+              'discountSen': -500,
+              'serviceSen': null,
+              'taxSen': 158,
+              'roundingSen': 2,
+              'other': [
+                {'name': 'Takeaway Charge', 'amountSen': 100},
+              ],
+            },
+          },
+        ),
+      ).get('r-1');
+      expect(r.charges, [
+        (kind: 'subtotal', name: null, amountSen: 2980),
+        (kind: 'discount', name: null, amountSen: -500),
+        (kind: 'tax', name: null, amountSen: 158),
+        (kind: 'other', name: 'Takeaway Charge', amountSen: 100),
+        (kind: 'rounding', name: null, amountSen: 2),
+      ]);
     },
   );
 

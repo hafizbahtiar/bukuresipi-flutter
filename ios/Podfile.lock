@@ -79,6 +79,8 @@ PODS:
   - geolocator_apple (1.2.0):
     - Flutter
     - FlutterMacOS
+  - google_mlkit_document_scanner (0.6.1):
+    - Flutter
   - google_sign_in_ios (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -204,6 +206,7 @@ DEPENDENCIES:
   - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
   - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
+  - google_mlkit_document_scanner (from `.symlinks/plugins/google_mlkit_document_scanner/ios`)
   - google_sign_in_ios (from `.symlinks/plugins/google_sign_in_ios/darwin`)
   - image_editor_common (from `.symlinks/plugins/image_editor_common/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
@@ -252,6 +255,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_secure_storage_darwin/darwin"
   geolocator_apple:
     :path: ".symlinks/plugins/geolocator_apple/darwin"
+  google_mlkit_document_scanner:
+    :path: ".symlinks/plugins/google_mlkit_document_scanner/ios"
   google_sign_in_ios:
     :path: ".symlinks/plugins/google_sign_in_ios/darwin"
   image_editor_common:
@@ -283,6 +288,7 @@ SPEC CHECKSUMS:
   flutter_inappwebview_ios: 9cde7869829d54b4110df350f3eedd192c5a4aea
   flutter_secure_storage_darwin: 46e401699982ee74142909676535e0f6a7321e58
   geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
+  google_mlkit_document_scanner: 26ccb4aed1e7c241ed8f0f23f8c58b640c6b0482
   google_sign_in_ios: 92f9b87736ef92fbfda3bdd2036283d2e44bfc29
   GoogleAdsOnDeviceConversion: 41f168313b305040f4af27093d3c0af5ba46a9a3
   GoogleAppMeasurement: f2f676480e4c97936df934aa181bc29caea46975
@@ -305,6 +311,6 @@ SPEC CHECKSUMS:
   swift-collections: ba248ecaf44ef500b27d5cf94d304218c89892ff
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
-PODFILE CHECKSUM: e932e6cbed33928bae9dc84ea112bf826f7aa390
+PODFILE CHECKSUM: 5653cdba1d7fcec80e685e5b9259913263f089b5
 
 COCOAPODS: 1.17.0

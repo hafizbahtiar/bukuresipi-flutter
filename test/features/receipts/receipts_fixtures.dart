@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 
@@ -14,6 +15,7 @@ Receipt receipt({
   int? totalSen = 4115,
   List<String> gaps = const [],
   List<ReceiptItem> items = const [],
+  List<ReceiptCharge> charges = const [],
 }) => Receipt(
   id: id,
   status: status,
@@ -23,6 +25,7 @@ Receipt receipt({
   totalSen: totalSen,
   gaps: gaps,
   items: items,
+  charges: charges,
   hasImage: status != 'saved',
 );
 
@@ -36,6 +39,9 @@ class FakeReceipts implements ReceiptsRepository {
     places: [],
   );
   List<Receipt> items = [];
+
+  /// The saved receipt a confirm runs into (409 `duplicate_receipt`).
+  String? duplicateOf;
   final uploaded = <String>[];
   final confirmed =
       <({String id, int totalSen, DateTime visitedAt, String? branchId})>[];
@@ -73,7 +79,15 @@ class FakeReceipts implements ReceiptsRepository {
     required int totalSen,
     required DateTime visitedAt,
     String? branchId,
+    bool update = false,
   }) async {
+    if (duplicateOf != null && !update) {
+      throw ApiException(
+        'duplicate_receipt',
+        status: 409,
+        data: {'existingId': duplicateOf},
+      );
+    }
     confirmed.add((
       id: id,
       totalSen: totalSen,
@@ -82,7 +96,7 @@ class FakeReceipts implements ReceiptsRepository {
     ));
     final r = answers.last;
     return Receipt(
-      id: id,
+      id: update ? duplicateOf! : id,
       status: 'saved',
       shop: r.shop,
       place: r.place,

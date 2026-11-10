@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-platform :ios, '15.0' # = Runner's IPHONEOS_DEPLOYMENT_TARGET
+platform :ios, '15.5' # = Runner's IPHONEOS_DEPLOYMENT_TARGET
 
 # firebase_core asks for Firebase 12.19.3, which is not on the CocoaPods trunk (12.19.0 is the newest there).
 # FlutterFire reads this override. Remove it once `pod install` finds the version firebase_core names.

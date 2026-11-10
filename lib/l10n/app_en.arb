@@ -2082,5 +2082,64 @@
   "badgeNice": "Nice!",
   "@badgeNice": {},
   "mergeNeedTwo": "Tap 2 or more places that are the same company.",
-  "@mergeNeedTwo": {}
+  "@mergeNeedTwo": {},
+  "ownerReasonInactive": "Not active",
+  "ownerReasonTester": "Test account (Google Play)",
+  "ownerReasonSpam": "Spam or fake",
+  "ownerReasonAsked": "They asked",
+  "ownerPicked": "{count} picked",
+  "@ownerPicked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerPickAll": "Pick all shown",
+  "ownerAccounts": "{count} accounts",
+  "@ownerAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDeletedMany": "{count} accounts deleted",
+  "@ownerDeletedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDeleteFailed": "{count} could not be deleted",
+  "@ownerDeleteFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptSubtotal": "Subtotal",
+  "@receiptSubtotal": {},
+  "receiptDiscount": "Discount",
+  "@receiptDiscount": {},
+  "receiptService": "Service charge",
+  "@receiptService": {},
+  "receiptTax": "SST",
+  "@receiptTax": {},
+  "receiptRounding": "Rounding",
+  "@receiptRounding": {},
+  "receiptRescanTitle": "Already saved",
+  "@receiptRescanTitle": {},
+  "receiptRescanBody": "You saved this receipt before. Update it with the items and charges from this scan?",
+  "@receiptRescanBody": {},
+  "receiptRescanUpdate": "Update",
+  "@receiptRescanUpdate": {},
+  "receiptUpdated": "Receipt updated",
+  "@receiptUpdated": {},
+  "receiptRescanHint": "No items or charges kept for this receipt. Scan it again with + to add them.",
+  "@receiptRescanHint": {},
+  "shoppingTabList": "List",
+  "shoppingTabReceipts": "Receipts"
 }
