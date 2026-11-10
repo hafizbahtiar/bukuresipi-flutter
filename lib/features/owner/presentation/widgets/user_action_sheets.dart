@@ -57,7 +57,8 @@ class _BanSheetState extends State<BanSheet> {
   }
 }
 
-/// The delete form: a reason (kept in the log) and whether the email may sign up again. Pops `(reason, banEmail)`.
+/// The delete form: a reason (kept in the log; a preset fills it) and whether the email may sign up again.
+/// Pops `(reason, banEmail)`. [email] is what the title names: one address, or "3 accounts" for a bulk delete.
 class DeleteUserSheet extends StatefulWidget {
   const DeleteUserSheet({super.key, required this.email});
 
@@ -93,6 +94,23 @@ class _DeleteUserSheetState extends State<DeleteUserSheet> {
         banEmail: _banEmail,
       )),
       children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final (i, reason) in [
+              l.ownerReasonInactive,
+              l.ownerReasonTester,
+              l.ownerReasonSpam,
+              l.ownerReasonAsked,
+            ].indexed)
+              ActionChip(
+                key: ValueKey('delete-reason-$i'),
+                label: Text(reason),
+                onPressed: () => setState(() => _reason.text = reason),
+              ),
+          ],
+        ),
         CheckboxListTile(
           key: const ValueKey('delete-ban-email'),
           contentPadding: EdgeInsets.zero,

@@ -788,5 +788,42 @@
   "badgeYourCount": "Anda ada {n}",
   "badgeNew": "Lencana baru!",
   "badgeNice": "Hebat!",
-  "mergeNeedTwo": "Ketik 2 atau lebih kedai yang sama syarikat."
+  "mergeNeedTwo": "Ketik 2 atau lebih kedai yang sama syarikat.",
+  "ownerReasonInactive": "Tidak aktif",
+  "ownerReasonTester": "Akaun ujian (Google Play)",
+  "ownerReasonSpam": "Spam atau palsu",
+  "ownerReasonAsked": "Mereka minta",
+  "ownerPicked": "{count} dipilih",
+  "@ownerPicked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerPickAll": "Pilih semua yang dipaparkan",
+  "ownerAccounts": "{count} akaun",
+  "@ownerAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDeletedMany": "{count} akaun dipadam",
+  "@ownerDeletedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDeleteFailed": "{count} tidak dapat dipadam",
+  "@ownerDeleteFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
