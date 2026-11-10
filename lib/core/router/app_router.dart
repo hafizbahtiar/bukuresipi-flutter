@@ -34,6 +34,7 @@ import '../../features/owner/presentation/pages/owner_shares_page.dart';
 import '../../features/owner/presentation/pages/owner_users_page.dart';
 import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
 import '../../features/shares/presentation/share_page.dart';
+import '../../features/shopping/presentation/pages/shopping_page.dart';
 import '../../features/receipts/presentation/pages/receipt_page.dart';
 import '../network/update_gate.dart';
 import '../widgets/system_pages.dart';
@@ -130,6 +131,8 @@ GoRouter buildRouter(
           );
         },
       ),
+      // The shopping list: its own page, opened from Home's shopping-list button.
+      _page(path: '/shopping', builder: (_, _) => const ShoppingPage()),
       _page(path: '/splash', builder: (_, _) => const SplashPage()),
       _page(path: '/update', builder: (_, _) => const UpdateRequiredPage()),
       _page(path: '/login', builder: (_, _) => const LoginPage()),

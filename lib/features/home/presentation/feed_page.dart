@@ -404,6 +404,12 @@ class _FeedPageState extends State<FeedPage> {
               ),
             ),
           IconButton(
+            key: const ValueKey('feed-shopping'),
+            tooltip: l.shoppingTitle,
+            icon: const Icon(Icons.shopping_basket_outlined),
+            onPressed: () => context.push('/shopping'),
+          ),
+          IconButton(
             key: const ValueKey('feed-map'),
             tooltip: l.navMap,
             icon: const Icon(Icons.map_outlined),

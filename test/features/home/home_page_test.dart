@@ -3,6 +3,7 @@ import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/home_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/shopping_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -15,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bukuresipi_flutter/features/shares/presentation/recent_shares.dart';
 
 import '../../fakes.dart';
+import '../receipts/receipts_fixtures.dart';
 import '../shares/presentation/share_intake_test.dart' show FakeShares;
 
 import '../places/places_fixtures.dart';
@@ -43,6 +45,7 @@ void main() {
           ChangeNotifierProvider(
             create: (_) => ShoppingController(FakeShopping()),
           ),
+          Provider<ReceiptsRepository>.value(value: FakeReceipts()),
           ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
           ChangeNotifierProvider(
             create: (_) => UpdateGate(playHasUpdate: () async => false),

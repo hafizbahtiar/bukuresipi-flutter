@@ -14,12 +14,9 @@ import '../../../family/presentation/family_controller.dart';
 import '../../domain/shopping.dart';
 import '../shopping_controller.dart';
 
-/// The Shopping tab: a checklist filled from recipes ("add to list") or typed in.
+/// The shopping list page (opened from Home): a checklist filled from recipes ("add to list") or typed in.
 class ShoppingPage extends StatefulWidget {
-  const ShoppingPage({super.key, this.switcher});
-
-  /// The Shopping tab's List | Receipts switch, under the title.
-  final PreferredSizeWidget? switcher;
+  const ShoppingPage({super.key});
 
   @override
   State<ShoppingPage> createState() => _ShoppingPageState();
@@ -157,7 +154,6 @@ class _ShoppingPageState extends State<ShoppingPage> {
       appBar: AppBar(
         toolbarHeight: 76,
         title: NotebookTitle(l.shoppingTitle),
-        bottom: widget.switcher,
         actions: [
           if (shopping.anyDone)
             IconButton(

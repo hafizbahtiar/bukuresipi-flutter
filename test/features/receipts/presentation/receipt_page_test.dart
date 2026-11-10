@@ -15,22 +15,31 @@ import '../../places/places_fixtures.dart';
 import '../receipts_fixtures.dart';
 
 void main() {
-  Future<void> pump(WidgetTester t, FakeReceipts repo) async {
+  Future<void> pump(
+    WidgetTester t,
+    FakeReceipts repo, {
+    Future<void> Function(String text, Rect? origin)? share,
+  }) async {
     await t.pumpWidget(
       MultiProvider(
         providers: [
           Provider<ReceiptsRepository>.value(value: repo),
           ChangeNotifierProvider(create: (_) => PlacesController(FakePlaces())),
         ],
-        child: const MaterialApp(
-          locale: Locale('en'),
-          localizationsDelegates: [
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
           ],
-          supportedLocales: [Locale('en'), Locale('ms')],
-          home: ReceiptPage(id: 'r-1', poll: Duration(milliseconds: 10)),
+          supportedLocales: const [Locale('en'), Locale('ms')],
+          home: ReceiptPage(
+            key: UniqueKey(),
+            id: 'r-1',
+            poll: const Duration(milliseconds: 10),
+            share: share,
+          ),
         ),
       ),
     );
@@ -303,5 +312,155 @@ void main() {
       ..answers = [receipt(status: 'failed', reason: 'not_restaurant')];
     await pump(t, repo);
     expect(find.textContaining('Not a restaurant receipt'), findsOneWidget);
+  });
+
+  testWidgets(
+    'a read receipt has Receipt | Split bill; a reading one does not',
+    (t) async {
+      await pump(t, FakeReceipts()..answers = [receipt(status: 'saved')]);
+      expect(find.text('Split bill'), findsOneWidget);
+      await pump(t, FakeReceipts()..answers = [receipt(status: 'reading')]);
+      expect(find.text('Split bill'), findsNothing);
+      await pump(t, FakeReceipts()..answers = [receipt(status: 'failed')]);
+      expect(find.text('Split bill'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'split: Me first, add Ali, assign a line and share the exact text',
+    (t) async {
+      final repo = FakeReceipts()
+        ..answers = [
+          receipt(
+            status: 'saved',
+            items: [
+              (
+                name: 'Nasi Lemak',
+                quantity: 1,
+                amountSen: 1840,
+                kcal: null,
+                kcalSource: null,
+                eaten: 1,
+              ),
+              (
+                name: 'Teh Ais',
+                quantity: 1,
+                amountSen: 2275,
+                kcal: null,
+                kcalSource: null,
+                eaten: 1,
+              ),
+            ],
+          ),
+        ]
+        ..splitAnswer = const ReceiptSplit(
+          people: [],
+          portions: [],
+          shares: [
+            (person: 0, amountSen: 1840, lines: ['Nasi Lemak']),
+            (person: 1, amountSen: 2275, lines: ['Teh Ais']),
+          ],
+          totalSen: 4115,
+        );
+      final shared = <String>[];
+      await pump(t, repo, share: (text, _) async => shared.add(text));
+      await t.tap(find.text('Split bill'));
+      await t.pumpAndSettle();
+      // Opened for the first time: a draft with Me who pays it all; nothing saved (the calorie ticks stay).
+      expect(repo.savedSplits, isEmpty);
+      expect(find.text('RM 41.15'), findsWidgets);
+
+      await t.tap(find.byKey(const ValueKey('split-add-person')));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const ValueKey('split-name')), 'Ali');
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      expect(repo.savedSplits.last.people.map((p) => p.name), ['Me', 'Ali']);
+
+      // One serving: a checkbox; Ali takes it.
+      await t.tap(find.byKey(const ValueKey('split-line-0')));
+      await t.pumpAndSettle();
+      await t.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('portion-1')),
+          matching: find.byType(Checkbox),
+        ),
+      );
+      await t.pump();
+      await t.tap(find.byKey(const ValueKey('portion-done')));
+      await t.pumpAndSettle();
+      expect(repo.savedSplits.last.portions, [
+        (position: 0, person: 1, quantity: 1.0),
+      ]);
+      expect(find.text('RM 22.75'), findsOneWidget);
+
+      final shareButton = find.byKey(const ValueKey('split-share-button'));
+      await t.scrollUntilVisible(shareButton, 200);
+      await t.pumpAndSettle();
+      await t.tap(shareButton);
+      await t.pumpAndSettle();
+      expect(shared.single, 'Me RM 18.40: Nasi Lemak\nAli RM 22.75: Teh Ais');
+    },
+  );
+
+  testWidgets('split: the paid tick is saved per person', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [receipt(status: 'saved', hasSplit: true)]
+      ..splitAnswer = const ReceiptSplit(
+        people: [(name: 'Me', paid: false), (name: 'Ali', paid: false)],
+        portions: [],
+        shares: [
+          (person: 0, amountSen: 2058, lines: []),
+          (person: 1, amountSen: 2057, lines: []),
+        ],
+        totalSen: 4115,
+      );
+    await pump(t, repo);
+    await t.tap(find.text('Split bill'));
+    await t.pumpAndSettle();
+    final paid = find.descendant(
+      of: find.byKey(const ValueKey('split-share-1')),
+      matching: find.byType(Checkbox),
+    );
+    await t.scrollUntilVisible(paid, 200);
+    await t.pumpAndSettle();
+    await t.tap(paid);
+    await t.pumpAndSettle();
+    expect(repo.savedSplits.single.people[1].paid, isTrue);
+  });
+
+  testWidgets('split: stopping removes it and returns to the receipt', (
+    t,
+  ) async {
+    final repo = FakeReceipts()
+      ..answers = [receipt(status: 'saved', hasSplit: true)]
+      ..splitAnswer = const ReceiptSplit(
+        people: [(name: 'Me', paid: false)],
+        portions: [],
+        shares: [(person: 0, amountSen: 4115, lines: [])],
+        totalSen: 4115,
+      );
+    await pump(t, repo);
+    await t.tap(find.text('Split bill'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('split-stop')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Stop splitting').last);
+    await t.pumpAndSettle();
+    expect(repo.cleared, ['r-1']);
+    expect(find.text('Saved'), findsOneWidget);
+  });
+
+  testWidgets('a split hides the manual calorie ticks', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(status: 'saved', hasSplit: true, items: [line(1, kcal: 640)]),
+      ];
+    await pump(t, repo);
+    expect(find.byKey(const ValueKey('eaten-0')), findsNothing);
+    expect(
+      find.text('Calories follow what is assigned to Me.'),
+      findsOneWidget,
+    );
   });
 }

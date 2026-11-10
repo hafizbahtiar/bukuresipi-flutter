@@ -1,4 +1,4 @@
-import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 import 'package:bukuresipi_flutter/features/receipts/presentation/pages/receipts_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -6,18 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import '../../../fakes.dart';
 import '../receipts_fixtures.dart';
 
 void main() {
-  testWidgets('Load more brings the next page and goes away on the last', (
-    t,
-  ) async {
-    final repo = FakeReceipts()
-      ..pageSize = 2
-      ..items = [
-        for (var i = 1; i <= 3; i++) receipt(id: 'r-$i', status: 'saved'),
-      ];
+  Future<void> pump(WidgetTester t, FakeReceipts repo) async {
     await t.pumpWidget(
       Provider<ReceiptsRepository>.value(
         value: repo,
@@ -30,6 +22,17 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
+  }
+
+  testWidgets('Load more brings the next page and goes away on the last', (
+    t,
+  ) async {
+    final repo = FakeReceipts()
+      ..pageSize = 2
+      ..items = [
+        for (var i = 1; i <= 3; i++) receipt(id: 'r-$i', status: 'saved'),
+      ];
+    await pump(t, repo);
     expect(find.byKey(const ValueKey('receipt-r-3')), findsNothing);
     await t.scrollUntilVisible(
       find.byKey(const ValueKey('receipts-more')),
@@ -41,71 +44,52 @@ void main() {
     expect(find.byKey(const ValueKey('receipts-more')), findsNothing);
   });
 
-  testWidgets('today against the target; the target is set from here', (
-    t,
-  ) async {
+  testWidgets('the spend chart sits above the receipts', (t) async {
     final repo = FakeReceipts()
-      ..today = (
-        eatenKcal: 900,
-        target: null,
-        hasEstimate: true,
-        unknownEaten: 0,
-      );
-    final auth = FakeAuthRepository();
-    await t.pumpWidget(
-      MultiProvider(
-        providers: [
-          Provider<ReceiptsRepository>.value(value: repo),
-          ChangeNotifierProvider(create: (_) => AuthController(auth)),
+      ..stats_ = const ReceiptStats(
+        totalSen: 5615,
+        visits: 3,
+        months: [(month: '2026-10', visits: 1, totalSen: 4115)],
+        places: [
+          (restaurantId: 'x', name: 'Port Lepak', visits: 2, totalSen: 5115),
         ],
-        child: const MaterialApp(
-          locale: Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ReceiptsPage(),
-        ),
-      ),
-    );
-    await t.pumpAndSettle();
-    expect(find.text('900 kcal'), findsOneWidget);
-    repo.today = (
-      eatenKcal: 900,
-      target: 2000,
-      hasEstimate: true,
-      unknownEaten: 0,
-    );
-    await t.tap(find.text('Set a daily target'));
-    await t.pumpAndSettle();
-    await t.enterText(find.byKey(const ValueKey('kcal-target')), '2000');
-    await t.tap(find.text('Save'));
-    await t.pumpAndSettle();
-    expect(auth.kcalTargets, [2000]);
-    expect(find.text('900 / 2000 kcal'), findsOneWidget);
-    expect(find.text('Change target'), findsOneWidget);
+      )
+      ..items = [receipt(id: 'r-1', status: 'saved')];
+    await pump(t, repo);
+    expect(find.byKey(const ValueKey('spend-chart')), findsOneWidget);
+    expect(find.text('RM 56.15'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('Top places'), findsOneWidget);
   });
 
-  testWidgets('a target outside 500-10,000 is not sent', (t) async {
-    final auth = FakeAuthRepository();
-    await t.pumpWidget(
-      MultiProvider(
-        providers: [
-          Provider<ReceiptsRepository>.value(value: FakeReceipts()),
-          ChangeNotifierProvider(create: (_) => AuthController(auth)),
-        ],
-        child: const MaterialApp(
-          locale: Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ReceiptsPage(),
-        ),
-      ),
-    );
+  testWidgets(
+    'a scroll down folds the header away; a scroll up brings it back',
+    (t) async {
+      final repo = FakeReceipts()
+        ..items = [
+          for (var i = 1; i <= 10; i++) receipt(id: 'r-$i', status: 'saved'),
+        ];
+      await pump(t, repo);
+      expect(find.byKey(const ValueKey('spend-chart')), findsOneWidget);
+      final header = find.byKey(const ValueKey('receipts-header'));
+      expect(t.getSize(header).height, greaterThan(0));
+      await t.drag(find.byType(CustomScrollView), const Offset(0, -320));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(t.getSize(header).height, 0);
+      await t.drag(find.byType(CustomScrollView), const Offset(0, 320));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(t.getSize(header).height, greaterThan(0));
+    },
+  );
+
+  testWidgets('pulling down refreshes the stats and the list', (t) async {
+    final repo = FakeReceipts();
+    await pump(t, repo);
+    expect(repo.statCalls, 1);
+    await t.fling(find.byType(CustomScrollView), const Offset(0, 320), 1000);
     await t.pumpAndSettle();
-    await t.tap(find.text('Set a daily target'));
-    await t.pumpAndSettle();
-    await t.enterText(find.byKey(const ValueKey('kcal-target')), '50');
-    await t.tap(find.text('Save'));
-    await t.pumpAndSettle();
-    expect(auth.kcalTargets, isEmpty);
+    expect(repo.statCalls, 2);
   });
 }
