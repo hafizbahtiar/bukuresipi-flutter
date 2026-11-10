@@ -442,7 +442,12 @@ class _ReceiptPageState extends State<ReceiptPage> {
               padding: const EdgeInsets.only(top: 16),
               child: _Photo(
                 bytes: bytes,
-                onTap: () => showPhotoDialog(context, bytes),
+                onTap: () => showPhotoDialog(
+                  context,
+                  bytes,
+                  heroTag: _Photo.hero,
+                  heroRadius: 14,
+                ),
               ),
             ),
             null => const SizedBox.shrink(),
@@ -792,6 +797,8 @@ class _ScanningState extends State<_Scanning>
 class _Photo extends StatelessWidget {
   const _Photo({required this.bytes, required this.onTap});
 
+  static const hero = 'photo:receipt';
+
   final Uint8List bytes;
   final VoidCallback onTap;
 
@@ -806,12 +813,15 @@ class _Photo extends StatelessWidget {
           onTap: onTap,
           child: Stack(
             children: [
-              Image.memory(
-                bytes,
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
+              PhotoHero(
+                tag: hero,
+                child: Image.memory(
+                  bytes,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
               ),
               Positioned(
                 right: 10,

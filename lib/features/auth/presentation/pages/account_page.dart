@@ -31,6 +31,7 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   bool _avatarBusy = false;
+  static const _avatarHero = 'photo:account-avatar';
 
   /// The picture: view it full size, change (pick + square crop) or remove. Upload errors show; the old
   /// picture stays.
@@ -71,7 +72,13 @@ class _AccountPageState extends State<AccountPage> {
           .catchError((Object _) => null);
       if (!mounted) return;
       if (bytes == null) return _snack(l.errUnknown);
-      return showPhotoDialog(context, bytes);
+      return showPhotoDialog(
+        context,
+        bytes,
+        heroTag: _avatarHero,
+        heroRadius: 20, // the 40 px avatar's circle
+        aspectRatio: 1, // avatars are cropped square
+      );
     }
     final path = choice == 'change'
         ? await pickPhoto(context, ratios: [('1:1', 1)], maxSide: 1024)
@@ -141,10 +148,13 @@ class _AccountPageState extends State<AccountPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           )
-                        : Avatar(
-                            userId: user.id,
-                            avatar: user.avatar,
-                            name: user.name ?? user.email,
+                        : PhotoHero(
+                            tag: _avatarHero,
+                            child: Avatar(
+                              userId: user.id,
+                              avatar: user.avatar,
+                              name: user.name ?? user.email,
+                            ),
                           ),
                   ),
                 ),

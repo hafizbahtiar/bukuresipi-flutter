@@ -15,61 +15,26 @@ class ShoppingTab extends StatefulWidget {
 }
 
 class _ShoppingTabState extends State<ShoppingTab> {
-  bool _receipts = false;
-
   /// Bumped on each switch to Receipts: it loads again (a receipt may have been added meanwhile).
   int _shown = 0;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final height = MediaQuery.textScalerOf(context).scale(40) + 12;
-    final switcher = PreferredSize(
-      preferredSize: Size.fromHeight(height),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 0, 16, 8),
-        child: PillSwitch<bool>(
-          key: const ValueKey('shopping-switch'),
-          value: _receipts,
-          expand: true,
-          onChanged: (r) => setState(() {
-            _receipts = r;
-            if (r) _shown++;
-          }),
-          options: [
-            (false, _Label(Icons.checklist, l.shoppingTabList), null),
-            (
-              true,
-              _Label(Icons.receipt_long_outlined, l.shoppingTabReceipts),
-              null,
-            ),
-          ],
-        ),
-      ),
-    );
-    return IndexedStack(
-      index: _receipts ? 1 : 0,
-      children: [
-        ShoppingPage(switcher: switcher),
-        ReceiptsPage(key: ValueKey(_shown), switcher: switcher),
+    return PillPages<bool>(
+      switchKey: const ValueKey('shopping-switch'),
+      padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 0, 16, 8),
+      initial: false,
+      tabs: [
+        (false, Icons.checklist, l.shoppingTabList),
+        (true, Icons.receipt_long_outlined, l.shoppingTabReceipts),
       ],
+      onShown: (receipts) {
+        if (receipts) setState(() => _shown++);
+      },
+      build: (receipts, switcher) => receipts
+          ? ReceiptsPage(key: ValueKey(_shown), switcher: switcher)
+          : ShoppingPage(switcher: switcher),
     );
   }
-}
-
-class _Label extends StatelessWidget {
-  const _Label(this.icon, this.text);
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Icon(icon, size: 18),
-      const SizedBox(width: 6),
-      Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis)),
-    ],
-  );
 }
