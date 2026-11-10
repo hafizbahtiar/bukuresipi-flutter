@@ -59,4 +59,43 @@ void main() {
     await t.pumpAndSettle();
     expect(shown(find.text('Receipts and spending')), 1);
   });
+
+  testWidgets(
+    'a switch reloads in place (no spinner); pulling from the header refreshes',
+    (t) async {
+      final repo = FakeReceipts();
+      await t.pumpWidget(
+        Provider<ReceiptsRepository>.value(
+          value: repo,
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: [Locale('en'), Locale('ms')],
+            home: Scaffold(body: ReceiptsTab()),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.text('Calories').first);
+      await t.pump(); // the reload has started, its answer not yet in
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await t.pumpAndSettle();
+
+      // Back on Receipts: drag down from the spending header (above the list).
+      await t.tap(find.text('Receipts').last);
+      await t.pumpAndSettle();
+      final calls = repo.statCalls;
+      await t.fling(
+        find.byKey(const ValueKey('spend-chart')),
+        const Offset(0, 400),
+        1000,
+      );
+      await t.pumpAndSettle();
+      expect(repo.statCalls, greaterThan(calls));
+    },
+  );
 }

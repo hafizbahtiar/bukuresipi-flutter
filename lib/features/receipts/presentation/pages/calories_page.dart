@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/collapsing_header.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/pill_switch.dart';
@@ -17,10 +16,13 @@ import '../widgets/calorie_chart.dart';
 /// Today's calories against the target, the last 7 / 30 days as a chart with the target line, and the day's eaten
 /// lines. The Calories side of the Receipts | Calories switch. Private: the caller's own receipts.
 class CaloriesPage extends StatefulWidget {
-  const CaloriesPage({super.key, this.switcher});
+  const CaloriesPage({super.key, this.switcher, this.refresh = 0});
 
   /// The Receipts | Calories switch, under the title.
   final PreferredSizeWidget? switcher;
+
+  /// Bumped each time the page is switched to: it loads again, keeping what it shows until the new data is in.
+  final int refresh;
 
   @override
   State<CaloriesPage> createState() => _CaloriesPageState();
@@ -93,6 +95,20 @@ class _CaloriesPageState extends State<CaloriesPage> {
     }
   }
 
+  Future<void> _refresh() async {
+    setState(() {
+      _data = _load();
+    });
+    await _data;
+  }
+
+  @override
+  void didUpdateWidget(covariant CaloriesPage old) {
+    super.didUpdateWidget(old);
+    // FutureBuilder keeps the last data while this loads: no spinner flash on a switch.
+    if (old.refresh != widget.refresh) _data = _load();
+  }
+
   @override
   void dispose() {
     _scroll.dispose();
@@ -133,40 +149,38 @@ class _CaloriesPageState extends State<CaloriesPage> {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
             final (today, days) = data;
-            return Column(
-              children: [
-                CollapsingHeader(
-                  key: const ValueKey('calories-header'),
-                  controller: _scroll,
-                  child: _Header(
-                    today: today,
-                    days: days,
-                    range: _range,
-                    onRange: _setRange,
-                    onTarget: () => _setTarget(today.target),
-                  ),
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      setState(() {
-                        _data = _load();
-                      });
-                      await _data;
-                    },
-                    child: CustomScrollView(
-                      controller: _scroll,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: _DayItems(today: today, onOpen: _open),
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                      ],
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                controller: _scroll,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // Part of the list (so a pull anywhere refreshes); scrolls away going down, floats back going up.
+                  SliverFloatingHeader(
+                    key: const ValueKey('calories-header'),
+                    animationStyle: MediaQuery.disableAnimationsOf(context)
+                        ? AnimationStyle.noAnimation
+                        : AnimationStyle(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
+                          ),
+                    child: ColoredBox(
+                      color: Notebook.of(context).paper,
+                      child: _Header(
+                        today: today,
+                        days: days,
+                        range: _range,
+                        onRange: _setRange,
+                        onTarget: () => _setTarget(today.target),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  SliverToBoxAdapter(
+                    child: _DayItems(today: today, onOpen: _open),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              ),
             );
           },
         ),

@@ -71,16 +71,17 @@ void main() {
         ];
       await pump(t, repo);
       expect(find.byKey(const ValueKey('spend-chart')), findsOneWidget);
-      final header = find.byKey(const ValueKey('receipts-header'));
-      expect(t.getSize(header).height, greaterThan(0));
+      // On screen = hit-testable: the floating header scrolls off going down, floats back going up.
+      final header = find.byKey(const ValueKey('spend-chart')).hitTestable();
+      expect(header, findsOneWidget);
       await t.drag(find.byType(CustomScrollView), const Offset(0, -320));
       await t.pump();
       await t.pump(const Duration(milliseconds: 300));
-      expect(t.getSize(header).height, 0);
+      expect(header, findsNothing);
       await t.drag(find.byType(CustomScrollView), const Offset(0, 320));
       await t.pump();
       await t.pump(const Duration(milliseconds: 300));
-      expect(t.getSize(header).height, greaterThan(0));
+      expect(header, findsOneWidget);
     },
   );
 

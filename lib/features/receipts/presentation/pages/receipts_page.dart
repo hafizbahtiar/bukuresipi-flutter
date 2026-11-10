@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/collapsing_header.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -14,10 +13,13 @@ import '../widgets/spend_chart.dart';
 /// The user's own spending (last 12 months, from saved receipts) above their receipts, newest first. Private.
 /// The Receipts side of the Receipts | Calories switch.
 class ReceiptsPage extends StatefulWidget {
-  const ReceiptsPage({super.key, this.switcher});
+  const ReceiptsPage({super.key, this.switcher, this.refresh = 0});
 
   /// The Receipts | Calories switch, under the title.
   final PreferredSizeWidget? switcher;
+
+  /// Bumped each time the page is switched to: it loads again, keeping what it shows until the new data is in.
+  final int refresh;
 
   @override
   State<ReceiptsPage> createState() => _ReceiptsPageState();
@@ -69,6 +71,20 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
     }
   }
 
+  Future<void> _refresh() async {
+    setState(() {
+      _data = _load();
+    });
+    await _data;
+  }
+
+  @override
+  void didUpdateWidget(covariant ReceiptsPage old) {
+    super.didUpdateWidget(old);
+    // FutureBuilder keeps the last data while this loads: no spinner flash on a switch.
+    if (old.refresh != widget.refresh) _data = _load();
+  }
+
   @override
   void dispose() {
     _scroll.dispose();
@@ -100,104 +116,98 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
             }
             final (stats, first) = data;
             final receipts = [...first, ..._more];
-            return Column(
-              children: [
-                CollapsingHeader(
-                  key: const ValueKey('receipts-header'),
-                  controller: _scroll,
-                  child: _Spending(stats: stats),
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      setState(() {
-                        _data = _load();
-                      });
-                      await _data;
-                    },
-                    child: CustomScrollView(
-                      controller: _scroll,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverToBoxAdapter(child: _TopPlaces(stats: stats)),
-                        if (receipts.isEmpty)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                notebookGutter + 10,
-                                24,
-                                20,
-                                0,
-                              ),
-                              child: Text(
-                                l.receiptsEmpty,
-                                style: text.bodyMedium?.copyWith(
-                                  color: nb.inkSoft,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          SliverList.builder(
-                            itemCount: receipts.length,
-                            itemBuilder: (context, index) {
-                              final r = receipts[index];
-                              return NotebookRow(
-                                key: ValueKey('receipt-${r.id}'),
-                                onTap: () => _open(r.id),
-                                trailing: Text(
-                                  r.totalSen == null ? '' : rm(r.totalSen!),
-                                  style: text.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      r.place?.name ?? r.shop ?? l.addReceipt,
-                                      style: text.titleMedium,
-                                    ),
-                                    Text(
-                                      [
-                                        if (r.visitedAt != null)
-                                          loc.formatMediumDate(r.visitedAt!),
-                                        if (r.inReview) l.receiptToCheck,
-                                        if (r.reading) l.receiptReading,
-                                        if (r.failed)
-                                          (r.notRestaurant
-                                                  ? l.receiptNotRestaurant
-                                                  : l.receiptFailed)
-                                              .split('.')
-                                              .first,
-                                      ].join(' · '),
-                                      style: text.bodySmall?.copyWith(
-                                        color: r.inReview
-                                            ? nb.kunyit
-                                            : nb.inkSoft,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                controller: _scroll,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // Part of the list (so a pull anywhere refreshes); scrolls away going down, floats back going up.
+                  SliverFloatingHeader(
+                    key: const ValueKey('receipts-header'),
+                    animationStyle: MediaQuery.disableAnimationsOf(context)
+                        ? AnimationStyle.noAnimation
+                        : AnimationStyle(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
                           ),
-                        if (_next != null)
-                          SliverToBoxAdapter(
-                            child: Center(
-                              child: TextButton(
-                                key: const ValueKey('receipts-more'),
-                                onPressed: _loadingMore ? null : _loadMore,
-                                child: Text(l.loadMore),
-                              ),
-                            ),
-                          ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                      ],
+                    child: ColoredBox(
+                      color: Notebook.of(context).paper,
+                      child: _Spending(stats: stats),
                     ),
                   ),
-                ),
-              ],
+                  SliverToBoxAdapter(child: _TopPlaces(stats: stats)),
+                  if (receipts.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          notebookGutter + 10,
+                          24,
+                          20,
+                          0,
+                        ),
+                        child: Text(
+                          l.receiptsEmpty,
+                          style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverList.builder(
+                      itemCount: receipts.length,
+                      itemBuilder: (context, index) {
+                        final r = receipts[index];
+                        return NotebookRow(
+                          key: ValueKey('receipt-${r.id}'),
+                          onTap: () => _open(r.id),
+                          trailing: Text(
+                            r.totalSen == null ? '' : rm(r.totalSen!),
+                            style: text.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                r.place?.name ?? r.shop ?? l.addReceipt,
+                                style: text.titleMedium,
+                              ),
+                              Text(
+                                [
+                                  if (r.visitedAt != null)
+                                    loc.formatMediumDate(r.visitedAt!),
+                                  if (r.inReview) l.receiptToCheck,
+                                  if (r.reading) l.receiptReading,
+                                  if (r.failed)
+                                    (r.notRestaurant
+                                            ? l.receiptNotRestaurant
+                                            : l.receiptFailed)
+                                        .split('.')
+                                        .first,
+                                ].join(' · '),
+                                style: text.bodySmall?.copyWith(
+                                  color: r.inReview ? nb.kunyit : nb.inkSoft,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  if (_next != null)
+                    SliverToBoxAdapter(
+                      child: Center(
+                        child: TextButton(
+                          key: const ValueKey('receipts-more'),
+                          onPressed: _loadingMore ? null : _loadMore,
+                          child: Text(l.loadMore),
+                        ),
+                      ),
+                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              ),
             );
           },
         ),
