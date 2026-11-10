@@ -666,6 +666,41 @@ class _InkUnderlinePainter extends CustomPainter {
 }
 
 /// A heading on the page, after the margin line: written by hand and underlined with the pen.
+/// A bar pinned at the top of a notebook scroll view (a page's tabs): opaque, so rows scroll under it, and it draws
+/// the page's margin itself. Used with `SliverPersistentHeader(pinned: true)`.
+class NotebookPinnedBar extends SliverPersistentHeaderDelegate {
+  NotebookPinnedBar({required this.height, required this.child});
+
+  final double height;
+  final Widget child;
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => ColoredBox(
+    color: Notebook.of(context).paper,
+    child: Stack(
+      children: [
+        const NotebookMargin(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+          child: Align(child: child),
+        ),
+      ],
+    ),
+  );
+
+  @override
+  bool shouldRebuild(NotebookPinnedBar old) => true;
+}
+
 class NotebookHeading extends StatelessWidget {
   const NotebookHeading(this.text, {super.key});
 

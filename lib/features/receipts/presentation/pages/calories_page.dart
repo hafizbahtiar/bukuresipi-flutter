@@ -14,23 +14,16 @@ import '../../domain/receipts_repository.dart';
 import '../widgets/calorie_chart.dart';
 
 /// Today's calories against the target, the last 7 / 30 days as a chart with the target line, and the day's eaten
-/// lines. The Calories side of the Receipts | Calories switch. Private: the caller's own receipts.
-class CaloriesPage extends StatefulWidget {
-  const CaloriesPage({super.key, this.switcher, this.refresh = 0});
-
-  /// The Receipts | Calories switch, under the title.
-  final PreferredSizeWidget? switcher;
-
-  /// Bumped each time the page is switched to: it loads again, keeping what it shows until the new data is in.
-  final int refresh;
+/// lines. The Calories side of the Receipts tab: slivers under its pinned switch (ReceiptsTab). Private: the caller's own receipts.
+class CaloriesSection extends StatefulWidget {
+  const CaloriesSection({super.key});
 
   @override
-  State<CaloriesPage> createState() => _CaloriesPageState();
+  State<CaloriesSection> createState() => CaloriesSectionState();
 }
 
-class _CaloriesPageState extends State<CaloriesPage> {
+class CaloriesSectionState extends State<CaloriesSection> {
   late final _repo = context.read<ReceiptsRepository>();
-  final _scroll = ScrollController();
   int _range = 30;
   late Future<(DailyCalories, CalorieDays)> _data = _load();
 
@@ -95,7 +88,8 @@ class _CaloriesPageState extends State<CaloriesPage> {
     }
   }
 
-  Future<void> _refresh() async {
+  /// Loads again; what is shown stays until the new data is in (FutureBuilder keeps the last data).
+  Future<void> refresh() async {
     setState(() {
       _data = _load();
     });
@@ -103,88 +97,52 @@ class _CaloriesPageState extends State<CaloriesPage> {
   }
 
   @override
-  void didUpdateWidget(covariant CaloriesPage old) {
-    super.didUpdateWidget(old);
-    // FutureBuilder keeps the last data while this loads: no spinner flash on a switch.
-    if (old.refresh != widget.refresh) _data = _load();
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 76,
-        title: NotebookTitle(l.navCalories),
-        bottom: widget.switcher,
-      ),
-      body: NotebookPage(
-        child: FutureBuilder(
-          future: _data,
-          builder: (context, s) {
-            if (s.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(errorText(l, s.error!)),
-                    TextButton(
-                      onPressed: () => setState(() {
-                        _data = _load();
-                      }),
-                      child: Text(l.tryAgain),
-                    ),
-                  ],
-                ),
-              );
-            }
-            final data = s.data;
-            if (data == null) {
-              return const Center(child: CircularProgressIndicator.adaptive());
-            }
-            final (today, days) = data;
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: CustomScrollView(
-                controller: _scroll,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // Part of the list (so a pull anywhere refreshes); scrolls away going down, floats back going up.
-                  SliverFloatingHeader(
-                    key: const ValueKey('calories-header'),
-                    animationStyle: MediaQuery.disableAnimationsOf(context)
-                        ? AnimationStyle.noAnimation
-                        : AnimationStyle(
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeOutCubic,
-                          ),
-                    child: ColoredBox(
-                      color: Notebook.of(context).paper,
-                      child: _Header(
-                        today: today,
-                        days: days,
-                        range: _range,
-                        onRange: _setRange,
-                        onTarget: () => _setTarget(today.target),
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _DayItems(today: today, onOpen: _open),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+    return FutureBuilder(
+      future: _data,
+      builder: (context, s) {
+        if (s.hasError) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Text(errorText(l, s.error!)),
+                  TextButton(onPressed: refresh, child: Text(l.tryAgain)),
                 ],
               ),
-            );
-          },
-        ),
-      ),
+            ),
+          );
+        }
+        final data = s.data;
+        if (data == null) {
+          return const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(48),
+              child: Center(child: CircularProgressIndicator.adaptive()),
+            ),
+          );
+        }
+        final (today, days) = data;
+        return SliverMainAxisGroup(
+          slivers: [
+            SliverToBoxAdapter(
+              key: const ValueKey('calories-header'),
+              child: _Header(
+                today: today,
+                days: days,
+                range: _range,
+                onRange: _setRange,
+                onTarget: () => _setTarget(today.target),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _DayItems(today: today, onOpen: _open),
+            ),
+          ],
+        );
+      },
     );
   }
 }
