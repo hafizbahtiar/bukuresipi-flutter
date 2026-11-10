@@ -726,13 +726,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
         },
         requestFocusOnTap: true,
         menuHeight: 320,
-        label: Text(label),
-        leadingIcon: ai
-            ? const Padding(
-                padding: EdgeInsets.only(left: 8, right: 4),
-                child: _AiBadge(),
-              )
-            : null,
+        label: _fieldLabel(label, ai),
         onSelected: onSelected,
         dropdownMenuEntries: [
           for (final o in options) DropdownMenuEntry(value: o, label: o),
@@ -787,18 +781,23 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
           ? TextCapitalization.sentences
           : TextCapitalization.none,
       decoration: InputDecoration(
-        labelText: label,
+        label: _fieldLabel(label, ai),
         errorText: errorText,
-        suffixIcon: ai
-            ? const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: _AiBadge(),
-              )
-            : null,
-        suffixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 0),
       ),
     ),
   );
+
+  /// A field's label, with the "AI" badge beside it when the draft filled the field.
+  Widget _fieldLabel(String label, bool ai) => ai
+      ? Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+            const SizedBox(width: 6),
+            const _AiBadge(),
+          ],
+        )
+      : Text(label);
 }
 
 class _DraftBanner extends StatelessWidget {
