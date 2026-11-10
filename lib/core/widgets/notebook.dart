@@ -29,29 +29,36 @@ class NotebookPage extends StatelessWidget {
               ),
             ),
           ),
-          // An exercise book's margin: a printed red line with a fainter one beside it.
-          Positioned(
-            left: notebookGutter - 8,
-            top: 0,
-            bottom: 0,
-            child: ExcludeSemantics(
-              child: Row(
-                children: [
-                  Container(
-                    width: 1.5,
-                    color: nb.margin.withValues(alpha: 0.55),
-                  ),
-                  const SizedBox(width: 2.5),
-                  Container(
-                    width: 0.8,
-                    color: nb.margin.withValues(alpha: 0.3),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const NotebookMargin(),
           child,
         ],
+      ),
+    );
+  }
+}
+
+/// An exercise book's margin: a printed red line with a fainter one beside it, at the page's gutter. Place it in a
+/// full-height [Stack] (a [NotebookPage] has one; so must anything opaque drawn over the page, e.g. a pinned bar).
+class NotebookMargin extends StatelessWidget {
+  const NotebookMargin({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return Positioned(
+      left: notebookGutter - 8,
+      top: 0,
+      bottom: 0,
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: Row(
+            children: [
+              Container(width: 1.5, color: nb.margin.withValues(alpha: 0.55)),
+              const SizedBox(width: 2.5),
+              Container(width: 0.8, color: nb.margin.withValues(alpha: 0.3)),
+            ],
+          ),
+        ),
       ),
     );
   }
