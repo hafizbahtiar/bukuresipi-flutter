@@ -1014,8 +1014,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     // The credit "i" sits bottom left, above whatever holds the bottom.
     // shortcut: the slip's height is a guess (~52); a large font may cover the "i" until the slip is measured.
     final bottomUsed = unpinned > 0
-        ? (showNearby ? NearbyCarousel.height + 32 : 16) + 52
-        : (showNearby ? NearbyCarousel.height + 16 : 0);
+        ? (showNearby ? NearbyCarousel.heightOf(context) + 32 : 16) + 52
+        : (showNearby ? NearbyCarousel.heightOf(context) + 16 : 0);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: Theme.of(context).brightness == Brightness.dark
           ? SystemUiOverlayStyle.light
@@ -1106,7 +1106,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                 right: 16,
                 // The nearby cards have the bottom; the unpinned slip sits just above them.
                 bottom:
-                    keyboard + (showNearby ? NearbyCarousel.height + 32 : 16),
+                    keyboard +
+                    (showNearby ? NearbyCarousel.heightOf(context) + 32 : 16),
                 child: SafeArea(
                   child: _Slip(
                     onTap: _showUnpinned,
@@ -1156,7 +1157,9 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                     places: places.pinned,
                     search: _searchNear,
                     onPicked: _picked,
-                    reserveBottom: showNearby ? NearbyCarousel.height + 24 : 0,
+                    reserveBottom: showNearby
+                        ? NearbyCarousel.heightOf(context) + 24
+                        : 0,
                   ),
                 ),
               ),

@@ -185,10 +185,11 @@ class _Spending extends StatelessWidget {
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 24,
+            runSpacing: 8,
             children: [
               _Figure(label: l.spendingSpent, value: rm(stats.totalSen)),
-              const SizedBox(width: 24),
               _Figure(label: l.spendingVisits, value: '${stats.visits}'),
             ],
           ),
