@@ -2139,5 +2139,7 @@
   "receiptUpdated": "Receipt updated",
   "@receiptUpdated": {},
   "receiptRescanHint": "No items or charges kept for this receipt. Scan it again with + to add them.",
-  "@receiptRescanHint": {}
+  "@receiptRescanHint": {},
+  "shoppingTabList": "List",
+  "shoppingTabReceipts": "Receipts"
 }
