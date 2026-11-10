@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/network/api_exception.dart';
@@ -15,18 +16,24 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/places_controller.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
+import '../widgets/split_bill.dart';
 
 /// One receipt: waits while the server reads it, then the user checks the place, time and total and saves.
 /// Saved = the place is in their book; "Rate your visit" opens its page (the star rating lives there).
+/// A read receipt also has Receipt | Split bill.
 class ReceiptPage extends StatefulWidget {
   const ReceiptPage({
     super.key,
     required this.id,
     this.poll = const Duration(seconds: 3),
+    this.share,
   });
 
   final String id;
   final Duration poll;
+
+  /// The platform share sheet for the split bill's text; tests pass a fake.
+  final Future<void> Function(String text, Rect? origin)? share;
 
   @override
   State<ReceiptPage> createState() => _ReceiptPageState();
@@ -42,6 +49,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
   String? _branchId; // a place picked by the user, when the read found none
   String? _branchName;
   bool _saving = false;
+  bool _split = false;
   Future<Uint8List?>? _photo;
 
   @override
@@ -73,6 +81,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
           _photo ??= _repo.image(r.id).catchError((Object _) => null);
         }
       });
+      _timer?.cancel(); // one poll at a time (a segment switch also reloads)
       if (r.reading || r.caloriesPending) _timer = Timer(widget.poll, _load);
     } catch (e) {
       if (mounted) setState(() => _error = e);
@@ -109,6 +118,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         hasEstimate: r.hasEstimate,
         unknownEaten: r.unknownEaten,
         caloriesPending: r.caloriesPending,
+        hasSplit: r.hasSplit,
       ),
     );
     try {
@@ -256,6 +266,31 @@ class _ReceiptPageState extends State<ReceiptPage> {
     final l = AppLocalizations.of(context);
     final r = _r;
     final review = r != null && r.inReview && _error == null;
+    final canSplit = r != null && (r.inReview || r.saved) && _error == null;
+    final content = switch (r) {
+      _ when _error != null => _Message(
+        text: errorText(l, _error!),
+        action: (l.tryAgain, _load),
+      ),
+      null => const Center(child: CircularProgressIndicator.adaptive()),
+      Receipt(reading: true) => FutureBuilder(
+        future: _photo,
+        builder: (context, s) => s.data == null
+            ? _Message(
+                text: l.receiptReading,
+                detail: l.receiptReadingHelp,
+                busy: true,
+              )
+            : _Scanning(bytes: s.data!),
+      ),
+      Receipt(failed: true) => _Message(
+        icon: Icons.receipt_long_outlined,
+        tone: _Tone.problem,
+        text: r.notRestaurant ? l.receiptNotRestaurant : l.receiptFailed,
+      ),
+      Receipt(saved: true) => _saved(context, r),
+      _ => _review(context, r),
+    };
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
@@ -269,33 +304,54 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ),
         ],
       ),
-      // Save stays in reach under a long list of lines.
-      bottomNavigationBar: review ? _saveBar(context, r) : null,
+      // Save stays in reach under a long list of lines (and away while splitting).
+      bottomNavigationBar: review && !_split ? _saveBar(context, r) : null,
       body: NotebookPage(
-        child: switch (r) {
-          _ when _error != null => _Message(
-            text: errorText(l, _error!),
-            action: (l.tryAgain, _load),
-          ),
-          null => const Center(child: CircularProgressIndicator.adaptive()),
-          Receipt(reading: true) => FutureBuilder(
-            future: _photo,
-            builder: (context, s) => s.data == null
-                ? _Message(
-                    text: l.receiptReading,
-                    detail: l.receiptReadingHelp,
-                    busy: true,
-                  )
-                : _Scanning(bytes: s.data!),
-          ),
-          Receipt(failed: true) => _Message(
-            icon: Icons.receipt_long_outlined,
-            tone: _Tone.problem,
-            text: r.notRestaurant ? l.receiptNotRestaurant : l.receiptFailed,
-          ),
-          Receipt(saved: true) => _saved(context, r),
-          _ => _review(context, r),
-        },
+        child: canSplit
+            ? Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      notebookGutter + 4,
+                      4,
+                      16,
+                      4,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: NotebookSegmented<bool>(
+                        selected: _split,
+                        onChanged: (split) {
+                          if (split == _split) return;
+                          setState(() => _split = split);
+                          // Back to Receipt: the split may have changed the ticks.
+                          if (!split) _load();
+                        },
+                        segments: [
+                          NotebookSegment(
+                            value: false,
+                            label: l.splitTabReceipt,
+                          ),
+                          NotebookSegment(value: true, label: l.splitTabBill),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: _split
+                        ? SplitBill(
+                            receipt: r,
+                            share: widget.share ?? _shareText,
+                            onStop: () {
+                              setState(() => _split = false);
+                              _load();
+                            },
+                          )
+                        : content,
+                  ),
+                ],
+              )
+            : content,
       ),
     );
   }
@@ -402,7 +458,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(receipt: r, onEaten: _eat),
+          _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
         ] else ...[
           // Saved before items and charges were read: a new scan of the same receipt fills them in.
           const SizedBox(height: 16),
@@ -567,7 +623,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(receipt: r, onEaten: _eat),
+          _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
         ],
       ],
     );
@@ -973,8 +1029,8 @@ class _Items extends StatelessWidget {
 
   final Receipt receipt;
 
-  /// Line index, how many eaten.
-  final void Function(int, double) onEaten;
+  /// Line index, how many eaten; null while a split bill sets the ticks.
+  final void Function(int, double)? onEaten;
 
   List<ReceiptItem> get items => receipt.items;
   List<ReceiptCharge> get charges => receipt.charges;
@@ -1026,6 +1082,14 @@ class _Items extends StatelessWidget {
                 ),
               ],
             ),
+            if (receipt.hasSplit)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l.splitCaloriesNote,
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                ),
+              ),
             const SizedBox(height: 8),
             for (final (n, i) in items.indexed)
               Padding(
@@ -1033,11 +1097,12 @@ class _Items extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _Eaten(
-                      key: ValueKey('eaten-$n'),
-                      item: i,
-                      onChanged: (v) => onEaten(n, v),
-                    ),
+                    if (onEaten case final eat?)
+                      _Eaten(
+                        key: ValueKey('eaten-$n'),
+                        item: i,
+                        onChanged: (v) => eat(n, v),
+                      ),
                     SizedBox(
                       width: 36,
                       child: Text(
@@ -1265,3 +1330,8 @@ class _Dashes extends CustomPainter {
   @override
   bool shouldRepaint(_Dashes old) => old.color != color;
 }
+
+/// The platform share sheet (the split bill's text); [origin] anchors the iPad popover.
+Future<void> _shareText(String text, Rect? origin) => SharePlus.instance.share(
+  ShareParams(text: text, sharePositionOrigin: origin),
+);

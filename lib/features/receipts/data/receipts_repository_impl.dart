@@ -46,6 +46,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       hasEstimate: j['hasEstimate'] as bool? ?? false,
       unknownEaten: (j['unknownEaten'] as num?)?.toDouble() ?? 0,
       caloriesPending: j['caloriesPending'] as bool? ?? false,
+      hasSplit: j['hasSplit'] as bool? ?? false,
     );
   }
 
@@ -64,8 +65,107 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       target: j['target'] as int?,
       hasEstimate: j['hasEstimate'] as bool,
       unknownEaten: (j['unknownEaten'] as num).toDouble(),
+      receipts: [
+        for (final r in (j['receipts'] as List?) ?? const [])
+          (
+            id: r['id'] as String,
+            shop: r['shop'] as String?,
+            visitedAt: DateTime.parse(r['visitedAt'] as String).toLocal(),
+            eatenKcal: (r['eatenKcal'] as num).round(),
+            items: [
+              for (final i in (r['items'] as List?) ?? const [])
+                (
+                  name: i['name'] as String,
+                  eaten: (i['eaten'] as num).toDouble(),
+                  kcal: (i['kcal'] as num?)?.round(),
+                  kcalSource: i['kcalSource'] as String?,
+                ),
+            ],
+          ),
+      ],
     );
   });
+
+  @override
+  Future<CalorieDays> calorieDays({int days = 30}) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/receipts/calories/days',
+      queryParameters: {'days': days},
+    )).data!;
+    return CalorieDays(
+      days: [
+        for (final d in (j['days'] as List).cast<Map<String, dynamic>>())
+          (
+            date: DateTime.parse(d['date'] as String),
+            eatenKcal: (d['eatenKcal'] as num).round(),
+            hasEstimate: d['hasEstimate'] as bool,
+            unknownEaten: (d['unknownEaten'] as num).toDouble(),
+          ),
+      ],
+      target: j['target'] as int?,
+    );
+  });
+
+  @override
+  Future<ReceiptSplit> split(String id) => apiCall(
+    () async => _split(
+      (await _dio.get<Map<String, dynamic>>('/receipts/$id/split')).data!,
+    ),
+  );
+
+  @override
+  Future<ReceiptSplit> saveSplit(
+    String id, {
+    required List<SplitPerson> people,
+    required List<SplitPortion> portions,
+  }) => apiCall(
+    () async => _split(
+      (await _dio.put<Map<String, dynamic>>(
+        '/receipts/$id/split',
+        data: {
+          'people': [
+            for (final p in people) {'name': p.name, 'paid': p.paid},
+          ],
+          'portions': [
+            for (final p in portions)
+              {
+                'position': p.position,
+                'person': p.person,
+                'quantity': p.quantity,
+              },
+          ],
+        },
+      )).data!,
+    ),
+  );
+
+  @override
+  Future<void> clearSplit(String id) =>
+      apiCall(() => _dio.delete<void>('/receipts/$id/split'));
+
+  static ReceiptSplit _split(Map<String, dynamic> j) => ReceiptSplit(
+    people: [
+      for (final p in (j['people'] as List?) ?? const [])
+        (name: p['name'] as String, paid: p['paid'] as bool? ?? false),
+    ],
+    portions: [
+      for (final p in (j['portions'] as List?) ?? const [])
+        (
+          position: p['position'] as int,
+          person: p['person'] as int,
+          quantity: (p['quantity'] as num).toDouble(),
+        ),
+    ],
+    shares: [
+      for (final s in (j['shares'] as List?) ?? const [])
+        (
+          person: s['person'] as int,
+          amountSen: s['amountSen'] as int,
+          lines: ((s['lines'] as List?) ?? const []).cast<String>(),
+        ),
+    ],
+    totalSen: j['totalSen'] as int?,
+  );
 
   @override
   Future<String> upload(String path) => apiCall(() async {

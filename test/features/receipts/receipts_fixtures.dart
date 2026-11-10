@@ -20,6 +20,7 @@ Receipt receipt({
   int eatenKcal = 0,
   bool hasEstimate = false,
   bool caloriesPending = false,
+  bool hasSplit = false,
 }) => Receipt(
   id: id,
   status: status,
@@ -35,6 +36,7 @@ Receipt receipt({
   eatenKcal: eatenKcal,
   hasEstimate: hasEstimate,
   caloriesPending: caloriesPending,
+  hasSplit: hasSplit,
 );
 
 class FakeReceipts implements ReceiptsRepository {
@@ -123,8 +125,13 @@ class FakeReceipts implements ReceiptsRepository {
   /// The receipt photo [image] answers; null = none (the plain "Reading…" spinner).
   Uint8List? photo;
 
+  int statCalls = 0;
+
   @override
-  Future<ReceiptStats> stats({int months = 12}) async => stats_;
+  Future<ReceiptStats> stats({int months = 12}) async {
+    statCalls++;
+    return stats_;
+  }
 
   final eaten = <({String id, int position, double eaten})>[];
   Object? eatenError;
@@ -140,8 +147,58 @@ class FakeReceipts implements ReceiptsRepository {
     target: null,
     hasEstimate: false,
     unknownEaten: 0,
+    receipts: const [],
   );
 
   @override
   Future<DailyCalories> calories() async => today;
+
+  CalorieDays calorieDaysAnswer = const CalorieDays(days: [], target: null);
+  final calorieDayRanges = <int>[];
+
+  @override
+  Future<CalorieDays> calorieDays({int days = 30}) async {
+    calorieDayRanges.add(days);
+    return calorieDaysAnswer;
+  }
+
+  ReceiptSplit splitAnswer = const ReceiptSplit(
+    people: [],
+    portions: [],
+    shares: [],
+    totalSen: 4115,
+  );
+  final savedSplits =
+      <({String id, List<SplitPerson> people, List<SplitPortion> portions})>[];
+  final cleared = <String>[];
+
+  @override
+  Future<ReceiptSplit> split(String id) async => splitAnswer;
+
+  @override
+  Future<ReceiptSplit> saveSplit(
+    String id, {
+    required List<SplitPerson> people,
+    required List<SplitPortion> portions,
+  }) async {
+    savedSplits.add((id: id, people: people, portions: portions));
+    splitAnswer = ReceiptSplit(
+      people: people,
+      portions: portions,
+      shares: splitAnswer.shares,
+      totalSen: splitAnswer.totalSen,
+    );
+    return splitAnswer;
+  }
+
+  @override
+  Future<void> clearSplit(String id) async {
+    cleared.add(id);
+    splitAnswer = ReceiptSplit(
+      people: const [],
+      portions: const [],
+      shares: const [],
+      totalSen: splitAnswer.totalSen,
+    );
+  }
 }
