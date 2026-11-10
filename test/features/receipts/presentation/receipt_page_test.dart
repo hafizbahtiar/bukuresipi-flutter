@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 import 'package:bukuresipi_flutter/features/receipts/presentation/pages/receipt_page.dart';
@@ -58,6 +60,24 @@ void main() {
       find.text('Saved. The photo is deleted; the numbers stay.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('reading with the photo shows it being scanned', (t) async {
+    // A 1x1 PNG.
+    final png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    );
+    final repo = FakeReceipts()
+      ..photo = png
+      ..answers = [receipt(status: 'reading'), receipt()];
+    await pump(t, repo);
+    await t.pump();
+    expect(find.byKey(const ValueKey('receipt-scan')), findsOneWidget);
+    expect(find.text('Reading the receipt…'), findsOneWidget);
+    await t.pump(const Duration(milliseconds: 20));
+    await t.pump();
+    expect(find.byKey(const ValueKey('receipt-scan')), findsNothing);
+    expect(find.text('Port Lepak Sentul'), findsOneWidget);
   });
 
   testWidgets('the printed lines show while checking and after saving', (

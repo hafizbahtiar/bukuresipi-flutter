@@ -83,24 +83,27 @@ class _RecipeVariantsState extends State<RecipeVariants> {
         NotebookHeading(l.variantsTitle),
         Padding(
           padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 12, 4),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Text(
-                  _variants.isEmpty ? l.variantsNone : l.variantsHint,
-                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                ),
+              Text(
+                _variants.isEmpty ? l.variantsNone : l.variantsHint,
+                style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
+              // On its own line: beside the hint it left the text no room on a narrow phone.
               if (widget.owner)
-                TextButton.icon(
-                  onPressed: _finding ? null : _find,
-                  icon: _finding
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.travel_explore, size: 18),
-                  label: Text(l.variantsFind),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _finding ? null : _find,
+                    icon: _finding
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.travel_explore, size: 18),
+                    label: Text(l.variantsFind),
+                  ),
                 ),
             ],
           ),

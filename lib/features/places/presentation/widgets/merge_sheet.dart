@@ -55,7 +55,8 @@ class _MergeSheetState extends State<MergeSheet> {
     final text = Theme.of(context).textTheme;
     final kept = widget.places.firstWhere((p) => p.restaurant.id == _into);
     final name = _name.text.trim();
-    return Padding(
+    // Scrolls when the list of places and the keyboard leave too little room.
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         notebookGutter + 10,
         0,

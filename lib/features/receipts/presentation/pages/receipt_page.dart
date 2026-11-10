@@ -65,9 +65,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
         if (r.inReview && _at == null) {
           _at = r.visitedAt ?? DateTime.now();
           if (r.totalSen case final sen?) _total.text = rm(sen).substring(3);
-          if (r.hasImage) {
-            _photo = _repo.image(r.id).catchError((Object _) => null);
-          }
+        }
+        // Fetched once: the scan while reading, then the preview while checking.
+        if (r.hasImage && (r.reading || r.inReview)) {
+          _photo ??= _repo.image(r.id).catchError((Object _) => null);
         }
       });
       if (r.reading) _timer = Timer(widget.poll, _load);
@@ -203,10 +204,15 @@ class _ReceiptPageState extends State<ReceiptPage> {
             action: (l.tryAgain, _load),
           ),
           null => const Center(child: CircularProgressIndicator.adaptive()),
-          Receipt(reading: true) => _Message(
-            text: l.receiptReading,
-            detail: l.receiptReadingHelp,
-            busy: true,
+          Receipt(reading: true) => FutureBuilder(
+            future: _photo,
+            builder: (context, s) => s.data == null
+                ? _Message(
+                    text: l.receiptReading,
+                    detail: l.receiptReadingHelp,
+                    busy: true,
+                  )
+                : _Scanning(bytes: s.data!),
           ),
           Receipt(failed: true) => _Message(
             icon: Icons.receipt_long_outlined,
@@ -400,7 +406,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
               padding: const EdgeInsets.only(top: 16),
               child: _Photo(
                 bytes: bytes,
-                onTap: () => showPhotoSheet(context, bytes),
+                onTap: () => showPhotoDialog(context, bytes),
               ),
             ),
             null => const SizedBox.shrink(),
@@ -615,6 +621,133 @@ class _Field extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// While the server reads: the photo with a scan line sweeping over it (still when the phone asks for no motion).
+class _Scanning extends StatefulWidget {
+  const _Scanning({required this.bytes});
+
+  final Uint8List bytes;
+
+  @override
+  State<_Scanning> createState() => _ScanningState();
+}
+
+class _ScanningState extends State<_Scanning>
+    with SingleTickerProviderStateMixin {
+  late final _sweep = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _sweep.value = 0.5;
+    } else if (!_sweep.isAnimating) {
+      _sweep.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _sweep.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final style = Theme.of(context).textTheme;
+    const height = 320.0;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 24, 24, 24),
+      children: [
+        ClipRRect(
+          key: const ValueKey('receipt-scan'),
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: height,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.memory(
+                  widget.bytes,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
+                AnimatedBuilder(
+                  animation: _sweep,
+                  builder: (context, _) {
+                    final down = _sweep.status != AnimationStatus.reverse;
+                    final y = Curves.easeInOut.transform(_sweep.value) * height;
+                    return Stack(
+                      children: [
+                        // A soft trail behind the line, on the side it came from.
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          top: down ? y - 56 : y,
+                          height: 56,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: down
+                                    ? Alignment.topCenter
+                                    : Alignment.bottomCenter,
+                                end: down
+                                    ? Alignment.bottomCenter
+                                    : Alignment.topCenter,
+                                colors: [
+                                  nb.pandan.withValues(alpha: 0),
+                                  nb.pandan.withValues(alpha: 0.28),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          top: y - 1.5,
+                          height: 3,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: nb.pandan,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: nb.pandan.withValues(alpha: 0.6),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          l.receiptReading,
+          textAlign: TextAlign.center,
+          style: style.titleMedium,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          l.receiptReadingHelp,
+          textAlign: TextAlign.center,
+          style: style.bodyMedium?.copyWith(color: nb.inkSoft),
+        ),
+      ],
     );
   }
 }

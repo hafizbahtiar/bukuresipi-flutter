@@ -96,7 +96,10 @@ class FakeReceipts implements ReceiptsRepository {
   Future<void> remove(String id) async => removed.add(id);
 
   @override
-  Future<Uint8List?> image(String id) async => null;
+  Future<Uint8List?> image(String id) async => photo;
+
+  /// The receipt photo [image] answers; null = none (the plain "Reading…" spinner).
+  Uint8List? photo;
 
   @override
   Future<ReceiptStats> stats({int months = 12}) async => stats_;

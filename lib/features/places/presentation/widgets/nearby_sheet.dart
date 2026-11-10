@@ -221,8 +221,9 @@ class _NearbySheetState extends State<NearbySheet> {
           alignment: Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.only(right: 20),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            // Wraps on a narrow phone or with large text instead of running off the edge.
+            child: Wrap(
+              alignment: WrapAlignment.end,
               children: [
                 TextButton.icon(
                   onPressed: _edit,

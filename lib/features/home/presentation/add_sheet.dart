@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -208,18 +209,40 @@ Future<void> _addReceipt(BuildContext context) async {
   final repo = context.read<ReceiptsRepository>();
   final messenger = ScaffoldMessenger.of(context);
   final router = GoRouter.of(context);
-  // 2000 px keeps small print readable and the upload well under the 5 MB cap.
-  final photo = await ImagePicker().pickImage(
-    source: source,
-    maxWidth: 2000,
-    maxHeight: 2000,
-    imageQuality: 88,
-  );
-  if (photo == null) return;
+  final path = source == ImageSource.camera
+      ? await _scan()
+      : (await _pick(ImageSource.gallery))?.path;
+  if (path == null) return;
   try {
-    final id = await repo.upload(photo.path);
+    final id = await repo.upload(path);
     unawaited(router.push('/receipts/$id'));
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+  }
+}
+
+// 2000 px keeps small print readable and the upload well under the 5 MB cap.
+Future<XFile?> _pick(ImageSource source) => ImagePicker().pickImage(
+  source: source,
+  maxWidth: 2000,
+  maxHeight: 2000,
+  imageQuality: 88,
+);
+
+/// The phone's document scanner (Android, Google Play services): finds the receipt's edges, crops and
+/// straightens it, so less background reaches the read. No scanner (iOS, no Play services) = the plain camera.
+// shortcut: the scan is not downscaled (ML Kit's page JPEG is ~1-3 MB, under the 5 MB cap); resize if uploads fail.
+Future<String?> _scan() async {
+  final scanner = DocumentScanner(options: DocumentScannerOptions());
+  try {
+    final pages = (await scanner.scanDocument()).images;
+    return pages == null || pages.isEmpty ? null : pages.first;
+  } on PlatformException catch (e) {
+    if (e.message == 'Operation cancelled') return null;
+    return (await _pick(ImageSource.camera))?.path;
+  } on MissingPluginException {
+    return (await _pick(ImageSource.camera))?.path;
+  } finally {
+    unawaited(scanner.close().catchError((Object _) {}));
   }
 }

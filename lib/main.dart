@@ -14,6 +14,7 @@ import 'core/env/env.dart';
 import 'core/network/api_client.dart';
 import 'core/network/update_gate.dart';
 import 'core/settings/locale_controller.dart';
+import 'core/settings/theme_controller.dart';
 import 'core/storage/token_store.dart';
 import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/google_auth.dart';
@@ -151,6 +152,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: recent),
         Provider<OwnerRepository>.value(value: OwnerRepositoryImpl(api.dio)),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
+        ChangeNotifierProvider(create: (_) => ThemeController(prefs)),
       ],
       child: BukuresipiApp(navigatorObservers: [?analytics]),
     ),
