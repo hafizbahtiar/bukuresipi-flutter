@@ -34,12 +34,38 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
             name: i['name'] as String,
             quantity: (i['quantity'] as num?)?.toDouble(),
             amountSen: i['amountSen'] as int?,
+            kcal: (i['kcal'] as num?)?.round(),
+            kcalSource: i['kcalSource'] as String?,
+            eaten: (i['eaten'] as num?)?.toDouble() ?? 0,
           ),
       ],
       charges: _charges(j['charges'] as Map<String, dynamic>?),
       hasImage: j['hasImage'] as bool? ?? false,
+      reason: j['reason'] as String?,
+      eatenKcal: (j['eatenKcal'] as num?)?.round() ?? 0,
+      hasEstimate: j['hasEstimate'] as bool? ?? false,
+      unknownEaten: (j['unknownEaten'] as num?)?.toDouble() ?? 0,
+      caloriesPending: j['caloriesPending'] as bool? ?? false,
     );
   }
+
+  @override
+  Future<void> setEaten(String id, int position, double eaten) => apiCall(
+    () =>
+        _dio.put<void>('/receipts/$id/items/$position', data: {'eaten': eaten}),
+  );
+
+  @override
+  Future<DailyCalories> calories() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/receipts/calories'))
+        .data!;
+    return (
+      eatenKcal: (j['eatenKcal'] as num).round(),
+      target: j['target'] as int?,
+      hasEstimate: j['hasEstimate'] as bool,
+      unknownEaten: (j['unknownEaten'] as num).toDouble(),
+    );
+  });
 
   @override
   Future<String> upload(String path) => apiCall(() async {

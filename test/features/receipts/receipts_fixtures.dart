@@ -16,6 +16,10 @@ Receipt receipt({
   List<String> gaps = const [],
   List<ReceiptItem> items = const [],
   List<ReceiptCharge> charges = const [],
+  String? reason,
+  int eatenKcal = 0,
+  bool hasEstimate = false,
+  bool caloriesPending = false,
 }) => Receipt(
   id: id,
   status: status,
@@ -27,6 +31,10 @@ Receipt receipt({
   items: items,
   charges: charges,
   hasImage: status != 'saved',
+  reason: reason,
+  eatenKcal: eatenKcal,
+  hasEstimate: hasEstimate,
+  caloriesPending: caloriesPending,
 );
 
 class FakeReceipts implements ReceiptsRepository {
@@ -117,4 +125,23 @@ class FakeReceipts implements ReceiptsRepository {
 
   @override
   Future<ReceiptStats> stats({int months = 12}) async => stats_;
+
+  final eaten = <({String id, int position, double eaten})>[];
+  Object? eatenError;
+
+  @override
+  Future<void> setEaten(String id, int position, double eaten) async {
+    if (eatenError != null) throw eatenError!;
+    this.eaten.add((id: id, position: position, eaten: eaten));
+  }
+
+  DailyCalories today = (
+    eatenKcal: 0,
+    target: null,
+    hasEstimate: false,
+    unknownEaten: 0,
+  );
+
+  @override
+  Future<DailyCalories> calories() async => today;
 }

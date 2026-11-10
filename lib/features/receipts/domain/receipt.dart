@@ -12,6 +12,11 @@ class Receipt {
     this.items = const [],
     this.charges = const [],
     this.hasImage = false,
+    this.reason,
+    this.eatenKcal = 0,
+    this.hasEstimate = false,
+    this.unknownEaten = 0,
+    this.caloriesPending = false,
   });
 
   final String id;
@@ -33,14 +38,42 @@ class Receipt {
   final List<ReceiptCharge> charges;
   final bool hasImage;
 
+  /// Why it failed: 'not_restaurant' = refused (a grocery or petrol receipt), null = unreadable.
+  final String? reason;
+
+  /// kcal of the ticked lines (the detail only); [hasEstimate] = one of them is an AI estimate; [unknownEaten] =
+  /// ticked lines with no calories; [caloriesPending] = the server is still matching the lines to dishes.
+  final int eatenKcal;
+  final bool hasEstimate;
+  final double unknownEaten;
+  final bool caloriesPending;
+
+  bool get notRestaurant => reason == 'not_restaurant';
   bool get reading => status == 'reading';
   bool get inReview => status == 'review';
   bool get saved => status == 'saved';
   bool get failed => status == 'failed';
 }
 
-/// One printed line: [quantity] null = not printed; [amountSen] = the whole line (negative for a discount).
-typedef ReceiptItem = ({String name, double? quantity, int? amountSen});
+/// One printed line: [quantity] null = not printed; [amountSen] = the whole line (negative for a discount);
+/// [kcal] = one serving's calories (null = unknown), [kcalSource] 'table' | 'ai' (an AI estimate); [eaten] = how
+/// many the user ate (0..quantity, or 0..1 when no quantity is printed).
+typedef ReceiptItem = ({
+  String name,
+  double? quantity,
+  int? amountSen,
+  int? kcal,
+  String? kcalSource,
+  double eaten,
+});
+
+/// One day's calories from the user's saved receipts ([target] null = not set).
+typedef DailyCalories = ({
+  int eatenKcal,
+  int? target,
+  bool hasEstimate,
+  double unknownEaten,
+});
 
 /// [kind]: 'subtotal', 'discount', 'service', 'tax' (SST), 'other' ([name] as printed) or 'rounding';
 /// [amountSen] negative when it takes money off.

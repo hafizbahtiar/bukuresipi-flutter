@@ -16,6 +16,9 @@ abstract interface class AuthRepository {
   /// The display name other users see (family, a public recipe's credit); never the email.
   Future<User> setName(String name);
 
+  /// The daily calorie target (500-10,000 kcal); null clears it.
+  Future<User> setKcalTarget(int? kcal);
+
   /// Profile picture from a local JPEG; returns the user with its new avatar id.
   Future<User> setAvatar(String path);
   Future<User> removeAvatar();

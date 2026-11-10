@@ -837,5 +837,19 @@
   "receiptUpdated": "Resit dikemas kini",
   "receiptRescanHint": "Tiada item atau caj disimpan untuk resit ini. Imbas sekali lagi dengan + untuk menambahnya.",
   "shoppingTabList": "Senarai",
-  "shoppingTabReceipts": "Resit"
+  "shoppingTabReceipts": "Resit",
+  "receiptNotRestaurant": "Bukan resit kedai makan. Hanya resit dari tempat yang menjual makanan atau minuman boleh disimpan.",
+  "caloriesYouAte": "Anda makan: {kcal} kcal",
+  "caloriesTickHint": "Tandakan apa yang anda makan untuk kira kalorinya.",
+  "caloriesCounting": "Mengira kalori…",
+  "caloriesUnknown": "Sesetengah item yang ditanda belum ada kalori.",
+  "caloriesAiEstimate": "Anggaran AI",
+  "caloriesDisclaimer": "Anggaran daripada jadual makanan KKM dan AI; saiz hidangan berbeza. Bukan nasihat perubatan.",
+  "caloriesKcal": "{kcal} kcal",
+  "caloriesToday": "Kalori hari ini",
+  "caloriesTodayOf": "{kcal} / {target} kcal",
+  "caloriesSetTarget": "Tetapkan sasaran harian",
+  "caloriesChangeTarget": "Tukar sasaran",
+  "caloriesTarget": "Sasaran harian (kcal)",
+  "caloriesTargetRange": "500 hingga 10,000 kcal. Biarkan kosong untuk tiada."
 }
