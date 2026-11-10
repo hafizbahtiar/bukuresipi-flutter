@@ -7,15 +7,15 @@ import '../../family/presentation/family_controller.dart';
 import '../../places/presentation/pages/places_list_page.dart';
 import '../../places/presentation/places_controller.dart';
 import '../../recipes/presentation/recipes_controller.dart';
-import 'shopping_tab.dart';
 import '../../shopping/presentation/shopping_controller.dart';
 import '../../shares/presentation/recent_shares.dart';
 import 'add_sheet.dart';
 import 'feed_page.dart';
+import 'receipts_tab.dart';
 
-/// Signed-in home: Home (feed, with the map button), Book, Shopping and Account tabs, and "+" in the middle (add
-/// anything: [showAddSheet]; it is a button, not a tab). Rebuilt after every share (the share page goes back to '/'), so it
-/// reloads the places.
+/// Signed-in home: Home (feed, with the map and shopping-list buttons), Book, Receipts and Account tabs, and "+" in
+/// the middle (add anything: [showAddSheet]; it is a button, not a tab). Rebuilt after every share (the share page goes
+/// back to '/'), so it reloads the places.
 class HomePage extends StatefulWidget {
   const HomePage({super.key, this.open});
 
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
         children: const [
           FeedPage(),
           PlacesListPage(),
-          ShoppingTab(),
+          ReceiptsTab(),
           AccountPage(),
         ],
       ),
@@ -111,9 +111,9 @@ class _HomePageState extends State<HomePage> {
             label: l.navAdd,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.shopping_basket_outlined),
-            selectedIcon: const Icon(Icons.shopping_basket),
-            label: l.navShopping,
+            icon: const Icon(Icons.receipt_long_outlined),
+            selectedIcon: const Icon(Icons.receipt_long),
+            label: l.navReceipts,
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),

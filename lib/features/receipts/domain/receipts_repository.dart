@@ -27,6 +27,23 @@ abstract interface class ReceiptsRepository {
   /// Ticks how many of line [position] the user ate (codes: too_many, not_ready, not_found).
   Future<void> setEaten(String id, int position, double eaten);
 
-  /// Today's calories (Malaysia day) from saved receipts, against the user's target.
+  /// Today's calories (Malaysia day) from saved receipts, against the user's target, with the day's eaten lines.
   Future<DailyCalories> calories();
+
+  /// The last [days] Malaysia days of calories, oldest first, against the target (the chart).
+  Future<CalorieDays> calorieDays({int days = 30});
+
+  /// The receipt's split (empty [ReceiptSplit.people] = none). Codes: not_ready, not_found.
+  Future<ReceiptSplit> split(String id);
+
+  /// Replaces the split: the server computes the shares and sets the calorie ticks from "Me"'s lines.
+  /// Codes: invalid_split, not_ready, not_found.
+  Future<ReceiptSplit> saveSplit(
+    String id, {
+    required List<SplitPerson> people,
+    required List<SplitPortion> portions,
+  });
+
+  /// Removes the split; the calorie ticks stay as they last were.
+  Future<void> clearSplit(String id);
 }

@@ -65,6 +65,10 @@ void main() {
         ),
         GoRoute(path: '/map', builder: (_, _) => const Text('the map')),
         GoRoute(
+          path: '/shopping',
+          builder: (_, _) => const Text('the shopping list'),
+        ),
+        GoRoute(
           path: '/recipes/:id',
           builder: (_, st) => Text('recipe ${st.pathParameters['id']}'),
         ),
@@ -224,6 +228,13 @@ void main() {
     await t.tap(find.byKey(const ValueKey('feed-map')));
     await t.pumpAndSettle();
     expect(find.text('the map'), findsOneWidget);
+  });
+
+  testWidgets('the shopping button opens the shopping list', (t) async {
+    await pump(t);
+    await t.tap(find.byKey(const ValueKey('feed-shopping')));
+    await t.pumpAndSettle();
+    expect(find.text('the shopping list'), findsOneWidget);
   });
 
   testWidgets('a newer version on Google Play shows the Update chip', (

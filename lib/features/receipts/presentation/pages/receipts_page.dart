@@ -3,20 +3,20 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/collapsing_header.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
-import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
+import '../widgets/spend_chart.dart';
 
 /// The user's own spending (last 12 months, from saved receipts) above their receipts, newest first. Private.
-/// The Shopping tab's Receipts side.
+/// The Receipts side of the Receipts | Calories switch.
 class ReceiptsPage extends StatefulWidget {
   const ReceiptsPage({super.key, this.switcher});
 
-  /// The Shopping tab's List | Receipts switch, under the title.
+  /// The Receipts | Calories switch, under the title.
   final PreferredSizeWidget? switcher;
 
   @override
@@ -25,63 +25,19 @@ class ReceiptsPage extends StatefulWidget {
 
 class _ReceiptsPageState extends State<ReceiptsPage> {
   late final _repo = context.read<ReceiptsRepository>();
-  late Future<(ReceiptStats, List<Receipt>, DailyCalories)> _data = _load();
+  final _scroll = ScrollController();
+  late Future<(ReceiptStats, List<Receipt>)> _data = _load();
 
   /// Pages after the first ("Load more"); [_next] = the cursor of the page after them, null on the last.
   final _more = <Receipt>[];
   String? _next;
   bool _loadingMore = false;
 
-  Future<(ReceiptStats, List<Receipt>, DailyCalories)> _load() async {
-    final (stats, list, today) = await (
-      _repo.stats(),
-      _repo.list(),
-      _repo.calories(),
-    ).wait;
+  Future<(ReceiptStats, List<Receipt>)> _load() async {
+    final (stats, list) = await (_repo.stats(), _repo.list()).wait;
     _more.clear();
     _next = list.next;
-    return (stats, list.items, today);
-  }
-
-  /// The daily target dialog; empty = none.
-  Future<void> _setTarget(int? current) async {
-    final l = AppLocalizations.of(context);
-    final field = TextEditingController(text: current?.toString() ?? '');
-    final ok = await showNotebookDialog(
-      context,
-      title: l.caloriesTarget,
-      message: l.caloriesTargetRange,
-      confirmLabel: l.save,
-      content: TextField(
-        key: const ValueKey('kcal-target'),
-        controller: field,
-        autofocus: true,
-        keyboardType: TextInputType.number,
-        decoration: const InputDecoration(suffixText: 'kcal'),
-      ),
-    );
-    // Not disposed here: the dialog's closing animation still shows the field.
-    final text = field.text.trim();
-    if (!ok || !mounted) return;
-    final kcal = int.tryParse(text);
-    if (text.isNotEmpty && (kcal == null || kcal < 500 || kcal > 10000)) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.caloriesTargetRange)));
-      return;
-    }
-    try {
-      await context.read<AuthController>().setKcalTarget(kcal);
-      if (mounted) {
-        setState(() {
-          _data = _load();
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(errorText(l, e))));
-      }
-    }
+    return (stats, list.items);
   }
 
   Future<void> _loadMore() async {
@@ -114,6 +70,12 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
   }
 
   @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
@@ -136,157 +98,109 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
             if (data == null) {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
-            final (stats, first, today) = data;
+            final (stats, first) = data;
             final receipts = [...first, ..._more];
-            return RefreshIndicator(
-              onRefresh: () async {
-                setState(() {
-                  _data = _load();
-                });
-                await _data;
-              },
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: 24),
-                children: [
-                  _Today(today: today, onTarget: _setTarget),
-                  _Spending(stats: stats),
-                  if (receipts.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        notebookGutter + 10,
-                        24,
-                        20,
-                        0,
-                      ),
-                      child: Text(
-                        l.receiptsEmpty,
-                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                      ),
-                    ),
-                  for (final r in receipts)
-                    NotebookRow(
-                      key: ValueKey('receipt-${r.id}'),
-                      onTap: () => _open(r.id),
-                      trailing: Text(
-                        r.totalSen == null ? '' : rm(r.totalSen!),
-                        style: text.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            r.place?.name ?? r.shop ?? l.addReceipt,
-                            style: text.titleMedium,
+            return Column(
+              children: [
+                CollapsingHeader(
+                  key: const ValueKey('receipts-header'),
+                  controller: _scroll,
+                  child: _Spending(stats: stats),
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      setState(() {
+                        _data = _load();
+                      });
+                      await _data;
+                    },
+                    child: CustomScrollView(
+                      controller: _scroll,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverToBoxAdapter(child: _TopPlaces(stats: stats)),
+                        if (receipts.isEmpty)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                notebookGutter + 10,
+                                24,
+                                20,
+                                0,
+                              ),
+                              child: Text(
+                                l.receiptsEmpty,
+                                style: text.bodyMedium?.copyWith(
+                                  color: nb.inkSoft,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          SliverList.builder(
+                            itemCount: receipts.length,
+                            itemBuilder: (context, index) {
+                              final r = receipts[index];
+                              return NotebookRow(
+                                key: ValueKey('receipt-${r.id}'),
+                                onTap: () => _open(r.id),
+                                trailing: Text(
+                                  r.totalSen == null ? '' : rm(r.totalSen!),
+                                  style: text.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      r.place?.name ?? r.shop ?? l.addReceipt,
+                                      style: text.titleMedium,
+                                    ),
+                                    Text(
+                                      [
+                                        if (r.visitedAt != null)
+                                          loc.formatMediumDate(r.visitedAt!),
+                                        if (r.inReview) l.receiptToCheck,
+                                        if (r.reading) l.receiptReading,
+                                        if (r.failed)
+                                          (r.notRestaurant
+                                                  ? l.receiptNotRestaurant
+                                                  : l.receiptFailed)
+                                              .split('.')
+                                              .first,
+                                      ].join(' · '),
+                                      style: text.bodySmall?.copyWith(
+                                        color: r.inReview
+                                            ? nb.kunyit
+                                            : nb.inkSoft,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                          Text(
-                            [
-                              if (r.visitedAt != null)
-                                loc.formatMediumDate(r.visitedAt!),
-                              if (r.inReview) l.receiptToCheck,
-                              if (r.reading) l.receiptReading,
-                              if (r.failed)
-                                (r.notRestaurant
-                                        ? l.receiptNotRestaurant
-                                        : l.receiptFailed)
-                                    .split('.')
-                                    .first,
-                            ].join(' · '),
-                            style: text.bodySmall?.copyWith(
-                              color: r.inReview ? nb.kunyit : nb.inkSoft,
+                        if (_next != null)
+                          SliverToBoxAdapter(
+                            child: Center(
+                              child: TextButton(
+                                key: const ValueKey('receipts-more'),
+                                onPressed: _loadingMore ? null : _loadMore,
+                                child: Text(l.loadMore),
+                              ),
                             ),
                           ),
-                        ],
-                      ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      ],
                     ),
-                  if (_next != null)
-                    Center(
-                      child: TextButton(
-                        key: const ValueKey('receipts-more'),
-                        onPressed: _loadingMore ? null : _loadMore,
-                        child: Text(l.loadMore),
-                      ),
-                    ),
-                ],
-              ),
+                  ),
+                ),
+              ],
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-/// Today's calories from saved receipts, against the user's target (or a link to set one).
-class _Today extends StatelessWidget {
-  const _Today({required this.today, required this.onTarget});
-
-  final DailyCalories today;
-  final ValueChanged<int?> onTarget;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
-    final target = today.target;
-    return Padding(
-      key: const ValueKey('calories-today'),
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l.caloriesToday,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            target == null
-                ? l.caloriesKcal('${today.eatenKcal}')
-                : l.caloriesTodayOf('${today.eatenKcal}', '$target'),
-            style: text.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          if (target != null) ...[
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: (today.eatenKcal / target).clamp(0, 1).toDouble(),
-                minHeight: 6,
-                color: today.eatenKcal > target ? nb.margin : nb.pandan,
-                backgroundColor: nb.mist,
-              ),
-            ),
-          ],
-          if (today.hasEstimate || today.unknownEaten > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                [
-                  if (today.hasEstimate) l.caloriesAiEstimate,
-                  if (today.unknownEaten > 0) l.caloriesUnknown,
-                ].join(' · '),
-                style: text.bodySmall?.copyWith(color: nb.inkSoft),
-              ),
-            ),
-          TextButton(
-            key: const ValueKey('kcal-target-button'),
-            style: TextButton.styleFrom(padding: EdgeInsets.zero),
-            onPressed: () => onTarget(target),
-            child: Text(
-              target == null ? l.caloriesSetTarget : l.caloriesChangeTarget,
-            ),
-          ),
-          Text(
-            l.caloriesDisclaimer,
-            style: text.bodySmall?.copyWith(color: nb.inkSoft, fontSize: 11),
-          ),
-        ],
       ),
     );
   }
@@ -300,16 +214,7 @@ class _Spending extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    // The last 12 months, oldest first; a month with no visit is an empty bar.
-    final now = DateTime.now();
-    final months = [
-      for (var i = 11; i >= 0; i--) DateTime(now.year, now.month - i),
-    ];
-    String key(DateTime m) => '${m.year}-${m.month.toString().padLeft(2, '0')}';
-    final byMonth = {for (final m in stats.months) m.month: m.totalSen};
-    final top = byMonth.values.fold(0, (a, b) => a > b ? a : b);
     return Padding(
       padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
       child: Column(
@@ -329,60 +234,53 @@ class _Spending extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 72,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (final m in months)
+          SpendChart(months: stats.months),
+        ],
+      ),
+    );
+  }
+}
+
+/// The top places by spend; scrolls with the list, under the collapsing header.
+class _TopPlaces extends StatelessWidget {
+  const _TopPlaces({required this.stats});
+
+  final ReceiptStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stats.places.isEmpty) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.spendingTopPlaces,
+            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          for (final p in stats.places.take(5))
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
                   Expanded(
-                    child: Tooltip(
-                      message:
-                          '${MaterialLocalizations.of(context).formatMonthYear(m)}: ${rm(byMonth[key(m)] ?? 0)}',
-                      child: Container(
-                        key: ValueKey('bar-${key(m)}'),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        height: top == 0
-                            ? 2
-                            : 2 + 70 * (byMonth[key(m)] ?? 0) / top,
-                        decoration: BoxDecoration(
-                          color: (byMonth[key(m)] ?? 0) > 0
-                              ? nb.pandan
-                              : nb.line,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
+                    child: Text(
+                      p.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-              ],
-            ),
-          ),
-          if (stats.places.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(
-              l.spendingTopPlaces,
-              style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            for (final p in stats.places.take(5))
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        p.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      '${l.receiptVisitCount(p.visits)} · ${rm(p.totalSen)}',
-                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                    ),
-                  ],
-                ),
+                  Text(
+                    '${l.receiptVisitCount(p.visits)} · ${rm(p.totalSen)}',
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                ],
               ),
-          ],
+            ),
         ],
       ),
     );

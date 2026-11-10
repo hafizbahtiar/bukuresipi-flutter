@@ -35,6 +35,29 @@ void main() {
     'hasImage': true,
   };
 
+  const splitJson = {
+    'people': [
+      {'name': 'Me', 'paid': false},
+      {'name': 'Ali', 'paid': true},
+    ],
+    'portions': [
+      {'position': 0, 'person': 1, 'quantity': 1},
+    ],
+    'shares': [
+      {
+        'person': 0,
+        'amountSen': 1840,
+        'lines': ['Nasi Lemak', 'Teh Ais'],
+      },
+      {
+        'person': 1,
+        'amountSen': 2275,
+        'lines': ['Nasi Lemak'],
+      },
+    ],
+    'totalSen': 4115,
+  };
+
   test(
     'a receipt reads its place, UTC time as local, total in sen and gaps',
     () async {
@@ -45,6 +68,7 @@ void main() {
       expect(r.gaps, ['totals_mismatch']);
       expect(r.inReview, isTrue);
       expect(r.charges, isEmpty); // a list row has none
+      expect(r.hasSplit, isFalse); // an older server sends nothing
     },
   );
 
@@ -135,4 +159,130 @@ void main() {
     expect(senOf('abc'), isNull);
     expect(senOf('41.155'), isNull);
   });
+
+  test('hasSplit and a day of calories with its eaten lines', () async {
+    final r = await make((_) => (200, {...json, 'hasSplit': true})).get('r-1');
+    expect(r.hasSplit, isTrue);
+    final today = await make(
+      (_) => (
+        200,
+        {
+          'eatenKcal': 1250,
+          'target': 2000,
+          'hasEstimate': true,
+          'unknownEaten': 0,
+          'receipts': [
+            {
+              'id': 'r-1',
+              'shop': 'Port Lepak',
+              'visitedAt': '2026-11-10T12:41:00Z',
+              'eatenKcal': 1250,
+              'items': [
+                {
+                  'name': 'Nasi Lemak',
+                  'eaten': 2,
+                  'kcal': 640,
+                  'kcalSource': 'ai',
+                },
+                {'name': 'Teh', 'eaten': 0.5, 'kcal': null, 'kcalSource': null},
+              ],
+            },
+          ],
+        },
+      ),
+    ).calories();
+    expect(today.receipts.single.shop, 'Port Lepak');
+    expect(
+      today.receipts.single.visitedAt,
+      DateTime.utc(2026, 11, 10, 12, 41).toLocal(),
+    );
+    expect(today.receipts.single.eatenKcal, 1250);
+    expect(today.receipts.single.items.last, (
+      name: 'Teh',
+      eaten: 0.5,
+      kcal: null,
+      kcalSource: null,
+    ));
+  });
+
+  test('calorieDays asks for the range and parses the days', () async {
+    final days = await make(
+      (_) => (
+        200,
+        {
+          'days': [
+            {
+              'date': '2026-11-09',
+              'eatenKcal': 300,
+              'hasEstimate': false,
+              'unknownEaten': 0,
+            },
+            {
+              'date': '2026-11-10',
+              'eatenKcal': 800,
+              'hasEstimate': true,
+              'unknownEaten': 1,
+            },
+          ],
+          'target': 2000,
+        },
+      ),
+    ).calorieDays(days: 7);
+    final sent = adapter.requests.single;
+    expect('${sent.method} ${sent.path}', 'GET /receipts/calories/days');
+    expect(sent.queryParameters, {'days': 7});
+    expect(days.days.map((d) => d.eatenKcal), [300, 800]);
+    expect(days.days.first.date, DateTime(2026, 11, 9)); // local midnight
+    expect(days.target, 2000);
+  });
+
+  test(
+    'split: reads the shares, saves the whole state and clears it',
+    () async {
+      final repo = make(
+        (o) => switch (o.method) {
+          'GET' => (200, splitJson),
+          'PUT' => (
+            200,
+            {
+              ...splitJson,
+              'people': [
+                {'name': 'Me', 'paid': false},
+                {'name': 'Ali', 'paid': true},
+              ],
+              'portions': [
+                {'position': 0, 'person': 1, 'quantity': 1},
+              ],
+            },
+          ),
+          _ => (204, null),
+        },
+      );
+      final split = await repo.split('r-1');
+      expect(split.people.map((p) => p.name), ['Me', 'Ali']);
+      expect(split.shares.first.amountSen, 1840);
+      expect(split.shares.last.lines, ['Nasi Lemak']);
+      expect(split.totalSen, 4115);
+      final saved = await repo.saveSplit(
+        'r-1',
+        people: [(name: 'Me', paid: false), (name: 'Ali', paid: true)],
+        portions: [(position: 0, person: 1, quantity: 1)],
+      );
+      expect(saved.people.last.paid, isTrue);
+      final sent = adapter.requests.last;
+      expect('${sent.method} ${sent.path}', 'PUT /receipts/r-1/split');
+      expect(sent.data, {
+        'people': [
+          {'name': 'Me', 'paid': false},
+          {'name': 'Ali', 'paid': true},
+        ],
+        'portions': [
+          {'position': 0, 'person': 1, 'quantity': 1.0},
+        ],
+      });
+      await repo.clearSplit('r-1');
+      final deleted = adapter.requests.last;
+      expect('${deleted.method} ${deleted.path}', 'DELETE /receipts/r-1/split');
+    },
+  );
 }
