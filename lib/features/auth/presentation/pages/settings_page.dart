@@ -8,6 +8,7 @@ import '../../../../core/settings/theme_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/widgets/pill_switch.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../push/push_controller.dart';
 import '../../data/google_auth.dart';
@@ -190,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
             NotebookRow(
               mark: mark(Icons.translate),
               onTap: () => locale.setLang(locale.lang == 'ms' ? 'en' : 'ms'),
-              trailing: _Choice(
+              trailing: PillSwitch(
                 value: locale.lang,
                 onChanged: locale.setLang,
                 options: const [
@@ -202,7 +203,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             NotebookRow(
               mark: mark(Icons.contrast),
-              trailing: _Choice(
+              trailing: PillSwitch(
                 value: theme.mode,
                 onChanged: theme.setMode,
                 options: [
@@ -272,93 +273,3 @@ class _Section extends StatelessWidget {
 
 /// BM / EN, the chosen one marked with a kunyit highlighter stroke.
 /// A small inline choice: each option is (value, what it shows, its name for screen readers when it shows an icon).
-class _Choice<T> extends StatelessWidget {
-  const _Choice({
-    required this.value,
-    required this.onChanged,
-    required this.options,
-  });
-
-  final T value;
-  final ValueChanged<T> onChanged;
-  final List<(T, Widget, String?)> options;
-
-  @override
-  Widget build(BuildContext context) {
-    final nb = Notebook.of(context);
-    // One pill track; the chosen option is a raised chip in pandan. Dark paper is darker than mist, so the chip
-    // takes the lighter line colour there (else it looks sunk in).
-    final chip = Theme.of(context).brightness == Brightness.dark
-        ? nb.line
-        : nb.paper;
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: nb.mist,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: nb.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final (code, shown, name) in options)
-            Semantics(
-              button: true,
-              selected: code == value,
-              label: name,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onChanged(code),
-                child: AnimatedContainer(
-                  duration: MediaQuery.disableAnimationsOf(context)
-                      ? Duration.zero
-                      : const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  constraints: const BoxConstraints(
-                    minWidth: 40,
-                    minHeight: 32,
-                  ),
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: code == value ? chip : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: code == value
-                        ? [
-                            BoxShadow(
-                              color: nb.ink.withValues(alpha: 0.12),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: IconTheme.merge(
-                    data: IconThemeData(
-                      size: 18,
-                      color: code == value ? nb.pandanDeep : nb.inkSoft,
-                    ),
-                    child: DefaultTextStyle.merge(
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: code == value
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: code == value ? nb.pandanDeep : nb.inkSoft,
-                      ),
-                      child: name == null
-                          ? shown
-                          : Tooltip(
-                              message: name,
-                              child: ExcludeSemantics(child: shown),
-                            ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}

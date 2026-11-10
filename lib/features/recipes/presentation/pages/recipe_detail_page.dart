@@ -7,6 +7,7 @@ import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/widgets/pill_switch.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -35,6 +36,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   RecipeDetail? _recipe;
   Object? _error;
   bool _loading = true;
+
+  /// The tab under the title: false = ingredients (and allergens), true = steps (and variants).
+  bool _steps = false;
 
   @override
   void initState() {
@@ -316,6 +320,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final source = recipe.sourceUrl;
     // Catalogue dishes credit the recipe they were built from; their steps stay there (not copied).
     final catalogue = recipe.sourceType == RecipeSourceType.catalogue;
+    // Tabs only when there are two sections to switch between (a catalogue dish: the original's link, then variants).
+    final tabs =
+        recipe.ingredients.isNotEmpty &&
+        (recipe.steps.isNotEmpty || (catalogue && source != null));
     return Scaffold(
       appBar: AppBar(),
       extendBody: true,
@@ -372,222 +380,296 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         ],
       ),
       body: NotebookPage(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: ActionDock.clearance),
-          children: [
-            // A photo opens the page edge to edge; none = the title starts the page (the owner may add one).
-            switch ((recipe.cover, recipe.shareId)) {
-              (final cover?, _) => ShareImage.cover(
-                recipe.id,
-                cover,
-                hero: true,
-              ),
-              (null, final share?) => ShareImage(share, hero: true),
-              _ => const SizedBox.shrink(),
-            },
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                notebookGutter + 10,
-                12,
-                20,
-                0,
-              ),
-              child: Text(
-                recipe.name,
-                style: text.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  height: 1.15,
-                ),
-              ),
-            ),
-            if (_byLine(l, recipe) case final by?)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  4,
-                  20,
-                  0,
-                ),
-                child: Text(
-                  by,
-                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                ),
-              ),
-            if (recipe.canEdit && recipe.cover == null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 4,
-                  6,
-                  20,
-                  0,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: ActionChip(
-                    key: const ValueKey('recipe-add-cover'),
-                    avatar: const Icon(Icons.add_a_photo_outlined, size: 18),
-                    label: Text(l.recipeCoverAdd),
-                    onPressed: () => _edit(recipe),
+        child: CustomScrollView(
+          slivers: [
+            SliverList.list(
+              children: [
+                // A photo opens the page edge to edge; none = the title starts the page (the owner may add one).
+                switch ((recipe.cover, recipe.shareId)) {
+                  (final cover?, _) => ShareImage.cover(
+                    recipe.id,
+                    cover,
+                    hero: true,
+                  ),
+                  (null, final share?) => ShareImage(share, hero: true),
+                  _ => const SizedBox.shrink(),
+                },
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    notebookGutter + 10,
+                    12,
+                    20,
+                    0,
+                  ),
+                  child: Text(
+                    recipe.name,
+                    style: text.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
                   ),
                 ),
-              ),
-            if (recipe.canEdit)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 4,
-                  6,
-                  20,
-                  0,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: ActionChip(
-                    avatar: Icon(visibilityIcon(recipe.visibility), size: 18),
-                    label: Text(switch (recipe.visibility) {
-                      RecipeVisibility.private => l.visPrivate,
-                      RecipeVisibility.family => l.visFamily,
-                      RecipeVisibility.public => l.visPublic,
-                    }),
-                    tooltip: l.visTitle,
-                    onPressed: () => _visibility(recipe),
+                if (_byLine(l, recipe) case final by?)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      notebookGutter + 10,
+                      4,
+                      20,
+                      0,
+                    ),
+                    child: Text(
+                      by,
+                      style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                    ),
                   ),
-                ),
-              ),
-            if (recipe.hidden)
-              NotebookRow(
-                mark: Icon(
-                  Icons.visibility_off_outlined,
-                  size: 18,
-                  color: nb.margin,
-                ),
-                child: Text(
-                  l.recipeHidden,
-                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                ),
-              ),
-            if (recipe.missing.isNotEmpty)
-              NotebookRow(
-                mark: Icon(Icons.info_outline, size: 18, color: nb.margin),
-                child: Text(
-                  _missingText(l, recipe.missing),
-                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                ),
-              ),
-            // No heading over an empty section: a post with no steps shows ingredients only.
-            if (recipe.ingredients.isNotEmpty)
-              NotebookHeading(l.recipeIngredients),
-            for (final (index, i) in recipe.ingredients.indexed)
-              NotebookRow(
-                // Tap: link the line to a catalogue ingredient (allergens, shopping hints) or change that link.
-                onTap: recipe.canEdit ? () => _pick(recipe, index) : null,
-                trailing: i.name == null
-                    ? Tooltip(
-                        message: l.ingredientUnrecognised,
-                        child: Icon(
-                          Icons.help_outline,
+                if (recipe.canEdit && recipe.cover == null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      notebookGutter + 4,
+                      6,
+                      20,
+                      0,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: ActionChip(
+                        key: const ValueKey('recipe-add-cover'),
+                        avatar: const Icon(
+                          Icons.add_a_photo_outlined,
                           size: 18,
-                          color: nb.inkSoft,
                         ),
-                      )
-                    : null,
-                mark: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: nb.inkSoft,
+                        label: Text(l.recipeCoverAdd),
+                        onPressed: () => _edit(recipe),
+                      ),
+                    ),
                   ),
-                ),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      if (i.amount case final amount?)
-                        TextSpan(
-                          text: '$amount  ',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                if (recipe.canEdit)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      notebookGutter + 4,
+                      6,
+                      20,
+                      0,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: ActionChip(
+                        avatar: Icon(
+                          visibilityIcon(recipe.visibility),
+                          size: 18,
                         ),
-                      TextSpan(text: i.label),
+                        label: Text(switch (recipe.visibility) {
+                          RecipeVisibility.private => l.visPrivate,
+                          RecipeVisibility.family => l.visFamily,
+                          RecipeVisibility.public => l.visPublic,
+                        }),
+                        tooltip: l.visTitle,
+                        onPressed: () => _visibility(recipe),
+                      ),
+                    ),
+                  ),
+                if (recipe.hidden)
+                  NotebookRow(
+                    mark: Icon(
+                      Icons.visibility_off_outlined,
+                      size: 18,
+                      color: nb.margin,
+                    ),
+                    child: Text(
+                      l.recipeHidden,
+                      style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                    ),
+                  ),
+                if (recipe.missing.isNotEmpty)
+                  NotebookRow(
+                    mark: Icon(Icons.info_outline, size: 18, color: nb.margin),
+                    child: Text(
+                      _missingText(l, recipe.missing),
+                      style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                    ),
+                  ),
+              ],
+            ),
+            if (tabs)
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _PinnedBar(
+                  height: MediaQuery.textScalerOf(context).scale(40) + 16,
+                  child: PillSwitch(
+                    expand: true,
+                    value: _steps,
+                    onChanged: (v) => setState(() => _steps = v),
+                    options: [
+                      (
+                        false,
+                        Text(
+                          l.recipeIngredients,
+                          key: const ValueKey('recipe-tab-ingredients'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        null,
+                      ),
+                      (
+                        true,
+                        Text(
+                          l.recipeSteps,
+                          key: const ValueKey('recipe-tab-steps'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        null,
+                      ),
                     ],
                   ),
                 ),
               ),
-            // Only when something was found: no section must never read as "safe".
-            if (recipe.allergens.isNotEmpty) ...[
-              NotebookHeading(l.recipeAllergens),
-              for (final a in recipe.allergens)
-                NotebookRow(
-                  mark: Icon(
-                    Icons.warning_amber_rounded,
-                    size: 18,
-                    color: nb.margin,
-                  ),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: a.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: ActionDock.clearance),
+              sliver: SliverList.list(
+                children: [
+                  if (!tabs || !_steps) ...[
+                    // No heading over an empty section, nor over a tab's own section.
+                    if (recipe.ingredients.isNotEmpty && !tabs)
+                      NotebookHeading(l.recipeIngredients),
+                    for (final (index, i) in recipe.ingredients.indexed)
+                      NotebookRow(
+                        // Tap: link the line to a catalogue ingredient (allergens, shopping hints) or change that link.
+                        onTap: recipe.canEdit
+                            ? () => _pick(recipe, index)
+                            : null,
+                        trailing: i.name == null
+                            ? Tooltip(
+                                message: l.ingredientUnrecognised,
+                                child: Icon(
+                                  Icons.help_outline,
+                                  size: 18,
+                                  color: nb.inkSoft,
+                                ),
+                              )
+                            : null,
+                        mark: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: nb.inkSoft,
+                          ),
                         ),
-                        TextSpan(text: ' · ${a.ingredients.join(', ')}'),
-                      ],
-                    ),
-                  ),
-                ),
-              NotebookRow(
-                child: Text(
-                  [
-                    l.recipeAllergenNote,
-                    if (recipe.uncheckedIngredients > 0)
-                      l.recipeAllergenUnchecked(recipe.uncheckedIngredients),
-                  ].join(' '),
-                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                ),
-              ),
-            ],
-            if (recipe.steps.isNotEmpty || (catalogue && source != null))
-              NotebookHeading(l.recipeSteps),
-            if (catalogue && recipe.steps.isEmpty && source != null)
-              NotebookRow(
-                mark: Icon(
-                  Icons.menu_book_outlined,
-                  size: 20,
-                  color: nb.pandanDeep,
-                ),
-                onTap: () => openLink(context, source, failed: l.openFailed),
-                trailing: Icon(
-                  Icons.open_in_new,
-                  size: 18,
-                  color: nb.pandanDeep,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.recipeStepsAtOriginal,
-                      style: text.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              if (i.amount case final amount?)
+                                TextSpan(
+                                  text: '$amount  ',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              TextSpan(text: i.label),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    Text(
-                      Uri.tryParse(source)?.host ?? source,
-                      style: text.bodyMedium?.copyWith(color: nb.pandanDeep),
-                    ),
+                    // Only when something was found: no section must never read as "safe".
+                    if (recipe.allergens.isNotEmpty) ...[
+                      NotebookHeading(l.recipeAllergens),
+                      for (final a in recipe.allergens)
+                        NotebookRow(
+                          mark: Icon(
+                            Icons.warning_amber_rounded,
+                            size: 18,
+                            color: nb.margin,
+                          ),
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: a.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' · ${a.ingredients.join(', ')}',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      NotebookRow(
+                        child: Text(
+                          [
+                            l.recipeAllergenNote,
+                            if (recipe.uncheckedIngredients > 0)
+                              l.recipeAllergenUnchecked(
+                                recipe.uncheckedIngredients,
+                              ),
+                          ].join(' '),
+                          style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                        ),
+                      ),
+                    ],
                   ],
-                ),
+                  if (!tabs || _steps) ...[
+                    if ((recipe.steps.isNotEmpty ||
+                            (catalogue && source != null)) &&
+                        !tabs)
+                      NotebookHeading(l.recipeSteps),
+                    if (catalogue && recipe.steps.isEmpty && source != null)
+                      NotebookRow(
+                        mark: Icon(
+                          Icons.menu_book_outlined,
+                          size: 20,
+                          color: nb.pandanDeep,
+                        ),
+                        onTap: () =>
+                            openLink(context, source, failed: l.openFailed),
+                        trailing: Icon(
+                          Icons.open_in_new,
+                          size: 18,
+                          color: nb.pandanDeep,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l.recipeStepsAtOriginal,
+                              style: text.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              Uri.tryParse(source)?.host ?? source,
+                              style: text.bodyMedium?.copyWith(
+                                color: nb.pandanDeep,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    for (final s in recipe.steps)
+                      NotebookRow(
+                        mark: Text(
+                          '${s.stepNo}',
+                          style: nb.hand.copyWith(
+                            fontSize: 22,
+                            color: nb.inkSoft,
+                          ),
+                        ),
+                        child: Text(s.instruction),
+                      ),
+                    if (catalogue)
+                      RecipeVariants(
+                        recipeId: recipe.id,
+                        owner:
+                            context.read<AuthController?>()?.user?.isOwner ??
+                            false,
+                      ),
+                  ],
+                ],
               ),
-            for (final s in recipe.steps)
-              NotebookRow(
-                mark: Text(
-                  '${s.stepNo}',
-                  style: nb.hand.copyWith(fontSize: 22, color: nb.inkSoft),
-                ),
-                child: Text(s.instruction),
-              ),
-            if (catalogue)
-              RecipeVariants(
-                recipeId: recipe.id,
-                owner: context.read<AuthController?>()?.user?.isOwner ?? false,
-              ),
+            ),
           ],
         ),
       ),
@@ -628,4 +710,33 @@ String _missingText(AppLocalizations l, List<String> missing) {
     if (missing.contains('steps')) l.recipeMissingSteps,
   ];
   return '${l.recipeIncomplete}: ${parts.join(', ')}';
+}
+
+/// The recipe's tab bar, pinned under the app bar while the page scrolls, on the page's paper.
+class _PinnedBar extends SliverPersistentHeaderDelegate {
+  _PinnedBar({required this.height, required this.child});
+
+  final double height;
+  final Widget child;
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => ColoredBox(
+    color: Notebook.of(context).paper,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+      child: Align(child: child),
+    ),
+  );
+
+  @override
+  bool shouldRebuild(_PinnedBar old) => true;
 }

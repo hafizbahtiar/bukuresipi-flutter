@@ -95,7 +95,12 @@ void main() {
     expect(find.textContaining('Not everything was found'), findsOneWidget);
     expect(find.textContaining('500 g'), findsOneWidget);
     expect(find.textContaining('sedikit bahan rahsia'), findsOneWidget);
+    // Steps are the second tab: hidden until it is picked, and the ingredients go.
+    expect(find.text('Goreng ayam hingga masak.'), findsNothing);
+    await t.tap(find.byKey(const ValueKey('recipe-tab-steps')));
+    await t.pumpAndSettle();
     expect(find.text('Goreng ayam hingga masak.'), findsOneWidget);
+    expect(find.textContaining('500 g'), findsNothing);
     expect(find.text('Open video'), findsOneWidget);
   });
 
@@ -479,10 +484,8 @@ void main() {
         find.text('Bukuresipi catalogue · ingredients from khairulaming.my'),
         findsOneWidget,
       );
-      await t.scrollUntilVisible(
-        find.text('How to cook: see the original recipe'),
-        200,
-      );
+      await t.tap(find.byKey(const ValueKey('recipe-tab-steps')));
+      await t.pumpAndSettle();
       expect(find.text('How to cook: see the original recipe'), findsOneWidget);
       expect(find.text('Original recipe'), findsOneWidget);
       expect(find.text('Open video'), findsNothing);
