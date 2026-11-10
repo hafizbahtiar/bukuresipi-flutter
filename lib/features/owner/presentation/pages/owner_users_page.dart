@@ -252,13 +252,6 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
               : null,
           title: Text(picking ? l.ownerPicked(_picked.length) : l.ownerUsers),
           actions: [
-            if (!picking)
-              TextButton.icon(
-                key: const ValueKey('pick-start'),
-                icon: const Icon(Icons.checklist),
-                label: Text(l.ownerSelect),
-                onPressed: () => setState(() => _picking = true),
-              ),
             if (picking) ...[
               IconButton(
                 key: const ValueKey('pick-all'),
