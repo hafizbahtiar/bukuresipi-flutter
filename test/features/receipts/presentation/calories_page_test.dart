@@ -160,16 +160,17 @@ void main() {
         ..calorieDaysAnswer = days(target: 2000);
       await pump(t, repo);
       expect(find.byKey(const ValueKey('calorie-chart')), findsOneWidget);
-      final header = find.byKey(const ValueKey('calories-header'));
-      expect(t.getSize(header).height, greaterThan(0));
+      // On screen = hit-testable: the floating header scrolls off going down, floats back going up.
+      final header = find.byKey(const ValueKey('calorie-chart')).hitTestable();
+      expect(header, findsOneWidget);
       await t.drag(find.byType(CustomScrollView), const Offset(0, -340));
       await t.pump();
       await t.pump(const Duration(milliseconds: 300));
-      expect(t.getSize(header).height, 0);
+      expect(header, findsNothing);
       await t.drag(find.byType(CustomScrollView), const Offset(0, 340));
       await t.pump();
       await t.pump(const Duration(milliseconds: 300));
-      expect(t.getSize(header).height, greaterThan(0));
+      expect(header, findsOneWidget);
     },
   );
 }

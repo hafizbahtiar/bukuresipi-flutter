@@ -15,7 +15,7 @@ class ReceiptsTab extends StatefulWidget {
 }
 
 class _ReceiptsTabState extends State<ReceiptsTab> {
-  /// Bumped on each switch: the page shown loads again (a receipt may have been added meanwhile).
+  /// Bumped on each switch: the page shown loads again in place (a receipt may have been added meanwhile).
   int _shown = 0;
 
   @override
@@ -33,8 +33,8 @@ class _ReceiptsTabState extends State<ReceiptsTab> {
         setState(() => _shown++);
       },
       build: (calories, switcher) => calories
-          ? CaloriesPage(key: ValueKey('calories-$_shown'), switcher: switcher)
-          : ReceiptsPage(key: ValueKey('receipts-$_shown'), switcher: switcher),
+          ? CaloriesPage(switcher: switcher, refresh: _shown)
+          : ReceiptsPage(switcher: switcher, refresh: _shown),
     );
   }
 }
