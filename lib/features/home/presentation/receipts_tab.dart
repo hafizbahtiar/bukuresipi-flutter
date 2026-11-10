@@ -6,7 +6,8 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../receipts/presentation/pages/calories_page.dart';
 import '../../receipts/presentation/pages/receipts_page.dart';
 
-/// The Receipts tab: spending and receipts, with calories one switch away.
+/// The Receipts tab: one notebook page, like a recipe's. Its Receipts | Calories switch is pinned under the title
+/// and only what is under it changes; both sides stay loaded, so a switch is instant (and reloads that side quietly).
 class ReceiptsTab extends StatefulWidget {
   const ReceiptsTab({super.key});
 
@@ -15,26 +16,74 @@ class ReceiptsTab extends StatefulWidget {
 }
 
 class _ReceiptsTabState extends State<ReceiptsTab> {
-  /// Bumped on each switch: the page shown loads again in place (a receipt may have been added meanwhile).
-  int _shown = 0;
+  bool _calories = false;
+  final _receipts = GlobalKey<ReceiptsSectionState>();
+  final _kcal = GlobalKey<CaloriesSectionState>();
+
+  Future<void> _refresh() async => _calories
+      ? _kcal.currentState?.refresh()
+      : _receipts.currentState?.refresh();
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return PillPages<bool>(
-      switchKey: const ValueKey('receipts-switch'),
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 0, 16, 8),
-      initial: false,
-      tabs: [
-        (false, Icons.receipt_long_outlined, l.navReceipts),
-        (true, Icons.local_fire_department_outlined, l.navCalories),
-      ],
-      onShown: (_) {
-        setState(() => _shown++);
-      },
-      build: (calories, switcher) => calories
-          ? CaloriesPage(switcher: switcher, refresh: _shown)
-          : ReceiptsPage(switcher: switcher, refresh: _shown),
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 76,
+        title: NotebookTitle(_calories ? l.navCalories : l.receiptsTitle),
+      ),
+      body: NotebookPage(
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: NotebookPinnedBar(
+                  height: MediaQuery.textScalerOf(context).scale(40) + 16,
+                  child: PillSwitch<bool>(
+                    key: const ValueKey('receipts-switch'),
+                    expand: true,
+                    value: _calories,
+                    onChanged: (v) {
+                      if (v == _calories) return;
+                      setState(() => _calories = v);
+                      _refresh(); // a receipt may have been added meanwhile
+                    },
+                    options: [
+                      (
+                        false,
+                        PillLabel(Icons.receipt_long_outlined, l.navReceipts),
+                        null,
+                      ),
+                      (
+                        true,
+                        PillLabel(
+                          Icons.local_fire_department_outlined,
+                          l.navCalories,
+                        ),
+                        null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverVisibility(
+                visible: !_calories,
+                maintainState: true,
+                sliver: ReceiptsSection(key: _receipts),
+              ),
+              SliverVisibility(
+                visible: _calories,
+                maintainState: true,
+                sliver: CaloriesSection(key: _kcal),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

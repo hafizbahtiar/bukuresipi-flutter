@@ -443,6 +443,8 @@ void main() {
     await pump(t, repo);
     await t.tap(find.text('Split bill'));
     await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.byKey(const ValueKey('split-stop')), 200);
+    await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('split-stop')));
     await t.pumpAndSettle();
     await t.tap(find.text('Stop splitting').last);

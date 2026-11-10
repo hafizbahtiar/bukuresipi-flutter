@@ -17,7 +17,7 @@ void main() {
           locale: Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: ReceiptsPage(),
+          home: Scaffold(body: CustomScrollView(slivers: [ReceiptsSection()])),
         ),
       ),
     );
@@ -60,37 +60,5 @@ void main() {
     expect(find.text('RM 56.15'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Top places'), findsOneWidget);
-  });
-
-  testWidgets(
-    'a scroll down folds the header away; a scroll up brings it back',
-    (t) async {
-      final repo = FakeReceipts()
-        ..items = [
-          for (var i = 1; i <= 10; i++) receipt(id: 'r-$i', status: 'saved'),
-        ];
-      await pump(t, repo);
-      expect(find.byKey(const ValueKey('spend-chart')), findsOneWidget);
-      // On screen = hit-testable: the floating header scrolls off going down, floats back going up.
-      final header = find.byKey(const ValueKey('spend-chart')).hitTestable();
-      expect(header, findsOneWidget);
-      await t.drag(find.byType(CustomScrollView), const Offset(0, -320));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 300));
-      expect(header, findsNothing);
-      await t.drag(find.byType(CustomScrollView), const Offset(0, 320));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 300));
-      expect(header, findsOneWidget);
-    },
-  );
-
-  testWidgets('pulling down refreshes the stats and the list', (t) async {
-    final repo = FakeReceipts();
-    await pump(t, repo);
-    expect(repo.statCalls, 1);
-    await t.fling(find.byType(CustomScrollView), const Offset(0, 320), 1000);
-    await t.pumpAndSettle();
-    expect(repo.statCalls, 2);
   });
 }

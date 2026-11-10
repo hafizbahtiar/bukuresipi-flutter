@@ -6,7 +6,7 @@ const _motion = Duration(milliseconds: 260);
 const _curve = Curves.easeOutCubic;
 
 /// A pill track of options, the chosen one a raised chip that slides (and resizes) to the option tapped: Settings'
-/// language and theme, a recipe's tabs, the Shopping tab's switch ([PillPages]).
+/// language and theme, a recipe's tabs, the Receipts tab and a receipt's Receipt | Split bill.
 /// Each option is (value, what it shows, tooltip + screen-reader name or null when what it shows is text).
 class PillSwitch<T> extends StatefulWidget {
   const PillSwitch({
@@ -208,118 +208,4 @@ class PillLabel extends StatelessWidget {
       Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis)),
     ],
   );
-}
-
-/// Pages behind one [PillSwitch]. The switch sits in each page's app bar ([build] gets it as `switcher`); a switch
-/// slides the new page in from its side while the old one fades out. Every page keeps its state (like an
-/// IndexedStack); a hidden page takes no taps or focus and is not read out.
-class PillPages<T> extends StatefulWidget {
-  const PillPages({
-    super.key,
-    required this.initial,
-    required this.tabs,
-    required this.build,
-    this.onShown,
-    this.switchKey,
-    this.padding = EdgeInsets.zero,
-  });
-
-  final T initial;
-
-  /// (value, icon, label), in switch order.
-  final List<(T, IconData, String)> tabs;
-  final Widget Function(T value, PreferredSizeWidget switcher) build;
-
-  /// Called when a tab is switched to (not for [initial] on open).
-  final ValueChanged<T>? onShown;
-  final Key? switchKey;
-
-  /// Around the switch inside the app bar.
-  final EdgeInsets padding;
-
-  @override
-  State<PillPages<T>> createState() => _PillPagesState<T>();
-}
-
-class _PillPagesState<T> extends State<PillPages<T>> {
-  late T _value = widget.initial;
-
-  @override
-  Widget build(BuildContext context) {
-    final height = MediaQuery.textScalerOf(context).scale(40) + 12;
-    final switcher = PreferredSize(
-      preferredSize: Size.fromHeight(height),
-      child: Padding(
-        padding: widget.padding,
-        child: PillSwitch<T>(
-          key: widget.switchKey,
-          value: _value,
-          expand: true,
-          onChanged: (v) {
-            if (v == _value) return;
-            setState(() => _value = v);
-            widget.onShown?.call(v);
-          },
-          options: [
-            for (final (v, icon, label) in widget.tabs)
-              (v, PillLabel(icon, label), null),
-          ],
-        ),
-      ),
-    );
-    final still = MediaQuery.disableAnimationsOf(context);
-    final shown = widget.tabs.indexWhere((t) => t.$1 == _value);
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        for (final (i, (v, _, _)) in widget.tabs.indexed)
-          _Page(
-            shown: i == shown,
-            // A page left of the shown one waits a little to the left, one to the right a little to the right.
-            side: (i - shown).sign.toDouble(),
-            still: still,
-            child: widget.build(v, switcher),
-          ),
-      ],
-    );
-  }
-}
-
-class _Page extends StatelessWidget {
-  const _Page({
-    required this.shown,
-    required this.side,
-    required this.still,
-    required this.child,
-  });
-
-  final bool shown;
-  final double side;
-  final bool still;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = still ? Duration.zero : _motion;
-    return IgnorePointer(
-      ignoring: !shown,
-      child: ExcludeFocus(
-        excluding: !shown,
-        child: ExcludeSemantics(
-          excluding: !shown,
-          child: AnimatedSlide(
-            offset: Offset(shown ? 0 : side * 0.06, 0),
-            duration: d,
-            curve: _curve,
-            child: AnimatedOpacity(
-              opacity: shown ? 1 : 0,
-              duration: d,
-              curve: _curve,
-              child: TickerMode(enabled: shown, child: child),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

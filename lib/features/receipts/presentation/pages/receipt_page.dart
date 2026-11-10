@@ -11,6 +11,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_sheet.dart';
+import '../../../../core/widgets/pill_switch.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/places_controller.dart';
@@ -310,31 +311,39 @@ class _ReceiptPageState extends State<ReceiptPage> {
         child: canSplit
             ? Column(
                 children: [
+                  // The recipe page's tabs: a sliding pill on the page's paper; only what is under it changes.
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                      notebookGutter + 4,
-                      4,
-                      16,
-                      4,
+                      notebookGutter + 10,
+                      8,
+                      20,
+                      8,
                     ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: NotebookSegmented<bool>(
-                        selected: _split,
-                        onChanged: (split) {
-                          if (split == _split) return;
-                          setState(() => _split = split);
-                          // Back to Receipt: the split may have changed the ticks.
-                          if (!split) _load();
-                        },
-                        segments: [
-                          NotebookSegment(
-                            value: false,
-                            label: l.splitTabReceipt,
+                    child: PillSwitch<bool>(
+                      key: const ValueKey('receipt-split-switch'),
+                      expand: true,
+                      value: _split,
+                      onChanged: (split) {
+                        if (split == _split) return;
+                        setState(() => _split = split);
+                        // Back to Receipt: the split may have changed the ticks.
+                        if (!split) _load();
+                      },
+                      options: [
+                        (
+                          false,
+                          PillLabel(
+                            Icons.receipt_long_outlined,
+                            l.splitTabReceipt,
                           ),
-                          NotebookSegment(value: true, label: l.splitTabBill),
-                        ],
-                      ),
+                          null,
+                        ),
+                        (
+                          true,
+                          PillLabel(Icons.groups_outlined, l.splitTabBill),
+                          null,
+                        ),
+                      ],
                     ),
                   ),
                   Expanded(
