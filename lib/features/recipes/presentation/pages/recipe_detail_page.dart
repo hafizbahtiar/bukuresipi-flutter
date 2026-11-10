@@ -493,7 +493,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             if (tabs)
               SliverPersistentHeader(
                 pinned: true,
-                delegate: _PinnedBar(
+                delegate: NotebookPinnedBar(
                   height: MediaQuery.textScalerOf(context).scale(40) + 16,
                   child: PillSwitch(
                     expand: true,
@@ -710,39 +710,4 @@ String _missingText(AppLocalizations l, List<String> missing) {
     if (missing.contains('steps')) l.recipeMissingSteps,
   ];
   return '${l.recipeIncomplete}: ${parts.join(', ')}';
-}
-
-/// The recipe's tab bar, pinned under the app bar while the page scrolls, on the page's paper.
-class _PinnedBar extends SliverPersistentHeaderDelegate {
-  _PinnedBar({required this.height, required this.child});
-
-  final double height;
-  final Widget child;
-
-  @override
-  double get minExtent => height;
-  @override
-  double get maxExtent => height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) => ColoredBox(
-    color: Notebook.of(context).paper,
-    // Opaque (rows scroll under it), so it draws the page's margin itself.
-    child: Stack(
-      children: [
-        const NotebookMargin(),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
-          child: Align(child: child),
-        ),
-      ],
-    ),
-  );
-
-  @override
-  bool shouldRebuild(_PinnedBar old) => true;
 }

@@ -28,7 +28,7 @@ void main() {
           locale: Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: CaloriesPage(),
+          home: Scaffold(body: CustomScrollView(slivers: [CaloriesSection()])),
         ),
       ),
     );
@@ -138,39 +138,4 @@ void main() {
     await pump(t, FakeReceipts()..today = day(target: 2000));
     expect(find.text('Nothing eaten today.'), findsOneWidget);
   });
-
-  testWidgets(
-    'a scroll down folds the header away; a scroll up brings it back',
-    (t) async {
-      final repo = FakeReceipts()
-        ..today = day(
-          eaten: 900,
-          target: 2000,
-          receipts: [
-            for (var i = 1; i <= 6; i++)
-              (
-                id: 'r-$i',
-                shop: 'Port $i',
-                visitedAt: DateTime(2026, 11, 10, 20, i),
-                eatenKcal: 150,
-                items: [(name: 'Nasi', eaten: 1, kcal: 150, kcalSource: null)],
-              ),
-          ],
-        )
-        ..calorieDaysAnswer = days(target: 2000);
-      await pump(t, repo);
-      expect(find.byKey(const ValueKey('calorie-chart')), findsOneWidget);
-      // On screen = hit-testable: the floating header scrolls off going down, floats back going up.
-      final header = find.byKey(const ValueKey('calorie-chart')).hitTestable();
-      expect(header, findsOneWidget);
-      await t.drag(find.byType(CustomScrollView), const Offset(0, -340));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 300));
-      expect(header, findsNothing);
-      await t.drag(find.byType(CustomScrollView), const Offset(0, 340));
-      await t.pump();
-      await t.pump(const Duration(milliseconds: 300));
-      expect(header, findsOneWidget);
-    },
-  );
 }

@@ -31,7 +31,7 @@ void main() {
             GlobalWidgetsLocalizations.delegate,
           ],
           supportedLocales: [Locale('en'), Locale('ms')],
-          home: Scaffold(body: ReceiptsTab()),
+          home: ReceiptsTab(),
         ),
       ),
     );
@@ -39,25 +39,20 @@ void main() {
     expect(find.text('Receipts and spending'), findsOneWidget);
     expect(find.text('Calories'), findsWidgets);
 
-    // The hidden page is still built; its opacity says which one is on.
-    double? shown(Finder finder) {
-      final matches = finder.evaluate();
-      if (matches.isEmpty) return null;
-      return matches.first
-          .findAncestorWidgetOfExactType<AnimatedOpacity>()
-          ?.opacity;
-    }
-
-    expect(shown(find.text('900 / 2000 kcal')), 0);
+    // One page: the switch changes what is under it (the hidden side is kept, offstage) and the title.
+    expect(find.text('900 / 2000 kcal'), findsNothing);
+    expect(find.byKey(const ValueKey('spend-chart')), findsOneWidget);
 
     await t.tap(find.text('Calories').first);
     await t.pumpAndSettle();
-    expect(shown(find.text('900 / 2000 kcal')), 1);
-    expect(shown(find.text('Receipts and spending')), 0);
+    expect(find.text('900 / 2000 kcal'), findsOneWidget);
+    expect(find.byKey(const ValueKey('spend-chart')), findsNothing);
+    expect(find.byType(Scaffold), findsOneWidget);
 
-    await t.tap(find.text('Receipts').last);
+    await t.tap(find.text('Receipts').first);
     await t.pumpAndSettle();
-    expect(shown(find.text('Receipts and spending')), 1);
+    expect(find.text('Receipts and spending'), findsOneWidget);
+    expect(find.byKey(const ValueKey('spend-chart')), findsOneWidget);
   });
 
   testWidgets(
@@ -75,7 +70,7 @@ void main() {
               GlobalWidgetsLocalizations.delegate,
             ],
             supportedLocales: [Locale('en'), Locale('ms')],
-            home: Scaffold(body: ReceiptsTab()),
+            home: ReceiptsTab(),
           ),
         ),
       );
@@ -85,8 +80,8 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await t.pumpAndSettle();
 
-      // Back on Receipts: drag down from the spending header (above the list).
-      await t.tap(find.text('Receipts').last);
+      // Back on Receipts: pull down from the very top of the page (the chart).
+      await t.tap(find.text('Receipts').first);
       await t.pumpAndSettle();
       final calls = repo.statCalls;
       await t.fling(
