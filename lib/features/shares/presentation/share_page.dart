@@ -222,7 +222,7 @@ class _SentState extends State<_Sent> with SingleTickerProviderStateMixin {
                 child: CircleAvatar(
                   radius: 22,
                   backgroundColor: nb.pandan,
-                  child: const Icon(Icons.check, color: Colors.white),
+                  child: Icon(Icons.check, color: nb.paper),
                 ),
               ),
             ),

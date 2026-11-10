@@ -1,9 +1,9 @@
-"""Achievement badges: 6 categories x 5 tiers as SVG (design/badges/svg) and PNG (assets/badges, via macOS QuickLook).
+"""Achievement badges: 6 categories x 5 tiers as SVG (design/badges/svg) and PNG (assets/badges, transparent, via AppKit: svg2png.swift).
 
 Run from the app root: python3 design/badges/build.py
 Design: bukuresipi-hono docs/superpowers/specs/2026-11-09-achievements-design.md
 """
-import math, os, subprocess, shutil, tempfile
+import math, os, subprocess, shutil
 
 TIERS = {  # highlight, body, shadow, deep
     'bronze':   ('#F6C9A0', '#C98549', '#8A4F24', '#5A3115'),
@@ -188,12 +188,10 @@ def main():
             with open(p, 'w') as f:
                 f.write(badge(cat, tier))
             paths.append(p)
-    if shutil.which('qlmanage'):
-        with tempfile.TemporaryDirectory() as out:
-            subprocess.run(['qlmanage', '-t', '-s', '512', '-o', out, *paths], check=True, capture_output=True)
-            for p in paths:
-                name = os.path.basename(p)
-                shutil.move(os.path.join(out, name + '.png'), os.path.join(png_dir, name[:-4] + '.png'))
+    # AppKit keeps the transparent background (QuickLook put each badge on a white square: wrong in dark mode).
+    if shutil.which('swift'):
+        pairs = [x for p in paths for x in (p, os.path.join(png_dir, os.path.basename(p)[:-4] + '.png'))]
+        subprocess.run(['swift', os.path.join(root, 'svg2png.swift'), '512', *pairs], check=True)
     print(f'{len(paths)} badges')
 
 
