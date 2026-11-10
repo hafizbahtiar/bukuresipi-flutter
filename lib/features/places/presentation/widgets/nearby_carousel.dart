@@ -16,7 +16,9 @@ class NearbyCarousel extends StatefulWidget {
     this.onSelected,
   });
 
-  static const height = 100.0;
+  /// Grows with the phone's text size: the card holds up to four lines of text.
+  static double heightOf(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(100);
 
   final List<NearbyBranch> places;
   final ValueChanged<NearbyBranch> onTap;
@@ -136,7 +138,7 @@ class _NearbyCarouselState extends State<NearbyCarousel> {
   Widget build(BuildContext context) {
     if (widget.places.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: NearbyCarousel.height,
+      height: NearbyCarousel.heightOf(context),
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Centre the selected card: the side padding is exactly the space a card leaves on each side.
@@ -159,7 +161,7 @@ class _NearbyCarouselState extends State<NearbyCarousel> {
                 child: SizedBox(
                   key: ValueKey('nearby-card-${widget.places[i].branchId}'),
                   width: _cardWidth,
-                  height: NearbyCarousel.height - 4,
+                  height: NearbyCarousel.heightOf(context) - 4,
                   child: NearbyCard(
                     place: widget.places[i],
                     selected: i == _selectedIndex,

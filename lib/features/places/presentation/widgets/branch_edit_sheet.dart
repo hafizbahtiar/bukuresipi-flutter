@@ -977,16 +977,26 @@ class _DraftField extends StatelessWidget {
                     onChanged: (v) => onUse(v ?? false),
                   ),
                 ),
-              Text(
-                label,
-                style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              // The texts give way (…) before the tick box and badge: large text never runs off the edge.
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
               ),
               const SizedBox(width: 6),
               const _AiBadge(),
               if (same)
-                Padding(
-                  padding: const EdgeInsets.only(left: 6),
-                  child: Text('· ${l.aiDraftSame}', style: small),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text(
+                      '· ${l.aiDraftSame}',
+                      overflow: TextOverflow.ellipsis,
+                      style: small,
+                    ),
+                  ),
                 ),
             ],
           ),
