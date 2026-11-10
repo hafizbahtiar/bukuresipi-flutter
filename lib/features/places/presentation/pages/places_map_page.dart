@@ -34,13 +34,14 @@ import '../widgets/view_mode_button.dart';
 import '../location.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 
-/// OpenFreeMap: free vector tiles, no key, no request cap; its style carries the OpenStreetMap attribution.
-const _style = 'https://tiles.openfreemap.org/styles/liberty';
+/// OpenFreeMap: free vector tiles, no key, no request cap; its styles carry the OpenStreetMap attribution.
+/// Liberty in light mode, Dark in dark mode; a switch reloads the style, and [_styleLoaded] redraws our layers.
+String mapStyle(BuildContext context) =>
+    'https://tiles.openfreemap.org/styles/${Theme.of(context).brightness == Brightness.dark ? 'dark' : 'liberty'}';
 const malaysiaCamera = CameraPosition(target: LatLng(4.2, 102.0), zoom: 4.6);
 // The "you are here" dot. Drawn by us (not the native location component) so it appears as soon as
 // the permission result arrives, even when the map was created before permission was granted.
 const _hereColor = '#1E88E5';
-const mapStyle = _style;
 
 /// The box around every pinned branch; null when nothing has a pin.
 LatLngBounds? pinBounds(List<Place> places) {
@@ -506,11 +507,11 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     await map.addSymbolLayer(
       _source,
       _countLayer,
-      const SymbolLayerProperties(
+      SymbolLayerProperties(
         textField: ['get', 'point_count_abbreviated'],
         textFont: ['Noto Sans Bold'], // in the OpenFreeMap style's glyphs
         textSize: 12,
-        textColor: '#FFFFFF',
+        textColor: _hex(nb.paper), // white on light mode's deep green, near-black on dark mode's pale green
         textAllowOverlap: true,
         textIgnorePlacement: true,
       ),
@@ -1025,7 +1026,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
         body: Stack(
           children: [
             MapLibreMap(
-              styleString: mapStyle,
+              styleString: mapStyle(context),
               initialCameraPosition: malaysiaCamera,
               onMapCreated: _created,
               onStyleLoadedCallback: _styleLoaded,

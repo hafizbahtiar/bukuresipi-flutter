@@ -192,7 +192,7 @@ class _PinPickerPageState extends State<PinPickerPage> {
                   )
                 else
                   MapLibreMap(
-                    styleString: mapStyle,
+                    styleString: mapStyle(context),
                     initialCameraPosition: _camera!,
                     onMapCreated: _created,
                     onStyleLoadedCallback: _styleLoaded,
