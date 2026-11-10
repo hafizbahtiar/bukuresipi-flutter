@@ -2129,5 +2129,15 @@
   "receiptTax": "SST",
   "@receiptTax": {},
   "receiptRounding": "Rounding",
-  "@receiptRounding": {}
+  "@receiptRounding": {},
+  "receiptRescanTitle": "Already saved",
+  "@receiptRescanTitle": {},
+  "receiptRescanBody": "You saved this receipt before. Update it with the items and charges from this scan?",
+  "@receiptRescanBody": {},
+  "receiptRescanUpdate": "Update",
+  "@receiptRescanUpdate": {},
+  "receiptUpdated": "Receipt updated",
+  "@receiptUpdated": {},
+  "receiptRescanHint": "No items or charges kept for this receipt. Scan it again with + to add them.",
+  "@receiptRescanHint": {}
 }

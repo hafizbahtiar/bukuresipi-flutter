@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'receipt.dart';
 
-/// Throws ApiException (codes: invalid_image, duplicate_receipt, receipt_limit, not_ready, place_required, not_found).
+/// Throws ApiException (codes: invalid_image, duplicate_receipt (confirm: `existingId` = the saved one; [update] then
+/// gives it this read's items and charges), receipt_limit, not_ready, place_required, not_found).
 abstract interface class ReceiptsRepository {
   /// Uploads a photo (a local JPEG path); the server starts reading it. Returns the receipt id.
   Future<String> upload(String path);
@@ -15,6 +16,7 @@ abstract interface class ReceiptsRepository {
     required int totalSen,
     required DateTime visitedAt,
     String? branchId,
+    bool update = false,
   });
   Future<void> remove(String id);
 

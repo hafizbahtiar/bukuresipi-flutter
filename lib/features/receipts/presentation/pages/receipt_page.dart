@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_sheet.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -138,10 +140,12 @@ class _ReceiptPageState extends State<ReceiptPage> {
     );
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool update = false}) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final places = context.read<PlacesController>();
+    // maybeOf: page tests pump it without a router.
+    final router = GoRouter.maybeOf(context);
     setState(() => _saving = true);
     try {
       final r = await _repo.confirm(
@@ -149,9 +153,33 @@ class _ReceiptPageState extends State<ReceiptPage> {
         totalSen: senOf(_total.text)!,
         visitedAt: _at!,
         branchId: _branchId,
+        update: update,
       );
       unawaited(places.load()); // the place is in the book now
-      if (mounted) setState(() => _r = r);
+      if (r.id != widget.id) {
+        // A rescan: this read went into the receipt saved before, and this one is gone.
+        messenger.showSnackBar(SnackBar(content: Text(l.receiptUpdated)));
+        router?.pushReplacement('/receipts/${r.id}');
+      } else if (mounted) {
+        setState(() => _r = r);
+      }
+    } on ApiException catch (e) {
+      // Saved before: offer to update that one with this scan's items and charges.
+      if (!update &&
+          e.code == 'duplicate_receipt' &&
+          e.data['existingId'] != null &&
+          mounted) {
+        setState(() => _saving = false);
+        final yes = await showNotebookDialog(
+          context,
+          title: l.receiptRescanTitle,
+          message: l.receiptRescanBody,
+          confirmLabel: l.receiptRescanUpdate,
+        );
+        if (yes && mounted) return _save(update: true);
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
@@ -329,6 +357,14 @@ class _ReceiptPageState extends State<ReceiptPage> {
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(items: r.items, charges: r.charges, totalSen: r.totalSen),
+        ] else ...[
+          // Saved before items and charges were read: a new scan of the same receipt fills them in.
+          const SizedBox(height: 16),
+          Text(
+            l.receiptRescanHint,
+            key: const ValueKey('receipt-rescan-hint'),
+            style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+          ),
         ],
         const SizedBox(height: 16),
         Row(
