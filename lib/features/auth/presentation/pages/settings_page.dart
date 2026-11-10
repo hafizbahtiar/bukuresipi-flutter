@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/log.dart';
 import '../../../../core/settings/locale_controller.dart';
+import '../../../../core/settings/theme_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
@@ -74,6 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final l = AppLocalizations.of(context);
     final auth = context.watch<AuthController>();
     final locale = context.watch<LocaleController>();
+    final theme = context.watch<ThemeController>();
     final user = auth.user;
     if (user == null) return const Scaffold();
     final nb = Notebook.of(context);
@@ -188,11 +190,40 @@ class _SettingsPageState extends State<SettingsPage> {
             NotebookRow(
               mark: mark(Icons.translate),
               onTap: () => locale.setLang(locale.lang == 'ms' ? 'en' : 'ms'),
-              trailing: _LangChoice(
-                lang: locale.lang,
+              trailing: _Choice(
+                value: locale.lang,
                 onChanged: locale.setLang,
+                options: const [
+                  ('ms', Text('BM'), null),
+                  ('en', Text('EN'), null),
+                ],
               ),
               child: Text(l.language),
+            ),
+            NotebookRow(
+              mark: mark(Icons.contrast),
+              trailing: _Choice(
+                value: theme.mode,
+                onChanged: theme.setMode,
+                options: [
+                  (
+                    ThemeMode.light,
+                    const Icon(Icons.light_mode_outlined, size: 18),
+                    l.themeLight,
+                  ),
+                  (
+                    ThemeMode.dark,
+                    const Icon(Icons.dark_mode_outlined, size: 18),
+                    l.themeDark,
+                  ),
+                  (
+                    ThemeMode.system,
+                    const Icon(Icons.phone_android, size: 18),
+                    l.themeSystem,
+                  ),
+                ],
+              ),
+              child: Text(l.theme),
             ),
             _Section(l.settingsAbout),
             NotebookRow(
@@ -240,11 +271,17 @@ class _Section extends StatelessWidget {
 }
 
 /// BM / EN, the chosen one marked with a kunyit highlighter stroke.
-class _LangChoice extends StatelessWidget {
-  const _LangChoice({required this.lang, required this.onChanged});
+/// A small inline choice: each option is (value, what it shows, its name for screen readers when it shows an icon).
+class _Choice<T> extends StatelessWidget {
+  const _Choice({
+    required this.value,
+    required this.onChanged,
+    required this.options,
+  });
 
-  final String lang;
-  final ValueChanged<String> onChanged;
+  final T value;
+  final ValueChanged<T> onChanged;
+  final List<(T, Widget, String?)> options;
 
   @override
   Widget build(BuildContext context) {
@@ -252,10 +289,11 @@ class _LangChoice extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final (code, label) in const [('ms', 'BM'), ('en', 'EN')])
+        for (final (code, shown, name) in options)
           Semantics(
             button: true,
-            selected: code == lang,
+            selected: code == value,
+            label: name,
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: () => onChanged(code),
@@ -266,18 +304,28 @@ class _LangChoice extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: code == lang
+                  color: code == value
                       ? nb.kunyit.withValues(alpha: 0.55)
                       : null,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: code == lang
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    color: code == lang ? nb.ink : nb.inkSoft,
+                child: IconTheme.merge(
+                  data: IconThemeData(
+                    color: code == value ? nb.ink : nb.inkSoft,
+                  ),
+                  child: DefaultTextStyle.merge(
+                    style: TextStyle(
+                      fontWeight: code == value
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: code == value ? nb.ink : nb.inkSoft,
+                    ),
+                    child: name == null
+                        ? shown
+                        : Tooltip(
+                            message: name,
+                            child: ExcludeSemantics(child: shown),
+                          ),
                   ),
                 ),
               ),

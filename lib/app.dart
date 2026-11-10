@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'core/network/update_gate.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
+import 'core/settings/theme_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_controller.dart';
 import 'features/places/presentation/places_controller.dart';
@@ -122,6 +123,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light(),
     darkTheme: AppTheme.dark(),
+    themeMode: context.watch<ThemeController>().mode,
     locale: context.watch<LocaleController>().locale,
     supportedLocales: LocaleController.supported,
     localizationsDelegates: const [

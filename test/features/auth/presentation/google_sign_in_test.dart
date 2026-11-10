@@ -1,5 +1,6 @@
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
+import 'package:bukuresipi_flutter/core/settings/theme_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/data/google_auth.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
@@ -46,6 +47,7 @@ void main() {
   }) async {
     SharedPreferences.setMockInitialValues({});
     final locale = LocaleController(await SharedPreferences.getInstance());
+    final theme = ThemeController(await SharedPreferences.getInstance());
     repo = FakeAuthRepository();
     if (user != null) {
       repo
@@ -64,6 +66,7 @@ void main() {
           Provider<GoogleAuth?>.value(value: google),
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider.value(value: locale),
+          ChangeNotifierProvider.value(value: theme),
         ],
         child: MaterialApp(
           locale: const Locale('en'),

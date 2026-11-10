@@ -5,6 +5,7 @@ import 'package:extended_image/extended_image.dart';
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
+import 'package:bukuresipi_flutter/core/settings/theme_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/pages/account_page.dart';
@@ -20,11 +21,13 @@ import '../../../fakes.dart';
 
 void main() {
   late LocaleController locale;
+  late ThemeController theme;
   late FakeAuthRepository repo;
 
   Future<void> pump(WidgetTester t, [Widget page = const AccountPage()]) async {
     SharedPreferences.setMockInitialValues({});
     locale = LocaleController(await SharedPreferences.getInstance());
+    theme = ThemeController(await SharedPreferences.getInstance());
     repo = FakeAuthRepository()..session = true;
     final auth = AuthController(repo);
     await auth.restore();
@@ -37,6 +40,7 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider.value(value: locale),
+          ChangeNotifierProvider.value(value: theme),
         ],
         child: MaterialApp(
           locale: const Locale('en'),
@@ -93,6 +97,25 @@ void main() {
     await t.tap(find.text('BM'));
     await t.pump();
     expect(locale.lang, 'ms');
+  });
+
+  testWidgets('settings: appearance follows the phone until a choice is made', (
+    t,
+  ) async {
+    await pump(t, const SettingsPage());
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(theme.mode, ThemeMode.system);
+    await t.tap(find.byTooltip('Dark'));
+    await t.pump();
+    expect(theme.mode, ThemeMode.dark);
+    // Saved on the phone: a fresh controller reads it back.
+    expect(
+      ThemeController(await SharedPreferences.getInstance()).mode,
+      ThemeMode.dark,
+    );
+    await t.tap(find.byTooltip('Match phone'));
+    await t.pump();
+    expect(theme.mode, ThemeMode.system);
   });
 
   testWidgets('sign out asks first', (t) async {
