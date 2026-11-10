@@ -105,6 +105,22 @@ class FakeAuthRepository implements AuthRepository {
     );
   }
 
+  final kcalTargets = <int?>[];
+
+  @override
+  Future<User> setKcalTarget(int? kcal) async {
+    kcalTargets.add(kcal);
+    return User(
+      id: testUser.id,
+      email: testUser.email,
+      name: testUser.name,
+      role: testUser.role,
+      lang: testUser.lang,
+      emailVerified: testUser.emailVerified,
+      kcalTarget: kcal,
+    );
+  }
+
   @override
   Future<User> login(String email, String password) async {
     if (loginError != null) throw loginError!;

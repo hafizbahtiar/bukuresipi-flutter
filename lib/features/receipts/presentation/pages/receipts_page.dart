@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
@@ -23,18 +25,63 @@ class ReceiptsPage extends StatefulWidget {
 
 class _ReceiptsPageState extends State<ReceiptsPage> {
   late final _repo = context.read<ReceiptsRepository>();
-  late Future<(ReceiptStats, List<Receipt>)> _data = _load();
+  late Future<(ReceiptStats, List<Receipt>, DailyCalories)> _data = _load();
 
   /// Pages after the first ("Load more"); [_next] = the cursor of the page after them, null on the last.
   final _more = <Receipt>[];
   String? _next;
   bool _loadingMore = false;
 
-  Future<(ReceiptStats, List<Receipt>)> _load() async {
-    final (stats, list) = await (_repo.stats(), _repo.list()).wait;
+  Future<(ReceiptStats, List<Receipt>, DailyCalories)> _load() async {
+    final (stats, list, today) = await (
+      _repo.stats(),
+      _repo.list(),
+      _repo.calories(),
+    ).wait;
     _more.clear();
     _next = list.next;
-    return (stats, list.items);
+    return (stats, list.items, today);
+  }
+
+  /// The daily target dialog; empty = none.
+  Future<void> _setTarget(int? current) async {
+    final l = AppLocalizations.of(context);
+    final field = TextEditingController(text: current?.toString() ?? '');
+    final ok = await showNotebookDialog(
+      context,
+      title: l.caloriesTarget,
+      message: l.caloriesTargetRange,
+      confirmLabel: l.save,
+      content: TextField(
+        key: const ValueKey('kcal-target'),
+        controller: field,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(suffixText: 'kcal'),
+      ),
+    );
+    // Not disposed here: the dialog's closing animation still shows the field.
+    final text = field.text.trim();
+    if (!ok || !mounted) return;
+    final kcal = int.tryParse(text);
+    if (text.isNotEmpty && (kcal == null || kcal < 500 || kcal > 10000)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.caloriesTargetRange)));
+      return;
+    }
+    try {
+      await context.read<AuthController>().setKcalTarget(kcal);
+      if (mounted) {
+        setState(() {
+          _data = _load();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorText(l, e))));
+      }
+    }
   }
 
   Future<void> _loadMore() async {
@@ -89,7 +136,7 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
             if (data == null) {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
-            final (stats, first) = data;
+            final (stats, first, today) = data;
             final receipts = [...first, ..._more];
             return RefreshIndicator(
               onRefresh: () async {
@@ -101,6 +148,7 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 24),
                 children: [
+                  _Today(today: today, onTarget: _setTarget),
                   _Spending(stats: stats),
                   if (receipts.isEmpty)
                     Padding(
@@ -138,7 +186,12 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
                                 loc.formatMediumDate(r.visitedAt!),
                               if (r.inReview) l.receiptToCheck,
                               if (r.reading) l.receiptReading,
-                              if (r.failed) l.receiptFailed.split('.').first,
+                              if (r.failed)
+                                (r.notRestaurant
+                                        ? l.receiptNotRestaurant
+                                        : l.receiptFailed)
+                                    .split('.')
+                                    .first,
                             ].join(' · '),
                             style: text.bodySmall?.copyWith(
                               color: r.inReview ? nb.kunyit : nb.inkSoft,
@@ -160,6 +213,80 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Today's calories from saved receipts, against the user's target (or a link to set one).
+class _Today extends StatelessWidget {
+  const _Today({required this.today, required this.onTarget});
+
+  final DailyCalories today;
+  final ValueChanged<int?> onTarget;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final target = today.target;
+    return Padding(
+      key: const ValueKey('calories-today'),
+      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.caloriesToday,
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            target == null
+                ? l.caloriesKcal('${today.eatenKcal}')
+                : l.caloriesTodayOf('${today.eatenKcal}', '$target'),
+            style: text.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          if (target != null) ...[
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: (today.eatenKcal / target).clamp(0, 1).toDouble(),
+                minHeight: 6,
+                color: today.eatenKcal > target ? nb.margin : nb.pandan,
+                backgroundColor: nb.mist,
+              ),
+            ),
+          ],
+          if (today.hasEstimate || today.unknownEaten > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                [
+                  if (today.hasEstimate) l.caloriesAiEstimate,
+                  if (today.unknownEaten > 0) l.caloriesUnknown,
+                ].join(' · '),
+                style: text.bodySmall?.copyWith(color: nb.inkSoft),
+              ),
+            ),
+          TextButton(
+            key: const ValueKey('kcal-target-button'),
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => onTarget(target),
+            child: Text(
+              target == null ? l.caloriesSetTarget : l.caloriesChangeTarget,
+            ),
+          ),
+          Text(
+            l.caloriesDisclaimer,
+            style: text.bodySmall?.copyWith(color: nb.inkSoft, fontSize: 11),
+          ),
+        ],
       ),
     );
   }

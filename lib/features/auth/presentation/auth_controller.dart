@@ -76,6 +76,10 @@ class AuthController extends ChangeNotifier {
   Future<void> setName(String name) async =>
       _set(AuthStatus.signedIn, await _repo.setName(name));
 
+  /// Throws ApiException (invalid_input outside 500-10,000).
+  Future<void> setKcalTarget(int? kcal) async =>
+      _set(AuthStatus.signedIn, await _repo.setKcalTarget(kcal));
+
   Future<void> setAvatar(String path) async =>
       _set(AuthStatus.signedIn, await _repo.setAvatar(path));
 

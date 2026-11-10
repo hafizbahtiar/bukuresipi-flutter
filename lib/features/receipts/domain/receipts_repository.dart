@@ -23,4 +23,10 @@ abstract interface class ReceiptsRepository {
   /// The photo while it exists (until saved); null = gone.
   Future<Uint8List?> image(String id);
   Future<ReceiptStats> stats({int months = 12});
+
+  /// Ticks how many of line [position] the user ate (codes: too_many, not_ready, not_found).
+  Future<void> setEaten(String id, int position, double eaten);
+
+  /// Today's calories (Malaysia day) from saved receipts, against the user's target.
+  Future<DailyCalories> calories();
 }

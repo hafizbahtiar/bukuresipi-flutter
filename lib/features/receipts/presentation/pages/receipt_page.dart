@@ -73,10 +73,55 @@ class _ReceiptPageState extends State<ReceiptPage> {
           _photo ??= _repo.image(r.id).catchError((Object _) => null);
         }
       });
-      if (r.reading) _timer = Timer(widget.poll, _load);
+      if (r.reading || r.caloriesPending) _timer = Timer(widget.poll, _load);
     } catch (e) {
       if (mounted) setState(() => _error = e);
     }
+  }
+
+  /// Ticks line [i] as eaten [n] times: shown at once, then the server's totals.
+  Future<void> _eat(int i, double n) async {
+    final r = _r!;
+    final items = [...r.items];
+    final it = items[i];
+    items[i] = (
+      name: it.name,
+      quantity: it.quantity,
+      amountSen: it.amountSen,
+      kcal: it.kcal,
+      kcalSource: it.kcalSource,
+      eaten: n,
+    );
+    setState(
+      () => _r = Receipt(
+        id: r.id,
+        status: r.status,
+        shop: r.shop,
+        place: r.place,
+        visitedAt: r.visitedAt,
+        totalSen: r.totalSen,
+        gaps: r.gaps,
+        items: items,
+        charges: r.charges,
+        hasImage: r.hasImage,
+        reason: r.reason,
+        eatenKcal: r.eatenKcal,
+        hasEstimate: r.hasEstimate,
+        unknownEaten: r.unknownEaten,
+        caloriesPending: r.caloriesPending,
+      ),
+    );
+    try {
+      await _repo.setEaten(r.id, i, n);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorText(AppLocalizations.of(context), e))),
+        );
+      }
+    }
+    _timer?.cancel();
+    await _load();
   }
 
   Future<void> _pickPlace() async {
@@ -246,7 +291,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
           Receipt(failed: true) => _Message(
             icon: Icons.receipt_long_outlined,
             tone: _Tone.problem,
-            text: l.receiptFailed,
+            text: r.notRestaurant ? l.receiptNotRestaurant : l.receiptFailed,
           ),
           Receipt(saved: true) => _saved(context, r),
           _ => _review(context, r),
@@ -357,7 +402,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(items: r.items, charges: r.charges, totalSen: r.totalSen),
+          _Items(receipt: r, onEaten: _eat),
         ] else ...[
           // Saved before items and charges were read: a new scan of the same receipt fills them in.
           const SizedBox(height: 16),
@@ -522,7 +567,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Items(items: r.items, charges: r.charges, totalSen: r.totalSen),
+          _Items(receipt: r, onEaten: _eat),
         ],
       ],
     );
@@ -922,16 +967,18 @@ class _Message extends StatelessWidget {
 
 /// The printed lines on a slip of receipt paper: "2 × Nasi Lemak Ayam ... RM 25.80", a dashed rule, then the
 /// total the user saves (the lines are as read; only the total is checked).
+/// The slip: items (each with a tick for what the user ate and its calories), charges, total, then what the ticks add up to.
 class _Items extends StatelessWidget {
-  const _Items({
-    required this.items,
-    required this.charges,
-    required this.totalSen,
-  });
+  const _Items({required this.receipt, required this.onEaten});
 
-  final List<ReceiptItem> items;
-  final List<ReceiptCharge> charges;
-  final int? totalSen;
+  final Receipt receipt;
+
+  /// Line index, how many eaten.
+  final void Function(int, double) onEaten;
+
+  List<ReceiptItem> get items => receipt.items;
+  List<ReceiptCharge> get charges => receipt.charges;
+  int? get totalSen => receipt.totalSen;
 
   @override
   Widget build(BuildContext context) {
@@ -980,12 +1027,17 @@ class _Items extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            for (final i in items)
+            for (final (n, i) in items.indexed)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _Eaten(
+                      key: ValueKey('eaten-$n'),
+                      item: i,
+                      onChanged: (v) => onEaten(n, v),
+                    ),
                     SizedBox(
                       width: 36,
                       child: Text(
@@ -993,7 +1045,24 @@ class _Items extends StatelessWidget {
                         style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                       ),
                     ),
-                    Expanded(child: Text(i.name, style: text.bodyMedium)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(i.name, style: text.bodyMedium),
+                          if (i.kcal != null)
+                            Text(
+                              [
+                                l.caloriesKcal('${i.kcal}'),
+                                if (i.kcalSource == 'ai') l.caloriesAiEstimate,
+                              ].join(' · '),
+                              style: text.bodySmall?.copyWith(
+                                color: nb.inkSoft,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                     if (i.amountSen != null)
                       Text(
                         rm(i.amountSen!),
@@ -1050,9 +1119,102 @@ class _Items extends StatelessWidget {
                 ],
               ),
             ],
+            if (items.isNotEmpty) ...[dashes, _Calories(receipt: receipt)],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A tick for one line: a checkbox (eaten 0 or all of it), or - for 2 or more - how many, with − and +.
+class _Eaten extends StatelessWidget {
+  const _Eaten({super.key, required this.item, required this.onChanged});
+
+  final ReceiptItem item;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cap = item.quantity ?? 1; // the server's cap
+    if (cap <= 1) {
+      return SizedBox(
+        width: 32,
+        height: 24,
+        child: Checkbox(
+          value: item.eaten > 0,
+          visualDensity: VisualDensity.compact,
+          onChanged: (v) => onChanged(v == true ? cap : 0),
+        ),
+      );
+    }
+    final n = item.eaten.floor();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          iconSize: 18,
+          tooltip: '−',
+          onPressed: n > 0 ? () => onChanged((n - 1).toDouble()) : null,
+          icon: const Icon(Icons.remove),
+        ),
+        Text('$n', style: Theme.of(context).textTheme.bodyMedium),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          iconSize: 18,
+          tooltip: '+',
+          onPressed: n + 1 <= cap ? () => onChanged((n + 1).toDouble()) : null,
+          icon: const Icon(Icons.add),
+        ),
+      ],
+    );
+  }
+}
+
+/// What the ticked lines add up to, or why it cannot say yet; always with the disclaimer.
+class _Calories extends StatelessWidget {
+  const _Calories({required this.receipt});
+
+  final Receipt receipt;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final ticked = receipt.items.any((i) => i.eaten > 0);
+    final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
+    return Column(
+      key: const ValueKey('receipt-calories'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (receipt.caloriesPending)
+          Text(l.caloriesCounting, style: soft)
+        else if (!ticked)
+          Text(l.caloriesTickHint, style: soft)
+        else ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.caloriesYouAte('${receipt.eatenKcal}'),
+                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              if (receipt.hasEstimate)
+                _Chip(
+                  icon: Icons.auto_awesome_outlined,
+                  label: l.caloriesAiEstimate,
+                  color: nb.inkSoft,
+                ),
+            ],
+          ),
+          if (receipt.unknownEaten > 0) Text(l.caloriesUnknown, style: soft),
+        ],
+        const SizedBox(height: 4),
+        Text(l.caloriesDisclaimer, style: soft?.copyWith(fontSize: 11)),
+      ],
     );
   }
 }
