@@ -84,6 +84,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
     required int totalSen,
     required DateTime visitedAt,
     String? branchId,
+    bool update = false,
   }) => apiCall(
     () async => _receipt(
       (await _dio.post<Map<String, dynamic>>(
@@ -92,6 +93,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
           'totalSen': totalSen,
           'visitedAt': visitedAt.toUtc().toIso8601String(),
           'branchId': ?branchId,
+          if (update) 'update': true,
         },
       )).data!,
     ),

@@ -830,5 +830,10 @@
   "receiptDiscount": "Diskaun",
   "receiptService": "Caj perkhidmatan",
   "receiptTax": "SST",
-  "receiptRounding": "Pembundaran"
+  "receiptRounding": "Pembundaran",
+  "receiptRescanTitle": "Sudah disimpan",
+  "receiptRescanBody": "Anda pernah simpan resit ini. Kemas kini dengan item dan caj daripada imbasan ini?",
+  "receiptRescanUpdate": "Kemas kini",
+  "receiptUpdated": "Resit dikemas kini",
+  "receiptRescanHint": "Tiada item atau caj disimpan untuk resit ini. Imbas sekali lagi dengan + untuk menambahnya."
 }
