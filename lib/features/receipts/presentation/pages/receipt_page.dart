@@ -406,7 +406,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
               padding: const EdgeInsets.only(top: 16),
               child: _Photo(
                 bytes: bytes,
-                onTap: () => showPhotoSheet(context, bytes),
+                onTap: () => showPhotoDialog(context, bytes),
               ),
             ),
             null => const SizedBox.shrink(),

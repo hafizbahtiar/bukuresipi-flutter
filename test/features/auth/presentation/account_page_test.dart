@@ -173,9 +173,9 @@ void main() {
       await t.tap(find.text('View photo'));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('photo-viewer')), findsOneWidget);
-      // In a sheet: a swipe down is the photo's slide-out (it closes the sheet); a tap outside closes it too.
+      // In a dialog: a swipe down is the photo's slide-out; ✕ closes it.
       expect(find.byType(ExtendedImageSlidePage), findsOneWidget);
-      await t.tapAt(const Offset(10, 10));
+      await t.tap(find.byKey(const ValueKey('photo-close')));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('photo-viewer')), findsNothing);
       await t.tap(find.byKey(const ValueKey('account-avatar')));
