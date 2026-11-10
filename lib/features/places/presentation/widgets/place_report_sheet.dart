@@ -58,6 +58,7 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
           ReportField.address,
           ReportField.city,
           ReportField.state,
+          ReportField.status,
         ];
 
   String _fieldLabel(AppLocalizations l, ReportField field) => switch (field) {
@@ -68,7 +69,11 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
     ReportField.state => l.reportFieldState,
     ReportField.name => l.reportFieldName,
     ReportField.cuisine => l.reportFieldCuisine,
+    ReportField.status => l.reportFieldStatus,
   };
+
+  /// A status report suggests the other one: closed when the branch shows open, open again when it shows closed.
+  bool get _suggestClosed => !(_branch?.closed ?? false);
 
   String? _current(AppLocalizations l) {
     if (_restaurant) {
@@ -87,6 +92,7 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
       ReportField.address => b.address,
       ReportField.city => b.city,
       ReportField.state => b.state,
+      ReportField.status => b.closed ? l.branchClosed : l.branchOpen,
       _ => null,
     };
   }
@@ -171,7 +177,9 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final location = _field == ReportField.location;
-    final value = _value.text.trim();
+    final value = _field == ReportField.status
+        ? (_suggestClosed ? 'closed' : 'open')
+        : _value.text.trim();
     setState(() => _saving = true);
     try {
       await widget.onSubmit(
@@ -201,9 +209,11 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final location = _field == ReportField.location;
+    final status = _field == ReportField.status;
     final canSubmit =
         !_saving &&
-        (location ? _picked != null : _value.text.trim().isNotEmpty);
+        (status ||
+            (location ? _picked != null : _value.text.trim().isNotEmpty));
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
@@ -310,7 +320,17 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
                       label: Text(l.reportSetLocation),
                     ),
                   ),
-                ] else
+                ] else if (status)
+                  Text(
+                    l.reportStatusSuggest(
+                      _suggestClosed ? l.branchClosed : l.branchOpen,
+                    ),
+                    key: const ValueKey('report-status'),
+                    style: text.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                else
                   TextField(
                     controller: _value,
                     onChanged: (_) => setState(() {}),

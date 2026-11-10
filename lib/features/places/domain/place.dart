@@ -185,6 +185,7 @@ class Branch {
     this.lat,
     this.lng,
     this.pinSource,
+    this.closed = false,
     this.rating = const RatingSummary(),
   });
 
@@ -199,6 +200,9 @@ class Branch {
   /// 'osm' | 'nominatim' | 'photon' | 'overture' | 'here' | 'maps_link' | 'web' | 'user' | 'owner' | null.
   final String? pinSource;
 
+  /// Permanently closed: still in the book, no longer suggested nearby or in search.
+  final bool closed;
+
   /// Community stars for this canonical branch; `canRate` is decided by the server.
   final RatingSummary rating;
 
@@ -211,6 +215,7 @@ class Branch {
     lat: lat,
     lng: lng,
     pinSource: pinSource,
+    closed: closed,
     rating: rating ?? this.rating,
   );
 
