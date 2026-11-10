@@ -286,52 +286,79 @@ class _Choice<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nb = Notebook.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final (code, shown, name) in options)
-          Semantics(
-            button: true,
-            selected: code == value,
-            label: name,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(6),
-              onTap: () => onChanged(code),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: code == value
-                      ? nb.kunyit.withValues(alpha: 0.55)
-                      : null,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: IconTheme.merge(
-                  data: IconThemeData(
-                    color: code == value ? nb.ink : nb.inkSoft,
+    // One pill track; the chosen option is a raised chip in pandan. Dark paper is darker than mist, so the chip
+    // takes the lighter line colour there (else it looks sunk in).
+    final chip = Theme.of(context).brightness == Brightness.dark
+        ? nb.line
+        : nb.paper;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: nb.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (code, shown, name) in options)
+            Semantics(
+              button: true,
+              selected: code == value,
+              label: name,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(code),
+                child: AnimatedContainer(
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 32,
                   ),
-                  child: DefaultTextStyle.merge(
-                    style: TextStyle(
-                      fontWeight: code == value
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color: code == value ? nb.ink : nb.inkSoft,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: code == value ? chip : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: code == value
+                        ? [
+                            BoxShadow(
+                              color: nb.ink.withValues(alpha: 0.12),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: IconTheme.merge(
+                    data: IconThemeData(
+                      size: 18,
+                      color: code == value ? nb.pandanDeep : nb.inkSoft,
                     ),
-                    child: name == null
-                        ? shown
-                        : Tooltip(
-                            message: name,
-                            child: ExcludeSemantics(child: shown),
-                          ),
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: code == value
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: code == value ? nb.pandanDeep : nb.inkSoft,
+                      ),
+                      child: name == null
+                          ? shown
+                          : Tooltip(
+                              message: name,
+                              child: ExcludeSemantics(child: shown),
+                            ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
