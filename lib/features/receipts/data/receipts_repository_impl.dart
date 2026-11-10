@@ -36,6 +36,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
             amountSen: i['amountSen'] as int?,
           ),
       ],
+      charges: _charges(j['charges'] as Map<String, dynamic>?),
       hasImage: j['hasImage'] as bool? ?? false,
     );
   }
@@ -140,4 +141,21 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       ],
     );
   });
+}
+
+List<ReceiptCharge> _charges(Map<String, dynamic>? c) {
+  if (c == null) return const [];
+  ReceiptCharge? one(String kind) => c['${kind}Sen'] is int
+      ? (kind: kind, name: null, amountSen: c['${kind}Sen'] as int)
+      : null;
+  return [
+    for (final k in ['subtotal', 'discount', 'service', 'tax']) ?one(k),
+    for (final o in (c['other'] as List?) ?? const [])
+      (
+        kind: 'other',
+        name: o['name'] as String,
+        amountSen: o['amountSen'] as int,
+      ),
+    ?one('rounding'),
+  ];
 }

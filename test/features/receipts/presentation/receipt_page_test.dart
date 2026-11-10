@@ -91,6 +91,13 @@ void main() {
             (name: 'Teh Ais', quantity: null, amountSen: 350),
             (name: 'Diskaun', quantity: 1, amountSen: -200),
           ],
+          charges: [
+            (kind: 'subtotal', name: null, amountSen: 2730),
+            (kind: 'service', name: null, amountSen: 273),
+            (kind: 'tax', name: null, amountSen: 164),
+            (kind: 'other', name: 'Takeaway Charge', amountSen: 100),
+            (kind: 'rounding', name: null, amountSen: -2),
+          ],
         ),
       ];
     await pump(t, repo);
@@ -100,6 +107,16 @@ void main() {
     expect(find.text('Nasi Lemak Ayam'), findsOneWidget);
     expect(find.text('RM 25.80'), findsOneWidget);
     expect(find.text('-RM 2.00'), findsOneWidget);
+    for (final s in [
+      'Subtotal',
+      'Service charge',
+      'SST',
+      'Takeaway Charge',
+      'Rounding',
+      '-RM 0.02',
+    ]) {
+      expect(find.text(s), findsOneWidget);
+    }
     final save = find.text('Save');
     await t.ensureVisible(save);
     await t.tap(save);

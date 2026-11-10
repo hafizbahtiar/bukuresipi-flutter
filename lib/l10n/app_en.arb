@@ -2119,5 +2119,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "receiptSubtotal": "Subtotal",
+  "@receiptSubtotal": {},
+  "receiptDiscount": "Discount",
+  "@receiptDiscount": {},
+  "receiptService": "Service charge",
+  "@receiptService": {},
+  "receiptTax": "SST",
+  "@receiptTax": {},
+  "receiptRounding": "Rounding",
+  "@receiptRounding": {}
 }
