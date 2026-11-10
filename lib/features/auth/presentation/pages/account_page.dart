@@ -71,7 +71,7 @@ class _AccountPageState extends State<AccountPage> {
           .catchError((Object _) => null);
       if (!mounted) return;
       if (bytes == null) return _snack(l.errUnknown);
-      return showPhotoSheet(context, bytes);
+      return showPhotoDialog(context, bytes);
     }
     final path = choice == 'change'
         ? await pickPhoto(context, ratios: [('1:1', 1)], maxSide: 1024)
