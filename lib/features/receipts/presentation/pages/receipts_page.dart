@@ -10,8 +10,12 @@ import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
 
 /// The user's own spending (last 12 months, from saved receipts) above their receipts, newest first. Private.
+/// The Shopping tab's Receipts side.
 class ReceiptsPage extends StatefulWidget {
-  const ReceiptsPage({super.key});
+  const ReceiptsPage({super.key, this.switcher});
+
+  /// The Shopping tab's List | Receipts switch, under the title.
+  final PreferredSizeWidget? switcher;
 
   @override
   State<ReceiptsPage> createState() => _ReceiptsPageState();
@@ -69,7 +73,11 @@ class _ReceiptsPageState extends State<ReceiptsPage> {
     final text = Theme.of(context).textTheme;
     final loc = MaterialLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l.receiptsTitle)),
+      appBar: AppBar(
+        toolbarHeight: 76,
+        title: NotebookTitle(l.receiptsTitle),
+        bottom: widget.switcher,
+      ),
       body: NotebookPage(
         child: FutureBuilder(
           future: _data,

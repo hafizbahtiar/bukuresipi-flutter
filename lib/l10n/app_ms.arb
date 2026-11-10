@@ -835,5 +835,7 @@
   "receiptRescanBody": "Anda pernah simpan resit ini. Kemas kini dengan item dan caj daripada imbasan ini?",
   "receiptRescanUpdate": "Kemas kini",
   "receiptUpdated": "Resit dikemas kini",
-  "receiptRescanHint": "Tiada item atau caj disimpan untuk resit ini. Imbas sekali lagi dengan + untuk menambahnya."
+  "receiptRescanHint": "Tiada item atau caj disimpan untuk resit ini. Imbas sekali lagi dengan + untuk menambahnya.",
+  "shoppingTabList": "Senarai",
+  "shoppingTabReceipts": "Resit"
 }

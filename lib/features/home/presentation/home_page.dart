@@ -7,7 +7,7 @@ import '../../family/presentation/family_controller.dart';
 import '../../places/presentation/pages/places_list_page.dart';
 import '../../places/presentation/places_controller.dart';
 import '../../recipes/presentation/recipes_controller.dart';
-import '../../shopping/presentation/pages/shopping_page.dart';
+import 'shopping_tab.dart';
 import '../../shopping/presentation/shopping_controller.dart';
 import '../../shares/presentation/recent_shares.dart';
 import 'add_sheet.dart';
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
         children: const [
           FeedPage(),
           PlacesListPage(),
-          ShoppingPage(),
+          ShoppingTab(),
           AccountPage(),
         ],
       ),
