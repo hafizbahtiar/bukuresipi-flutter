@@ -232,79 +232,162 @@ class _TicketRow extends StatelessWidget {
         : l.ownerReportVerifiedAt(
             m.formatShortDate(ticket.verifiedAt!.toLocal()),
           );
+    final ready = ticket.ready && ticket.status == 'open';
+    // A status report holds "closed" / "open": shown in words.
+    String shown(ReportValue v) => switch ((ticket.field, v.value)) {
+      ('status', 'closed') => l.branchClosed,
+      ('status', 'open') => l.branchOpen,
+      _ => v.label,
+    };
     return NotebookRow(
       mark: Icon(
-        ticket.ready && ticket.status == 'open'
-            ? Icons.rate_review_outlined
-            : Icons.flag_outlined,
+        ready ? Icons.rate_review_outlined : Icons.flag_outlined,
         size: 18,
-        color: ticket.ready && ticket.status == 'open' ? nb.margin : nb.inkSoft,
+        color: ready ? nb.margin : nb.inkSoft,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            ticket.title,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          Text(
-            '$fieldLabel · ${l.ownerReportCount(ticket.count, ticket.threshold)}',
-            style: text.bodySmall?.copyWith(color: nb.inkSoft),
-          ),
-          if (ticket.ready && ticket.status == 'open')
-            Text(
-              l.ownerReportReady,
-              style: text.bodySmall?.copyWith(
-                color: nb.margin,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          const SizedBox(height: 4),
-          Text(
-            '${l.ownerReportCurrent}: ${ticket.current.label}',
-            style: text.bodySmall,
-          ),
-          if (ticket.proposed case final proposed?)
-            Text(
-              '${l.ownerReportProposed}: ${proposed.label}',
-              style: text.bodySmall,
-            ),
-          if (ticket.latestNote case final note? when note.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                '${l.ownerReportLatestNote}: $note',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: text.bodySmall?.copyWith(
-                  color: nb.inkSoft,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          if (ticket.status != 'open') ...[
-            const SizedBox(height: 2),
-            Text(
-              verified == null ? status : '$status · $verified',
-              style: text.bodySmall?.copyWith(color: nb.inkSoft),
-            ),
-          ],
-          if (onApply != null && onReject != null)
-            Wrap(
-              spacing: 4,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextButton(
-                  onPressed: onReject,
-                  child: Text(l.ownerReportReject),
+                Expanded(
+                  child: Text(
+                    ticket.title,
+                    style: text.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-                FilledButton(
-                  onPressed: onApply,
-                  child: Text(l.ownerReportApply),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: nb.mist,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    fieldLabel,
+                    style: text.labelSmall?.copyWith(
+                      color: nb.pandanDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ],
             ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              [
+                l.ownerReportCount(ticket.count, ticket.threshold),
+                if (ready) l.ownerReportReady,
+                if (ticket.status != 'open')
+                  verified == null ? status : '$status · $verified',
+              ].join(' · '),
+              style: text.bodySmall?.copyWith(
+                color: ready ? nb.margin : nb.inkSoft,
+                fontWeight: ready ? FontWeight.w600 : null,
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Now -> suggested, side by side in one box: the change the owner applies.
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: nb.line),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Value(
+                    label: l.ownerReportCurrent,
+                    value: shown(ticket.current),
+                    style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                  ),
+                  if (ticket.proposed case final proposed?) ...[
+                    Divider(height: 14, color: nb.line),
+                    _Value(
+                      label: l.ownerReportProposed,
+                      value: shown(proposed),
+                      style: text.bodyMedium?.copyWith(
+                        color: nb.pandanDeep,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (ticket.latestNote case final note? when note.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '“$note”',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodySmall?.copyWith(
+                    color: nb.inkSoft,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            if (onApply != null && onReject != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: onReject,
+                      child: Text(l.ownerReportReject),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: onApply,
+                      child: Text(l.ownerReportApply),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+/// One line of the now/suggested box: a fixed-width label, then the value (wraps under itself).
+class _Value extends StatelessWidget {
+  const _Value({required this.label, required this.value, this.style});
+
+  final String label;
+  final String value;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 84,
+          child: Text(
+            label,
+            style: text.labelMedium?.copyWith(
+              color: Notebook.of(context).inkSoft,
+            ),
+          ),
+        ),
+        Expanded(child: Text(value, style: style)),
+      ],
     );
   }
 }

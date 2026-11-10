@@ -79,6 +79,38 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a closed-place ticket shows now and suggested in words, with the note',
+    (t) async {
+      repo.tickets = [
+        ReportTicket(
+          targetType: 'branch',
+          targetId: 'b-1',
+          targetName: 'Kedai A',
+          targetLabel: 'Kedai A KL',
+          field: 'status',
+          count: 3,
+          threshold: 100,
+          status: 'open',
+          ready: false,
+          updatedAt: DateTime(2026, 11, 10),
+          current: const ReportValue(value: 'open'),
+          proposed: const ReportValue(value: 'closed'),
+          latestNote: 'Shop is empty now',
+        ),
+      ];
+      await pump(t, const OwnerReportsPage());
+      expect(find.text('Open or closed'), findsOneWidget);
+      expect(find.text('Permanently closed'), findsOneWidget);
+      expect(find.text('“Shop is empty now”'), findsOneWidget);
+      expect(find.text('closed'), findsNothing);
+      expect(
+        t.takeException(),
+        isNull,
+      ); // nothing overflows on a phone-sized screen
+    },
+  );
+
   testWidgets('review reports show the review and hide it after confirmation', (
     t,
   ) async {
