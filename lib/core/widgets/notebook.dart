@@ -4,6 +4,7 @@ import 'dart:ui' show PointMode;
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'glass_bar.dart';
 
 /// Left gutter (the margin) of a notebook page: marks sit in it, text starts after the red line.
 const notebookGutter = 56.0;
@@ -327,7 +328,7 @@ class DockAction {
 double navRoom(BuildContext context) =>
     MediaQuery.paddingOf(context).bottom + 24;
 
-/// A page's actions on a slip of paper floating at the bottom, always in reach. Use as the Scaffold's
+/// A page's actions on the same frosted pill as Home's tab bar ([GlassBar]), floating at the bottom, always in reach. Use as the Scaffold's
 /// bottomNavigationBar with `extendBody: true`, and pad the page's list by [ActionDock.clearance].
 class ActionDock extends StatelessWidget {
   const ActionDock({super.key, required this.actions});
@@ -345,22 +346,13 @@ class ActionDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nb = Notebook.of(context);
     // A Scaffold's bottom bar stays under the keyboard: lift the dock above it.
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
         top: false,
-        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: Material(
-          color: nb.paper,
-          elevation: 3,
-          shadowColor: nb.ink.withValues(alpha: 0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: BorderSide(color: nb.line),
-          ),
-          clipBehavior: Clip.antiAlias,
+        minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+        child: GlassBar(
           child: Row(
             children: [
               for (final a in actions) Expanded(child: _DockButton(action: a)),
@@ -391,13 +383,14 @@ class _DockButton extends StatelessWidget {
       message: a.tooltip ?? a.label,
       child: InkWell(
         onTap: on ? a.onPressed : null,
+        customBorder: const StadiumBorder(),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox.square(
-                dimension: 24,
+                dimension: 22,
                 child: a.busy
                     ? Padding(
                         padding: const EdgeInsets.all(3),
@@ -406,14 +399,15 @@ class _DockButton extends StatelessWidget {
                           color: nb.pandan,
                         ),
                       )
-                    : Icon(a.icon, color: color),
+                    : Icon(a.icon, size: 22, color: color),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 a.label,
-                maxLines: 2,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: color,
                   fontWeight: FontWeight.w600,
                   height: 1.1,

@@ -580,6 +580,14 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               onPressed: () => _remove(recipe),
             ),
           ] else ...[
+            // The app's owner keeps the catalogue: edit (with the AI draft), never remove.
+            if (recipe.sourceType == RecipeSourceType.catalogue &&
+                (context.read<AuthController?>()?.user?.isOwner ?? false))
+              DockAction(
+                icon: Icons.edit_outlined,
+                label: l.recipeEdit,
+                onPressed: () => _edit(recipe),
+              ),
             DockAction(
               icon: Icons.copy_outlined,
               label: l.recipeCopy,

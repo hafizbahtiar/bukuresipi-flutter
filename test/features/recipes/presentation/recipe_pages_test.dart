@@ -518,4 +518,94 @@ void main() {
       expect(find.text('Open video'), findsNothing);
     },
   );
+
+  for (final owner in [true, false]) {
+    testWidgets(
+      'a catalogue dish: ${owner ? 'the owner edits it from an AI draft' : 'a user cannot edit it'}',
+      (t) async {
+        final auth = AuthController(
+          FakeAuthRepository()
+            ..session = true
+            ..meResult = User(
+              id: 'u-1',
+              email: 'a@example.com',
+              name: 'Ali',
+              role: owner ? 'owner' : 'user',
+              lang: 'ms',
+              emailVerified: true,
+            ),
+        );
+        await auth.restore();
+        final ownerRepo = FakeOwner()
+          ..draft = (
+            name: 'Kari Ayam Kampung',
+            ingredients: ['1 ekor ayam', '400 ml santan'],
+            steps: ['Tumis rempah.', 'Masak ayam.'],
+            sources: [
+              (url: 'https://masak.example.my/kari', title: 'Kari Ayam'),
+            ],
+            images: ['https://masak.example.my/kari.jpg'],
+            warnings: ['Pages disagree on santan.'],
+            complete: true,
+          );
+        final fake = FakeRecipes()
+          ..detailResult = recipeDetail(
+            canEdit: false,
+            missing: const [],
+            steps: const [],
+            sourceType: RecipeSourceType.catalogue,
+          );
+        await t.pumpWidget(
+          app(
+            providers: [
+              ChangeNotifierProvider.value(value: RecipesController(fake)),
+              ChangeNotifierProvider.value(value: auth),
+              Provider<OwnerRepository>.value(value: ownerRepo),
+            ],
+            home: const RecipeDetailPage(id: 'r-1'),
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(find.text('Edit'), owner ? findsOneWidget : findsNothing);
+        expect(
+          find.text('Remove'),
+          findsNothing,
+        ); // the catalogue is never removed
+        if (!owner) return;
+        await t.tap(find.text('Edit'));
+        await t.pumpAndSettle();
+        expect(find.byKey(const ValueKey('recipe-add-cover')), findsNothing);
+        await t.tap(find.byKey(const ValueKey('recipe-ai-draft')));
+        await t.pumpAndSettle();
+        expect(ownerRepo.drafted, ['r-1']);
+        expect(find.byKey(const ValueKey('recipe-draft-note')), findsOneWidget);
+        expect(find.textContaining('Pages disagree'), findsOneWidget);
+        ownerRepo.dishCoverResult = recipeDetail(
+          canEdit: false,
+          sourceType: RecipeSourceType.catalogue,
+        );
+        await t.tap(
+          find.byKey(
+            const ValueKey('draft-photo-https://masak.example.my/kari.jpg'),
+          ),
+        );
+        await t.pump();
+        await t.tap(find.text('Save'));
+        await t.pumpAndSettle();
+        final (id, name, ingredients, steps) = fake.edited.single;
+        expect(
+          [id, name, ingredients, steps],
+          [
+            'r-1',
+            'Kari Ayam Kampung',
+            ['1 ekor ayam', '400 ml santan'],
+            ['Tumis rempah.', 'Masak ayam.'],
+          ],
+        );
+        expect(ownerRepo.dishCovers, [
+          ('r-1', 'https://masak.example.my/kari.jpg'),
+        ]);
+      },
+    );
+  }
 }
