@@ -1,4 +1,5 @@
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/nearby_carousel.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -47,9 +48,12 @@ void main() {
     expect(find.text('Kedai Jauh'), findsOneWidget);
     expect(find.text('2.4 km'), findsOneWidget);
     expect(find.text('Melayu'), findsNWidgets(2));
-    expect(find.textContaining('Halal ya'), findsNWidgets(2));
+    expect(find.text('Says halal'), findsNWidgets(2));
     expect(find.text('Kedai Sederhana Bangsar'), findsNWidgets(2));
-    expect(find.text('Jalan Telawi'), findsNWidgets(2));
+    expect(
+      find.text('Jalan Telawi'),
+      findsNothing,
+    ); // the branch label says more
     expect(
       t.widget<ListView>(find.byType(ListView)).scrollDirection,
       Axis.horizontal,
@@ -95,8 +99,39 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Saved'), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark), findsOneWidget);
   });
+
+  testWidgets(
+    'no overflow on a 360 dp phone at 1.3x text with long names and stars',
+    (t) async {
+      t.view.physicalSize = const Size(360, 740);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      final long = NearbyBranch(
+        branchId: 'b-long',
+        restaurantId: 'r-1',
+        name: 'Restoran Nasi Kandar Yang Sangat Panjang Namanya Sekali',
+        label: 'Cawangan Taman Melawati Hulu Kelang Selangor Darul Ehsan',
+        lat: 3.15,
+        lng: 101.71,
+        distanceM: 12345,
+        saved: true,
+        cuisine: 'Masakan Melayu Tradisional Pantai Timur',
+        halalClaim: 'says_halal',
+        halalQuote: 'Halal',
+        rating: const RatingSummary(average: 4.6, count: 128),
+      );
+      await t.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: app(NearbyCarousel(places: [long], onTap: (_) {})),
+        ),
+      );
+      expect(t.takeException(), isNull);
+      expect(find.text('4.6 (128)'), findsOneWidget);
+    },
+  );
 
   testWidgets('snapping to a card selects it and focuses the map', (t) async {
     final selected = <String>[];

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
+import '../../auth/domain/user.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../auth/presentation/pages/account_page.dart';
+import '../../auth/presentation/widgets/avatar.dart';
 import '../../family/presentation/family_controller.dart';
 import '../../places/presentation/pages/places_list_page.dart';
 import '../../places/presentation/places_controller.dart';
@@ -12,6 +15,7 @@ import '../../shares/presentation/recent_shares.dart';
 import 'add_sheet.dart';
 import 'feed_page.dart';
 import 'receipts_tab.dart';
+import 'widgets/floating_nav.dart';
 
 /// Signed-in home: Home (feed, with the map and shopping-list buttons), Book, Receipts and Account tabs, and "+" in
 /// the middle (add anything: [showAddSheet]; it is a button, not a tab). Rebuilt after every share (the share page goes
@@ -21,7 +25,10 @@ class HomePage extends StatefulWidget {
 
   /// Pass as the route's `extra` to show the Home tab (after a share). A new object each time, so going there twice
   /// still switches (the page keeps its state across navigations).
-  static Object get homeTab => Object();
+  static Object get homeTab => HomeOpen(0);
+
+  /// The same for the Book tab (Done after a share: the place or recipe lands there).
+  static Object get bookTab => HomeOpen(1);
 
   /// The `extra` of the route; a new one = show Home.
   final Object? open;
@@ -31,7 +38,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _tab = 0;
+  late int _tab = _tabOf(widget.open);
+
+  static int _tabOf(Object? open) => open is HomeOpen ? open.tab : 0;
 
   @override
   void initState() {
@@ -61,7 +70,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void didUpdateWidget(covariant HomePage old) {
     super.didUpdateWidget(old);
-    if (widget.open != null && !identical(widget.open, old.open)) _tab = 0;
+    if (widget.open != null && !identical(widget.open, old.open)) {
+      _tab = _tabOf(widget.open);
+    }
   }
 
   @override
@@ -73,7 +84,10 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final user = context.select<AuthController, User?>((a) => a.user);
     return Scaffold(
+      // The nav floats: the tabs run under it (each pads its list by navRoom).
+      extendBody: true,
       body: IndexedStack(
         index: _tab,
         children: const [
@@ -83,45 +97,45 @@ class _HomePageState extends State<HomePage> {
           AccountPage(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        // Index 2 is "+": the tabs after it sit one place to the right.
-        selectedIndex: _tab < 2 ? _tab : _tab + 1,
-        onDestinationSelected: (i) {
-          if (i == 2) {
-            showAddSheet(context);
-          } else {
-            setState(() => _tab = i < 2 ? i : i - 1);
-          }
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: l.navHome,
+      bottomNavigationBar: FloatingNav(
+        selected: _tab,
+        onSelected: (i) => setState(() => _tab = i),
+        addLabel: l.navAdd,
+        onAdd: () => showAddSheet(context),
+        items: [
+          // Outlined when idle, filled and rounded when active: one family, so the switch reads as a fill.
+          NavItem(Icons.home_outlined, Icons.home_rounded, l.navHome),
+          NavItem(Icons.menu_book_outlined, Icons.menu_book_rounded, l.navBook),
+          NavItem(
+            Icons.receipt_long_outlined,
+            Icons.receipt_long,
+            l.navReceipts,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
-            selectedIcon: const Icon(Icons.menu_book),
-            label: l.navBook,
-          ),
-          NavigationDestination(
-            key: const ValueKey('nav-add'),
-            icon: const Icon(Icons.add_circle_outline),
-            selectedIcon: const Icon(Icons.add_circle),
-            label: l.navAdd,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.receipt_long_outlined),
-            selectedIcon: const Icon(Icons.receipt_long),
-            label: l.navReceipts,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: l.navAccount,
+          NavItem(
+            Icons.account_circle_outlined,
+            Icons.account_circle_rounded,
+            l.navAccount,
+            // Their photo when they have one; else the icon (a letter would read as a stray button).
+            picture: switch (user) {
+              final u? when u.avatar != null => Avatar(
+                key: const ValueKey('nav-avatar'),
+                userId: u.id,
+                avatar: u.avatar,
+                name: u.name ?? u.email,
+                size: 20,
+              ),
+              _ => null,
+            },
           ),
         ],
       ),
     );
   }
+}
+
+/// A route `extra` naming the tab to show; compared by identity, so each one switches once.
+class HomeOpen {
+  HomeOpen(this.tab);
+
+  final int tab;
 }

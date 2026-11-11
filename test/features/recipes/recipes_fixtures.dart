@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
@@ -118,6 +120,10 @@ class FakeRecipes implements RecipesRepository {
 
   List<Recipe> family = [];
   List<Recipe> communityList = [];
+
+  /// While set and not completed, community / dishes answers wait for it (a slow network).
+  Completer<void>? communityGate;
+  Completer<void>? dishesGate;
   List<Dish> dishList = [];
   final copied = <String>[];
   final visibilities = <(String, RecipeVisibility)>[];
@@ -134,32 +140,38 @@ class FakeRecipes implements RecipesRepository {
     String? query,
     String? cursor,
     int? limit,
-  }) async => (
-    recipes: communityList
-        .where(
-          (r) =>
-              query == null ||
-              r.name.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList(),
-    next: null,
-  );
+  }) async {
+    await communityGate?.future;
+    return (
+      recipes: communityList
+          .where(
+            (r) =>
+                query == null ||
+                r.name.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList(),
+      next: null,
+    );
+  }
 
   @override
   Future<({List<Dish> dishes, String? next})> dishes({
     String? query,
     String? cursor,
     int? limit,
-  }) async => (
-    dishes: dishList
-        .where(
-          (d) =>
-              query == null ||
-              d.name.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList(),
-    next: null,
-  );
+  }) async {
+    await dishesGate?.future;
+    return (
+      dishes: dishList
+          .where(
+            (d) =>
+                query == null ||
+                d.name.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList(),
+      next: null,
+    );
+  }
 
   @override
   Future<RecipeDetail> copy(String id) async {

@@ -104,6 +104,33 @@ void main() {
     expect(find.text('Open video'), findsOneWidget);
   });
 
+  testWidgets('swiping the ingredients sideways turns to the steps, and back', (
+    t,
+  ) async {
+    final recipes = RecipesController(
+      FakeRecipes()..detailResult = recipeDetail(),
+    );
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.fling(find.textContaining('500 g'), const Offset(-300, 0), 1000);
+    await t.pumpAndSettle();
+    expect(find.text('Goreng ayam hingga masak.'), findsOneWidget);
+    expect(find.textContaining('500 g'), findsNothing);
+
+    await t.fling(
+      find.text('Goreng ayam hingga masak.'),
+      const Offset(300, 0),
+      1000,
+    );
+    await t.pumpAndSettle();
+    expect(find.textContaining('500 g'), findsOneWidget);
+  });
+
   testWidgets(
     'no photo: the owner gets "Add photo", a reader sees just the title',
     (t) async {

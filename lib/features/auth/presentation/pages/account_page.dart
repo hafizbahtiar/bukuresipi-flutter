@@ -128,7 +128,7 @@ class _AccountPageState extends State<AccountPage> {
             (Object e) => _snack(errorText(l, e)),
           ),
           child: ListView(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: EdgeInsets.only(bottom: navRoom(context)),
             children: [
               NotebookRow(
                 mark: Semantics(

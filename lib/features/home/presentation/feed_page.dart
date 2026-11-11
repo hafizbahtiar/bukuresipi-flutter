@@ -15,7 +15,9 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../places/domain/nearby_branch.dart';
 import '../../places/domain/rating.dart';
 import '../../shares/presentation/widgets/share_image.dart';
+import 'add_sheet.dart';
 import 'widgets/feed_card.dart';
+import 'widgets/feed_empty.dart';
 import '../../places/presentation/location.dart';
 import '../../places/presentation/places_controller.dart';
 import '../../places/presentation/widgets/nearby_sheet.dart';
@@ -69,6 +71,13 @@ class _FeedPageState extends State<FeedPage> {
   bool _failed = false;
   int _generation = 0;
 
+  /// After a restart (refresh, new search) the cards on screen are the old ones: they stay until the new first
+  /// page replaces them, so a refresh never blanks the grid.
+  bool _stale = false;
+
+  /// The nearby request is out: restaurants are coming, so "nothing here" would be early.
+  bool _nearbyBusy = false;
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +98,7 @@ class _FeedPageState extends State<FeedPage> {
     if (!mounted) return;
     setState(() => _located = here != null);
     if (here == null) return;
+    setState(() => _nearbyBusy = true);
     try {
       final rows = await context.read<PlacesController>().nearby(
         here.lat,
@@ -104,6 +114,8 @@ class _FeedPageState extends State<FeedPage> {
       }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _nearbyBusy = false);
     }
   }
 
@@ -111,8 +123,7 @@ class _FeedPageState extends State<FeedPage> {
   Future<void> _restart() {
     _generation++;
     setState(() {
-      _community = const [];
-      _dishes = const [];
+      _stale = true;
       _cursor = null;
       _inDishes = false;
       _done = false;
@@ -134,7 +145,9 @@ class _FeedPageState extends State<FeedPage> {
         final page = await recipes.community(query: q, cursor: _cursor);
         if (generation != _generation || !mounted) return;
         setState(() {
-          _community = [..._community, ...page.recipes];
+          if (_stale) _dishes = const [];
+          _community = [if (!_stale) ..._community, ...page.recipes];
+          _stale = false;
           _cursor = page.next;
           _inDishes = page.next == null;
         });
@@ -148,7 +161,12 @@ class _FeedPageState extends State<FeedPage> {
         });
       }
     } catch (_) {
-      if (generation == _generation && mounted) setState(() => _failed = true);
+      if (generation == _generation && mounted) {
+        setState(() {
+          _failed = true;
+          _stale = false; // the old cards stay; the failure note says why they did not change
+        });
+      }
       return;
     } finally {
       if (generation == _generation && mounted) setState(() => _busy = false);
@@ -265,6 +283,62 @@ class _FeedPageState extends State<FeedPage> {
     return tiles;
   }
 
+  bool get _filtered => _kind != FeedKind.all || _halal || _cuisine != null;
+
+  /// Nothing to show: why, and the one thing to do about it. A search that found nothing, filters that hide
+  /// everything, or (nothing at all yet) how the feed fills up.
+  Widget _empty(BuildContext context, AppLocalizations l) {
+    if (_query.isNotEmpty) {
+      return FeedEmpty(
+        key: const ValueKey('feed-empty-search'),
+        icon: Icons.search_off_rounded,
+        title: l.feedEmptySearchTitle(_query),
+        body: l.feedEmptySearchBody,
+        primary: (
+          Icons.close_rounded,
+          l.feedClearSearch,
+          () {
+            _search.clear();
+            _submit('');
+          },
+        ),
+      );
+    }
+    if (_filtered) {
+      return FeedEmpty(
+        key: const ValueKey('feed-empty-filters'),
+        icon: Icons.filter_alt_off_outlined,
+        title: l.feedEmptyFilterTitle,
+        body: l.feedEmptyFilterBody,
+        primary: (
+          Icons.filter_alt_off_outlined,
+          l.feedClearFilters,
+          () => setState(() {
+            _kind = FeedKind.all;
+            _halal = false;
+            _cuisine = null;
+          }),
+        ),
+      );
+    }
+    return FeedEmpty(
+      key: const ValueKey('feed-empty'),
+      drawing: ImageConstant.recipePlaceholder,
+      title: l.feedEmptyTitle,
+      body: l.feedEmptyBody,
+      primary: (
+        Icons.ios_share_rounded,
+        l.feedEmptyShare,
+        () => showAddSheet(context),
+      ),
+      secondary: (
+        Icons.map_outlined,
+        l.feedEmptyMap,
+        () => context.push('/map'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -373,7 +447,12 @@ class _FeedPageState extends State<FeedPage> {
     if (_done || !showRecipes) {
       cards.addAll(restaurants.skip(next).map(place));
     }
-    final loading = (_busy && showRecipes) || _located == null;
+    // Still coming: a recipe page out, or more pages to fetch while the grid is empty (they chain on their own),
+    // restaurants being asked for, or location not answered yet. Until then, no empty state.
+    final loading =
+        (showRecipes && (_busy || (cards.isEmpty && !_done && !_failed))) ||
+        (showRestaurants && _nearbyBusy) ||
+        _located == null;
 
     Widget note(String label, {VoidCallback? onTap, IconData? icon}) =>
         SliverToBoxAdapter(
@@ -522,7 +601,8 @@ class _FeedPageState extends State<FeedPage> {
                   onTap: _loadNearby,
                   icon: Icons.location_off_outlined,
                 ),
-              if (cards.isEmpty && !loading && !_failed) note(l.feedNothing),
+              if (cards.isEmpty && !loading && !_failed)
+                SliverToBoxAdapter(child: _empty(context, l)),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 // A fixed height for the card's width, so every row lines up whatever the text.
@@ -533,18 +613,32 @@ class _FeedPageState extends State<FeedPage> {
                     crossAxisSpacing: 12,
                     mainAxisExtent: cardHeight,
                   ),
-                  delegate: SliverChildListDelegate(cards),
+                  // First load: cards' shapes in their place; more pages: the spinner below.
+                  delegate: SliverChildListDelegate(
+                    cards.isEmpty && loading && !_failed
+                        ? [
+                            for (var i = 0; i < columns * 3; i++)
+                              FeedCardSkeleton(
+                                key: ValueKey('feed-skeleton-$i'),
+                                wide: (i ~/ columns + i).isEven,
+                              ),
+                          ]
+                        : cards,
+                  ),
                 ),
               ),
               SliverToBoxAdapter(
-                child: loading
-                    ? const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(
-                          child: CircularProgressIndicator.adaptive(),
-                        ),
-                      )
-                    : const SizedBox(height: 24),
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: navRoom(context) - 24),
+                  child: loading && cards.isNotEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(
+                            child: CircularProgressIndicator.adaptive(),
+                          ),
+                        )
+                      : const SizedBox(height: 24),
+                ),
               ),
             ],
           ),

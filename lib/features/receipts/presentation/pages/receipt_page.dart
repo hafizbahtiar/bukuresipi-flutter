@@ -51,6 +51,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
   String? _branchName;
   bool _saving = false;
   bool _split = false;
+  // Receipt | Split bill as pages: swiped, or driven by the pill above them.
+  final _pages = PageController();
   Future<Uint8List?>? _photo;
 
   @override
@@ -63,6 +65,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
   void dispose() {
     _timer?.cancel();
     _total.dispose();
+    _pages.dispose();
     super.dispose();
   }
 
@@ -323,12 +326,8 @@ class _ReceiptPageState extends State<ReceiptPage> {
                       key: const ValueKey('receipt-split-switch'),
                       expand: true,
                       value: _split,
-                      onChanged: (split) {
-                        if (split == _split) return;
-                        setState(() => _split = split);
-                        // Back to Receipt: the split may have changed the ticks.
-                        if (!split) _load();
-                      },
+                      onChanged: _setSplit,
+                      pages: _pages,
                       options: [
                         (
                           false,
@@ -347,22 +346,35 @@ class _ReceiptPageState extends State<ReceiptPage> {
                     ),
                   ),
                   Expanded(
-                    child: _split
-                        ? SplitBill(
-                            receipt: r,
-                            share: widget.share ?? _shareText,
-                            onStop: () {
-                              setState(() => _split = false);
-                              _load();
-                            },
-                          )
-                        : content,
+                    child: PageView(
+                      controller: _pages,
+                      onPageChanged: (i) => _setSplit(i == 1),
+                      children: [
+                        content,
+                        SplitBill(
+                          receipt: r,
+                          share: widget.share ?? _shareText,
+                          onStop: () => _pages.animateToPage(
+                            0,
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               )
             : content,
       ),
     );
+  }
+
+  void _setSplit(bool split) {
+    if (split == _split) return;
+    setState(() => _split = split);
+    // Back to Receipt: the split may have changed the ticks.
+    if (!split) _load();
   }
 
   bool _canSave(Receipt r) {

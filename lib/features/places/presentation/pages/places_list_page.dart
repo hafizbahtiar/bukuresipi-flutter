@@ -321,7 +321,7 @@ class _PlacesListPageState extends State<PlacesListPage> {
                 Future.wait([places.load(), recipes.load(), shared.load()]),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: EdgeInsets.only(bottom: navRoom(context)),
               // The search box once there is something to search.
               children: [
                 ...inbox,

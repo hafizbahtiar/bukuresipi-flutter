@@ -25,6 +25,23 @@ void main() {
     expect(c.loading, isFalse);
   });
 
+  test(
+    'Only me flips at once, and flips back when the server says no',
+    () async {
+      final repo = FakePlaces()..places = [place(id: 'a')];
+      final c = PlacesController(repo);
+      await c.load();
+      final saving = c.setPrivate('a', true);
+      expect(c.places.single.private, isTrue); // before the server answered
+      await saving;
+      expect(repo.privates, {'a': true});
+
+      repo.error = StateError('offline');
+      await expectLater(c.setPrivate('a', false), throwsStateError);
+      expect(c.places.single.private, isTrue); // put back
+    },
+  );
+
   test('remove takes the place off the list after the API agrees', () async {
     final repo = FakePlaces()..places = [place(id: 'a'), place(id: 'b')];
     final c = PlacesController(repo);

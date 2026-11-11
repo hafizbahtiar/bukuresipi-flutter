@@ -6,6 +6,7 @@ import '../../../../core/log.dart';
 import '../../../../core/settings/locale_controller.dart';
 import '../../../../core/settings/theme_controller.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/theme_reveal.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/pill_switch.dart';
@@ -25,6 +26,31 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  final _themePill = GlobalKey();
+
+  /// The new theme spreads from the theme pill as a circle; a choice that looks the same (System while the phone
+  /// already matches) just switches.
+  void _setTheme(ThemeMode mode) {
+    final theme = context.read<ThemeController>();
+    final then = switch (mode) {
+      ThemeMode.light => Brightness.light,
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.system => MediaQuery.platformBrightnessOf(context),
+    };
+    final reveal = ThemeReveal.maybeOf(context);
+    final pill = _themePill.currentContext?.findRenderObject() as RenderBox?;
+    if (then == Theme.of(context).brightness ||
+        reveal == null ||
+        pill == null) {
+      theme.setMode(mode);
+      return;
+    }
+    reveal.change(
+      pill.localToGlobal(pill.size.center(Offset.zero)),
+      () => theme.setMode(mode),
+    );
+  }
+
   // Called after awaits: the page may be gone by then.
   void _snack(String text) {
     if (!mounted) return;
@@ -204,8 +230,9 @@ class _SettingsPageState extends State<SettingsPage> {
             NotebookRow(
               mark: mark(Icons.contrast),
               trailing: PillSwitch(
+                key: _themePill,
                 value: theme.mode,
-                onChanged: theme.setMode,
+                onChanged: _setTheme,
                 options: [
                   (
                     ThemeMode.light,

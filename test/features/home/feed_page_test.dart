@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/features/home/presentation/feed_page.dart';
 import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
@@ -18,6 +20,7 @@ import '../recipes/recipes_fixtures.dart';
 void main() {
   final l = lookupAppLocalizations(const Locale('en'));
   late FakePlaces places;
+  late FakeRecipes recipes;
 
   Future<void> pump(
     WidgetTester t, {
@@ -25,6 +28,10 @@ void main() {
     int community = 1,
     RatingSummary? rating,
     UpdateGate? update,
+    bool empty = false, // no restaurants nearby, no recipes
+    bool locating = false, // the location answer never comes: still loading
+    bool settle = true,
+    Completer<void>? dishesGate,
   }) async {
     t.view.physicalSize = const Size(
       2400,
@@ -41,7 +48,7 @@ void main() {
           rating: rating,
         ),
       ];
-    final recipes = FakeRecipes()
+    recipes = FakeRecipes()
       ..communityList = [
         recipe(id: 'c-1', name: 'Kek Batik Viral'),
         for (var i = 2; i <= community; i++)
@@ -55,12 +62,21 @@ void main() {
           ingredientCount: 9,
         ),
       ];
+    recipes.dishesGate = dishesGate;
+    if (empty) {
+      places.nearbyResults = [];
+      recipes
+        ..communityList = []
+        ..dishList = const [];
+    }
     final router = GoRouter(
       routes: [
         GoRoute(
           path: '/',
           builder: (_, _) => FeedPage(
-            locate: () async => located ? (lat: 3.15, lng: 101.7) : null,
+            locate: () => locating
+                ? Completer<({double lat, double lng})?>().future
+                : Future.value(located ? (lat: 3.15, lng: 101.7) : null),
           ),
         ),
         GoRoute(path: '/map', builder: (_, _) => const Text('the map')),
@@ -95,7 +111,7 @@ void main() {
         ),
       ),
     );
-    await t.pumpAndSettle();
+    if (settle) await t.pumpAndSettle();
   }
 
   List<String> cardKeys(WidgetTester t) => [
@@ -253,4 +269,100 @@ void main() {
     await none.check();
     expect(none.available, isFalse);
   });
+
+  testWidgets(
+    'first load: skeleton cards fill the grid, no spinner and no empty state',
+    (t) async {
+      // Recipes do not wait for location: with none yet and location still being asked, the grid is all skeleton.
+      await pump(t, empty: true, locating: true, settle: false);
+      await t.pump(const Duration(milliseconds: 100));
+      expect(find.byType(FeedCardSkeleton), findsWidgets);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byKey(const ValueKey('feed-empty')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'nothing at all: the welcome empty state, Share a post and Open the map',
+    (t) async {
+      await pump(t, empty: true);
+      expect(find.byType(FeedCardSkeleton), findsNothing);
+      expect(find.byKey(const ValueKey('feed-empty')), findsOneWidget);
+      expect(find.text(l.feedEmptyTitle), findsOneWidget);
+      expect(find.text(l.feedEmptyShare), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('feed-empty-secondary')));
+      await t.pumpAndSettle();
+      expect(find.text('the map'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'filters that hide everything say so, and Clear filters brings back the plain feed',
+    (t) async {
+      await pump(t, empty: true);
+      await t.tap(find.byKey(const ValueKey('feed-kind-restaurants')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('feed-empty-filters')), findsOneWidget);
+      expect(find.text(l.feedEmptyFilterTitle), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('feed-empty-primary')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('feed-empty-filters')), findsNothing);
+      expect(find.byKey(const ValueKey('feed-empty')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a search that finds nothing names the word, and Clear search empties it',
+    (t) async {
+      await pump(t, empty: true);
+      await t.tap(find.byKey(const ValueKey('feed-search')));
+      await t.pumpAndSettle();
+      await t.enterText(find.byType(TextField).last, 'sushi');
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('feed-search-for')));
+      await t.pumpAndSettle();
+      expect(find.text(l.feedEmptySearchTitle('sushi')), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('feed-empty-primary')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('feed-empty-search')), findsNothing);
+      expect(find.byKey(const ValueKey('feed-empty')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'pull to refresh keeps the cards on screen until the new ones arrive',
+    (t) async {
+      await pump(t);
+      final before = cardKeys(t);
+      expect(before, isNotEmpty);
+      recipes.communityGate = Completer();
+      await t.fling(find.byType(CustomScrollView), const Offset(0, 400), 1500);
+      for (var i = 0; i < 10; i++) {
+        await t.pump(const Duration(milliseconds: 100));
+        expect(cardKeys(t), before); // never blank, never skeleton
+        expect(find.byType(FeedCardSkeleton), findsNothing);
+        expect(find.byKey(const ValueKey('feed-empty')), findsNothing);
+      }
+      recipes.communityGate!.complete();
+      await t.pumpAndSettle();
+      expect(cardKeys(t), before);
+    },
+  );
+
+  testWidgets(
+    'no empty state between pages: no community recipes, dishes still coming',
+    (t) async {
+      final gate = Completer<void>();
+      await pump(t, empty: true, dishesGate: gate, settle: false);
+      for (var i = 0; i < 10; i++) {
+        await t.pump(const Duration(milliseconds: 50));
+        expect(find.byKey(const ValueKey('feed-empty')), findsNothing);
+      }
+      expect(find.byType(FeedCardSkeleton), findsWidgets);
+      gate.complete();
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('feed-empty')), findsOneWidget);
+    },
+  );
 }

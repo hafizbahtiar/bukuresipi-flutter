@@ -1109,20 +1109,28 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                     keyboard +
                     (showNearby ? NearbyCarousel.heightOf(context) + 32 : 16),
                 child: SafeArea(
-                  child: _Slip(
-                    onTap: _showUnpinned,
-                    child: Row(
-                      children: [
-                        const PinMark(pinned: false),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            l.unpinnedCount(unpinned),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
+                  // As wide as a nearby card, centred over it.
+                  child: Center(
+                    child: SizedBox(
+                      width: NearbyCarousel.cardWidth,
+                      child: _Slip(
+                        onTap: _showUnpinned,
+                        child: Row(
+                          children: [
+                            const PinMark(pinned: false),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                l.unpinnedCount(unpinned),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.expand_less, color: nb.inkSoft),
+                          ],
                         ),
-                        Icon(Icons.expand_less, color: nb.inkSoft),
-                      ],
+                      ),
                     ),
                   ),
                 ),

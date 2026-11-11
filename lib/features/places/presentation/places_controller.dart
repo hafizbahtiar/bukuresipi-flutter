@@ -81,11 +81,21 @@ class PlacesController extends ChangeNotifier {
 
   /// Throws ApiException; the screen shows it.
   Future<void> setPrivate(String id, bool private) async {
-    await _repo.setPrivate(id, private);
-    _places = [
-      for (final p in _places) p.id == id ? p.copyWith(private: private) : p,
-    ];
-    notifyListeners();
+    void show(bool v) {
+      _places = [
+        for (final p in _places) p.id == id ? p.copyWith(private: v) : p,
+      ];
+      notifyListeners();
+    }
+
+    // The switch flips at once (no snap back while the server answers); a failure puts it back, then throws.
+    show(private);
+    try {
+      await _repo.setPrivate(id, private);
+    } catch (_) {
+      show(!private);
+      rethrow;
+    }
   }
 
   /// Throws ApiException. The branch's pin is the server's call (earliest hand pin), so reload.

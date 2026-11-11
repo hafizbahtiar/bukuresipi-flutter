@@ -46,7 +46,12 @@ class PushController extends ChangeNotifier {
   bool _allowed = false;
 
   /// The Account switch: on when the system allows notifications and the user did not turn them off here.
-  bool get enabled => _allowed && !(_prefs.getBool(_offKey) ?? false);
+  bool get enabled =>
+      _turning ?? (_allowed && !(_prefs.getBool(_offKey) ?? false));
+
+  /// While [setEnabled] runs: what the user just chose, so the switch shows it at once (the permission dialog and
+  /// the server call come after). null = settled.
+  bool? _turning;
 
   Future<void> start() async {
     _allowed = await _messaging.allowed();
@@ -96,18 +101,27 @@ class PushController extends ChangeNotifier {
 
   /// The Account switch. On asks the system again (it may say no: then it stays off).
   Future<void> setEnabled(bool on) async {
-    await _prefs.setBool(_offKey, !on);
-    if (on) {
-      _allowed = await _messaging.requestPermission();
-      await _register();
-    } else {
-      try {
-        await apiCall(() => _dio.delete<void>('/push/device'));
-      } catch (e) {
-        log('push: unregister failed, ${ApiException.from(e).code}');
-      }
-    }
+    _turning = on;
     notifyListeners();
+    try {
+      await _prefs.setBool(_offKey, !on);
+      if (on) {
+        _allowed = await _messaging.requestPermission();
+        _turning =
+            null; // _register reads the real state: refused permission = off
+        await _register();
+      } else {
+        try {
+          await apiCall(() => _dio.delete<void>('/push/device'));
+        } catch (e) {
+          log('push: unregister failed, ${ApiException.from(e).code}');
+        }
+      }
+    } finally {
+      // Settled: the switch shows the real state (off again when the permission was refused).
+      _turning = null;
+      notifyListeners();
+    }
   }
 
   /// Saves this phone for the signed-in session. Failures only log: the app works without pushes.

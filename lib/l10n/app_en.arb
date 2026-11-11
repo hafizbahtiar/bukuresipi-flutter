@@ -1689,9 +1689,33 @@
   "@avatarChange": {},
   "avatarRemove": "Remove profile picture",
   "@avatarRemove": {},
-  "feedNothing": "Nothing matches. Try another word.",
+  "feedEmptyTitle": "Nothing here yet",
+  "@feedEmptyTitle": {},
+  "feedEmptyBody": "Share a TikTok, Instagram, Facebook or YouTube post and Bukuresipi turns it into a recipe or a place to eat.",
+  "@feedEmptyBody": {},
+  "feedEmptyShare": "Share a post",
+  "@feedEmptyShare": {},
+  "feedEmptyMap": "Open the map",
+  "@feedEmptyMap": {},
+  "feedEmptySearchTitle": "No “{query}” yet",
+  "@feedEmptySearchTitle": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "feedEmptySearchBody": "Try another word, or check the spelling.",
+  "@feedEmptySearchBody": {},
+  "feedClearSearch": "Clear search",
+  "@feedClearSearch": {},
+  "feedEmptyFilterTitle": "Nothing with these filters",
+  "@feedEmptyFilterTitle": {},
+  "feedEmptyFilterBody": "Try fewer filters to see more.",
+  "@feedEmptyFilterBody": {},
+  "feedClearFilters": "Clear filters",
+  "@feedClearFilters": {},
   "feedSearchFor": "Search \"{query}\"",
-  "@feedNothing": {},
   "@feedSearchFor": {
     "placeholders": {
       "query": {

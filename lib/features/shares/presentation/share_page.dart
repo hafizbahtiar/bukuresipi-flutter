@@ -35,12 +35,10 @@ class SharePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final intake = context.watch<ShareIntake>();
-    void close() {
+    // Home, not the tab left open before the share; Done goes to the Book, where the place or recipe lands.
+    void close({bool book = false}) {
       intake.dismiss();
-      context.go(
-        '/',
-        extra: HomePage.homeTab,
-      ); // the Home tab, not the one left open before the share
+      context.go('/', extra: book ? HomePage.bookTab : HomePage.homeTab);
     }
 
     Future<void> leaveApp() async {
@@ -121,7 +119,10 @@ class SharePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                FilledButton(onPressed: close, child: Text(l.doneButton)),
+                FilledButton(
+                  onPressed: () => close(book: true),
+                  child: Text(l.doneButton),
+                ),
               ],
             ),
           ),

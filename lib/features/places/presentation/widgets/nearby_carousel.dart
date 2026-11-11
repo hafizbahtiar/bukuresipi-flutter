@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/nearby_branch.dart';
+import '../../domain/rating.dart';
 
 /// Nearby branches as a horizontal, snapping strip of compact notebook cards along the bottom of the map.
 class NearbyCarousel extends StatefulWidget {
@@ -20,6 +22,9 @@ class NearbyCarousel extends StatefulWidget {
   static double heightOf(BuildContext context) =>
       MediaQuery.textScalerOf(context).scale(100);
 
+  /// Wide enough for a long name on one line; a 360 dp phone still shows the next card peeking in.
+  static const cardWidth = 300.0;
+
   final List<NearbyBranch> places;
   final ValueChanged<NearbyBranch> onTap;
 
@@ -34,8 +39,7 @@ class NearbyCarousel extends StatefulWidget {
 }
 
 class _NearbyCarouselState extends State<NearbyCarousel> {
-  // Wide enough for a long name on one line; a 360 dp phone still shows the next card peeking in.
-  static const _cardWidth = 300.0;
+  static const _cardWidth = NearbyCarousel.cardWidth;
   static const _gap = 8.0;
   static const _extent = _cardWidth + _gap;
 
@@ -177,7 +181,7 @@ class _NearbyCarouselState extends State<NearbyCarousel> {
   }
 }
 
-/// One nearby restaurant: name, distance, address, cuisine and the post's halal quote. Map carousel and Home feed.
+/// One nearby restaurant: cover, name, distance, branch or address, stars, cuisine, a quoted halal claim. Map carousel.
 class NearbyCard extends StatelessWidget {
   const NearbyCard({
     super.key,
@@ -197,15 +201,23 @@ class NearbyCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final label = place.label?.trim();
     final address = place.address?.trim();
+    // One line under the name: the branch when it says more than the name, else the address.
     final under = label != null && label.isNotEmpty && label != place.name
         ? label
         : (address != null && address.isNotEmpty ? address : null);
-    final addressLine =
-        address != null && address.isNotEmpty && address != under
-        ? address
-        : null;
-    final quote = place.halalQuote?.trim();
     final cuisine = place.cuisine?.trim();
+    // A quoted claim from the post, never "certified" (as the Home feed).
+    final saysHalal =
+        place.halalClaim == 'says_halal' &&
+        (place.halalQuote?.trim().isNotEmpty ?? false);
+    final icon = Icon(Icons.storefront, size: 22, color: nb.pandanDeep);
+    Widget tag(String t, {IconData? icon, Color? color}) => _InfoTag(
+      text: t,
+      icon: icon,
+      color: color ?? nb.inkSoft,
+      background: nb.mist,
+      border: nb.line,
+    );
     return Material(
       color: nb.paper,
       elevation: selected ? 4 : 2,
@@ -220,26 +232,31 @@ class NearbyCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: nb.mist,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: nb.line),
-                ),
-                child: Icon(Icons.storefront, size: 18, color: nb.pandanDeep),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Fixed width: the text needs the room; the height follows the card.
+            SizedBox(
+              width: 72,
+              child: ColoredBox(
+                color: nb.mist,
+                child: switch (place.cover) {
+                  final cover? => ShareFill(
+                    key: ValueKey('nearby-cover-$cover'),
+                    id: cover,
+                    restaurantId: place.restaurantId,
+                    fallback: Center(child: icon),
+                  ),
+                  null => Center(child: icon),
+                },
               ),
-              const SizedBox(width: 9),
-              Expanded(
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
@@ -262,63 +279,66 @@ class NearbyCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (under != null) ...[
-                      const SizedBox(height: 2),
+                    if (under != null)
                       Text(
                         under,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: text.bodySmall?.copyWith(color: nb.inkSoft),
                       ),
-                    ],
-                    if (addressLine != null)
-                      Text(
-                        addressLine,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.bodySmall?.copyWith(
-                          color: nb.inkSoft.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    const SizedBox(height: 5),
                     Row(
                       children: [
-                        if (cuisine != null && cuisine.isNotEmpty) ...[
-                          _InfoTag(
-                            text: cuisine,
-                            color: nb.inkSoft,
-                            background: nb.mist,
-                            border: nb.line,
+                        if (place.rating
+                            case RatingSummary(:final average?, :final count)
+                            when count > 0) ...[
+                          Icon(
+                            Icons.star_rounded,
+                            size: 15,
+                            color: nb.pandanDeep,
                           ),
-                          if (quote != null && quote.isNotEmpty)
-                            const SizedBox(width: 6),
-                        ],
-                        if (quote != null && quote.isNotEmpty)
-                          Expanded(
+                          const SizedBox(width: 2),
+                          Flexible(
                             child: Text(
-                              '“$quote”',
+                              '${average.toStringAsFixed(1)} ($count)',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: text.bodySmall?.copyWith(
-                                color: nb.inkSoft,
-                                fontStyle: FontStyle.italic,
+                              style: text.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          )
-                        else
-                          const Spacer(),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        // A long cuisine shrinks to an ellipsis instead of pushing the row off the card.
+                        Expanded(
+                          child: Row(
+                            children: [
+                              if (cuisine != null && cuisine.isNotEmpty) ...[
+                                Flexible(child: tag(cuisine)),
+                                const SizedBox(width: 6),
+                              ],
+                              if (saysHalal)
+                                Flexible(
+                                  child: tag(
+                                    l.feedSaysHalal,
+                                    icon: Icons.format_quote_rounded,
+                                    color: nb.pandanDeep,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                         if (place.saved)
-                          _InfoTag(
-                            text: l.nearbySavedTag,
-                            icon: Icons.bookmark,
+                          Icon(
+                            Icons.bookmark,
+                            size: 18,
                             color: nb.pandanDeep,
-                            background: nb.mist,
-                            border: nb.line,
+                            semanticLabel: l.nearbySavedTag,
                           )
                         else
                           Icon(
                             Icons.chevron_right,
-                            size: 16,
+                            size: 18,
                             color: nb.inkSoft,
                           ),
                       ],
@@ -326,8 +346,8 @@ class NearbyCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -390,9 +410,14 @@ class _InfoTag extends StatelessWidget {
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 2),
         ],
-        Text(
-          text,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: color),
+          ),
         ),
       ],
     ),

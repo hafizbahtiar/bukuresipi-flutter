@@ -322,6 +322,11 @@ class DockAction {
   final bool busy;
 }
 
+/// Room under a Home tab's list: Home's floating nav runs over the page (the Scaffold reports it as the bottom
+/// padding), plus a little air, so the last row scrolls clear of it.
+double navRoom(BuildContext context) =>
+    MediaQuery.paddingOf(context).bottom + 24;
+
 /// A page's actions on a slip of paper floating at the bottom, always in reach. Use as the Scaffold's
 /// bottomNavigationBar with `extendBody: true`, and pad the page's list by [ActionDock.clearance].
 class ActionDock extends StatelessWidget {

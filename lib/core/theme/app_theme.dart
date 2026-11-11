@@ -123,9 +123,44 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w700,
         ),
       ),
+      // Off reads as the notebook's paper and pencil, not Material's grey: a mist track with a pencil-line edge
+      // and a soft ink thumb. On: pandan with a paper thumb. Disabled: the same, faded.
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((s) {
+          final on = s.contains(WidgetState.selected);
+          final c = on ? nb.paper : nb.inkSoft.withValues(alpha: 0.75);
+          return s.contains(WidgetState.disabled)
+              ? c.withValues(alpha: 0.4)
+              : c;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((s) {
+          final on = s.contains(WidgetState.selected);
+          final c = on ? nb.pandan : nb.mist;
+          return s.contains(WidgetState.disabled)
+              ? c.withValues(alpha: 0.4)
+              : c;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((s) {
+          if (s.contains(WidgetState.selected)) return Colors.transparent;
+          final c = nb.inkSoft.withValues(alpha: 0.35);
+          return s.contains(WidgetState.disabled)
+              ? c.withValues(alpha: 0.15)
+              : c;
+        }),
+        trackOutlineWidth: const WidgetStatePropertyAll(1.5),
+        overlayColor: WidgetStateProperty.resolveWith(
+          (s) =>
+              s.contains(WidgetState.pressed) || s.contains(WidgetState.focused)
+              ? nb.pandan.withValues(alpha: 0.12)
+              : null,
+        ),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: nb.paper,
         surfaceTintColor: Colors.transparent,
+        // Every sheet shows it can be pulled down, including a plain showModalBottomSheet.
+        showDragHandle: true,
+        dragHandleColor: nb.inkSoft.withValues(alpha: 0.4),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: nb.paper,
