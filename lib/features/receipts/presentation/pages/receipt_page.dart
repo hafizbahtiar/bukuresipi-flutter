@@ -1106,11 +1106,13 @@ class _Items extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (onEaten case final eat?)
-                      _Eaten(
-                        key: ValueKey('eaten-$n'),
+                    if (onEaten != null)
+                      _Tick(
+                        key: (i.quantity ?? 1) > 1
+                            ? null
+                            : ValueKey('eaten-$n'),
                         item: i,
-                        onChanged: (v) => eat(n, v),
+                        onChanged: (v) => onEaten!(n, v),
                       ),
                     SizedBox(
                       width: 36,
@@ -1134,9 +1136,17 @@ class _Items extends StatelessWidget {
                                 color: nb.inkSoft,
                               ),
                             ),
+                          // under the name, so a long name keeps its width on a narrow phone
+                          if (onEaten != null && (i.quantity ?? 1) > 1)
+                            _Eaten(
+                              key: ValueKey('eaten-$n'),
+                              item: i,
+                              onChanged: (v) => onEaten!(n, v),
+                            ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     if (i.amountSen != null)
                       Text(
                         rm(i.amountSen!),
@@ -1201,7 +1211,31 @@ class _Items extends StatelessWidget {
   }
 }
 
-/// A tick for one line: a checkbox (eaten 0 or all of it), or - for 2 or more - how many, with − and +.
+/// The same-width checkbox in front of every line: all of it eaten, none, or (dash) some of it.
+class _Tick extends StatelessWidget {
+  const _Tick({super.key, required this.item, required this.onChanged});
+
+  final ReceiptItem item;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cap = item.quantity ?? 1; // the server's cap
+    final all = item.eaten >= cap;
+    return SizedBox(
+      width: 32,
+      height: 24,
+      child: Checkbox(
+        tristate: true,
+        value: all ? true : (item.eaten > 0 ? null : false),
+        visualDensity: VisualDensity.compact,
+        onChanged: (_) => onChanged(all ? 0 : cap),
+      ),
+    );
+  }
+}
+
+/// How many of a line of 2 or more were eaten: − n/cap +, under the line's name.
 class _Eaten extends StatelessWidget {
   const _Eaten({super.key, required this.item, required this.onChanged});
 
@@ -1210,19 +1244,9 @@ class _Eaten extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cap = item.quantity ?? 1; // the server's cap
-    if (cap <= 1) {
-      return SizedBox(
-        width: 32,
-        height: 24,
-        child: Checkbox(
-          value: item.eaten > 0,
-          visualDensity: VisualDensity.compact,
-          onChanged: (v) => onChanged(v == true ? cap : 0),
-        ),
-      );
-    }
+    final cap = item.quantity!;
     final n = item.eaten.floor();
+    final text = Theme.of(context).textTheme;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1233,7 +1257,12 @@ class _Eaten extends StatelessWidget {
           onPressed: n > 0 ? () => onChanged((n - 1).toDouble()) : null,
           icon: const Icon(Icons.remove),
         ),
-        Text('$n', style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          '$n / ${cap.floor()}',
+          style: text.bodyMedium?.copyWith(
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
         IconButton(
           visualDensity: VisualDensity.compact,
           iconSize: 18,

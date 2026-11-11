@@ -293,6 +293,19 @@ void main() {
     expect(repo.eaten.single.eaten, 2);
   });
 
+  testWidgets('a part-eaten line of 3: its checkbox ticks all 3', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(status: 'saved', items: [line(3, eaten: 1)]),
+      ];
+    await pump(t, repo);
+    await t.ensureVisible(find.byKey(const ValueKey('eaten-0')));
+    expect(t.widget<Checkbox>(find.byType(Checkbox)).value, isNull);
+    await t.tap(find.byType(Checkbox));
+    await t.pump();
+    expect(repo.eaten.single.eaten, 3);
+  });
+
   testWidgets('counting calories polls until the server is done', (t) async {
     final repo = FakeReceipts()
       ..answers = [
