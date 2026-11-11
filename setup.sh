@@ -18,23 +18,24 @@ fi
 step() { echo; echo "${CYAN}${B}==> $*${R}"; }
 fail() { echo "${RED}${B}✗ $*${R}" >&2; exit 1; }
 
-ask() { # ask <prompt> <option>... -> echoes the chosen option
-  local prompt=$1 answer o
-  shift
+ask() { # ask <prompt> <default> <option>... -> echoes the chosen option; Enter = the default
+  local prompt=$1 def=$2 answer o
+  shift 2
   local IFS=/
   while true; do
-    read -rp "${B}$prompt${R} ${DIM}[$*]${R}: " answer
+    read -rp "${B}$prompt${R} ${DIM}[$*] ($def)${R}: " answer
+    answer=${answer:-$def}
     for o in "$@"; do [ "$answer" = "$o" ] && { echo "$answer"; return; }; done
     echo "${YELLOW}Type one of: $*${R}" >&2
   done
 }
 
-type=$(ask "Build" apk aab none)
+type=$(ask "Build" aab apk aab none)
 echo
 if [ "$type" = none ]; then
   echo "${B}Will run:${R} flutter clean, flutter pub get, pod install ${DIM}(no build)${R}"
 else
-  env=$(ask "Environment" dev prod)
+  env=$(ask "Environment" prod dev prod)
   version=$(sed -n 's/^version: *//p' pubspec.yaml) # e.g. 1.0.0+1
   name=${version%%+*}
   code=${version##*+}
@@ -47,7 +48,7 @@ else
   echo "${B}Will run:${R} flutter clean, flutter pub get, pod install, then build ${B}$type${R} (${B}$env${R})"
   echo "${B}Output:${R}   ${GREEN}$out${R}"
 fi
-[ "$(ask "Proceed?" y n)" = y ] || { echo "${YELLOW}Stopped.${R}"; exit 0; }
+[ "$(ask "Proceed?" y y n)" = y ] || { echo "${YELLOW}Stopped.${R}"; exit 0; }
 
 step "flutter clean"
 flutter clean
