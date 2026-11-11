@@ -219,7 +219,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   bool _coverRemoved = false;
   String? get _shownCover => _coverRemoved ? null : widget.recipe?.cover;
 
-  /// A catalogue dish (the app owner edits it): no cover; the AI draft instead.
+  /// A catalogue dish (the app owner edits it): the AI draft too.
   bool get _catalogue =>
       widget.recipe?.sourceType == RecipeSourceType.catalogue;
   bool _drafting = false;
@@ -505,7 +505,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       label: l.recipeAiDraftPhotos,
       child: GestureDetector(
         key: ValueKey('draft-photo-$url'),
-        onTap: () => setState(() => _photo = picked ? null : url),
+        // One cover: a draft photo replaces a photo of your own picked on this visit.
+        onTap: () => setState(() {
+          _photo = picked ? null : url;
+          if (!picked) _coverPath = null;
+        }),
         child: AspectRatio(
           aspectRatio: 4 / 3,
           child: Container(
@@ -622,11 +626,17 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       context,
       ratios: [('4:3', 4 / 3), ('1:1', 1), (l.photoFree, null)],
     );
-    if (path != null && mounted) setState(() => _coverPath = path);
+    // One cover: a photo of your own replaces a picked draft photo.
+    if (path != null && mounted) {
+      setState(() {
+        _coverPath = path;
+        _photo = null;
+      });
+    }
   }
 
   Widget _coverField(AppLocalizations l) {
-    final has = _coverPath != null || _shownCover != null;
+    final has = _coverPath != null || _photo != null || _shownCover != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -642,6 +652,23 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                 width: double.infinity,
                 fit: BoxFit.cover,
                 cacheWidth: 1200,
+              ),
+            ),
+          )
+        else if (_photo case final url?)
+          // A draft photo picked: shown here as the cover it will be.
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                url,
+                key: const ValueKey('cover-draft-photo'),
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                cacheWidth: 1200,
+                errorBuilder: (_, _, _) => const SizedBox(height: 200),
               ),
             ),
           )
@@ -663,6 +690,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                     ? null
                     : () => setState(() {
                         _coverPath = null;
+                        _photo = null;
                         _coverRemoved = widget.recipe?.cover != null;
                       }),
                 icon: const Icon(Icons.hide_image_outlined),
@@ -916,7 +944,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 12, 32),
             children: [
-              if (!_catalogue) _coverField(l),
+              _coverField(l),
               if (_draft case final d?) _draftNote(l, d),
               TextField(
                 controller: _name,

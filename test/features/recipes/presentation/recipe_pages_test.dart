@@ -574,7 +574,8 @@ void main() {
         if (!owner) return;
         await t.tap(find.text('Edit'));
         await t.pumpAndSettle();
-        expect(find.byKey(const ValueKey('recipe-add-cover')), findsNothing);
+        // Catalogue dishes get a cover too: upload one, or pick a draft photo below.
+        expect(find.byKey(const ValueKey('cover-pick')), findsOneWidget);
         await t.tap(find.byKey(const ValueKey('recipe-ai-draft')));
         await t.pumpAndSettle();
         expect(ownerRepo.drafted, ['r-1']);
@@ -590,6 +591,7 @@ void main() {
           ),
         );
         await t.pump();
+        expect(find.byKey(const ValueKey('cover-draft-photo')), findsOneWidget);
         await t.tap(find.text('Save'));
         await t.pumpAndSettle();
         final (id, name, ingredients, steps) = fake.edited.single;
