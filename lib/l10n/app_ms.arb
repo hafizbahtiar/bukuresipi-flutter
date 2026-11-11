@@ -809,6 +809,17 @@
       }
     }
   },
+  "ownerDeleting": "Memadam {done} daripada {total}…",
+  "@ownerDeleting": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "ownerDeletedMany": "{count} akaun dipadam",
   "@ownerDeletedMany": {
     "placeholders": {

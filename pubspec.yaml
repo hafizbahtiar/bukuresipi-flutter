@@ -1,7 +1,7 @@
 name: bukuresipi_flutter
 description: "Bukuresipi: recipes and places to eat from social media posts."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-version: 1.0.20+22
+version: 1.0.21+23
 
 environment:
   sdk: ^3.13.7
