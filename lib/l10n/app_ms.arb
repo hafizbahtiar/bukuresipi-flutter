@@ -895,5 +895,10 @@
   "splitStop": "Berhenti kongsi bil",
   "splitStopBody": "Kongsi bil dibuang. Tanda kalori kekal.",
   "splitCaloriesNote": "Kalori ikut apa yang diberi kepada Saya.",
-  "splitNoItems": "Resit ini tiada baris item untuk dikongsi."
+  "splitNoItems": "Resit ini tiada baris item untuk dikongsi.",
+  "recipeAiDraft": "Draf AI",
+  "recipeAiDraftNote": "Didraf daripada {count} resepi web. Semak, kemudian Simpan.",
+  "recipeAiDraftNone": "Tiada resepi web ditemui untuk hidangan ini.",
+  "recipeAiDraftOff": "Carian atau AI dimatikan atau sudah had. Cuba lagi nanti.",
+  "recipeAiDraftPhotos": "Ketik foto untuk dijadikan foto muka"
 }

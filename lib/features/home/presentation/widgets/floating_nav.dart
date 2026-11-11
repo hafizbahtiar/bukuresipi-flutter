@@ -1,10 +1,9 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/glass_bar.dart';
 
 /// One tab of [FloatingNav]: its icons and name (the tooltip and screen-reader label; no text shows on the bar).
 class NavItem {
@@ -41,7 +40,7 @@ class FloatingNav extends StatefulWidget {
   final String addLabel;
   final VoidCallback onAdd;
 
-  static const height = 56.0;
+  static const height = GlassBar.height;
 
   @override
   State<FloatingNav> createState() => _FloatingNavState();
@@ -88,7 +87,6 @@ class _FloatingNavState extends State<FloatingNav> {
     final nb = Notebook.of(context);
     final still = MediaQuery.disableAnimationsOf(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    const radius = BorderRadius.all(Radius.circular(28));
     // Under the finger the nearest tab lights up; at rest, the selected one.
     final lit = switch (_drag) {
       final at? => _settle(at, 0),
@@ -97,120 +95,81 @@ class _FloatingNavState extends State<FloatingNav> {
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          boxShadow: [
-            BoxShadow(
-              color: nb.ink.withValues(alpha: 0.14),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: Container(
-              height: FloatingNav.height,
-              padding: const EdgeInsets.all(2),
-              // Glass: a thin tint over the blurred page, brighter at the top like light on a pane, and a
-              // light rim instead of a drawn border.
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    nb.paper.withValues(alpha: dark ? 0.62 : 0.58),
-                    nb.paper.withValues(alpha: dark ? 0.46 : 0.38),
-                  ],
-                ),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: dark ? 0.10 : 0.65),
+      child: GlassBar(
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final w = box.maxWidth / _slots;
+            final chipAt = _drag ?? _slotOf(widget.selected).toDouble();
+            return GestureDetector(
+              // From the touch, not from where the drag was recognised: the chip stays under the finger.
+              dragStartBehavior: DragStartBehavior.down,
+              onHorizontalDragStart: (_) =>
+                  setState(() => _drag = _slotOf(widget.selected).toDouble()),
+              onHorizontalDragUpdate: (d) => setState(
+                () => _drag = ((_drag ?? 0) + d.delta.dx / w).clamp(
+                  0,
+                  _slots - 1,
                 ),
               ),
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final w = box.maxWidth / _slots;
-                  final chipAt = _drag ?? _slotOf(widget.selected).toDouble();
-                  return GestureDetector(
-                    // From the touch, not from where the drag was recognised: the chip stays under the finger.
-                    dragStartBehavior: DragStartBehavior.down,
-                    onHorizontalDragStart: (_) => setState(
-                      () => _drag = _slotOf(widget.selected).toDouble(),
-                    ),
-                    onHorizontalDragUpdate: (d) => setState(
-                      () => _drag = ((_drag ?? 0) + d.delta.dx / w).clamp(
-                        0,
-                        _slots - 1,
-                      ),
-                    ),
-                    onHorizontalDragEnd: _dragEnd,
-                    onHorizontalDragCancel: () => setState(() => _drag = null),
-                    child: Stack(
-                      children: [
-                        // The chip: follows the finger while dragged, slides when a tab is picked.
-                        AnimatedPositioned(
-                          key: const ValueKey('nav-chip'),
-                          duration: _drag != null || still
-                              ? Duration.zero
-                              : _motion,
-                          curve: _curve,
-                          left: chipAt * w,
-                          top: 0,
-                          bottom: 0,
-                          width: w,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: dark
-                                  ? Color.alphaBlend(
-                                      nb.pandan.withValues(alpha: 0.24),
-                                      nb.mist,
-                                    )
-                                  : nb.mist,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: nb.pandan.withValues(
-                                  alpha: dark ? 0.55 : 0.25,
-                                ),
-                              ),
-                            ),
+              onHorizontalDragEnd: _dragEnd,
+              onHorizontalDragCancel: () => setState(() => _drag = null),
+              child: Stack(
+                children: [
+                  // The chip: follows the finger while dragged, slides when a tab is picked.
+                  AnimatedPositioned(
+                    key: const ValueKey('nav-chip'),
+                    duration: _drag != null || still ? Duration.zero : _motion,
+                    curve: _curve,
+                    left: chipAt * w,
+                    top: 0,
+                    bottom: 0,
+                    width: w,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: dark
+                            ? Color.alphaBlend(
+                                nb.pandan.withValues(alpha: 0.24),
+                                nb.mist,
+                              )
+                            : nb.mist,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: nb.pandan.withValues(
+                            alpha: dark ? 0.55 : 0.25,
                           ),
                         ),
-                        Row(
-                          children: [
-                            for (var s = 0; s < _slots; s++)
-                              SizedBox(
-                                width: w,
-                                child: s == _mid
-                                    ? _AddButton(
-                                        label: widget.addLabel,
-                                        onTap: widget.onAdd,
-                                      )
-                                    : _Tab(
-                                        key: ValueKey('nav-tab-${_tabOf(s)}'),
-                                        item: widget.items[_tabOf(s)],
-                                        selected: _tabOf(s) == widget.selected,
-                                        lit: s == lit,
-                                        still: still,
-                                        onTap: () {
-                                          if (_tabOf(s) != widget.selected) {
-                                            widget.onSelected(_tabOf(s));
-                                          }
-                                        },
-                                      ),
-                              ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
-                  );
-                },
+                  ),
+                  Row(
+                    children: [
+                      for (var s = 0; s < _slots; s++)
+                        SizedBox(
+                          width: w,
+                          child: s == _mid
+                              ? _AddButton(
+                                  label: widget.addLabel,
+                                  onTap: widget.onAdd,
+                                )
+                              : _Tab(
+                                  key: ValueKey('nav-tab-${_tabOf(s)}'),
+                                  item: widget.items[_tabOf(s)],
+                                  selected: _tabOf(s) == widget.selected,
+                                  lit: s == lit,
+                                  still: still,
+                                  onTap: () {
+                                    if (_tabOf(s) != widget.selected) {
+                                      widget.onSelected(_tabOf(s));
+                                    }
+                                  },
+                                ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

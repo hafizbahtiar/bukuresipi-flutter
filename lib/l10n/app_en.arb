@@ -2286,5 +2286,20 @@
   "splitCaloriesNote": "Calories follow what is assigned to Me.",
   "@splitCaloriesNote": {},
   "splitNoItems": "This receipt has no item lines to split.",
-  "@splitNoItems": {}
+  "@splitNoItems": {},
+  "recipeAiDraft": "AI draft",
+  "@recipeAiDraft": {},
+  "recipeAiDraftNote": "Drafted from {count} web recipes. Check it, then Save.",
+  "recipeAiDraftNone": "No web recipe found for this dish.",
+  "@recipeAiDraftNone": {},
+  "recipeAiDraftOff": "Search or AI is off or at its limit. Try later.",
+  "@recipeAiDraftOff": {},
+  "@recipeAiDraftNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeAiDraftPhotos": "Tap a photo to use it as the cover"
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
@@ -164,6 +165,24 @@ class FakeOwner implements OwnerRepository {
   ) async {
     variantSearches.add(recipeId);
     return (variants: foundVariants, complete: true);
+  }
+
+  DishDraft? draft;
+  final drafted = <String>[];
+
+  @override
+  Future<DishDraft> draftDish(String recipeId) async {
+    drafted.add(recipeId);
+    return draft!;
+  }
+
+  final dishCovers = <(String, String)>[];
+  RecipeDetail? dishCoverResult;
+
+  @override
+  Future<RecipeDetail> setDishCover(String recipeId, String url) async {
+    dishCovers.add((recipeId, url));
+    return dishCoverResult!;
   }
 
   final hiddenRecipes = <String>[];

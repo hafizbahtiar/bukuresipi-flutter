@@ -10,7 +10,9 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../owner/domain/owner_repository.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
@@ -217,6 +219,17 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   bool _coverRemoved = false;
   String? get _shownCover => _coverRemoved ? null : widget.recipe?.cover;
 
+  /// A catalogue dish (the app owner edits it): no cover; the AI draft instead.
+  bool get _catalogue =>
+      widget.recipe?.sourceType == RecipeSourceType.catalogue;
+  bool _drafting = false;
+
+  /// The last AI draft's pages and notes, shown under the name until the page closes.
+  DishDraft? _draft;
+
+  /// The draft photo picked as the cover; set by the server after Save.
+  String? _photo;
+
   // Catalogue suggestions under the ingredient being typed (GET /recipes/ingredients), so the line gets linked.
   _Ingredient? _suggestFor;
   List<String> _suggestions = const [];
@@ -248,7 +261,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     '|',
     for (final s in _steps) s.text.text.trim(),
     '|',
-    '$_coverPath $_coverRemoved',
+    '$_coverPath $_coverRemoved $_photo',
   ].join('\n');
 
   bool get _dirty => _snapshot() != _initial;
@@ -385,6 +398,157 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     _gone.add(step);
   });
 
+  // ----- AI draft (owner, catalogue)
+
+  /// Fills the form from web recipes; nothing is saved until Save (and leaving asks, as for any edit).
+  Future<void> _aiDraft() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _drafting = true);
+    try {
+      final d = await context.read<OwnerRepository>().draftDish(
+        widget.recipe!.id,
+      );
+      if (!mounted) return;
+      if (d.sources.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              d.complete ? l.recipeAiDraftNone : l.recipeAiDraftOff,
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _draft = d;
+        _photo = null;
+        _name.text = d.name;
+        _gone.addAll([..._ingredients, ..._steps]);
+        _suggestions = const [];
+        _ingredients
+          ..clear()
+          ..addAll([for (final i in d.ingredients) _Ingredient.fromLine(i)]);
+        if (_ingredients.isEmpty) _ingredients.add(_Ingredient());
+        _steps
+          ..clear()
+          ..addAll([for (final s in d.steps) _Step(s)]);
+        if (_steps.isEmpty) _steps.add(_Step());
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _drafting = false);
+    }
+  }
+
+  Widget _draftNote(AppLocalizations l, DishDraft d) {
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final small = text.bodySmall?.copyWith(color: nb.inkSoft);
+    return Container(
+      key: const ValueKey('recipe-draft-note'),
+      margin: const EdgeInsets.only(top: 8, bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.recipeAiDraftNote(d.sources.length), style: text.bodyMedium),
+          for (final w in d.warnings)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('⚠ $w', style: small),
+            ),
+          if (d.images.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(l.recipeAiDraftPhotos, style: small),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                for (final (i, url) in d.images.indexed) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(child: _draftPhoto(l, url)),
+                ],
+                // Three slots always: one photo is not stretched across the card.
+                for (var i = d.images.length; i < 3; i++) ...[
+                  const SizedBox(width: 8),
+                  const Expanded(child: SizedBox()),
+                ],
+              ],
+            ),
+          ],
+          for (final s in d.sources)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '• ${s.title ?? Uri.tryParse(s.url)?.host ?? s.url}  (${Uri.tryParse(s.url)?.host ?? ''})',
+                style: small,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// One draft photo: tap to pick it as the cover, again to drop it.
+  Widget _draftPhoto(AppLocalizations l, String url) {
+    final nb = Notebook.of(context);
+    final picked = _photo == url;
+    return Semantics(
+      button: true,
+      selected: picked,
+      label: l.recipeAiDraftPhotos,
+      child: GestureDetector(
+        key: ValueKey('draft-photo-$url'),
+        onTap: () => setState(() => _photo = picked ? null : url),
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: picked ? nb.pandan : nb.line,
+                width: picked ? 3 : 1,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  cacheWidth: 360,
+                  errorBuilder: (_, _, _) => ColoredBox(
+                    color: nb.line,
+                    child: Icon(Icons.broken_image_outlined, color: nb.inkSoft),
+                  ),
+                ),
+                if (picked)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: CircleAvatar(
+                        radius: 11,
+                        backgroundColor: nb.pandan,
+                        child: Icon(Icons.check, size: 15, color: nb.paper),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ----- save / leave
 
   Future<void> _save() async {
@@ -415,6 +579,8 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       for (final s in _steps)
         if (s.text.text.trim().isNotEmpty) s.text.text.trim(),
     ];
+    // Read before the first wait: the page may be gone after it.
+    final owner = _photo == null ? null : context.read<OwnerRepository>();
     try {
       final recipes = context.read<RecipesController>();
       final saved = switch (widget.recipe) {
@@ -432,7 +598,9 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       };
       var done = saved;
       try {
-        if (_coverPath case final path?) {
+        if (_photo case final url?) {
+          done = await owner!.setDishCover(saved.id, url);
+        } else if (_coverPath case final path?) {
           done = await recipes.setCover(saved.id, path);
         } else if (_coverRemoved && widget.recipe?.cover != null) {
           await recipes.removeCover(saved.id);
@@ -645,55 +813,59 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   Widget _stepRow(int i, _Step s) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
-    return Row(
+    // Air under each step: a long one wraps to several lines and would run into the next.
+    return Padding(
       key: ObjectKey(s),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ReorderableDragStartListener(
-          index: i,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.drag_indicator, color: nb.inkSoft),
-                SizedBox(
-                  width: 22,
-                  child: Text(
-                    '${i + 1}',
-                    textAlign: TextAlign.center,
-                    style: nb.hand.copyWith(fontSize: 20, color: nb.inkSoft),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ReorderableDragStartListener(
+            index: i,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.drag_indicator, color: nb.inkSoft),
+                  SizedBox(
+                    width: 22,
+                    child: Text(
+                      '${i + 1}',
+                      textAlign: TextAlign.center,
+                      style: nb.hand.copyWith(fontSize: 20, color: nb.inkSoft),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: TextField(
-            key: ValueKey('step-$i'),
-            controller: s.text,
-            focusNode: s.focus,
-            maxLines: null,
-            maxLength: 2000,
-            keyboardType: TextInputType.text,
-            textInputAction: TextInputAction.next,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              hintText: l.recipeEditStepHint,
-              counterText: '',
+          Expanded(
+            child: TextField(
+              key: ValueKey('step-$i'),
+              controller: s.text,
+              focusNode: s.focus,
+              maxLines: null,
+              maxLength: 2000,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: l.recipeEditStepHint,
+                counterText: '',
+              ),
+              onChanged: (v) =>
+                  v.contains('\n') ? _pastedSteps(s, v) : setState(() {}),
+              onSubmitted: (_) => _nextStep(s),
             ),
-            onChanged: (v) =>
-                v.contains('\n') ? _pastedSteps(s, v) : setState(() {}),
-            onSubmitted: (_) => _nextStep(s),
           ),
-        ),
-        IconButton(
-          tooltip: l.remove,
-          icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
-          onPressed: () => _removeStep(s),
-        ),
-      ],
+          IconButton(
+            tooltip: l.remove,
+            icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
+            onPressed: () => _removeStep(s),
+          ),
+        ],
+      ),
     );
   }
 
@@ -712,6 +884,22 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
             widget.recipe == null ? l.recipeNew : l.recipeEdit,
           ),
           actions: [
+            if (_catalogue &&
+                (context.read<AuthController?>()?.user?.isOwner ?? false))
+              _drafting
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      key: const ValueKey('recipe-ai-draft'),
+                      tooltip: l.recipeAiDraft,
+                      icon: const Icon(Icons.auto_awesome_outlined),
+                      onPressed: _saving ? null : _aiDraft,
+                    ),
             if (_saving)
               const Padding(
                 padding: EdgeInsets.all(16),
@@ -728,7 +916,8 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 12, 32),
             children: [
-              _coverField(l),
+              if (!_catalogue) _coverField(l),
+              if (_draft case final d?) _draftNote(l, d),
               TextField(
                 controller: _name,
                 maxLength: 200,
