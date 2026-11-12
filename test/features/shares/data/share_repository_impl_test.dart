@@ -69,7 +69,7 @@ void main() {
           'id': 's-1',
           'status': 'done',
           'kind': 'restaurant',
-          'restaurantId': 'r-1',
+          'placeId': 'r-1',
           'gaps': <String>[],
           'error': null,
         },
@@ -77,7 +77,7 @@ void main() {
     );
     final s = await repo.get('s-1');
     expect(
-      [s.status, s.kind, s.restaurantId, s.isFinished],
+      [s.status, s.kind, s.placeId, s.isFinished],
       ['done', 'restaurant', 'r-1', true],
     );
   });
@@ -104,7 +104,7 @@ void main() {
               'id': 's-2',
               'status': 'processing',
               'kind': 'unknown',
-              'restaurantId': null,
+              'placeId': null,
               'gaps': [],
               'error': null,
               'platform': 'tiktok',
@@ -113,7 +113,7 @@ void main() {
               'id': 's-1',
               'status': 'done',
               'kind': 'other',
-              'restaurantId': null,
+              'placeId': null,
               'gaps': ['unreadable'],
               'error': null,
               'platform': 'tiktok',

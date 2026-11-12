@@ -8,9 +8,13 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/draft_photos.dart';
 import '../../../../core/widgets/skeleton.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook.dart' show NotebookTitle;
+import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/photo_editor_page.dart';
+import '../../../../core/widgets/pill_switch.dart';
+import '../../../../core/widgets/ai_button.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -238,6 +242,17 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
 
   final _scroll = ScrollController();
 
+  /// The tab: Details (cover, name, AI draft) | Ingredients | Steps, as on the recipe page.
+  _EditTab _tab = _EditTab.details;
+  final _pages = PageController();
+
+  /// Shows [tab] at once (no slide): a field on it can be focused in the next frame.
+  void _goTo(_EditTab tab) {
+    if (_tab == tab) return;
+    setState(() => _tab = tab);
+    if (_pages.hasClients) _pages.jumpToPage(tab.index);
+  }
+
   // Catalogue suggestions under the ingredient being typed (GET /recipes/ingredients), so the line gets linked.
   _Ingredient? _suggestFor;
   List<String> _suggestions = const [];
@@ -254,6 +269,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   void dispose() {
     _debounce?.cancel();
     _scroll.dispose();
+    _pages.dispose();
     _name.dispose();
     for (final r in [..._ingredients, ..._gone.whereType<_Ingredient>()]) {
       r.dispose();
@@ -415,6 +431,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     final messenger = ScaffoldMessenger.of(context);
     final owner = context.read<OwnerRepository>();
     setState(() => _drafting = true);
+    _goTo(_EditTab.details);
     // The placeholder card is at the top of the form: bring it into view.
     if (_scroll.hasClients) {
       unawaited(
@@ -602,7 +619,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: nb.margin),
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(child: Text(w, style: small)),
                 ],
@@ -634,8 +655,12 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
         r.nameMissing = nameless.contains(r);
       }
     });
-    if (name.isEmpty) return;
-    if (nameless.isNotEmpty) return nameless.first.nameFocus.requestFocus();
+    // A problem on another tab: go there, or the error is never seen.
+    if (name.isEmpty) return _goTo(_EditTab.details);
+    if (nameless.isNotEmpty) {
+      _goTo(_EditTab.ingredients);
+      return _focusLater(nameless.first.nameFocus);
+    }
     FocusScope.of(context).unfocus();
     setState(() => _saving = true);
     final ingredients = [
@@ -772,7 +797,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   Future<void> _leave() async {
     final l = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
-    final sure = await showNotebookDialog(
+    final sure = await showBaseDialog(
       context,
       message: l.recipeEditDiscard,
       tone: DialogTone.danger,
@@ -782,15 +807,6 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   }
 
   // ----- build
-
-  Widget _heading(String title) => Padding(
-    padding: const EdgeInsets.only(top: 20, bottom: 4),
-    child: Text(
-      title,
-      style: Theme.of(context).textTheme.titleSmall
-          ?.copyWith(fontWeight: FontWeight.w700),
-    ),
-  );
 
   Widget _addButton(String label, VoidCallback? onPressed) => Align(
     alignment: Alignment.centerLeft,
@@ -923,12 +939,14 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.drag_indicator, color: nb.inkSoft),
-                  SizedBox(
-                    width: 22,
+                  const SizedBox(width: spaceXs),
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: nb.mist,
+                    foregroundColor: nb.pandanDeep,
                     child: Text(
                       '${i + 1}',
-                      textAlign: TextAlign.center,
-                      style: nb.hand.copyWith(fontSize: 20, color: nb.inkSoft),
+                      style: Theme.of(context).textTheme.labelMedium,
                     ),
                   ),
                 ],
@@ -981,12 +999,12 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           actions: [
             if (_catalogue &&
                 (context.read<AuthController?>()?.user?.isOwner ?? false))
-              IconButton(
+              AiButton.icon(
                 key: const ValueKey('recipe-ai-draft'),
                 tooltip: l.recipeAiDraft,
-                icon: const Icon(Icons.auto_awesome_outlined),
-                // The card in the form shows it working.
-                onPressed: _saving || _drafting ? null : _aiDraft,
+                // The card in the form shows it working too.
+                busy: _drafting,
+                onPressed: _saving ? null : _aiDraft,
               ),
             if (_saving)
               const Padding(
@@ -997,73 +1015,146 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                 ),
               )
             else
-              TextButton(onPressed: _save, child: Text(l.save)),
+              IconButton(
+                key: const ValueKey('recipe-save'),
+                tooltip: l.save,
+                icon: const Icon(Icons.check),
+                onPressed: _save,
+              ),
           ],
         ),
-        body: NotebookPage(
-          child: ListView(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 12, 32),
-            children: [
-              // First: the button that starts it is at the top, and so is what it gives.
-              if (_drafting)
-                _draftLoading(l)
-              else if (_draft case final d?)
-                _draftNote(l, d),
-              _coverField(l),
-              TextField(
-                controller: _name,
-                maxLength: 200,
-                textCapitalization: TextCapitalization.sentences,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: l.recipeEditName,
-                  errorText: _nameMissing ? l.recipeEditNameRequired : null,
-                ),
-                onChanged: (v) => setState(
-                  () => _nameMissing = _nameMissing && v.trim().isEmpty,
-                ),
-                onSubmitted: (_) => _ingredients.isEmpty
-                    ? _addIngredient()
-                    : _ingredients.first.nameFocus.requestFocus(),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                spaceM,
+                spaceS,
+                spaceM,
+                spaceS,
               ),
-              _heading(l.recipeIngredients),
-              ReorderableListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: false,
-                onReorderItem: (from, to) => setState(
-                  () => _ingredients.insert(to, _ingredients.removeAt(from)),
-                ),
-                children: [
-                  for (final (i, r) in _ingredients.indexed)
-                    _ingredientRow(i, r),
+              child: PillSwitch(
+                expand: true,
+                value: _tab,
+                onChanged: (v) => setState(() => _tab = v),
+                pages: _pages,
+                options: [
+                  for (final tab in _EditTab.values)
+                    (
+                      tab,
+                      Text(
+                        switch (tab) {
+                          _EditTab.details => l.recipeDetails,
+                          _EditTab.ingredients =>
+                            '${l.recipeIngredients} (${_ingredients.where((r) => !r.isEmpty).length})',
+                          _EditTab.steps =>
+                            '${l.recipeSteps} (${_steps.where((s) => s.text.text.trim().isNotEmpty).length})',
+                        },
+                        key: ValueKey('recipe-edit-tab-${tab.name}'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      null,
+                    ),
                 ],
               ),
-              _addButton(
-                l.recipeEditAddIngredient,
-                _ingredients.length < _maxRows ? () => _addIngredient() : null,
+            ),
+            Expanded(
+              child: PageView(
+                controller: _pages,
+                onPageChanged: (i) => setState(() => _tab = _EditTab.values[i]),
+                children: [
+                  _tabList(_EditTab.details, controller: _scroll, [
+                    // First: the button that starts it is at the top, and so is what it gives.
+                    if (_drafting)
+                      _draftLoading(l)
+                    else if (_draft case final d?)
+                      _draftNote(l, d),
+                    _coverField(l),
+                    TextField(
+                      controller: _name,
+                      maxLength: 200,
+                      textCapitalization: TextCapitalization.sentences,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: l.recipeEditName,
+                        errorText: _nameMissing
+                            ? l.recipeEditNameRequired
+                            : null,
+                      ),
+                      onChanged: (v) => setState(
+                        () => _nameMissing = _nameMissing && v.trim().isEmpty,
+                      ),
+                      onSubmitted: (_) {
+                        _goTo(_EditTab.ingredients);
+                        _ingredients.isEmpty
+                            ? _addIngredient()
+                            : _focusLater(_ingredients.first.nameFocus);
+                      },
+                    ),
+                  ]),
+                  _tabList(_EditTab.ingredients, [
+                    ReorderableListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      onReorderItem: (from, to) => setState(
+                        () => _ingredients.insert(
+                          to,
+                          _ingredients.removeAt(from),
+                        ),
+                      ),
+                      children: [
+                        for (final (i, r) in _ingredients.indexed)
+                          _ingredientRow(i, r),
+                      ],
+                    ),
+                    _addButton(
+                      l.recipeEditAddIngredient,
+                      _ingredients.length < _maxRows
+                          ? () => _addIngredient()
+                          : null,
+                    ),
+                  ]),
+                  _tabList(_EditTab.steps, [
+                    ReorderableListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      onReorderItem: (from, to) => setState(
+                        () => _steps.insert(to, _steps.removeAt(from)),
+                      ),
+                      children: [
+                        for (final (i, s) in _steps.indexed) _stepRow(i, s),
+                      ],
+                    ),
+                    _addButton(
+                      l.recipeEditAddStep,
+                      _steps.length < _maxRows ? () => _addStep() : null,
+                    ),
+                  ]),
+                ],
               ),
-              _heading(l.recipeSteps),
-              ReorderableListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: false,
-                onReorderItem: (from, to) =>
-                    setState(() => _steps.insert(to, _steps.removeAt(from))),
-                children: [for (final (i, s) in _steps.indexed) _stepRow(i, s)],
-              ),
-              _addButton(
-                l.recipeEditAddStep,
-                _steps.length < _maxRows ? () => _addStep() : null,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  /// One tab's scrolling form; each keeps its place when swiped away and back.
+  Widget _tabList(
+    _EditTab tab,
+    List<Widget> children, {
+    ScrollController? controller,
+  }) => ListView(
+    key: PageStorageKey('recipe-edit-${tab.name}'),
+    controller: controller,
+    padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceS, spaceL),
+    children: children,
+  );
 }
+
+enum _EditTab { details, ingredients, steps }
 
 /// The unit beside an amount: a field that opens a sheet of [recipeUnits] (plus a stored spelling such as "sb"), or none.
 class _UnitPicker extends StatelessWidget {
@@ -1075,7 +1166,7 @@ class _UnitPicker extends StatelessWidget {
   Future<void> _pick(BuildContext context) async {
     final l = AppLocalizations.of(context);
     FocusScope.of(context).unfocus();
-    final chosen = await showNotebookPicker<String>(
+    final chosen = await showBasePicker<String>(
       context,
       title: l.recipeEditUnit,
       options: [

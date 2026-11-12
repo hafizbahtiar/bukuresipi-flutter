@@ -6,10 +6,11 @@ import 'package:provider/provider.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
-import '../../../../core/widgets/pill_switch.dart';
+import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -24,7 +25,7 @@ import '../widgets/ingredient_picker.dart';
 import '../widgets/recipe_variants.dart';
 import 'recipe_edit_page.dart';
 
-/// One imported recipe as a notebook page: what the post said, with the pieces it did not give marked.
+/// One imported recipe, standard (base) style: what the post said, with the pieces it did not give marked.
 /// What a card already knows of a recipe, handed to its page (go_router `extra`): the page opens with its photo
 /// header at once, so the card's photo can fly into it (hero) instead of the page flip.
 class RecipePreview {
@@ -76,10 +77,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   RecipeDetail? _recipe;
   Object? _error;
   bool _loading = true;
-
-  /// The tab under the title: false = ingredients (and allergens), true = steps (and variants).
-  bool _steps = false;
-  late final _pages = PageController(initialPage: _steps ? 1 : 0);
 
   /// How far the page has been pulled down past its top in this drag; [_closeAt] closes it.
   double _pull = 0;
@@ -136,12 +133,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           ),
         );
 
-  /// The page's NestedScrollView, for its outer scroll (how far the photo bar has collapsed).
-  final _nested = GlobalKey<NestedScrollViewState>();
-
   @override
   void dispose() {
-    _pages.dispose();
     super.dispose();
   }
 
@@ -180,7 +173,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final l = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
     final recipes = context.read<RecipesController>();
-    if (!await showNotebookDialog(
+    if (!await showBaseDialog(
       context,
       message: recipe.sourceType == RecipeSourceType.catalogue
           ? l.dishRemoveConfirm
@@ -207,28 +200,13 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     if (inFamily) {
       final picked =
           shopping.lastRecipeList ??
-          await showNotebookSheet<bool>(
+          await showBasePicker<bool>(
             context,
-            builder: (sheet) => ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 16),
-              children: [
-                NotebookRow(
-                  child: Text(
-                    l.shoppingWhichList,
-                    style: Theme.of(sheet).textTheme.titleMedium,
-                  ),
-                ),
-                NotebookRow(
-                  onTap: () => Navigator.of(sheet).pop(false),
-                  child: Text(l.shoppingMine),
-                ),
-                NotebookRow(
-                  onTap: () => Navigator.of(sheet).pop(true),
-                  child: Text(l.shoppingFamily),
-                ),
-              ],
-            ),
+            title: l.shoppingWhichList,
+            search: false,
+            options: const [false, true],
+            selected: null,
+            label: (family) => family ? l.shoppingFamily : l.shoppingMine,
           );
       if (picked == null) return;
       family = picked;
@@ -258,38 +236,30 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final l = AppLocalizations.of(context);
     final recipes = context.read<RecipesController>();
     final inFamily = context.read<FamilyController?>()?.inFamily ?? false;
-    final picked = await showNotebookSheet<RecipeVisibility>(
-      context,
+    final picked = await showModalBottomSheet<RecipeVisibility>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
       builder: (sheet) {
-        final nb = Notebook.of(sheet);
-        final text = Theme.of(sheet).textTheme;
         Widget choice(RecipeVisibility v, String label, String hint) =>
-            NotebookRow(
-              mark: Icon(
-                visibilityIcon(v),
-                size: 20,
-                color: v == recipe.visibility ? nb.pandan : nb.inkSoft,
-              ),
-              trailing: v == recipe.visibility
-                  ? Icon(Icons.check, color: nb.pandan)
-                  : null,
+            ListTile(
+              leading: Icon(visibilityIcon(v)),
+              title: Text(label),
+              subtitle: Text(hint),
+              selected: v == recipe.visibility,
+              trailing: v == recipe.visibility ? const Icon(Icons.check) : null,
               onTap: () => Navigator.of(sheet).pop(v),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label),
-                  Text(
-                    hint,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                ],
-              ),
             );
         return ListView(
           shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: spaceM),
           children: [
-            NotebookRow(child: Text(l.visTitle, style: text.titleMedium)),
+            ListTile(
+              title: Text(
+                l.visTitle,
+                style: Theme.of(sheet).textTheme.titleMedium,
+              ),
+            ),
             choice(RecipeVisibility.private, l.visPrivate, l.visPrivateHint),
             if (inFamily || recipe.visibility == RecipeVisibility.family)
               choice(RecipeVisibility.family, l.visFamily, l.visFamilyHint),
@@ -312,31 +282,20 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   Future<void> _report(RecipeDetail recipe) async {
     final l = AppLocalizations.of(context);
     final recipes = context.read<RecipesController>();
-    final reason = await showNotebookSheet<String>(
+    final reasons = {
+      'copyright': l.reasonCopyright,
+      'spam': l.reasonSpam,
+      'offensive': l.reasonOffensive,
+      'wrong_info': l.reasonWrongInfo,
+      'other': l.reasonOther,
+    };
+    final reason = await showBasePicker<String>(
       context,
-      builder: (sheet) => ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.only(bottom: 16),
-        children: [
-          NotebookRow(
-            child: Text(
-              l.recipeReportTitle,
-              style: Theme.of(sheet).textTheme.titleMedium,
-            ),
-          ),
-          for (final (code, label) in [
-            ('copyright', l.reasonCopyright),
-            ('spam', l.reasonSpam),
-            ('offensive', l.reasonOffensive),
-            ('wrong_info', l.reasonWrongInfo),
-            ('other', l.reasonOther),
-          ])
-            NotebookRow(
-              onTap: () => Navigator.of(sheet).pop(code),
-              child: Text(label),
-            ),
-        ],
-      ),
+      title: l.recipeReportTitle,
+      search: false,
+      options: reasons.keys.toList(),
+      selected: null,
+      label: (code) => reasons[code]!,
     );
     if (reason == null) return;
     try {
@@ -351,7 +310,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   Future<void> _hide(RecipeDetail recipe) async {
     final l = AppLocalizations.of(context);
     final owner = context.read<OwnerRepository>();
-    final sure = await showNotebookDialog(
+    final sure = await showBaseDialog(
       context,
       message: l.recipeHideConfirm,
       tone: DialogTone.danger,
@@ -426,10 +385,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   title: p.name,
                   heroTag: recipePhotoTag(widget.id),
                 ),
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: CircularProgressIndicator.adaptive()),
-                ),
+                const SliverToBoxAdapter(child: _Loading()),
               ],
             ),
           ),
@@ -437,7 +393,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       }
       return Scaffold(
         appBar: AppBar(),
-        body: Center(child: CircularProgressIndicator.adaptive()),
+        body: const SingleChildScrollView(child: _Loading()),
       );
     }
     if (recipe == null) {
@@ -459,13 +415,77 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
+    final errorColor = Theme.of(context).colorScheme.error;
     final source = recipe.sourceUrl;
     // Catalogue dishes credit the recipe they were built from; their steps stay there (not copied).
     final catalogue = recipe.sourceType == RecipeSourceType.catalogue;
-    // Tabs only when there are two sections to switch between (a catalogue dish: the original's link, then variants).
-    final tabs =
-        recipe.ingredients.isNotEmpty &&
-        (recipe.steps.isNotEmpty || (catalogue && source != null));
+    final isOwner = context.read<AuthController?>()?.user?.isOwner ?? false;
+    // A section shows only when it has something (a catalogue dish's steps: the original's link, then variants);
+    // tabs only when there are two or more.
+    final sections = [
+      if (recipe.ingredients.isNotEmpty) _Section.ingredients,
+      if (recipe.steps.isNotEmpty || (catalogue && source != null))
+        _Section.steps,
+      if (recipe.allergens.isNotEmpty) _Section.others,
+    ];
+    final tabs = sections.length > 1;
+    // Only the owner edits or removes; anyone else may make their own copy (or report a public one). The app's
+    // owner keeps the catalogue: edit (with the AI draft) or delete it for everyone.
+    final manage = recipe.canEdit || (catalogue && isOwner);
+    final hideOrReport =
+        !recipe.canEdit &&
+        recipe.visibility == RecipeVisibility.public &&
+        recipe.owner != null;
+    // Use first (cook, shop), then make it yours (copy, edit), then report; danger last, set apart by a line.
+    final more = MoreMenu(
+      actions: [
+        if (recipe.ingredients.isNotEmpty)
+          MenuAction(
+            icon: Icons.add_shopping_cart,
+            label: l.shoppingAddRecipe,
+            onTap: () => _addToList(recipe),
+          ),
+        if (source case final url?)
+          MenuAction(
+            icon: Icons.open_in_new,
+            label: catalogue ? l.recipeOpenOriginal : l.recipeOpenSource,
+            onTap: () => openLink(context, url, failed: l.openFailed),
+          ),
+        if (!recipe.canEdit)
+          MenuAction(
+            icon: Icons.copy_outlined,
+            label: l.recipeCopy,
+            onTap: () => _copy(recipe),
+          ),
+        if (manage)
+          MenuAction(
+            icon: Icons.edit_outlined,
+            label: l.recipeEdit,
+            onTap: () => _edit(recipe),
+          ),
+        // Anyone else reports a public recipe to the owner; the owner hides it from Community directly.
+        if (hideOrReport && !isOwner)
+          MenuAction(
+            icon: Icons.flag_outlined,
+            label: l.report,
+            onTap: () => _report(recipe),
+          ),
+        if (hideOrReport && isOwner)
+          MenuAction(
+            icon: Icons.visibility_off_outlined,
+            label: l.recipeHide,
+            danger: true,
+            onTap: recipe.hidden ? null : () => _hide(recipe),
+          ),
+        if (manage)
+          MenuAction(
+            icon: Icons.delete_outline,
+            label: recipe.canEdit ? l.recipeRemove : l.remove,
+            danger: true,
+            onTap: () => _remove(recipe),
+          ),
+      ],
+    );
     // A photo opens the page as its top bar (CoverAppBar); none = a plain bar, the title starts the page.
     final photo = recipePhoto(
       recipe.id,
@@ -480,22 +500,21 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             photo: photo,
             title: recipe.name,
             heroTag: recipePhotoTag(recipe.id),
+            actions: [more],
           );
     final header = SliverList.list(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 12, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, spaceM, spaceM, 0),
           child: Text(
             recipe.name,
-            style: text.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              height: 1.15,
-            ),
+            style: Notebook.of(context).hand
+                .copyWith(fontSize: 34, height: 1.05),
           ),
         ),
         if (_byLine(l, recipe) case final by?)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, spaceXs, spaceM, 0),
             child: Text(
               by,
               style: text.bodyMedium?.copyWith(color: nb.inkSoft),
@@ -503,7 +522,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           ),
         if (recipe.canEdit && recipe.cover == null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 6, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
             child: Align(
               alignment: Alignment.centerLeft,
               child: ActionChip(
@@ -516,7 +535,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           ),
         if (recipe.canEdit)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 6, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
             child: Align(
               alignment: Alignment.centerLeft,
               child: ActionChip(
@@ -532,88 +551,43 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ),
           ),
         if (recipe.hidden)
-          NotebookRow(
-            mark: Icon(
-              Icons.visibility_off_outlined,
-              size: 18,
-              color: nb.margin,
-            ),
-            child: Text(
-              l.recipeHidden,
-              style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-            ),
+          ListTile(
+            leading: Icon(Icons.visibility_off_outlined, color: errorColor),
+            title: Text(l.recipeHidden),
           ),
         if (recipe.missing.isNotEmpty)
-          NotebookRow(
-            mark: Icon(Icons.info_outline, size: 18, color: nb.margin),
-            child: Text(
-              _missingText(l, recipe.missing),
-              style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-            ),
+          ListTile(
+            leading: Icon(Icons.info_outline, color: errorColor),
+            title: Text(_missingText(l, recipe.missing)),
           ),
       ],
-    );
-    final bar = SliverPersistentHeader(
-      pinned: true,
-      delegate: NotebookPinnedBar(
-        height: MediaQuery.textScalerOf(context).scale(40) + 16,
-        child: PillSwitch(
-          expand: true,
-          value: _steps,
-          onChanged: (v) => setState(() => _steps = v),
-          pages: _pages,
-          options: [
-            (
-              false,
-              Text(
-                l.recipeIngredients,
-                key: const ValueKey('recipe-tab-ingredients'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              null,
-            ),
-            (
-              true,
-              Text(
-                l.recipeSteps,
-                key: const ValueKey('recipe-tab-steps'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              null,
-            ),
-          ],
-        ),
-      ),
-    );
-    Widget list(List<Widget> rows) => SliverPadding(
-      padding: const EdgeInsets.only(bottom: ActionDock.clearance),
-      sliver: SliverList.list(children: rows),
     );
     final ingredientRows = <Widget>[
       // No heading over an empty section, nor over a tab's own section.
       if (recipe.ingredients.isNotEmpty && !tabs)
-        NotebookHeading(l.recipeIngredients),
+        SectionHeader(l.recipeIngredients),
       for (final (index, i) in recipe.ingredients.indexed)
-        NotebookRow(
+        ListTile(
           // Tap: link the line to a catalogue ingredient (allergens, shopping hints) or change that link.
-          onTap: recipe.canEdit ? () => _pick(recipe, index) : null,
+          onTap: manage ? () => _pick(recipe, index) : null,
           trailing: i.name == null
               ? Tooltip(
                   message: l.ingredientUnrecognised,
+                  // A phone has no hover: a tap explains the mark.
+                  triggerMode: TooltipTriggerMode.tap,
                   child: Icon(Icons.help_outline, size: 18, color: nb.inkSoft),
                 )
               : null,
-          mark: Container(
-            width: 8,
-            height: 8,
+          minLeadingWidth: 0,
+          leading: Container(
+            width: 6,
+            height: 6,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: nb.inkSoft,
             ),
           ),
-          child: Text.rich(
+          title: Text.rich(
             TextSpan(
               children: [
                 if (i.amount case final amount?)
@@ -626,13 +600,19 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ),
           ),
         ),
-      // Only when something was found: no section must never read as "safe".
+    ];
+    // Only when something was found: no section must never read as "safe".
+    final otherRows = <Widget>[
       if (recipe.allergens.isNotEmpty) ...[
-        NotebookHeading(l.recipeAllergens),
+        SectionHeader(l.recipeAllergens),
+        InfoCard(
+          icon: Icons.health_and_safety_outlined,
+          text: l.recipeAllergenInfo,
+        ),
         for (final a in recipe.allergens)
-          NotebookRow(
-            mark: Icon(Icons.warning_amber_rounded, size: 18, color: nb.margin),
-            child: Text.rich(
+          ListTile(
+            leading: Icon(Icons.warning_amber_rounded, color: errorColor),
+            title: Text.rich(
               TextSpan(
                 children: [
                   TextSpan(
@@ -644,8 +624,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ),
             ),
           ),
-        NotebookRow(
-          child: Text(
+        ListTile(
+          title: Text(
             [
               l.recipeAllergenNote,
               if (recipe.uncheckedIngredients > 0)
@@ -657,177 +637,97 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       ],
     ];
     final stepRows = <Widget>[
-      if ((recipe.steps.isNotEmpty || (catalogue && source != null)) && !tabs)
-        NotebookHeading(l.recipeSteps),
+      if (sections.contains(_Section.steps) && !tabs)
+        SectionHeader(l.recipeSteps),
       if (catalogue && recipe.steps.isEmpty && source != null)
-        NotebookRow(
-          mark: Icon(Icons.menu_book_outlined, size: 20, color: nb.pandanDeep),
+        ListTile(
+          leading: const Icon(Icons.menu_book_outlined),
           onTap: () => openLink(context, source, failed: l.openFailed),
-          trailing: Icon(Icons.open_in_new, size: 18, color: nb.pandanDeep),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l.recipeStepsAtOriginal,
-                style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                Uri.tryParse(source)?.host ?? source,
-                style: text.bodyMedium?.copyWith(color: nb.pandanDeep),
-              ),
-            ],
-          ),
+          trailing: const Icon(Icons.open_in_new),
+          title: Text(l.recipeStepsAtOriginal),
+          subtitle: Text(Uri.tryParse(source)?.host ?? source),
         ),
       for (final s in recipe.steps)
-        NotebookRow(
-          mark: Text(
-            '${s.stepNo}',
-            style: nb.hand.copyWith(fontSize: 22, color: nb.inkSoft),
+        ListTile(
+          leading: CircleAvatar(
+            radius: 14,
+            backgroundColor: nb.mist,
+            foregroundColor: nb.pandanDeep,
+            child: Text('${s.stepNo}', style: text.labelLarge),
           ),
-          child: Text(s.instruction),
+          title: Text(s.instruction),
         ),
-      if (catalogue)
-        RecipeVariants(
-          recipeId: recipe.id,
-          owner: context.read<AuthController?>()?.user?.isOwner ?? false,
-        ),
+      if (catalogue) RecipeVariants(recipeId: recipe.id, owner: isOwner),
     ];
     return Scaffold(
-      appBar: coverBar == null ? AppBar() : null,
-      extendBody: true,
-      bottomNavigationBar: ActionDock(
-        actions: [
-          if (source case final url?)
-            DockAction(
-              icon: Icons.open_in_new,
-              label: catalogue ? l.recipeOpenOriginal : l.recipeOpenSource,
-              onPressed: () => openLink(context, url, failed: l.openFailed),
-            ),
-          if (recipe.ingredients.isNotEmpty)
-            DockAction(
-              icon: Icons.add_shopping_cart,
-              label: l.shoppingAddRecipe,
-              onPressed: () => _addToList(recipe),
-            ),
-          // Only the owner edits or removes; anyone else may make their own copy (or report a public one).
-          if (recipe.canEdit) ...[
-            DockAction(
-              icon: Icons.edit_outlined,
-              label: l.recipeEdit,
-              onPressed: () => _edit(recipe),
-            ),
-            DockAction(
-              icon: Icons.delete_outline,
-              label: l.remove,
-              tooltip: l.recipeRemove,
-              danger: true,
-              onPressed: () => _remove(recipe),
-            ),
-          ] else ...[
-            // The app's owner keeps the catalogue: edit (with the AI draft) or delete it for everyone.
-            if (recipe.sourceType == RecipeSourceType.catalogue &&
-                (context.read<AuthController?>()?.user?.isOwner ?? false)) ...[
-              DockAction(
-                icon: Icons.edit_outlined,
-                label: l.recipeEdit,
-                onPressed: () => _edit(recipe),
-              ),
-              DockAction(
-                icon: Icons.delete_outline,
-                label: l.remove,
-                tooltip: l.recipeRemove,
-                danger: true,
-                onPressed: () => _remove(recipe),
-              ),
-            ],
-            DockAction(
-              icon: Icons.copy_outlined,
-              label: l.recipeCopy,
-              onPressed: () => _copy(recipe),
-            ),
-            if (recipe.visibility == RecipeVisibility.public &&
-                recipe.owner != null)
-              // The owner removes it from Community directly; anyone else reports it to the owner.
-              (context.read<AuthController?>()?.user?.isOwner ?? false)
-                  ? DockAction(
-                      icon: Icons.visibility_off_outlined,
-                      label: l.recipeHide,
-                      danger: true,
-                      onPressed: recipe.hidden ? null : () => _hide(recipe),
-                    )
-                  : DockAction(
-                      icon: Icons.flag_outlined,
-                      label: l.report,
-                      onPressed: () => _report(recipe),
-                    ),
-          ],
-        ],
-      ),
+      appBar: coverBar == null ? AppBar(actions: [more]) : null,
       body: _pullToClose(
         coverBar != null,
-        NotebookPage(
-          child: tabs
-              ? NestedScrollView(
-                  key: _nested,
-                  headerSliverBuilder: (context, _) => [
-                    // Pinned on its own: it stays as a bar (back button) once the photo has scrolled away.
-                    ?coverBar,
-                    header,
-                    // The pinned pill (and the photo bar, pinned too): absorbed so each tab's list starts below them
-                    // (SliverOverlapInjector).
-                    SliverOverlapAbsorber(
-                      handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
-                        context,
-                      ),
-                      sliver: bar,
-                    ),
-                  ],
-                  // One page per tab: swiped, or driven by the pill (it follows the swipe).
-                  body: PageView(
-                    controller: _pages,
-                    onPageChanged: (i) => setState(() => _steps = i == 1),
-                    children: [
-                      for (final (i, rows) in [
-                        ingredientRows,
-                        stepRows,
-                      ].indexed)
-                        Builder(
-                          builder: (context) => CustomScrollView(
-                            key: PageStorageKey('recipe-tab-$i'),
-                            slivers: [
-                              if (coverBar != null)
-                                SliverToBoxAdapter(
-                                  child: _UnderBar(
-                                    nested: _nested,
-                                    bar:
-                                        kToolbarHeight +
-                                        MediaQuery.paddingOf(context).top,
-                                  ),
-                                ),
-                              SliverOverlapInjector(
-                                handle:
-                                    NestedScrollView.sliverOverlapAbsorberHandleFor(
-                                      context,
-                                    ),
-                              ),
-                              list(rows),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                )
-              : CustomScrollView(
-                  slivers: [
-                    ?coverBar,
-                    header,
-                    list([...ingredientRows, ...stepRows]),
-                  ],
-                ),
+        DetailTabs(
+          coverBar: coverBar,
+          header: header,
+          sections: [
+            for (final section in sections)
+              DetailSection(
+                id: 'recipe-tab-${section.name}',
+                label: switch (section) {
+                  _Section.ingredients => l.recipeIngredients,
+                  _Section.steps => l.recipeSteps,
+                  _Section.others => l.recipeOthers,
+                },
+                rows: switch (section) {
+                  _Section.ingredients => ingredientRows,
+                  _Section.steps => stepRows,
+                  _Section.others => otherRows,
+                },
+              ),
+          ],
         ),
       ),
     );
   }
+}
+
+enum _Section { ingredients, steps, others }
+
+/// The page's shape while it loads: title, by-line, tabs, then ingredient lines.
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) => Skeleton(
+    child: Padding(
+      padding: const EdgeInsets.all(spaceM),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonBox(width: 240, height: 24),
+          const SizedBox(height: spaceS),
+          const SkeletonBox(width: 150),
+          const SizedBox(height: spaceL),
+          const SkeletonBox(height: 40, radius: 20),
+          const SizedBox(height: spaceS),
+          for (final w in const [0.7, 0.5, 0.8, 0.6, 0.4, 0.65])
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: spaceM),
+              child: Row(
+                children: [
+                  const SkeletonBox(width: 6, height: 6),
+                  const SizedBox(width: spaceM),
+                  Expanded(
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: w,
+                      child: const SkeletonBox(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// The lock, people or globe of a visibility (recipe chip and sheet).
@@ -863,33 +763,4 @@ String _missingText(AppLocalizations l, List<String> missing) {
     if (missing.contains('steps')) l.recipeMissingSteps,
   ];
   return '${l.recipeIncomplete}: ${parts.join(', ')}';
-}
-
-/// Room at the top of a tab's list for the pinned photo bar, which covers the list's start only as it finishes
-/// collapsing: 0 while the photo is open, growing to the bar's height ([bar]) over the outer scroll's last [bar]
-/// pixels. (The pill has NestedScrollView's absorber; a second fixed one would leave a gap while the photo is open.)
-class _UnderBar extends StatelessWidget {
-  const _UnderBar({required this.nested, required this.bar});
-
-  final GlobalKey<NestedScrollViewState> nested;
-  final double bar;
-
-  @override
-  Widget build(BuildContext context) {
-    final outer = nested.currentState?.outerController;
-    if (outer == null) return const SizedBox.shrink();
-    return ListenableBuilder(
-      listenable: outer,
-      builder: (context, _) {
-        // Before the first layout the outer scroll has no size yet.
-        if (!outer.hasClients || !outer.position.hasContentDimensions) {
-          return const SizedBox.shrink();
-        }
-        final p = outer.position;
-        return SizedBox(
-          height: (p.pixels - (p.maxScrollExtent - bar)).clamp(0.0, bar),
-        );
-      },
-    );
-  }
 }

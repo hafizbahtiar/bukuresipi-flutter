@@ -122,7 +122,9 @@ class _PinPickerPageState extends State<PinPickerPage> {
       }
       final target = LatLng(here.latitude, here.longitude);
       if (mounted) setState(() => _pin = target);
-      await _map?.animateCamera(CameraUpdate.newLatLngZoom(target, 18));
+      await quietMap(
+        _map?.animateCamera(CameraUpdate.newLatLngZoom(target, 18)),
+      );
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l.locationDenied)));
     } finally {
@@ -237,8 +239,9 @@ class _PinPickerPageState extends State<PinPickerPage> {
                       builder: (context, _) => NorthButton(
                         bearing: _map!.cameraPosition?.bearing ?? 0,
                         tooltip: AppLocalizations.of(context).northUp,
-                        onPressed: () =>
-                            _map!.animateCamera(CameraUpdate.bearingTo(0)),
+                        onPressed: () => quietMap(
+                          _map!.animateCamera(CameraUpdate.bearingTo(0)),
+                        ),
                       ),
                     ),
                   ),

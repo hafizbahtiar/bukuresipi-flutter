@@ -14,11 +14,19 @@ class CoverAppBar extends StatelessWidget {
     required this.photo,
     required this.title,
     this.heroTag,
+    this.actions = const [],
+    this.height,
   });
 
   final Widget photo;
   final String title;
   final Object? heroTag;
+
+  /// The bar's right side (e.g. a MoreMenu), each on the same paper chip as back.
+  final List<Widget> actions;
+
+  /// The open height; null = [heightFor] the screen (a photo). A placeholder with no photo is shorter.
+  final double? height;
 
   /// The photo's height for a screen [width]: 4:3, at most 360 (a tablet keeps room for the recipe).
   static double heightFor(double width) => math.min(width * 3 / 4, 360);
@@ -43,12 +51,16 @@ class CoverAppBar extends StatelessWidget {
     return SliverAppBar(
       pinned: true,
       stretch: true,
-      expandedHeight: heightFor(width),
+      expandedHeight: height ?? heightFor(width),
       backgroundColor: nb.paper,
       surfaceTintColor: Colors.transparent,
       foregroundColor: nb.ink,
       automaticallyImplyLeading: false,
-      leading: const _ChipBack(),
+      leading: const _Chip(child: BackButton()),
+      actions: [
+        for (final a in actions) _Chip(child: a),
+        const SizedBox(width: 8),
+      ],
       title: _CollapsedTitle(title),
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
@@ -80,9 +92,11 @@ class CoverAppBar extends StatelessWidget {
   }
 }
 
-/// Back on a round paper chip: readable over a photo and on the plain bar alike.
-class _ChipBack extends StatelessWidget {
-  const _ChipBack();
+/// A bar button on a round paper chip: readable over a photo and on the plain bar alike.
+class _Chip extends StatelessWidget {
+  const _Chip({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +107,7 @@ class _ChipBack extends StatelessWidget {
         shape: const CircleBorder(),
         elevation: 1,
         shadowColor: nb.ink.withValues(alpha: 0.3),
-        child: const SizedBox.square(dimension: 40, child: BackButton()),
+        child: SizedBox.square(dimension: 40, child: Center(child: child)),
       ),
     );
   }
@@ -121,7 +135,13 @@ class _CollapsedTitle extends StatelessWidget {
         0.0,
         1.0,
       ), // fades in over the last quarter
-      child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      child: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        // The app's page title: handwritten, as on every other page.
+        style: Notebook.of(context).hand.copyWith(fontSize: 30, height: 1),
+      ),
     );
   }
 }

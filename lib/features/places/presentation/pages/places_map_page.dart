@@ -23,7 +23,7 @@ import '../../domain/place.dart';
 import '../places_controller.dart';
 import '../widgets/map_search.dart';
 import '../widgets/location_button.dart';
-import '../widgets/branch_edit_sheet.dart';
+import 'branch_edit_page.dart';
 import '../widgets/map_legend.dart';
 import '../widgets/nearby_carousel.dart';
 import '../widgets/nearby_sheet.dart';
@@ -145,6 +145,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _places.changes.removeListener(_loadNearby);
     _map?.onCircleTapped.remove(_tapped);
     _map?.onFeatureTapped.remove(_featureTapped);
+    // Calls still in flight find no map and stop (see quietMap).
+    _map = null;
     super.dispose();
   }
 
@@ -182,13 +184,15 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _faceLoading.clear();
     if (widget.focus case final focus?) {
       await _draw();
-      await _map?.animateCamera(CameraUpdate.newLatLngZoom(focus, 16));
+      await quietMap(
+        _map?.animateCamera(CameraUpdate.newLatLngZoom(focus, 16)),
+      );
       _cameraIdle();
       return;
     }
     await _draw(fit: _here == null);
     if (_here case final here?) {
-      await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14));
+      await quietMap(_map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14)));
     }
     _cameraIdle();
   }
@@ -210,7 +214,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       if (widget.focus != null) {
         return;
       }
-      await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14));
+      await quietMap(_map?.animateCamera(CameraUpdate.newLatLngZoom(here, 14)));
       _cameraIdle();
     } finally {
       _askingLocation = false;
@@ -320,7 +324,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
         unawaited(_loadNearby());
         _syncLocationUpdates();
       }
-      await _map?.animateCamera(CameraUpdate.newLatLngZoom(here, 15));
+      await quietMap(_map?.animateCamera(CameraUpdate.newLatLngZoom(here, 15)));
       _cameraIdle();
     } finally {
       if (mounted) setState(() => _locating = false);
@@ -358,7 +362,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   Future<void> _northUp() async {
     final map = _map;
     if (map == null) return;
-    await map.animateCamera(CameraUpdate.bearingTo(0));
+    await quietMap(map.animateCamera(CameraUpdate.bearingTo(0)));
     if (mounted) setState(() => _bearing = 0);
   }
 
@@ -367,7 +371,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final map = _map;
     if (map == null) return;
     final threeD = _tilt > 1;
-    await map.animateCamera(CameraUpdate.tiltTo(threeD ? 0 : 45));
+    await quietMap(map.animateCamera(CameraUpdate.tiltTo(threeD ? 0 : 45)));
     if (mounted) setState(() => _tilt = threeD ? 0 : 45);
   }
 
@@ -597,7 +601,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     );
   }
 
-  Future<void> _draw({bool fit = false}) async {
+  /// Redraws the pins; quiet once the native map has gone (see [quietMap]).
+  Future<void> _draw({bool fit = false}) => quietMap(_paint(fit: fit));
+
+  Future<void> _paint({bool fit = false}) async {
     final map = _map;
     if (map == null || !_styled || !mounted) return;
     final nb = Notebook.of(context);
@@ -734,17 +741,19 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final box = pinBounds(places);
     if (box == null) return;
     final single = box.southwest == box.northeast;
-    await map.animateCamera(
-      single
-          ? CameraUpdate.newLatLngZoom(box.southwest, 14)
-          : CameraUpdate.newLatLngBounds(
-              box,
-              left: 48,
-              top: 64,
-              right: 48,
-              bottom: 120,
-            ),
-      duration: const Duration(milliseconds: 700),
+    await quietMap(
+      map.animateCamera(
+        single
+            ? CameraUpdate.newLatLngZoom(box.southwest, 14)
+            : CameraUpdate.newLatLngBounds(
+                box,
+                left: 48,
+                top: 64,
+                right: 48,
+                bottom: 120,
+              ),
+        duration: const Duration(milliseconds: 700),
+      ),
     );
   }
 
@@ -776,10 +785,17 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   ) async {
     if (layer == _clusterLayer || layer == _countLayer) {
       final map = _map;
-      final zoom = (await map?.queryCameraPosition())?.zoom ?? 9;
-      await map?.animateCamera(
-        CameraUpdate.newLatLngZoom(at, zoom + 2),
-        duration: const Duration(milliseconds: 500),
+      double zoom = 9;
+      try {
+        zoom = (await map?.queryCameraPosition())?.zoom ?? 9;
+      } on PlatformException {
+        return;
+      }
+      await quietMap(
+        map?.animateCamera(
+          CameraUpdate.newLatLngZoom(at, zoom + 2),
+          duration: const Duration(milliseconds: 500),
+        ),
       );
     } else if (layer == _dotLayer || layer == _faceLayer) {
       _onTap(_features[id]);
@@ -878,17 +894,19 @@ class _PlacesMapPageState extends State<PlacesMapPage>
 
   void _flyTo(double lat, double lng) {
     unawaited(
-      _map?.easeCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: LatLng(lat, lng),
-            zoom: 15,
-            bearing: _bearing,
-            tilt: _tilt,
+      quietMap(
+        _map?.easeCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(lat, lng),
+              zoom: 15,
+              bearing: _bearing,
+              tilt: _tilt,
+            ),
           ),
+          duration: const Duration(milliseconds: 900),
+          interpolation: CameraAnimationInterpolation.easeInOut,
         ),
-        duration: const Duration(milliseconds: 900),
-        interpolation: CameraAnimationInterpolation.easeInOut,
       ),
     );
   }
@@ -899,24 +917,26 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final map = _map;
     if (map == null) return;
     unawaited(
-      map.easeCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: LatLng(place.lat, place.lng),
-            zoom: 15,
-            bearing: _bearing,
-            tilt: _tilt,
+      quietMap(
+        map.easeCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(place.lat, place.lng),
+              zoom: 15,
+              bearing: _bearing,
+              tilt: _tilt,
+            ),
           ),
+          duration: const Duration(milliseconds: 900),
+          interpolation: CameraAnimationInterpolation.easeInOut,
         ),
-        duration: const Duration(milliseconds: 900),
-        interpolation: CameraAnimationInterpolation.easeInOut,
       ),
     );
   }
 
   void _openNearby(NearbyBranch place) {
-    if (place.saved && place.placeId != null) {
-      context.push('/places/${place.placeId}');
+    if (place.saved && place.savedPlaceId != null) {
+      context.push('/places/${place.savedPlaceId}');
       return;
     }
     final places = context.read<PlacesController>();
@@ -937,7 +957,11 @@ class _PlacesMapPageState extends State<PlacesMapPage>
             _nearby = [
               for (final n in _nearby)
                 n.branchId == place.branchId
-                    ? n.copyWith(saved: true, placeId: saved.id, rating: rating)
+                    ? n.copyWith(
+                        saved: true,
+                        savedPlaceId: saved.id,
+                        rating: rating,
+                      )
                     : n,
             ];
           });
@@ -1296,9 +1320,9 @@ class _PinSheet extends StatelessWidget {
   Future<void> _edit(BuildContext context, Branch b) async {
     final owner = context.read<AuthController>().user?.isOwner ?? false;
     final navigator = Navigator.of(context);
-    final saved = await showNotebookSheet<bool>(
+    final saved = await showBranchEdit(
       context,
-      builder: (_) => BranchEditSheet(
+      builder: (_) => BranchEditPage(
         placeId: place.id,
         branch: b,
         canEditShared: owner,
@@ -1466,9 +1490,9 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
     final places = context.read<PlacesController>();
     final navigator = Navigator.of(context);
     final b = place.branch;
-    final saved = await showNotebookSheet<bool>(
+    final saved = await showBranchEdit(
       context,
-      builder: (_) => BranchEditSheet(
+      builder: (_) => BranchEditPage(
         placeId: '',
         branch: b,
         canEditShared: true,
@@ -1511,7 +1535,7 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
   Future<String?> _check() async {
     final l = AppLocalizations.of(context);
     final done = await context.read<PlacesController>().tidyBranches(
-      place.restaurantId,
+      place.placeId,
     );
     return l.branchesChecked(done.merged, done.removed);
   }
@@ -1616,4 +1640,14 @@ Future<Uint8List> _roundFace(Uint8List photo, Color ring, double dpr) async {
   final out = await rec.endRecording().toImage(size, size);
   final png = await out.toByteData(format: ui.ImageByteFormat.png);
   return png!.buffer.asUint8List();
+}
+
+/// A map call that may outlive its map: leaving the map page mid-animation (or the activity being recreated)
+/// destroys the native view, and the call then fails with MAP_NOT_READY. Nothing is left to update, so it is dropped.
+Future<void> quietMap(Future<Object?>? call) async {
+  try {
+    await call;
+  } on PlatformException {
+    // The map has gone.
+  }
 }

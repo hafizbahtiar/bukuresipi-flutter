@@ -13,9 +13,9 @@ import '../places_controller.dart';
 /// Owner only: pick the restaurant's cover for everyone from the thumbnails of the posts shared about it, or take
 /// or pick a photo of their own.
 class CoverPickerSheet extends StatefulWidget {
-  const CoverPickerSheet({super.key, required this.restaurantId});
+  const CoverPickerSheet({super.key, required this.placeId});
 
-  final String restaurantId;
+  final String placeId;
 
   @override
   State<CoverPickerSheet> createState() => _CoverPickerSheetState();
@@ -23,7 +23,7 @@ class CoverPickerSheet extends StatefulWidget {
 
 class _CoverPickerSheetState extends State<CoverPickerSheet> {
   late final _candidates = context.read<PlacesController>().coverCandidates(
-    widget.restaurantId,
+    widget.placeId,
   );
   bool _saving = false;
 
@@ -34,7 +34,7 @@ class _CoverPickerSheetState extends State<CoverPickerSheet> {
     setState(() => _saving = true);
     try {
       await context.read<PlacesController>().setRestaurantCover(
-        widget.restaurantId,
+        widget.placeId,
         cover,
       );
       messenger.showSnackBar(SnackBar(content: Text(l.coverSaved)));
@@ -59,7 +59,7 @@ class _CoverPickerSheetState extends State<CoverPickerSheet> {
     if (path == null || !mounted) return;
     setState(() => _saving = true);
     try {
-      await places.uploadRestaurantCover(widget.restaurantId, path);
+      await places.uploadRestaurantCover(widget.placeId, path);
       messenger.showSnackBar(SnackBar(content: Text(l.coverSaved)));
       navigator.pop();
     } catch (e) {
@@ -111,7 +111,7 @@ class _CoverPickerSheetState extends State<CoverPickerSheet> {
                         for (final c in data.covers)
                           _Candidate(
                             key: ValueKey('cover-$c'),
-                            restaurantId: widget.restaurantId,
+                            placeId: widget.placeId,
                             cover: c,
                             selected: c == data.current,
                             onTap: _saving ? null : () => _pick(c),
@@ -164,13 +164,13 @@ class _CoverPickerSheetState extends State<CoverPickerSheet> {
 class _Candidate extends StatefulWidget {
   const _Candidate({
     super.key,
-    required this.restaurantId,
+    required this.placeId,
     required this.cover,
     required this.selected,
     required this.onTap,
   });
 
-  final String restaurantId;
+  final String placeId;
   final String cover;
   final bool selected;
   final VoidCallback? onTap;
@@ -182,7 +182,7 @@ class _Candidate extends StatefulWidget {
 class _CandidateState extends State<_Candidate> {
   late final Future<Uint8List?> _bytes = context
       .read<PlacesController>()
-      .coverCandidate(widget.restaurantId, widget.cover)
+      .coverCandidate(widget.placeId, widget.cover)
       .catchError((Object _) => null);
 
   @override

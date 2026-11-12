@@ -94,7 +94,7 @@ void main() {
     await t.pumpWidget(
       app(
         NearbyCarousel(
-          places: [nearbyBranch(saved: true, placeId: 'p-1')],
+          places: [nearbyBranch(saved: true, savedPlaceId: 'p-1')],
           onTap: (_) {},
         ),
       ),
@@ -110,7 +110,7 @@ void main() {
       addTearDown(t.view.reset);
       final long = NearbyBranch(
         branchId: 'b-long',
-        restaurantId: 'r-1',
+        placeId: 'r-1',
         name: 'Restoran Nasi Kandar Yang Sangat Panjang Namanya Sekali',
         label: 'Cawangan Taman Melawati Hulu Kelang Selangor Darul Ehsan',
         lat: 3.15,

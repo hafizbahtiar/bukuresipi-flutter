@@ -43,6 +43,12 @@ Future<FakeRecipes> pumpEditor(WidgetTester t, {RecipeDetail? recipe}) async {
   return fake;
 }
 
+/// The editor's tabs: Details | Ingredients | Steps.
+Future<void> editTab(WidgetTester t, String name) async {
+  await t.tap(find.byKey(ValueKey('recipe-edit-tab-$name')));
+  await t.pumpAndSettle();
+}
+
 Finder nameField(int i) => find.byKey(ValueKey('ingredient-name-$i'));
 Finder amountField(int i) => find.byKey(ValueKey('ingredient-amount-$i'));
 bool focused(WidgetTester t, Finder field) =>
@@ -85,6 +91,7 @@ void main() {
     'Enter on an ingredient starts the next row and puts the cursor in it',
     (t) async {
       await pumpEditor(t);
+      await editTab(t, 'ingredients');
       await t.enterText(nameField(0), 'gula');
       await t.testTextInput.receiveAction(TextInputAction.next);
       await t.pumpAndSettle();
@@ -108,12 +115,14 @@ void main() {
     (t) async {
       final fake = await pumpEditor(t);
       await t.enterText(find.widgetWithText(TextField, 'Name'), 'Kek Pisang');
+      await editTab(t, 'ingredients');
       await t.enterText(nameField(0), 'tepung gandum');
       await t.enterText(amountField(0), '1 1/2');
       await t.tap(find.byKey(const ValueKey('ingredient-unit-0')));
       await t.pumpAndSettle();
       await t.tap(find.text('cawan').last);
       await t.pumpAndSettle();
+      await editTab(t, 'steps');
       await t.enterText(find.byKey(const ValueKey('step-0')), 'Pukul telur.');
       await t.testTextInput.receiveAction(TextInputAction.next);
       await t.pumpAndSettle();
@@ -122,7 +131,7 @@ void main() {
         find.byKey(const ValueKey('step-1')),
         'Bakar 40 minit.',
       );
-      await t.tap(find.text('Save'));
+      await t.tap(find.byTooltip('Save'));
       await t.pumpAndSettle();
       final (name, ingredients, steps) = fake.created.single;
       expect(name, 'Kek Pisang');
@@ -131,17 +140,32 @@ void main() {
     },
   );
 
-  testWidgets('an amount with no ingredient is flagged and nothing is saved', (
-    t,
-  ) async {
-    final fake = await pumpEditor(t);
-    await t.enterText(find.widgetWithText(TextField, 'Name'), 'Kek');
-    await t.enterText(amountField(0), '2');
-    await t.tap(find.text('Save'));
+  testWidgets(
+    'an amount with no ingredient is flagged, its tab shown, and nothing is saved',
+    (t) async {
+      final fake = await pumpEditor(t);
+      await t.enterText(find.widgetWithText(TextField, 'Name'), 'Kek');
+      await editTab(t, 'ingredients');
+      await t.enterText(amountField(0), '2');
+      // Saved from another tab: the editor goes to the row with the problem.
+      await editTab(t, 'details');
+      await t.tap(find.byTooltip('Save'));
+      await t.pumpAndSettle();
+      expect(
+        find.text('Write the ingredient for this amount.'),
+        findsOneWidget,
+      );
+      expect(fake.created, isEmpty);
+      expect(focused(t, nameField(0)), isTrue);
+    },
+  );
+
+  testWidgets('a missing name on Save brings back the Details tab', (t) async {
+    await pumpEditor(t);
+    await editTab(t, 'steps');
+    await t.tap(find.byTooltip('Save'));
     await t.pumpAndSettle();
-    expect(find.text('Write the ingredient for this amount.'), findsOneWidget);
-    expect(fake.created, isEmpty);
-    expect(focused(t, nameField(0)), isTrue);
+    expect(find.text('Give the recipe a name.'), findsOneWidget);
   });
 
   testWidgets(
@@ -161,13 +185,14 @@ void main() {
           ],
         ),
       );
+      await editTab(t, 'ingredients');
       expect(t.widget<TextField>(amountField(0)).controller!.text, '2');
       expect(
         find.text('sb'),
         findsOneWidget,
       ); // the stored spelling stays selectable
       await t.enterText(amountField(1), '2');
-      await t.tap(find.text('Save'));
+      await t.tap(find.byTooltip('Save'));
       await t.pumpAndSettle();
       expect(fake.edited.single.$3, ['2 sb  gula', '2 cawan santan']);
     },
@@ -177,6 +202,7 @@ void main() {
     'leaving with changes asks first; without changes it just closes',
     (t) async {
       await pumpEditor(t);
+      await editTab(t, 'ingredients');
       await t.enterText(nameField(0), 'gula');
       await t.pump(); // the frame that rebuilds the page with its change
       await t.binding.handlePopRoute(); // Android back: respects PopScope (pageBack() does not)
@@ -203,7 +229,7 @@ void main() {
     await t.pump();
     expect(find.text('Add photo'), findsOneWidget);
     expect(find.byKey(const ValueKey('cover-remove')), findsNothing);
-    await t.tap(find.text('Save'));
+    await t.tap(find.byTooltip('Save'));
     await t.pumpAndSettle();
     expect(fake.edited, hasLength(1));
     expect(fake.coversRemoved, ['r-1']);
@@ -215,7 +241,7 @@ void main() {
     expect(find.text('Add photo'), findsOneWidget);
     expect(find.byKey(const ValueKey('cover-remove')), findsNothing);
     await t.enterText(find.byType(TextField).first, 'Kek Batik');
-    await t.tap(find.text('Save'));
+    await t.tap(find.byTooltip('Save'));
     await t.pumpAndSettle();
     expect(fake.created, hasLength(1));
     expect(fake.covers, isEmpty);

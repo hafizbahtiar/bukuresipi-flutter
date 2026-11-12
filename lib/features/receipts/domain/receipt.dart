@@ -138,7 +138,7 @@ class ReceiptSplit {
 /// [amountSen] negative when it takes money off.
 typedef ReceiptCharge = ({String kind, String? name, int amountSen});
 
-typedef ReceiptPlace = ({String restaurantId, String? branchId, String name});
+typedef ReceiptPlace = ({String placeId, String? branchId, String name});
 
 /// The user's own visits and spend from saved receipts. [months]: 'YYYY-MM' with visits only (gaps left out).
 class ReceiptStats {
@@ -152,8 +152,7 @@ class ReceiptStats {
   final int totalSen;
   final int visits;
   final List<({String month, int visits, int totalSen})> months;
-  final List<({String restaurantId, String name, int visits, int totalSen})>
-  places;
+  final List<({String placeId, String name, int visits, int totalSen})> places;
 }
 
 /// "RM 41.15" from sen; "-RM 2.00" for a discount.

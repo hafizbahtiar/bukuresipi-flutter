@@ -240,8 +240,8 @@ class _FeedPageState extends State<FeedPage> {
   }
 
   void _open(NearbyBranch place) {
-    if (place.saved && place.placeId != null) {
-      context.push('/places/${place.placeId}');
+    if (place.saved && place.savedPlaceId != null) {
+      context.push('/places/${place.savedPlaceId}');
       return;
     }
     final places = context.read<PlacesController>();
@@ -417,7 +417,7 @@ class _FeedPageState extends State<FeedPage> {
       photo: switch (p.cover) {
         final cover? => (ph) => ShareFill(
           id: cover,
-          restaurantId: p.restaurantId,
+          placeId: p.placeId,
           fallback: ph,
         ),
         null => null,

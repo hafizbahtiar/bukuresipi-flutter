@@ -50,9 +50,7 @@ void main() {
         totalSen: 5615,
         visits: 3,
         months: [(month: '2026-10', visits: 1, totalSen: 4115)],
-        places: [
-          (restaurantId: 'x', name: 'Port Lepak', visits: 2, totalSen: 5115),
-        ],
+        places: [(placeId: 'x', name: 'Port Lepak', visits: 2, totalSen: 5115)],
       )
       ..items = [receipt(id: 'r-1', status: 'saved')];
     await pump(t, repo);

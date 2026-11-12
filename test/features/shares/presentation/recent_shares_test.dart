@@ -9,7 +9,7 @@ Share s(String id, String status, {List<String> gaps = const []}) => Share(
   status: status,
   kind: 'restaurant',
   gaps: gaps,
-  restaurantId: status == 'done' ? 'r-$id' : null,
+  placeId: status == 'done' ? 'r-$id' : null,
 );
 
 void main() {

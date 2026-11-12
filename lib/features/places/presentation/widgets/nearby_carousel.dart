@@ -244,7 +244,7 @@ class NearbyCard extends StatelessWidget {
                   final cover? => ShareFill(
                     key: ValueKey('nearby-cover-$cover'),
                     id: cover,
-                    restaurantId: place.restaurantId,
+                    placeId: place.placeId,
                     fallback: Center(child: icon),
                   ),
                   null => Center(child: icon),

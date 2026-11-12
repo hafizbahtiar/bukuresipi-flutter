@@ -238,6 +238,127 @@
   "@recipeIngredients": {},
   "recipeSteps": "Steps",
   "@recipeSteps": {},
+  "recipeDetails": "Details",
+  "@recipeDetails": {
+    "description": "Recipe editor tab: cover photo and name"
+  },
+  "placeTabHalal": "Halal claim",
+  "@placeTabHalal": {
+    "description": "Place page tab: what the post says about halal (a claim, never a certificate)"
+  },
+  "pickerSearch": "Search",
+  "@pickerSearch": {},
+  "pickerNone": "Nothing matches.",
+  "@pickerNone": {},
+  "pickerUseTyped": "Use “{text}”",
+  "pinResultsShow": "{count, plural, =1{Show 1 result} other{Show {count} results}}",
+  "pinResultsTitle": "{count, plural, =1{1 result} other{{count} results}} from {map}",
+  "@pickerUseTyped": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "@pinResultsShow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pinResultsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "map": {
+        "type": "String"
+      }
+    }
+  },
+  "pinHitAdded": "Added",
+  "@pinHitAdded": {},
+  "branchDetails": "Details",
+  "@branchDetails": {},
+  "placeEdit": "Edit place",
+  "@placeEdit": {},
+  "placeName": "Place name",
+  "@placeName": {},
+  "placeCuisine": "Cuisine",
+  "@placeCuisine": {},
+  "placeEditShared": "The place's name and cuisine are shared by every user. Branches are edited one by one.",
+  "@placeEditShared": {},
+  "placeNameRequired": "Enter the place's name.",
+  "@placeNameRequired": {},
+  "placeSaved": "Place updated.",
+  "@placeSaved": {},
+  "placeCategory": "Category",
+  "@placeCategory": {},
+  "placeCategoryFood": "Food",
+  "@placeCategoryFood": {},
+  "placeCategoryShop": "Shop",
+  "@placeCategoryShop": {},
+  "placeCategoryAttraction": "Attraction",
+  "@placeCategoryAttraction": {},
+  "placeCategoryStay": "Stay",
+  "@placeCategoryStay": {},
+  "placeCategoryOutdoor": "Outdoor",
+  "@placeCategoryOutdoor": {},
+  "placeCategoryOther": "Other",
+  "@placeCategoryOther": {},
+  "placeSubcategory": "Type",
+  "@placeSubcategory": {},
+  "placeSubcategoryNone": "Not set",
+  "@placeSubcategoryNone": {},
+  "placeSubRestaurant": "Restaurant",
+  "@placeSubRestaurant": {},
+  "placeSubCafe": "Café",
+  "@placeSubCafe": {},
+  "placeSubStall": "Stall",
+  "@placeSubStall": {},
+  "placeSubMamak": "Mamak",
+  "@placeSubMamak": {},
+  "placeSubKopitiam": "Kopitiam",
+  "@placeSubKopitiam": {},
+  "placeSubFoodCourt": "Food court",
+  "@placeSubFoodCourt": {},
+  "placeSubBakery": "Bakery",
+  "@placeSubBakery": {},
+  "placeSubDessert": "Dessert",
+  "@placeSubDessert": {},
+  "placeSubFastFood": "Fast food",
+  "@placeSubFastFood": {},
+  "placeSubGrocery": "Grocery",
+  "@placeSubGrocery": {},
+  "placeSubMarket": "Market",
+  "@placeSubMarket": {},
+  "placeSubMall": "Mall",
+  "@placeSubMall": {},
+  "placeSubMuseum": "Museum",
+  "@placeSubMuseum": {},
+  "placeSubThemePark": "Theme park",
+  "@placeSubThemePark": {},
+  "placeSubLandmark": "Landmark",
+  "@placeSubLandmark": {},
+  "placeSubHotel": "Hotel",
+  "@placeSubHotel": {},
+  "placeSubHomestay": "Homestay",
+  "@placeSubHomestay": {},
+  "placeSubResort": "Resort",
+  "@placeSubResort": {},
+  "placeSubPark": "Park",
+  "@placeSubPark": {},
+  "placeSubBeach": "Beach",
+  "@placeSubBeach": {},
+  "placeSubWaterfall": "Waterfall",
+  "@placeSubWaterfall": {},
+  "placeSubHiking": "Hiking",
+  "@placeSubHiking": {},
+  "recipeOthers": "Others",
+  "@recipeOthers": {
+    "description": "Recipe page tab: allergens and other notes"
+  },
   "recipeIncomplete": "Not everything was found",
   "@recipeIncomplete": {},
   "recipeMissingName": "dish name",
@@ -865,6 +986,8 @@
   "@ownerRatingDeleteConfirm": {},
   "recipeAllergens": "Allergens",
   "@recipeAllergens": {},
+  "recipeAllergenInfo": "Allergens are foods that can cause a reaction in people allergic to them, such as milk, egg, peanuts, shellfish or wheat (gluten). Below are the ones found in this recipe's ingredients, and which ingredient has them.",
+  "@recipeAllergenInfo": {},
   "recipeAllergenNote": "From recognised ingredients only, by their usual recipe. Always check product labels.",
   "@recipeAllergenNote": {},
   "recipeAllergenUnchecked": "Ingredients not checked: {count}.",

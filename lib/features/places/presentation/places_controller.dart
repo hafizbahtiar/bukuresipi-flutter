@@ -126,13 +126,13 @@ class PlacesController extends ChangeNotifier {
     String into, {
     String? name,
   }) async {
-    await _repo.mergeRestaurants(from, into, name: name);
+    await _repo.mergePlaces(from, into, name: name);
     await _reload();
   }
 
   /// Owner only. Throws ApiException.
-  Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
-    final done = await _repo.tidyBranches(restaurantId);
+  Future<({int merged, int removed})> tidyBranches(String placeId) async {
+    final done = await _repo.tidyBranches(placeId);
     await _reload();
     return done;
   }
@@ -140,6 +140,24 @@ class PlacesController extends ChangeNotifier {
   /// Owner only. Throws ApiException.
   Future<void> deleteBranch(String branchId) async {
     await _repo.deleteBranch(branchId);
+    await _reload();
+  }
+
+  /// Owner only: renames the main place / sets its cuisine for everyone. Throws ApiException.
+  Future<void> updateRestaurant(
+    String placeId, {
+    required String name,
+    required String category,
+    String? subcategory,
+    String? cuisine,
+  }) async {
+    await _repo.updatePlace(
+      placeId,
+      name: name,
+      category: category,
+      subcategory: subcategory,
+      cuisine: cuisine,
+    );
     await _reload();
   }
 
@@ -305,33 +323,33 @@ class PlacesController extends ChangeNotifier {
   Future<void> report(ReportDraft draft) => _repo.report(draft);
 
   /// The restaurant's cover photo bytes, or null (none, or not loaded).
-  Future<Uint8List?> restaurantCover(String restaurantId, String cover) =>
-      _repo.restaurantCover(restaurantId, cover);
+  Future<Uint8List?> restaurantCover(String placeId, String cover) =>
+      _repo.placeCover(placeId, cover);
 
   /// Owner only. Throws ApiException.
   Future<({List<String> covers, String? current})> coverCandidates(
-    String restaurantId,
-  ) => _repo.coverCandidates(restaurantId);
+    String placeId,
+  ) => _repo.coverCandidates(placeId);
 
   /// Owner only.
-  Future<Uint8List?> coverCandidate(String restaurantId, String cover) =>
-      _repo.coverCandidate(restaurantId, cover);
+  Future<Uint8List?> coverCandidate(String placeId, String cover) =>
+      _repo.coverCandidate(placeId, cover);
 
   /// Owner only: sets the cover for everyone, then reloads the saved places so the new id shows.
-  Future<void> setRestaurantCover(String restaurantId, String? cover) async {
-    await _repo.setRestaurantCover(restaurantId, cover);
+  Future<void> setRestaurantCover(String placeId, String? cover) async {
+    await _repo.setRestaurantCover(placeId, cover);
     await _reload();
   }
 
   /// Owner only: a photo of their own as the cover. Throws ApiException.
-  Future<void> uploadRestaurantCover(String restaurantId, String path) async {
-    await _repo.uploadRestaurantCover(restaurantId, path);
+  Future<void> uploadRestaurantCover(String placeId, String path) async {
+    await _repo.uploadRestaurantCover(placeId, path);
     await _reload();
   }
 
   /// Owner only: a draft's web photo as the cover. Throws ApiException.
-  Future<void> setRestaurantCoverUrl(String restaurantId, String url) async {
-    await _repo.setRestaurantCoverUrl(restaurantId, url);
+  Future<void> setRestaurantCoverUrl(String placeId, String url) async {
+    await _repo.setRestaurantCoverUrl(placeId, url);
     await _reload();
   }
 }

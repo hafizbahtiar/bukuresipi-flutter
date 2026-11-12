@@ -99,10 +99,10 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     try {
       final share = await shares.get(shareId);
       if (share.recipeId case final id?) return _router.go('/recipes/$id');
-      if (share.restaurantId case final restaurantId?) {
+      if (share.placeId case final placeId?) {
         await places.load();
         final place = places.places
-            .where((p) => p.restaurant.id == restaurantId)
+            .where((p) => p.restaurant.id == placeId)
             .firstOrNull;
         if (place != null) return _router.go('/places/${place.id}');
       }

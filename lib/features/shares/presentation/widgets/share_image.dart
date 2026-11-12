@@ -222,7 +222,7 @@ class _SharePhotoState extends State<SharePhoto> {
   );
 }
 
-/// A share's photo, a recipe's cover ([recipeId]) or a restaurant's cover ([restaurantId]), filling its box
+/// A share's photo, a recipe's cover ([recipeId]) or a restaurant's cover ([placeId]), filling its box
 /// (BoxFit.cover). [fallback] shows while loading, when there is none, or on error. For cards (Home feed); the list
 /// rows use [SharePhoto].
 class ShareFill extends StatefulWidget {
@@ -230,15 +230,15 @@ class ShareFill extends StatefulWidget {
     super.key,
     required this.id,
     this.recipeId,
-    this.restaurantId,
+    this.placeId,
     required this.fallback,
     this.cacheWidth = 600,
   });
 
-  /// The share id, or the cover id when [recipeId] or [restaurantId] is set.
+  /// The share id, or the cover id when [recipeId] or [placeId] is set.
   final String id;
   final String? recipeId;
-  final String? restaurantId;
+  final String? placeId;
   final Widget fallback;
 
   /// Decoded at this width: a card is at most ~240 dp wide (600); a page's header photo is the screen's width.
@@ -254,7 +254,7 @@ class _ShareFillState extends State<ShareFill> {
   // shortcut: unbounded for the run's photos seen (~100 KB-1 MB each); bound it if a long session ever matters.
   static final _ready = <String, Uint8List>{};
 
-  String get _key => '${widget.recipeId}/${widget.restaurantId}/${widget.id}';
+  String get _key => '${widget.recipeId}/${widget.placeId}/${widget.id}';
 
   late Future<Uint8List?> _bytes = _load();
 
@@ -263,25 +263,24 @@ class _ShareFillState extends State<ShareFill> {
     return b;
   });
 
-  Future<Uint8List?> _fetch() =>
-      switch ((widget.recipeId, widget.restaurantId)) {
-        (final recipe?, _) => context.read<RecipesController>().cover(
-          recipe,
-          widget.id,
-        ),
-        (_, final r?) => context.read<PlacesController>().restaurantCover(
-          r,
-          widget.id,
-        ),
-        _ => context.read<ShareRepository>().image(widget.id),
-      }.catchError((Object _) => null);
+  Future<Uint8List?> _fetch() => switch ((widget.recipeId, widget.placeId)) {
+    (final recipe?, _) => context.read<RecipesController>().cover(
+      recipe,
+      widget.id,
+    ),
+    (_, final r?) => context.read<PlacesController>().restaurantCover(
+      r,
+      widget.id,
+    ),
+    _ => context.read<ShareRepository>().image(widget.id),
+  }.catchError((Object _) => null);
 
   @override
   void didUpdateWidget(covariant ShareFill old) {
     super.didUpdateWidget(old);
     if (old.id != widget.id ||
         old.recipeId != widget.recipeId ||
-        old.restaurantId != widget.restaurantId) {
+        old.placeId != widget.placeId) {
       _bytes = _load();
     }
   }

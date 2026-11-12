@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/ai_button.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../owner/domain/owner_repository.dart';
@@ -80,9 +82,9 @@ class _RecipeVariantsState extends State<RecipeVariants> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NotebookHeading(l.variantsTitle),
+        SectionHeader(l.variantsTitle),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 12, 4),
+          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceS, spaceXs),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -94,15 +96,10 @@ class _RecipeVariantsState extends State<RecipeVariants> {
               if (widget.owner)
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: _finding ? null : _find,
-                    icon: _finding
-                        ? const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.travel_explore, size: 18),
-                    label: Text(l.variantsFind),
+                  child: AiButton(
+                    label: l.variantsFind,
+                    busy: _finding,
+                    onPressed: _find,
                   ),
                 ),
             ],
@@ -129,14 +126,16 @@ class _VariantRow extends StatelessWidget {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final v = variant;
-    return NotebookRow(
-      onTap: () => showNotebookSheet<void>(
-        context,
-        builder: (_) => _VariantSheet(variant: v),
+    return ListTile(
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (_) => SafeArea(child: _VariantSheet(variant: v)),
       ),
-      mark: _MatchBadge(match: v.match),
+      leading: _MatchBadge(match: v.match),
       trailing: Icon(Icons.chevron_right, color: nb.inkSoft),
-      child: Column(
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -241,9 +240,9 @@ class _VariantSheet extends StatelessWidget {
     return ListView(
       shrinkWrap: true,
       children: [
-        NotebookRow(
-          mark: _MatchBadge(match: v.match),
-          child: Column(
+        ListTile(
+          leading: _MatchBadge(match: v.match),
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -261,15 +260,14 @@ class _VariantSheet extends StatelessWidget {
             ],
           ),
         ),
-        NotebookHeading(l.recipeIngredients),
+        SectionHeader(l.recipeIngredients),
         for (final i in v.ingredients)
-          NotebookRow(
-            mark: Icon(
+          ListTile(
+            leading: Icon(
               i.name == null ? Icons.help_outline : Icons.link,
-              size: 18,
               color: i.name == null ? nb.inkSoft : nb.pandanDeep,
             ),
-            child: Column(
+            title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(i.text),
@@ -288,9 +286,9 @@ class _VariantSheet extends StatelessWidget {
               ],
             ),
           ),
-        NotebookRow(
-          mark: Icon(Icons.format_list_numbered, size: 18, color: nb.inkSoft),
-          child: Text(
+        ListTile(
+          leading: Icon(Icons.format_list_numbered, color: nb.inkSoft),
+          title: Text(
             v.stepCount > 0
                 ? l.variantStepsThere(v.stepCount)
                 : l.variantStepsThereUnknown,
@@ -298,7 +296,7 @@ class _VariantSheet extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+          padding: const EdgeInsets.all(spaceM),
           child: Wrap(
             spacing: 8,
             runSpacing: 8,

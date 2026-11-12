@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/cover_app_bar.dart';
+import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -15,9 +17,11 @@ import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
 import '../widgets/halal_status.dart';
-import '../widgets/branch_edit_sheet.dart';
+import 'branch_page.dart';
+import 'place_edit_page.dart';
 import '../widgets/cover_picker_sheet.dart';
 import '../widgets/notebook_rating.dart';
+import '../widgets/place_category.dart';
 import '../widgets/place_report_sheet.dart';
 import '../widgets/unpinned_actions.dart';
 
@@ -113,8 +117,9 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     }
   }
 
-  Future<void> _report(Place place) => showNotebookSheet<void>(
-    context,
+  Future<void> _report(Place place) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
     builder: (_) => PlaceReportSheet(
       subject: ReportSubject.fromPlace(place),
       onSubmit: (draft) => context.read<PlacesController>().report(draft),
@@ -171,181 +176,223 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     final savers = [
       for (final s in place.savedBy) s.isMe ? l.savedByYou : (s.name ?? '?'),
     ];
+    final halal = r.halalClaim != null && r.halalQuote != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          if (branch case Branch(hasPin: true, :final lat?, :final lng?))
-            IconButton(
-              key: const ValueKey('place-map'),
-              tooltip: l.navMap,
-              icon: const Icon(Icons.map_outlined),
-              onPressed: () => context.push('/map?lat=$lat&lng=$lng'),
-            ),
-        ],
-      ),
-      extendBody: true,
-      bottomNavigationBar: ActionDock(
-        actions: [
-          if (branch?.mapsUrl case final url?)
-            DockAction(
-              icon: Icons.directions,
-              label: l.directions,
-              onPressed: () => openLink(context, url, failed: l.openFailed),
-            ),
-          if (place.mine)
-            DockAction(
-              icon: Icons.edit_note,
-              label: l.noteSave,
-              onPressed: dirty ? () => _saveNote(place) : null,
-              busy: _savingNote,
-            )
-          else if (place.savedBranch != null)
-            DockAction(
-              icon: Icons.bookmark_add_outlined,
-              label: l.placeSaveToMine,
-              onPressed: () => _saveToMine(place),
-            ),
-          if (owner)
-            DockAction(
-              icon: Icons.image_outlined,
-              label: l.coverTitle,
-              onPressed: () => showNotebookSheet<void>(
-                context,
-                builder: (_) => CoverPickerSheet(restaurantId: r.id),
-              ),
-            ),
-          if (owner)
-            DockAction(
-              icon: Icons.merge_type,
-              label: l.checkBranches,
-              onPressed: () => _checkBranches(place),
-              busy: _checking,
-            ),
-          DockAction(
-            icon: Icons.flag_outlined,
-            label: l.report,
-            onPressed: () => _report(place),
+    void pickCover() => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => CoverPickerSheet(placeId: r.id),
+    );
+    // Go there first, then keep it (save, note), then the owner's tools, then report; remove last, set apart.
+    final more = MoreMenu(
+      actions: [
+        if (branch?.mapsUrl case final url?)
+          MenuAction(
+            icon: Icons.directions,
+            label: l.directions,
+            onTap: () => openLink(context, url, failed: l.openFailed),
           ),
-          // Unsave removes only the caller's own save; a family member's stays theirs.
-          if (place.mine)
-            DockAction(
-              icon: Icons.delete_outline,
-              label: l.remove,
-              tooltip: l.removePlace,
-              danger: true,
-              onPressed: () => _remove(place),
-            ),
+        if (branch case Branch(hasPin: true, :final lat?, :final lng?))
+          MenuAction(
+            icon: Icons.map_outlined,
+            label: l.navMap,
+            onTap: () => context.push('/map?lat=$lat&lng=$lng'),
+          ),
+        if (place.sourceUrl case final url?)
+          MenuAction(
+            icon: Icons.open_in_new,
+            label: l.openYourPost,
+            onTap: () => openLink(context, url, failed: l.openFailed),
+          ),
+        if (!place.mine && place.savedBranch != null)
+          MenuAction(
+            icon: Icons.bookmark_add_outlined,
+            label: l.placeSaveToMine,
+            onTap: () => _saveToMine(place),
+          ),
+        if (owner) ...[
+          MenuAction(
+            icon: Icons.edit_outlined,
+            label: l.placeEdit,
+            onTap: () => PlaceEditPage.open(context, r),
+          ),
+          MenuAction(
+            icon: Icons.image_outlined,
+            label: l.coverTitle,
+            onTap: pickCover,
+          ),
+          MenuAction(
+            icon: Icons.merge_type,
+            label: l.checkBranches,
+            onTap: _checking ? null : () => _checkBranches(place),
+          ),
         ],
-      ),
-      body: NotebookPage(
-        // Builder: bottomRoom needs the body's context (it holds the keyboard + dock height).
-        child: Builder(
-          builder: (context) => ListView(
-            padding: EdgeInsets.only(bottom: ActionDock.bottomRoom(context)),
+        MenuAction(
+          icon: Icons.flag_outlined,
+          label: l.report,
+          onTap: () => _report(place),
+        ),
+        // Unsave removes only the caller's own save; a family member's stays theirs.
+        if (place.mine)
+          MenuAction(
+            icon: Icons.delete_outline,
+            label: l.removePlace,
+            danger: true,
+            onTap: () => _remove(place),
+          ),
+      ],
+    );
+
+    // The cover the owner picked, else the post's picture, else a short banner (the owner can add a cover there).
+    final photoId = r.cover ?? place.shareId;
+    final coverBar = CoverAppBar(
+      photo: photoId == null
+          ? _NoPhoto(onAdd: owner ? pickCover : null)
+          : ShareFill(
+              key: ValueKey('place-cover-$photoId'),
+              id: photoId,
+              placeId: r.cover == null ? null : r.id,
+              fallback: ColoredBox(color: nb.mist),
+            ),
+      height: photoId == null ? 140 : null,
+      title: r.name,
+      actions: [more],
+    );
+    final header = SliverList.list(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, spaceM, spaceM, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(r.name, style: nb.hand.copyWith(fontSize: 34, height: 1.05)),
+              // "Mamak · Thai": the most specific kind known, then (food) its cuisine.
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  4,
-                  20,
-                  0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.only(top: spaceXs),
+                child: Row(
+                  key: const ValueKey('place-category-line'),
                   children: [
-                    if (r.cover case final cover?)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: ShareFill(
-                              key: ValueKey('place-cover-$cover'),
-                              id: cover,
-                              restaurantId: r.id,
-                              fallback: const SizedBox.shrink(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    Text(
-                      r.name,
-                      style: text.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        height: 1.15,
+                    Icon(
+                      placeCategoryIcon(r.category, r.subcategory),
+                      size: 18,
+                      color: nb.inkSoft,
+                    ),
+                    const SizedBox(width: spaceXs + 2),
+                    Expanded(
+                      child: Text(
+                        [
+                          if (r.subcategory case final s?)
+                            placeSubcategoryLabel(l, s)
+                          else
+                            placeCategoryLabel(l, r.category),
+                          if (r.isFood) ?r.cuisine,
+                        ].join(' · '),
+                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                       ),
                     ),
-                    if (r.cuisine != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          r.cuisine!,
-                          style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                        ),
-                      ),
-                    HalalStatus(
-                      claim: r.halalQuote == null ? null : r.halalClaim,
-                    ),
-                    if (place.shareId case final id? when r.cover == null)
-                      ShareImage(id),
-                    if (place.sourceUrl case final url?)
-                      TextButton.icon(
-                        onPressed: () =>
-                            openLink(context, url, failed: l.openFailed),
-                        icon: const Icon(Icons.open_in_new, size: 16),
-                        label: Text(l.openYourPost),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
                   ],
                 ),
               ),
-              if (savers.length > 1 || !place.mine)
-                NotebookRow(
-                  mark: Icon(Icons.people_outline, size: 20, color: nb.inkSoft),
-                  child: Text(l.placeSavedBy(savers.join(', '))),
-                ),
-              if (place.mine && inFamily)
-                NotebookRow(
-                  mark: Icon(Icons.lock_outline, size: 20, color: nb.inkSoft),
-                  onTap: () => _setPrivate(place, !place.private),
-                  trailing: Switch(
-                    value: place.private,
-                    onChanged: (v) => _setPrivate(place, v),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l.placeOnlyMe),
-                      Text(
-                        l.placeOnlyMeHint,
-                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                      ),
-                    ],
-                  ),
-                ),
-              NotebookHeading(l.branchesTitle),
-              for (final b in branches)
-                _BranchRow(
-                  place: place,
-                  branch: b,
-                  fromPost: b == branch && place.branchId != null,
-                  owner: owner,
-                ),
-              if (r.halalClaim != null && r.halalQuote != null) ...[
-                NotebookHeading(l.halalTitle),
-                _HalalQuote(restaurant: r),
-              ],
-              if (place.mine) ...[
-                NotebookHeading(l.noteTitle),
-                _NoteField(controller: _note),
-              ],
+              // Halal is a food claim: a shop or a park has none to show.
+              if (r.isFood)
+                HalalStatus(claim: r.halalQuote == null ? null : r.halalClaim),
             ],
           ),
+        ),
+        if (savers.length > 1 || !place.mine)
+          ListTile(
+            leading: const Icon(Icons.people_outline),
+            title: Text(l.placeSavedBy(savers.join(', '))),
+          ),
+        if (place.mine && inFamily)
+          SwitchListTile(
+            secondary: const Icon(Icons.lock_outline),
+            title: Text(l.placeOnlyMe),
+            subtitle: Text(l.placeOnlyMeHint),
+            value: place.private,
+            onChanged: (v) => _setPrivate(place, v),
+          ),
+      ],
+    );
+
+    return Scaffold(
+      body: GestureDetector(
+        // A tap off the note closes the keyboard.
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: DetailTabs(
+          coverBar: coverBar,
+          header: header,
+          sections: [
+            if (branches.isNotEmpty)
+              DetailSection(
+                id: 'place-tab-branches',
+                label: '${l.branchesTitle} (${branches.length})',
+                rows: [
+                  for (final b in branches) ...[
+                    _BranchRow(
+                      place: place,
+                      branch: b,
+                      fromPost: b == branch && place.branchId != null,
+                      owner: owner,
+                    ),
+                  ],
+                ],
+              ),
+            if (halal)
+              DetailSection(
+                id: 'place-tab-halal',
+                label: l.placeTabHalal,
+                rows: [
+                  SectionHeader(l.halalTitle),
+                  _HalalQuote(restaurant: r),
+                ],
+              ),
+            if (place.mine)
+              DetailSection(
+                id: 'place-tab-note',
+                label: l.noteTitle,
+                rows: [
+                  SectionHeader(l.noteTitle),
+                  _NoteField(
+                    controller: _note,
+                    saving: _savingNote,
+                    onSave: dirty ? () => _saveNote(place) : null,
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The header with no photo: a tinted banner with a shop mark; the owner gets "Add cover photo" on it.
+class _NoPhoto extends StatelessWidget {
+  const _NoPhoto({required this.onAdd});
+
+  final VoidCallback? onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return ColoredBox(
+      color: nb.mist,
+      child: SafeArea(
+        bottom: false,
+        child: Center(
+          child: onAdd == null
+              ? Icon(
+                  Icons.storefront_outlined,
+                  size: 48,
+                  color: nb.pandan.withValues(alpha: 0.5),
+                )
+              : TextButton.icon(
+                  key: const ValueKey('place-add-cover'),
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: Text(AppLocalizations.of(context).coverTitle),
+                ),
         ),
       ),
     );
@@ -354,7 +401,7 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
 
 /// Removing or deleting: the red dialog.
 Future<bool> _confirm(BuildContext context, String question, String action) =>
-    showNotebookDialog(
+    showBaseDialog(
       context,
       message: question,
       tone: DialogTone.danger,
@@ -374,108 +421,51 @@ class _BranchRow extends StatelessWidget {
   final bool fromPost;
   final bool owner;
 
-  Future<void> _edit(BuildContext context) => showNotebookSheet<void>(
-    context,
-    builder: (_) => BranchEditSheet(
-      placeId: place.id,
-      branch: branch,
-      canEditShared: owner,
-      onSuggest: owner
-          ? () => context.read<PlacesController>().suggestBranch(branch.id)
-          : null,
-      onSave: (edit, scope) => context.read<PlacesController>().updateBranch(
-        branch.id,
-        label: edit.label,
-        address: edit.address,
-        city: edit.city,
-        state: edit.state,
-        lat: edit.lat,
-        lng: edit.lng,
-        scope: scope,
-      ),
-    ),
-  );
-
-  Future<void> _delete(BuildContext context) async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final places = context.read<PlacesController>();
-    if (!await _confirm(
-      context,
-      l.deleteBranchConfirm(branch.label ?? branch.where ?? ''),
-      l.delete,
-    )) {
-      return;
-    }
-    try {
-      await places.deleteBranch(branch.id);
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
-    final notes = [
-      ?branch.where,
-      if (!branch.hasPin) l.noPin,
-      if (branch.pinnedByUser) l.pinnedByUser,
-      if (branch.pinnedByOwner) l.pinnedByOwner,
-      if (fromPost) l.fromYourPost,
-    ];
-    return NotebookRow(
-      mark: PinMark(pinned: branch.hasPin),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: l.editBranch,
-            icon: Icon(Icons.edit_outlined, color: nb.inkSoft),
-            onPressed: () => _edit(context),
-          ),
-          if (owner)
-            IconButton(
-              tooltip: l.deleteBranch,
-              icon: Icon(Icons.delete_outline, color: nb.inkSoft),
-              onPressed: () => _delete(context),
-            ),
-        ],
+    return BaseTile(
+      key: ValueKey('branch-${branch.id}'),
+      title: branch.label ?? branch.where ?? '-',
+      subtitle: branch.label == null ? null : branch.where,
+      muted: branch.closed,
+      leading: BaseTile.icon(
+        context,
+        branch.hasPin ? Icons.place : Icons.location_off_outlined,
+        color: branch.hasPin ? nb.pandanDeep : nb.kunyit,
       ),
-      child: Column(
+      tags: branchTags(l, branch, fromPost: fromPost),
+      onTap: () => BranchPage.open(context, place, branch),
+      footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            branch.label ?? branch.where ?? '-',
-            style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+          RatingLine(
+            rating: branch.rating,
+            onTap: () => context.push('/branches/${branch.id}/reviews'),
           ),
-          if (branch.closed)
-            Text(
-              l.branchClosed,
-              key: ValueKey('branch-closed-${branch.id}'),
-              style: text.bodySmall?.copyWith(
-                color: nb.margin,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          for (final n in notes)
-            Text(n, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: RatingLine(
-              rating: branch.rating,
-              onTap: () => context.push('/branches/${branch.id}/reviews'),
-            ),
-          ),
-          if (!branch.hasPin)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: UnpinnedActions(place: place, branch: branch),
-            ),
+          if (!branch.hasPin) UnpinnedActions(place: place, branch: branch),
         ],
       ),
+      actions: [
+        MenuAction(
+          icon: Icons.edit_outlined,
+          label: l.editBranch,
+          onTap: () => editBranch(context, place, branch, owner: owner),
+        ),
+        MenuAction(
+          icon: Icons.reviews_outlined,
+          label: l.reviewsTitle,
+          onTap: () => context.push('/branches/${branch.id}/reviews'),
+        ),
+        if (owner)
+          MenuAction(
+            icon: Icons.delete_outline,
+            label: l.deleteBranch,
+            danger: true,
+            onTap: () => deleteBranch(context, branch),
+          ),
+      ],
     );
   }
 }
@@ -492,7 +482,7 @@ class _HalalQuote extends StatelessWidget {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     return Container(
-      margin: const EdgeInsets.fromLTRB(notebookGutter + 10, 2, 20, 0),
+      margin: const EdgeInsets.symmetric(horizontal: spaceM),
       padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: nb.kunyit, width: 4)),
@@ -528,50 +518,47 @@ class _HalalQuote extends StatelessWidget {
   }
 }
 
-/// The user's own note, in handwriting on the page's lines (saved from the dock).
+/// The user's own note, with its Save button under it (on when the text changed).
 class _NoteField extends StatelessWidget {
-  const _NoteField({required this.controller});
+  const _NoteField({
+    required this.controller,
+    required this.saving,
+    required this.onSave,
+  });
 
   final TextEditingController controller;
+  final bool saving;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final underline = UnderlineInputBorder(
-      borderSide: BorderSide(color: nb.rule),
-    );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 0),
-      child: TextField(
-        controller: controller,
-        // Scroll the note above the dock and keyboard, not just into the body (which runs under them). Flutter
-        // reveals the caret's line; + 60 keeps the line under it and the 500 counter in sight too.
-        scrollPadding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          ActionDock.bottomRoom(context) + 60,
-        ),
-        maxLength: 500,
-        minLines: 2,
-        maxLines: 6,
-        textCapitalization: TextCapitalization.sentences,
-        style: nb.hand.copyWith(fontSize: 24, height: 1.3, color: nb.ink),
-        decoration: InputDecoration(
-          hintText: l.noteHint,
-          hintStyle: nb.hand.copyWith(
-            fontSize: 22,
-            color: nb.inkSoft.withValues(alpha: 0.6),
+      padding: const EdgeInsets.symmetric(horizontal: spaceM),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: controller,
+            maxLength: 500,
+            minLines: 3,
+            maxLines: 8,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(hintText: l.noteHint),
           ),
-          filled: false,
-          border: underline,
-          enabledBorder: underline,
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: nb.pandan, width: 2),
+          const SizedBox(height: spaceS),
+          FilledButton.icon(
+            key: const ValueKey('note-save'),
+            onPressed: saving ? null : onSave,
+            icon: saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: Text(l.noteSave),
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 6),
-        ),
+        ],
       ),
     );
   }

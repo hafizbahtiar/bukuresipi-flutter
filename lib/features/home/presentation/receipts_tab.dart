@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/notebook.dart';
+import '../../../core/theme/app_theme_constant.dart';
+import '../../../core/widgets/notebook.dart' show NotebookTitle, navRoom;
 import '../../../core/widgets/pill_switch.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../receipts/presentation/pages/calories_page.dart';
 import '../../receipts/presentation/pages/receipts_page.dart';
 
-/// The Receipts tab: one notebook page, like a recipe's. Its Receipts | Calories switch stays under the title over
+/// The Receipts tab, like a recipe's page. Its Receipts | Calories switch stays under the title over
 /// two pages, swiped or picked; each side stays loaded once seen, so a switch is instant (and reloads that side quietly).
 class ReceiptsTab extends StatefulWidget {
   const ReceiptsTab({super.key});
@@ -52,57 +53,53 @@ class _ReceiptsTabState extends State<ReceiptsTab> {
         toolbarHeight: 76,
         title: NotebookTitle(_calories ? l.navCalories : l.receiptsTitle),
       ),
-      body: NotebookPage(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
-              child: PillSwitch<bool>(
-                key: const ValueKey('receipts-switch'),
-                expand: true,
-                value: _calories,
-                onChanged: (
-                  _,
-                ) {}, // with pages, onPageChanged reports the change
-                pages: _pages,
-                options: [
-                  (
-                    false,
-                    PillLabel(Icons.receipt_long_outlined, l.navReceipts),
-                    null,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceS),
+            child: PillSwitch<bool>(
+              key: const ValueKey('receipts-switch'),
+              expand: true,
+              value: _calories,
+              onChanged: (_) {}, // with pages, onPageChanged reports the change
+              pages: _pages,
+              options: [
+                (
+                  false,
+                  PillLabel(Icons.receipt_long_outlined, l.navReceipts),
+                  null,
+                ),
+                (
+                  true,
+                  PillLabel(
+                    Icons.local_fire_department_outlined,
+                    l.navCalories,
                   ),
-                  (
-                    true,
-                    PillLabel(
-                      Icons.local_fire_department_outlined,
-                      l.navCalories,
-                    ),
-                    null,
-                  ),
-                ],
-              ),
+                  null,
+                ),
+              ],
             ),
-            Expanded(
-              child: PageView(
-                controller: _pages,
-                onPageChanged: (i) {
-                  setState(() => _calories = i == 1);
-                  _refresh(); // a receipt may have been added meanwhile
-                },
-                children: [
-                  page(
-                    ReceiptsSection(key: _receipts),
-                    () async => _receipts.currentState?.refresh(),
-                  ),
-                  page(
-                    CaloriesSection(key: _kcal),
-                    () async => _kcal.currentState?.refresh(),
-                  ),
-                ],
-              ),
+          ),
+          Expanded(
+            child: PageView(
+              controller: _pages,
+              onPageChanged: (i) {
+                setState(() => _calories = i == 1);
+                _refresh(); // a receipt may have been added meanwhile
+              },
+              children: [
+                page(
+                  ReceiptsSection(key: _receipts),
+                  () async => _receipts.currentState?.refresh(),
+                ),
+                page(
+                  CaloriesSection(key: _kcal),
+                  () async => _kcal.currentState?.refresh(),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

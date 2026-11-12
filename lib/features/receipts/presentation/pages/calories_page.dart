@@ -3,9 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/pill_switch.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -34,7 +35,7 @@ class CaloriesSectionState extends State<CaloriesSection> {
   Future<void> _setTarget(int? current) async {
     final l = AppLocalizations.of(context);
     final field = TextEditingController(text: current?.toString() ?? '');
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       title: l.caloriesTarget,
       message: l.caloriesTargetRange,
@@ -117,12 +118,7 @@ class CaloriesSectionState extends State<CaloriesSection> {
         }
         final data = s.data;
         if (data == null) {
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(48),
-              child: Center(child: CircularProgressIndicator.adaptive()),
-            ),
-          );
+          return const SliverToBoxAdapter(child: SkeletonRows(rows: 4));
         }
         final (today, days) = data;
         return SliverMainAxisGroup(
@@ -169,7 +165,7 @@ class _Header extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final target = today.target;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -263,7 +259,7 @@ class _DayItems extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
           child: Text(
             l.caloriesItemsTitle,
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -271,7 +267,7 @@ class _DayItems extends StatelessWidget {
         ),
         if (today.receipts.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
             child: Text(
               l.caloriesNoItems,
               style: text.bodyMedium?.copyWith(color: nb.inkSoft),
@@ -279,14 +275,14 @@ class _DayItems extends StatelessWidget {
           )
         else
           for (final r in today.receipts)
-            NotebookRow(
+            ListTile(
               key: ValueKey('calories-receipt-${r.id}'),
               onTap: () => onOpen(r.id),
               trailing: Text(
                 l.caloriesKcal('${r.eatenKcal}'),
                 style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
-              child: Column(
+              title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(r.shop ?? l.addReceipt, style: text.titleMedium),

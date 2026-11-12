@@ -4,7 +4,7 @@ import 'rating.dart';
 class NearbyBranch {
   const NearbyBranch({
     required this.branchId,
-    required this.restaurantId,
+    required this.placeId,
     required this.name,
     required this.lat,
     required this.lng,
@@ -16,13 +16,13 @@ class NearbyBranch {
     this.halalClaim,
     this.halalQuote,
     this.halalSourceUrl,
-    this.placeId,
+    this.savedPlaceId,
     this.rating = const RatingSummary(),
     this.cover,
   });
 
   final String branchId;
-  final String restaurantId;
+  final String placeId;
   final String name;
   final String? label;
   final String? address;
@@ -40,8 +40,8 @@ class NearbyBranch {
   /// The caller already has this restaurant on their map.
   final bool saved;
 
-  /// The caller's user_place public id when [saved].
-  final String? placeId;
+  /// The caller's user_place public id when [saved] (the place page's id), not the shared [placeId].
+  final String? savedPlaceId;
 
   /// Community stars for this canonical branch; `canRate` is decided by the server.
   final RatingSummary rating;
@@ -51,12 +51,12 @@ class NearbyBranch {
 
   NearbyBranch copyWith({
     bool? saved,
-    String? placeId,
+    String? savedPlaceId,
     int? distanceM,
     RatingSummary? rating,
   }) => NearbyBranch(
     branchId: branchId,
-    restaurantId: restaurantId,
+    placeId: placeId,
     name: name,
     label: label,
     address: address,
@@ -68,7 +68,7 @@ class NearbyBranch {
     halalQuote: halalQuote,
     halalSourceUrl: halalSourceUrl,
     saved: saved ?? this.saved,
-    placeId: placeId ?? this.placeId,
+    savedPlaceId: savedPlaceId ?? this.savedPlaceId,
     rating: rating ?? this.rating,
     cover: cover,
   );

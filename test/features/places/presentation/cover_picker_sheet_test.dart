@@ -35,7 +35,7 @@ void main() {
               builder: (context) => TextButton(
                 onPressed: () => showModalBottomSheet<void>(
                   context: context,
-                  builder: (_) => const CoverPickerSheet(restaurantId: 'r-1'),
+                  builder: (_) => const CoverPickerSheet(placeId: 'r-1'),
                 ),
                 child: const Text('open'),
               ),

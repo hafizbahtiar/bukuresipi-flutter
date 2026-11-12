@@ -16,6 +16,8 @@ const placeJson = {
   'restaurant': {
     'id': 'r-1',
     'name': 'Nasi Kandar Pelita',
+    'category': 'food',
+    'subcategory': null,
     'cuisine': null,
     'halalClaim': 'says_halal',
     'halalQuote': 'Halal ya',
@@ -80,7 +82,7 @@ Place place({
 
 const nearbyBranchJson = {
   'branchId': 'b-1',
-  'restaurantId': 'r-1',
+  'placeId': 'r-1',
   'name': 'Kedai Sederhana',
   'label': 'Kedai Sederhana Bangsar',
   'address': 'Jalan Telawi',
@@ -92,7 +94,7 @@ const nearbyBranchJson = {
   'halalQuote': 'Halal ya',
   'halalSourceUrl': 'https://www.tiktok.com/@makan/video/1',
   'saved': false,
-  'placeId': null,
+  'savedPlaceId': null,
 };
 
 NearbyBranch nearbyBranch({
@@ -102,11 +104,11 @@ NearbyBranch nearbyBranch({
   double lng = 101.71,
   int distanceM = 2400,
   bool saved = false,
-  String? placeId,
+  String? savedPlaceId,
   RatingSummary? rating,
 }) => NearbyBranch(
   branchId: branchId,
-  restaurantId: 'r-1',
+  placeId: 'r-1',
   name: name,
   label: 'Kedai Sederhana Bangsar',
   address: 'Jalan Telawi',
@@ -118,7 +120,7 @@ NearbyBranch nearbyBranch({
   halalQuote: 'Halal ya',
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',
   saved: saved,
-  placeId: placeId,
+  savedPlaceId: savedPlaceId,
   rating: rating ?? const RatingSummary(),
 );
 
@@ -169,20 +171,18 @@ class FakePlaces implements PlacesRepository {
   final coverPicks = <String?>[];
 
   @override
-  Future<Uint8List?> restaurantCover(String restaurantId, String cover) async =>
-      null;
+  Future<Uint8List?> placeCover(String placeId, String cover) async => null;
 
   @override
   Future<({List<String> covers, String? current})> coverCandidates(
-    String restaurantId,
+    String placeId,
   ) async => (covers: coverIds, current: currentCover);
 
   @override
-  Future<Uint8List?> coverCandidate(String restaurantId, String cover) async =>
-      null;
+  Future<Uint8List?> coverCandidate(String placeId, String cover) async => null;
 
   @override
-  Future<void> setRestaurantCover(String restaurantId, String? cover) async {
+  Future<void> setRestaurantCover(String placeId, String? cover) async {
     coverPicks.add(cover);
     currentCover = cover;
   }
@@ -191,15 +191,15 @@ class FakePlaces implements PlacesRepository {
   final coverUploads = <(String, String)>[];
 
   @override
-  Future<void> uploadRestaurantCover(String restaurantId, String path) async =>
-      coverUploads.add((restaurantId, path));
+  Future<void> uploadRestaurantCover(String placeId, String path) async =>
+      coverUploads.add((placeId, path));
 
   /// [setRestaurantCoverUrl] calls: (restaurant, photo url).
   final coverUrls = <(String, String)>[];
 
   @override
-  Future<void> setRestaurantCoverUrl(String restaurantId, String url) async =>
-      coverUrls.add((restaurantId, url));
+  Future<void> setRestaurantCoverUrl(String placeId, String url) async =>
+      coverUrls.add((placeId, url));
 
   @override
   Future<Place> savePoi(String poiId) async {
@@ -274,15 +274,15 @@ class FakePlaces implements PlacesRepository {
   final merges = <(List<String>, String, String?)>[];
 
   @override
-  Future<void> mergeRestaurants(
+  Future<void> mergePlaces(
     List<String> from,
     String into, {
     String? name,
   }) async => merges.add((from, into, name));
 
   @override
-  Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
-    tidied.add(restaurantId);
+  Future<({int merged, int removed})> tidyBranches(String placeId) async {
+    tidied.add(placeId);
     return (merged: 1, removed: 1);
   }
 
@@ -301,6 +301,19 @@ class FakePlaces implements PlacesRepository {
   @override
   Future<void> deleteBranch(String branchId) async =>
       deletedBranches.add(branchId);
+
+  /// [updatePlace] calls: (restaurant, name, category, subcategory, cuisine).
+  final restaurantUpdates = <(String, String, String, String?, String?)>[];
+
+  @override
+  Future<void> updatePlace(
+    String placeId, {
+    required String name,
+    required String category,
+    String? subcategory,
+    String? cuisine,
+  }) async =>
+      restaurantUpdates.add((placeId, name, category, subcategory, cuisine));
 
   @override
   Future<void> updateBranch(

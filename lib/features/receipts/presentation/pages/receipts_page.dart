@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
@@ -91,12 +93,7 @@ class ReceiptsSectionState extends State<ReceiptsSection> {
         }
         final data = s.data;
         if (data == null) {
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(48),
-              child: Center(child: CircularProgressIndicator.adaptive()),
-            ),
-          );
+          return const SliverToBoxAdapter(child: SkeletonRows());
         }
         final (stats, first) = data;
         final receipts = [...first, ..._more];
@@ -110,12 +107,7 @@ class ReceiptsSectionState extends State<ReceiptsSection> {
             if (receipts.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    notebookGutter + 10,
-                    24,
-                    20,
-                    0,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(spaceM, 24, spaceM, 0),
                   child: Text(
                     l.receiptsEmpty,
                     style: text.bodyMedium?.copyWith(color: nb.inkSoft),
@@ -127,40 +119,40 @@ class ReceiptsSectionState extends State<ReceiptsSection> {
                 itemCount: receipts.length,
                 itemBuilder: (context, index) {
                   final r = receipts[index];
-                  return NotebookRow(
+                  return BaseTile(
                     key: ValueKey('receipt-${r.id}'),
                     onTap: () => _open(r.id),
+                    leading: BaseTile.icon(
+                      context,
+                      r.failed
+                          ? Icons.error_outline
+                          : Icons.receipt_long_outlined,
+                      color: r.failed ? nb.margin : null,
+                    ),
+                    title: r.place?.name ?? r.shop ?? l.addReceipt,
+                    subtitle: r.visitedAt == null
+                        ? null
+                        : loc.formatMediumDate(r.visitedAt!),
+                    tags: [
+                      if (r.inReview)
+                        TileTag(l.receiptToCheck, tone: TagTone.warn),
+                      if (r.reading) TileTag(l.receiptReading),
+                      if (r.failed)
+                        TileTag(
+                          (r.notRestaurant
+                                  ? l.receiptNotRestaurant
+                                  : l.receiptFailed)
+                              .split('.')
+                              .first,
+                          tone: TagTone.danger,
+                        ),
+                    ],
                     trailing: Text(
                       r.totalSen == null ? '' : rm(r.totalSen!),
                       style: text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r.place?.name ?? r.shop ?? l.addReceipt,
-                          style: text.titleMedium,
-                        ),
-                        Text(
-                          [
-                            if (r.visitedAt != null)
-                              loc.formatMediumDate(r.visitedAt!),
-                            if (r.inReview) l.receiptToCheck,
-                            if (r.reading) l.receiptReading,
-                            if (r.failed)
-                              (r.notRestaurant
-                                      ? l.receiptNotRestaurant
-                                      : l.receiptFailed)
-                                  .split('.')
-                                  .first,
-                          ].join(' · '),
-                          style: text.bodySmall?.copyWith(
-                            color: r.inReview ? nb.kunyit : nb.inkSoft,
-                          ),
-                        ),
-                      ],
                     ),
                   );
                 },
@@ -192,7 +184,7 @@ class _Spending extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -230,7 +222,7 @@ class _TopPlaces extends StatelessWidget {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 8),
+      padding: const EdgeInsets.fromLTRB(spaceM, 4, spaceM, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

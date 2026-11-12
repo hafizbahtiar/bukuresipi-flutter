@@ -7,11 +7,14 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook.dart' show NotebookTitle;
+import '../../../../core/widgets/ai_button.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_sheet.dart';
 import '../../../../core/widgets/pill_switch.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/places_controller.dart';
@@ -229,7 +232,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
           e.data['existingId'] != null &&
           mounted) {
         setState(() => _saving = false);
-        final yes = await showNotebookDialog(
+        final yes = await showBaseDialog(
           context,
           title: l.receiptRescanTitle,
           message: l.receiptRescanBody,
@@ -261,7 +264,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
   /// The place's page in the book (rating, reviews); null when it is not loaded yet.
   String? _placePath(PlacesController places) {
-    final id = _r?.place?.restaurantId;
+    final id = _r?.place?.placeId;
     return places.places.where((p) => p.restaurant.id == id).firstOrNull?.id;
   }
 
@@ -276,7 +279,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         text: errorText(l, _error!),
         action: (l.tryAgain, _load),
       ),
-      null => const Center(child: CircularProgressIndicator.adaptive()),
+      null => const SingleChildScrollView(child: SkeletonRows(rows: 4)),
       Receipt(reading: true) => FutureBuilder(
         future: _photo,
         builder: (context, s) => s.data == null
@@ -310,63 +313,56 @@ class _ReceiptPageState extends State<ReceiptPage> {
       ),
       // Save stays in reach under a long list of lines (and away while splitting).
       bottomNavigationBar: review && !_split ? _saveBar(context, r) : null,
-      body: NotebookPage(
-        child: canSplit
-            ? Column(
-                children: [
-                  // The recipe page's tabs: a sliding pill on the page's paper; only what is under it changes.
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      notebookGutter + 10,
-                      8,
-                      20,
-                      8,
-                    ),
-                    child: PillSwitch<bool>(
-                      key: const ValueKey('receipt-split-switch'),
-                      expand: true,
-                      value: _split,
-                      onChanged: _setSplit,
-                      pages: _pages,
-                      options: [
-                        (
-                          false,
-                          PillLabel(
-                            Icons.receipt_long_outlined,
-                            l.splitTabReceipt,
-                          ),
-                          null,
+      body: canSplit
+          ? Column(
+              children: [
+                // The recipe page's tabs: a sliding pill on the page's paper; only what is under it changes.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 8),
+                  child: PillSwitch<bool>(
+                    key: const ValueKey('receipt-split-switch'),
+                    expand: true,
+                    value: _split,
+                    onChanged: _setSplit,
+                    pages: _pages,
+                    options: [
+                      (
+                        false,
+                        PillLabel(
+                          Icons.receipt_long_outlined,
+                          l.splitTabReceipt,
                         ),
-                        (
-                          true,
-                          PillLabel(Icons.groups_outlined, l.splitTabBill),
-                          null,
-                        ),
-                      ],
-                    ),
+                        null,
+                      ),
+                      (
+                        true,
+                        PillLabel(Icons.groups_outlined, l.splitTabBill),
+                        null,
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: PageView(
-                      controller: _pages,
-                      onPageChanged: (i) => _setSplit(i == 1),
-                      children: [
-                        content,
-                        SplitBill(
-                          receipt: r,
-                          share: widget.share ?? _shareText,
-                          onStop: () => _pages.animateToPage(
-                            0,
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeOutCubic,
-                          ),
+                ),
+                Expanded(
+                  child: PageView(
+                    controller: _pages,
+                    onPageChanged: (i) => _setSplit(i == 1),
+                    children: [
+                      content,
+                      SplitBill(
+                        receipt: r,
+                        share: widget.share ?? _shareText,
+                        onStop: () => _pages.animateToPage(
+                          0,
+                          duration: const Duration(milliseconds: 260),
+                          curve: Curves.easeOutCubic,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              )
-            : content,
-      ),
+                ),
+              ],
+            )
+          : content,
     );
   }
 
@@ -427,7 +423,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
     final text = Theme.of(context).textTheme;
     final path = _placePath(context.watch<PlacesController>());
     return ListView(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceL),
       children: [
         _Card(
           child: Column(
@@ -536,7 +532,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         ? 'totals_mismatch'
         : 'total';
     return ListView(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceL),
       children: [
         Container(
           padding: const EdgeInsets.all(12),
@@ -653,7 +649,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
 enum _Tone { normal, problem }
 
-/// A white card on the ruled page.
+/// An outlined card, the app's standard surface.
 class _Card extends StatelessWidget {
   const _Card({required this.child, this.padding = const EdgeInsets.all(16)});
 
@@ -667,15 +663,8 @@ class _Card extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: nb.paper,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: nb.line),
-        boxShadow: [
-          BoxShadow(
-            color: nb.ink.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: child,
     );
@@ -829,7 +818,7 @@ class _ScanningState extends State<_Scanning>
     final style = Theme.of(context).textTheme;
     const height = 320.0;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 24, 24, 24),
+      padding: const EdgeInsets.fromLTRB(spaceM, 24, spaceM, 24),
       children: [
         ClipRRect(
           key: const ValueKey('receipt-scan'),
@@ -1006,7 +995,7 @@ class _Message extends StatelessWidget {
     final color = tone == _Tone.problem ? nb.margin : nb.pandan;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 24, 24, 24),
+        padding: const EdgeInsets.fromLTRB(spaceM, 24, spaceM, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1042,7 +1031,7 @@ class _Message extends StatelessWidget {
   }
 }
 
-/// The printed lines on a slip of receipt paper: "2 × Nasi Lemak Ayam ... RM 25.80", a dashed rule, then the
+/// The printed lines: "2 × Nasi Lemak Ayam ... RM 25.80", a dashed rule, then the
 /// total the user saves (the lines are as read; only the total is checked).
 /// The slip: items (each with a tick for what the user ate and its calories), charges, total, then what the ticks add up to.
 class _Items extends StatelessWidget {
@@ -1082,6 +1071,7 @@ class _Items extends StatelessWidget {
         painter: _Dashes(nb.line),
       ),
     );
+    // A slip torn off the till: the receipt's own look, kept on purpose in the standard UI.
     return PhysicalShape(
       clipper: const _TornEdge(),
       color: nb.paper,
@@ -1317,12 +1307,7 @@ class _Calories extends StatelessWidget {
                   style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
-              if (receipt.hasEstimate)
-                _Chip(
-                  icon: Icons.auto_awesome_outlined,
-                  label: l.caloriesAiEstimate,
-                  color: nb.inkSoft,
-                ),
+              if (receipt.hasEstimate) AiBadge(label: l.caloriesAiEstimate),
             ],
           ),
           if (receipt.unknownEaten > 0) Text(l.caloriesUnknown, style: soft),

@@ -21,7 +21,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       place: place == null
           ? null
           : (
-              restaurantId: place['restaurantId'] as String,
+              placeId: place['placeId'] as String,
               branchId: place['branchId'] as String?,
               name: place['name'] as String,
             ),
@@ -261,7 +261,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       places: [
         for (final p in (j['places'] as List).cast<Map<String, dynamic>>())
           (
-            restaurantId: p['restaurantId'] as String,
+            placeId: p['placeId'] as String,
             name: p['name'] as String,
             visits: p['visits'] as int,
             totalSen: p['totalSen'] as int,

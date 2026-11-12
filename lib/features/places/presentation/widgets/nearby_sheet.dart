@@ -12,7 +12,7 @@ import '../../domain/nearby_branch.dart';
 import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
-import 'branch_edit_sheet.dart';
+import '../pages/branch_edit_page.dart';
 import 'halal_status.dart';
 import 'notebook_rating.dart';
 import 'place_report_sheet.dart';
@@ -52,10 +52,10 @@ class _NearbySheetState extends State<NearbySheet> {
     final places = context.read<PlacesController>();
     final navigator = Navigator.of(context);
     final p = widget.place;
-    final saved = await showNotebookSheet<bool>(
+    final saved = await showBranchEdit(
       context,
-      builder: (_) => BranchEditSheet(
-        placeId: p.placeId ?? '',
+      builder: (_) => BranchEditPage(
+        placeId: p.savedPlaceId ?? '',
         branch: Branch(
           id: p.branchId,
           label: p.label,

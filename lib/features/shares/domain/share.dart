@@ -5,7 +5,7 @@ class Share {
     required this.id,
     required this.status,
     required this.kind,
-    this.restaurantId,
+    this.placeId,
     this.recipeId,
     this.gaps = const [],
     this.error,
@@ -16,7 +16,7 @@ class Share {
   final String id;
   final String status;
   final String kind;
-  final String? restaurantId;
+  final String? placeId;
   final String? recipeId;
   final List<String> gaps;
   final String? error;
@@ -37,8 +37,5 @@ class Share {
 
   /// Read fine, but the post holds neither a recipe nor a place to eat.
   bool get nothingFound =>
-      status == 'done' &&
-      restaurantId == null &&
-      recipeId == null &&
-      !couldNotRead;
+      status == 'done' && placeId == null && recipeId == null && !couldNotRead;
 }

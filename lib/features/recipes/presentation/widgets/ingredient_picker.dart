@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../recipes_controller.dart';
 
@@ -13,9 +12,13 @@ Future<({String? name})?> pickIngredient(
   BuildContext context, {
   required String line,
   required bool linked,
-}) => showNotebookSheet<({String? name})>(
-  context,
-  builder: (_) => _IngredientPicker(line: line, linked: linked),
+}) => showModalBottomSheet<({String? name})>(
+  context: context,
+  showDragHandle: true,
+  isScrollControlled: true,
+  builder: (_) => SafeArea(
+    child: _IngredientPicker(line: line, linked: linked),
+  ),
 );
 
 class _IngredientPicker extends StatefulWidget {
@@ -65,56 +68,47 @@ class _IngredientPickerState extends State<_IngredientPicker> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
+    final error = Theme.of(context).colorScheme.error;
     return ListView(
       shrinkWrap: true,
       padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + spaceM,
       ),
       children: [
-        NotebookRow(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l.ingredientPickTitle,
-                style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              Text(
-                widget.line,
-                style: text.bodySmall?.copyWith(color: nb.inkSoft),
-              ),
-            ],
+        ListTile(
+          title: Text(
+            l.ingredientPickTitle,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
+          subtitle: Text(widget.line),
         ),
-        NotebookRow(
-          mark: Icon(Icons.search, size: 20, color: nb.inkSoft),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: spaceM),
           child: TextField(
             autofocus: true,
             maxLength: 50,
             onChanged: _changed,
             decoration: InputDecoration(
               hintText: l.ingredientSearchHint,
-              border: InputBorder.none,
+              prefixIcon: const Icon(Icons.search),
               counterText: '',
             ),
           ),
         ),
         if (_failed)
-          NotebookRow(
-            child: Text(l.errNetwork, style: TextStyle(color: nb.margin)),
+          ListTile(
+            title: Text(l.errNetwork, style: TextStyle(color: error)),
           ),
         for (final name in _names)
-          NotebookRow(
+          ListTile(
             onTap: () => Navigator.of(context).pop((name: name)),
-            child: Text(name),
+            title: Text(name),
           ),
         if (widget.linked)
-          NotebookRow(
-            mark: Icon(Icons.link_off, size: 20, color: nb.margin),
+          ListTile(
+            leading: Icon(Icons.link_off, color: error),
             onTap: () => Navigator.of(context).pop((name: null)),
-            child: Text(l.ingredientUnlink, style: TextStyle(color: nb.margin)),
+            title: Text(l.ingredientUnlink, style: TextStyle(color: error)),
           ),
       ],
     );

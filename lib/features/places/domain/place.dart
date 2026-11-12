@@ -33,7 +33,7 @@ class BranchSuggestion {
     this.candidates = const [],
     this.pages = const [],
     this.photos = const [],
-    this.restaurantId,
+    this.placeId,
   });
 
   final BranchDraft draft;
@@ -53,7 +53,7 @@ class BranchSuggestion {
   final List<String> photos;
 
   /// The branch's restaurant (that cover's target).
-  final String? restaurantId;
+  final String? placeId;
 }
 
 /// One pin a source gave for a branch. [source]: 'current', 'draft:<source>', 'here', 'grab'.
@@ -169,6 +169,8 @@ class PlaceRestaurant {
   const PlaceRestaurant({
     required this.id,
     required this.name,
+    this.category = 'food',
+    this.subcategory,
     this.cuisine,
     this.halalClaim,
     this.halalQuote,
@@ -178,6 +180,12 @@ class PlaceRestaurant {
 
   final String id;
   final String name;
+
+  /// One of [categories] (broad); places saved before categories existed are 'food'.
+  final String category;
+
+  /// One of [categories]\[category] (specific), or null = not set.
+  final String? subcategory;
   final String? cuisine;
   final String? halalClaim;
   final String? halalQuote;
@@ -185,6 +193,22 @@ class PlaceRestaurant {
 
   /// The owner's chosen photo (PlacesRepository.restaurantCover); changes when another is picked. null = none.
   final String? cover;
+
+  /// The server's lists (PLACE_SUBCATEGORIES): each category and its subcategories.
+  static const categories = <String, List<String>>{
+    'food': [
+      'restaurant', 'cafe', 'stall', 'mamak', 'kopitiam', //
+      'food_court', 'bakery', 'dessert', 'fast_food',
+    ],
+    'shop': ['grocery', 'market', 'mall'],
+    'attraction': ['museum', 'theme_park', 'landmark'],
+    'stay': ['hotel', 'homestay', 'resort'],
+    'outdoor': ['park', 'beach', 'waterfall', 'hiking'],
+    'other': [],
+  };
+
+  /// Cuisine and halal only mean something for food.
+  bool get isFood => category == 'food';
 }
 
 class Branch {

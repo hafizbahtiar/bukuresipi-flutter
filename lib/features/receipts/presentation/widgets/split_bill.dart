@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
@@ -146,7 +148,7 @@ class _SplitBillState extends State<SplitBill> {
     final split = _split;
     if (split == null) return;
     final field = TextEditingController();
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       title: l.splitAddPerson,
       message: l.splitAddPersonBody,
@@ -176,7 +178,7 @@ class _SplitBillState extends State<SplitBill> {
     final l = AppLocalizations.of(context);
     final split = _split;
     if (split == null) return;
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       title: l.splitRemovePerson(split.people[index].name),
       message: l.splitRemovePersonBody,
@@ -220,8 +222,9 @@ class _SplitBillState extends State<SplitBill> {
       for (final p in split.portions)
         if (p.position == position) p.person: p.quantity,
     };
-    final picked = await showNotebookSheet<Map<int, double>>(
-      context,
+    final picked = await showModalBottomSheet<Map<int, double>>(
+      context: context,
+      isScrollControlled: true,
       builder: (_) => _PortionSheet(
         item: item,
         people: split.people,
@@ -241,7 +244,7 @@ class _SplitBillState extends State<SplitBill> {
 
   Future<void> _stop() async {
     final l = AppLocalizations.of(context);
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       title: l.splitStop,
       message: l.splitStopBody,
@@ -322,11 +325,11 @@ class _SplitBillState extends State<SplitBill> {
     final split = _split;
     if (split == null) {
       if (_error == null) {
-        return const Center(child: CircularProgressIndicator.adaptive());
+        return const SingleChildScrollView(child: SkeletonRows(rows: 4));
       }
       return Center(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 24, 24, 24),
+          padding: const EdgeInsets.fromLTRB(spaceM, 24, spaceM, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -348,18 +351,18 @@ class _SplitBillState extends State<SplitBill> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        NotebookRow(
-          minHeight: 56,
-          mark: Icon(Icons.people_outline, color: nb.pandan),
-          child: Text(
+        ListTile(
+          minTileHeight: 56,
+          leading: Icon(Icons.people_outline, color: nb.pandan),
+          title: Text(
             l.splitPeople,
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
         for (final (i, person) in split.people.indexed)
-          NotebookRow(
+          ListTile(
             key: ValueKey('split-person-$i'),
-            mark: i == 0
+            leading: i == 0
                 ? Icon(Icons.person_outline, size: 20, color: nb.inkSoft)
                 : null,
             trailing: i == 0
@@ -369,14 +372,14 @@ class _SplitBillState extends State<SplitBill> {
                     icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
                     onPressed: () => _removePerson(i),
                   ),
-            child: Text(person.name),
+            title: Text(person.name),
           ),
         if (split.people.length < 10)
-          NotebookRow(
+          ListTile(
             key: const ValueKey('split-add-person'),
-            mark: Icon(Icons.add, size: 20, color: nb.pandanDeep),
+            leading: Icon(Icons.add, size: 20, color: nb.pandanDeep),
             onTap: _addPerson,
-            child: Text(
+            title: Text(
               l.splitAddPerson,
               style: text.bodyMedium?.copyWith(
                 color: nb.pandanDeep,
@@ -384,17 +387,21 @@ class _SplitBillState extends State<SplitBill> {
               ),
             ),
           ),
-        NotebookRow(
-          minHeight: 56,
-          mark: Icon(Icons.receipt_long_outlined, size: 20, color: nb.pandan),
-          child: Text(
+        ListTile(
+          minTileHeight: 56,
+          leading: Icon(
+            Icons.receipt_long_outlined,
+            size: 20,
+            color: nb.pandan,
+          ),
+          title: Text(
             l.receiptItems,
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
         if (widget.receipt.items.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
             child: Text(
               l.splitNoItems,
               style: text.bodyMedium?.copyWith(color: nb.inkSoft),
@@ -402,13 +409,13 @@ class _SplitBillState extends State<SplitBill> {
           )
         else
           for (final (position, item) in widget.receipt.items.indexed)
-            NotebookRow(
+            ListTile(
               key: ValueKey('split-line-$position'),
               onTap: () => _assign(position),
               trailing: item.amountSen == null
                   ? null
                   : Text(rm(item.amountSen!), style: figures),
-              child: Column(
+              title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -428,7 +435,7 @@ class _SplitBillState extends State<SplitBill> {
           (c) => c.kind != 'subtotal' && c.amountSen != 0,
         ))
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 10, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, 10, spaceM, 0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -444,7 +451,7 @@ class _SplitBillState extends State<SplitBill> {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 20, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 20, spaceM, 0),
           child: Row(
             children: [
               Expanded(
@@ -474,7 +481,7 @@ class _SplitBillState extends State<SplitBill> {
             onPaid: (paid) => _paid(i, paid),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 16, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 16, spaceM, 0),
           child: Builder(
             builder: (button) => FilledButton.icon(
               key: const ValueKey('split-share-button'),
@@ -485,7 +492,7 @@ class _SplitBillState extends State<SplitBill> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
           child: TextButton(
             key: const ValueKey('split-stop'),
             style: TextButton.styleFrom(foregroundColor: nb.margin),
@@ -515,7 +522,7 @@ class _ShareRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    return NotebookRow(
+    return ListTile(
       trailing: Tooltip(
         message: l.splitPaid,
         child: Checkbox(
@@ -523,7 +530,7 @@ class _ShareRow extends StatelessWidget {
           onChanged: (paid) => onPaid(paid ?? false),
         ),
       ),
-      child: Column(
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -599,8 +606,8 @@ class _PortionSheetState extends State<_PortionSheet> {
       shrinkWrap: true,
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        NotebookRow(
-          child: Column(
+        ListTile(
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -617,9 +624,9 @@ class _PortionSheetState extends State<_PortionSheet> {
           ),
         ),
         for (final (i, person) in widget.people.indexed)
-          NotebookRow(
+          ListTile(
             key: ValueKey('portion-$i'),
-            mark: _oneServing
+            leading: _oneServing
                 ? Checkbox(
                     value: (_qty[i] ?? 0) > 0,
                     onChanged: (on) => _toggle(i, on ?? false),
@@ -655,18 +662,18 @@ class _PortionSheetState extends State<_PortionSheet> {
                       ),
                     ],
                   ),
-            child: Text(person.name),
+            title: Text(person.name),
           ),
         if (left)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, 4, spaceM, 0),
             child: Text(
               l.splitShared,
               style: text.bodySmall?.copyWith(color: nb.inkSoft),
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 12, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 12, spaceM, 0),
           child: FilledButton(
             key: const ValueKey('portion-done'),
             onPressed: () => Navigator.pop(context, {

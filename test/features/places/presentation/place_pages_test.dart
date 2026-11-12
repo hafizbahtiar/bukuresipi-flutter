@@ -1,4 +1,3 @@
-import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
@@ -29,6 +28,18 @@ import '../../recipes/recipes_fixtures.dart';
 double spacing(WidgetTester t) =>
     t.getTopLeft(find.byKey(const ValueKey('pin-search-query'))).dy -
     t.getBottomLeft(find.text('AWS (Grab)')).dy;
+
+/// Opens the first branch's actions: its ⋮ button, or a long press on the tile.
+Future<void> branchMenu(WidgetTester t, {bool longPress = false}) async {
+  final tile = find.byKey(const ValueKey('branch-b-1'));
+  await t.ensureVisible(tile);
+  if (longPress) {
+    await t.longPress(tile);
+  } else {
+    await t.tap(find.descendant(of: tile, matching: find.byTooltip('More')));
+  }
+  await t.pumpAndSettle();
+}
 
 void main() {
   late FakePlaces repo;
@@ -244,6 +255,7 @@ void main() {
     (t) async {
       repo = FakePlaces()..places = [place(id: 'a')];
       await pump(t, const PlaceDetailPage(id: 'a'));
+      await tapKey(t, 'place-tab-halal');
       expect(find.text('What the post says about halal'), findsOneWidget);
       expect(find.textContaining('Halal ya'), findsOneWidget);
       expect(find.text('Open the post'), findsOneWidget);
@@ -261,8 +273,11 @@ void main() {
           place(id: 'b'),
         ];
       await pump(t, const PlaceDetailPage(id: 'a'));
+      await tapKey(t, 'more-menu');
       expect(find.text('Open your post'), findsOneWidget);
+      await closeMenu(t);
       await pump(t, const PlaceDetailPage(id: 'b'));
+      await tapKey(t, 'more-menu');
       expect(find.text('Open your post'), findsNothing);
     },
   );
@@ -278,8 +293,9 @@ void main() {
   ) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
-    // In the floating dock: always in reach, no scrolling.
-    await t.tap(find.byTooltip('Remove from my book'));
+    // In the app bar's ⋮ menu: always in reach, no scrolling.
+    await tapKey(t, 'more-menu');
+    await t.tap(find.text('Remove from my book'));
     await t.pumpAndSettle();
     expect(repo.removed, isEmpty);
     await t.tap(find.widgetWithText(FilledButton, 'Remove'));
@@ -326,10 +342,14 @@ void main() {
   ) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
-    expect(find.byTooltip('Delete branch'), findsNothing);
+    await branchMenu(t);
+    expect(find.text('Delete branch'), findsNothing);
+    await t.tapAt(const Offset(10, 10)); // closes the sheet
+    await t.pumpAndSettle();
 
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    await t.tap(find.byTooltip('Delete branch'));
+    await branchMenu(t, longPress: true);
+    await t.tap(find.text('Delete branch'));
     await t.pumpAndSettle();
     await t.tap(find.widgetWithText(FilledButton, 'Delete'));
     await t.pumpAndSettle();
@@ -339,9 +359,8 @@ void main() {
   testWidgets('the owner edits a branch from the place page', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    expect(find.byTooltip('Edit branch'), findsOneWidget);
-
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
     expect(find.text('This branch is shared by every user.'), findsOneWidget);
 
@@ -350,7 +369,7 @@ void main() {
       find.byKey(const ValueKey('branch-address')),
       'Jalan Baru',
     );
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();
@@ -362,10 +381,91 @@ void main() {
     expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
   });
 
+  testWidgets('the owner edits the main place: name, category, type, cuisine', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await tapKey(t, 'more-menu');
+    expect(find.text('Edit place'), findsNothing);
+    await closeMenu(t);
+
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await tapKey(t, 'more-menu');
+    await t.tap(find.text('Edit place'));
+    await t.pumpAndSettle();
+    // A name is required.
+    await t.enterText(find.byKey(const ValueKey('place-name')), ' ');
+    await t.tap(find.byKey(const ValueKey('place-save')));
+    await t.pump();
+    expect(find.text("Enter the place's name."), findsOneWidget);
+    expect(repo.restaurantUpdates, isEmpty);
+
+    await t.enterText(find.byKey(const ValueKey('place-name')), 'Kedai Baru');
+    // Food (the default) offers cuisine and food types.
+    expect(find.byKey(const ValueKey('place-cuisine')), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('place-subcategory')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Mamak'));
+    await t.pumpAndSettle();
+    expect(find.text('Mamak'), findsOneWidget);
+    // A shop: no cuisine, and the food type is cleared.
+    await t.tap(find.byKey(const ValueKey('place-category')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Shop'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('place-cuisine')), findsNothing);
+    expect(find.text('Mamak'), findsNothing);
+    await t.tap(find.byKey(const ValueKey('place-subcategory')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Market'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('place-save')));
+    await t.pumpAndSettle();
+    final saved = repo.restaurantUpdates.single;
+    expect(
+      (saved.$2, saved.$3, saved.$4, saved.$5),
+      ('Kedai Baru', 'shop', 'market', null),
+    );
+    expect(find.byKey(const ValueKey('place-save')), findsNothing);
+  });
+
+  testWidgets('a branch opens in view mode; the pencil switches to edit', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    final tile = find.byKey(const ValueKey('branch-b-1'));
+    await t.ensureVisible(tile);
+    await t.tap(tile);
+    await t.pumpAndSettle();
+    // View mode: the facts, read only.
+    expect(find.byType(TextField), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('branch-view-address')),
+        matching: find.text('—'),
+      ),
+      findsOneWidget,
+    );
+    await t.tap(find.byKey(const ValueKey('branch-edit')));
+    await t.pumpAndSettle();
+    await t.enterText(
+      find.byKey(const ValueKey('branch-address')),
+      'Jalan Baru',
+    );
+    await t.tap(find.byKey(const ValueKey('branch-save')));
+    await t.pumpAndSettle();
+    expect(repo.branchUpdates.single.address, 'Jalan Baru');
+    // Saved: back on the view page.
+    expect(find.byKey(const ValueKey('branch-edit')), findsOneWidget);
+  });
+
   testWidgets('town and state are dropdowns from the server list', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
     TextEditingController ctl(String key) => t
         .widget<TextField>(
@@ -386,7 +486,7 @@ void main() {
     // Another state clears a town that is not in it; its towns are the only ones listed.
     final state = find.byKey(const ValueKey('branch-state'));
     await t.ensureVisible(state);
-    await t.tap(find.descendant(of: state, matching: find.byType(IconButton)));
+    await t.tap(state);
     await t.pumpAndSettle();
     await t.tap(find.text('Selangor').last);
     await t.pumpAndSettle();
@@ -397,7 +497,7 @@ void main() {
     expect(find.text('Ketereh'), findsNothing);
     await t.tap(find.text('Kajang').last);
     await t.pumpAndSettle();
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();
@@ -409,14 +509,15 @@ void main() {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
 
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
     expect(find.text('Only you will see these changes.'), findsOneWidget);
     expect(find.text('Who sees this edit?'), findsNothing);
     expect(find.text('Suggest with AI'), findsNothing);
 
     await t.enterText(find.byKey(const ValueKey('branch-label')), 'My Kedai');
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();
@@ -429,7 +530,8 @@ void main() {
   testWidgets('the owner can choose Just me before saving', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
     expect(find.text('Who sees this edit?'), findsOneWidget);
 
@@ -437,7 +539,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Only you will see these changes.'), findsOneWidget);
     await t.enterText(find.byKey(const ValueKey('branch-label')), 'Owner only');
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();
@@ -487,7 +589,8 @@ void main() {
       summary: 'Cleaned from the map.',
     );
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
 
     final suggest = find.text('Suggest with AI');
@@ -536,7 +639,7 @@ void main() {
       '2.991234',
     );
 
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();
@@ -564,10 +667,11 @@ void main() {
         changed: true,
         pages: [(url: 'https://www.flow.my/bangi', title: 'FLOW Bangi')],
         photos: ['https://flow.my/a.jpg', 'https://flow.my/b.jpg'],
-        restaurantId: 'r-9',
+        placeId: 'r-9',
       );
       await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-      await t.tap(find.byTooltip('Edit branch'));
+      await branchMenu(t);
+      await t.tap(find.text('Edit branch'));
       await t.pumpAndSettle();
       final suggest = find.text('Suggest with AI');
       await t.ensureVisible(suggest);
@@ -582,7 +686,7 @@ void main() {
       await t.tap(photo);
       await t.pumpAndSettle();
 
-      final save = find.widgetWithText(FilledButton, 'Save');
+      final save = find.byKey(const ValueKey('branch-save'));
       await t.ensureVisible(save);
       await t.tap(save);
       await t.pumpAndSettle();
@@ -596,7 +700,8 @@ void main() {
   ) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
 
     final lat = find.byKey(const ValueKey('branch-lat'));
@@ -605,7 +710,7 @@ void main() {
     await t.enterText(lat, '2.991234');
     await t.ensureVisible(lng);
     await t.enterText(lng, '101.791234');
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();
@@ -619,7 +724,8 @@ void main() {
   ) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
 
     final link = find.byKey(const ValueKey('branch-maps-link'));
@@ -633,7 +739,7 @@ void main() {
         t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
     expect(field('branch-lat'), '3.199464');
     expect(field('branch-lng'), '101.695650');
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();
@@ -669,7 +775,8 @@ void main() {
       ],
     );
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
     final suggest = find.text('Suggest with AI');
     await t.ensureVisible(suggest);
@@ -708,7 +815,8 @@ void main() {
         ),
       ];
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
     // Picking a map searches it at once.
     final osm = find.text('OpenStreetMap');
@@ -716,6 +824,10 @@ void main() {
     await t.tap(osm);
     await t.pumpAndSettle();
     expect(repo.pinSearches.last.$2, 'osm');
+    // Results open in a sheet; closed, the form keeps a button to show them again.
+    expect(find.text('1 result from OpenStreetMap'), findsOneWidget);
+    await closeMenu(t);
+    expect(find.text('Show 1 result'), findsOneWidget);
     await t.tap(find.text('AWS (Grab)'));
     await t.pumpAndSettle();
     expect(repo.pinSearches.last.$2, 'grab');
@@ -749,6 +861,8 @@ void main() {
     ); // what was asked, to change and search again
 
     // Another outlet in the results: added as a new branch, the form untouched.
+    await t.tap(find.byKey(const ValueKey('pin-search-results')));
+    await t.pumpAndSettle();
     final add = find.byKey(const ValueKey('pin-hit-add-0'));
     await t.ensureVisible(add);
     await t.tap(add);
@@ -765,12 +879,13 @@ void main() {
     );
   });
 
-  testWidgets('a pinned place has a map button that opens the map on its pin', (
+  testWidgets('a pinned place has a Map item that opens the map on its pin', (
     t,
   ) async {
     repo = FakePlaces()..places = [place(id: 'a', lat: 3.15)];
     await pump(t, const PlaceDetailPage(id: 'a'));
-    expect(find.byKey(const ValueKey('place-map')), findsOneWidget);
+    await tapKey(t, 'more-menu');
+    expect(find.text('Map'), findsOneWidget);
   });
 
   testWidgets(
@@ -778,6 +893,7 @@ void main() {
     (t) async {
       repo = FakePlaces()..places = [place(id: 'a')];
       await pump(t, const PlaceDetailPage(id: 'a'));
+      await tapKey(t, 'more-menu');
       await t.tap(find.text('Report').last);
       await t.pumpAndSettle();
       final link = find.byKey(const ValueKey('report-maps-link'));
@@ -800,7 +916,8 @@ void main() {
   testWidgets('a user does not see the map search', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
-    await t.tap(find.byTooltip('Edit branch'));
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('pin-search-query')), findsNothing);
   });
@@ -810,9 +927,12 @@ void main() {
   ) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlaceDetailPage(id: 'a'));
+    await tapKey(t, 'more-menu');
     expect(find.text('Check branches'), findsNothing);
+    await closeMenu(t);
 
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await tapKey(t, 'more-menu');
     await t.tap(find.text('Check branches'));
     await t.pumpAndSettle();
     expect(repo.tidied, [places.byId('a')!.restaurant.id]);
@@ -853,56 +973,30 @@ void main() {
   );
 
   testWidgets(
-    'Save note in the dock is off until the note changes, then saves it',
+    'Save note under the note is off until the note changes, then saves it',
     (t) async {
       repo = FakePlaces()..places = [place(id: 'a')];
       await pump(t, const PlaceDetailPage(id: 'a'));
-      await t.tap(find.byTooltip('Save note'));
-      await t.pump();
-      expect(repo.notes, isEmpty);
+      await tapKey(t, 'place-tab-note');
+      final save = find.byKey(const ValueKey('note-save'));
+      expect(t.widget<ButtonStyleButton>(save).enabled, isFalse);
       await t.enterText(find.byType(TextField), 'Order the ayam goreng');
       await t.pump();
-      await t.tap(find.byTooltip('Save note'));
+      await t.tap(save);
       await t.pumpAndSettle();
       expect(repo.notes, {'a': 'Order the ayam goreng'});
     },
   );
 
   testWidgets(
-    'with the keyboard open the dock sits above it (Save note stays in reach)',
+    'typing a note with the keyboard open: the note shows above the keyboard',
     (t) async {
-      t.view.physicalSize = const Size(1080, 2280);
+      t.view.physicalSize = const Size(1080, 1800); // a short phone
       t.view.devicePixelRatio = 3;
       addTearDown(t.view.reset);
       repo = FakePlaces()..places = [place(id: 'a')];
       await pump(t, const PlaceDetailPage(id: 'a'));
-      t.view.viewInsets = const FakeViewPadding(
-        bottom: 900,
-      ); // 300 logical px of keyboard
-      await t.pumpAndSettle();
-      final screen = 2280 / 3;
-      expect(
-        t.getBottomLeft(find.byTooltip('Save note')).dy,
-        lessThanOrEqualTo(screen - 300),
-      );
-    },
-  );
-
-  testWidgets(
-    'typing a note with the keyboard open: the note shows above the keyboard and the dock',
-    (t) async {
-      t.view.physicalSize = const Size(
-        1080,
-        1800,
-      ); // a short phone: the note starts below the fold
-      t.view.devicePixelRatio = 3;
-      addTearDown(t.view.reset);
-      repo = FakePlaces()..places = [place(id: 'a')];
-      await pump(t, const PlaceDetailPage(id: 'a'));
-      await t.scrollUntilVisible(
-        find.byType(TextField),
-        200,
-      ); // the user scrolls down to the note
+      await tapKey(t, 'place-tab-note');
       await t.showKeyboard(find.byType(TextField));
       t.view.viewInsets = const FakeViewPadding(
         bottom: 900,
@@ -910,14 +1004,21 @@ void main() {
       await t.pumpAndSettle();
       await t.enterText(find.byType(TextField), 'Sedap, datang lagi');
       await t.pumpAndSettle();
-      final dockTop = t.getTopLeft(find.byType(ActionDock)).dy;
       final field = t.getRect(find.byType(TextField));
-      expect(
-        field.bottom,
-        lessThanOrEqualTo(dockTop),
-        reason: 'the note is under the dock or keyboard',
-      );
+      expect(field.bottom, lessThanOrEqualTo(1800 / 3 - 300));
       expect(field.top, greaterThanOrEqualTo(0));
     },
   );
+}
+
+/// Taps the widget with [key] (a tab, the ⋮ menu) and waits for it to settle.
+Future<void> tapKey(WidgetTester t, String key) async {
+  await t.tap(find.byKey(ValueKey(key)));
+  await t.pumpAndSettle();
+}
+
+/// Closes an open popup menu (a tap outside it).
+Future<void> closeMenu(WidgetTester t) async {
+  await t.tapAt(const Offset(1, 1));
+  await t.pumpAndSettle();
 }

@@ -91,3 +91,47 @@ class SkeletonBox extends StatelessWidget {
     ),
   );
 }
+
+/// A list still loading: [rows] grey rows shaped like the ListTiles that will replace them (icon, two lines,
+/// an amount at the end).
+class SkeletonRows extends StatelessWidget {
+  const SkeletonRows({super.key, this.rows = 6});
+
+  final int rows;
+
+  @override
+  Widget build(BuildContext context) => Skeleton(
+    child: Column(
+      children: [
+        for (var i = 0; i < rows; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const SkeletonBox(width: 40, height: 40, radius: 20),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FractionallySizedBox(
+                        widthFactor: i.isEven ? 0.7 : 0.55,
+                        child: const SkeletonBox(height: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      const FractionallySizedBox(
+                        widthFactor: 0.4,
+                        child: SkeletonBox(height: 10),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const SkeletonBox(width: 56, height: 14),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}

@@ -8,7 +8,7 @@ Receipt receipt({
   String id = 'r-1',
   String status = 'review',
   ReceiptPlace? place = (
-    restaurantId: 'x',
+    placeId: 'x',
     branchId: 'b-1',
     name: 'Port Lepak Sentul',
   ),
