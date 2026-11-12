@@ -187,6 +187,20 @@ class FakePlaces implements PlacesRepository {
     currentCover = cover;
   }
 
+  /// [uploadRestaurantCover] calls: (restaurant, file path).
+  final coverUploads = <(String, String)>[];
+
+  @override
+  Future<void> uploadRestaurantCover(String restaurantId, String path) async =>
+      coverUploads.add((restaurantId, path));
+
+  /// [setRestaurantCoverUrl] calls: (restaurant, photo url).
+  final coverUrls = <(String, String)>[];
+
+  @override
+  Future<void> setRestaurantCoverUrl(String restaurantId, String url) async =>
+      coverUrls.add((restaurantId, url));
+
   @override
   Future<Place> savePoi(String poiId) async {
     savedPois.add(poiId);

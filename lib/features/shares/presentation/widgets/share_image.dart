@@ -232,6 +232,7 @@ class ShareFill extends StatefulWidget {
     this.recipeId,
     this.restaurantId,
     required this.fallback,
+    this.cacheWidth = 600,
   });
 
   /// The share id, or the cover id when [recipeId] or [restaurantId] is set.
@@ -240,14 +241,29 @@ class ShareFill extends StatefulWidget {
   final String? restaurantId;
   final Widget fallback;
 
+  /// Decoded at this width: a card is at most ~240 dp wide (600); a page's header photo is the screen's width.
+  final int cacheWidth;
+
   @override
   State<ShareFill> createState() => _ShareFillState();
 }
 
 class _ShareFillState extends State<ShareFill> {
+  /// Photos already loaded this run, so a new ShareFill of one (a page's header after the card's hero flies there)
+  /// draws it in its first frame instead of the fallback for a frame. The bytes are also in the repositories' caches.
+  // shortcut: unbounded for the run's photos seen (~100 KB-1 MB each); bound it if a long session ever matters.
+  static final _ready = <String, Uint8List>{};
+
+  String get _key => '${widget.recipeId}/${widget.restaurantId}/${widget.id}';
+
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() =>
+  Future<Uint8List?> _load() => _fetch().then((b) {
+    if (b != null) _ready[_key] = b;
+    return b;
+  });
+
+  Future<Uint8List?> _fetch() =>
       switch ((widget.recipeId, widget.restaurantId)) {
         (final recipe?, _) => context.read<RecipesController>().cover(
           recipe,
@@ -273,13 +289,15 @@ class _ShareFillState extends State<ShareFill> {
   @override
   Widget build(BuildContext context) => FutureBuilder(
     future: _bytes,
+    initialData: _ready[_key],
     builder: (context, s) => switch (s.data) {
       final bytes? => Image.memory(
         bytes,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        cacheWidth: 600, // a card is at most ~240 dp wide
+        cacheWidth: widget.cacheWidth,
+        gaplessPlayback: true,
         excludeFromSemantics: true,
         errorBuilder: (_, _, _) => widget.fallback,
       ),

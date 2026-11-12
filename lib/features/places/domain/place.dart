@@ -31,6 +31,9 @@ class BranchSuggestion {
     this.summary,
     this.warnings = const [],
     this.candidates = const [],
+    this.pages = const [],
+    this.photos = const [],
+    this.restaurantId,
   });
 
   final BranchDraft draft;
@@ -42,6 +45,15 @@ class BranchSuggestion {
 
   /// Every pin found (current, the draft's, HERE, GrabMaps), to compare before saving.
   final List<PinCandidate> candidates;
+
+  /// The web pages read about the shop, to open and check.
+  final List<({String url, String? title})> pages;
+
+  /// Up to 3 photos from those pages: one may become the restaurant's cover.
+  final List<String> photos;
+
+  /// The branch's restaurant (that cover's target).
+  final String? restaurantId;
 }
 
 /// One pin a source gave for a branch. [source]: 'current', 'draft:<source>', 'here', 'grab'.

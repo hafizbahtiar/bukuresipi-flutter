@@ -16,10 +16,11 @@ Future<String?> pickPhoto(
   BuildContext context, {
   required List<(String, double?)> ratios,
   double maxSide = 1600,
+  ImageSource source = ImageSource.gallery,
 }) async {
   final navigator = Navigator.of(context);
   final picked = await ImagePicker().pickImage(
-    source: ImageSource.gallery,
+    source: source,
     maxWidth: maxSide,
     maxHeight: maxSide,
     imageQuality: 100, // encoded once, at photoQuality, after editing

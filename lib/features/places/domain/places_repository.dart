@@ -85,6 +85,12 @@ abstract interface class PlacesRepository {
   /// Owner only: picks a candidate as the cover for everyone; null clears it.
   Future<void> setRestaurantCover(String restaurantId, String? cover);
 
+  /// Owner only: a photo from the AI draft's web pages as the cover (the server downloads it). Throws ApiException.
+  Future<void> setRestaurantCoverUrl(String restaurantId, String url);
+
+  /// Owner only: a photo of their own ([path] = the editor's JPEG) as the cover. Throws ApiException.
+  Future<void> uploadRestaurantCover(String restaurantId, String path);
+
   /// Community rating; the response is the branch's fresh summary.
   Future<RatingSummary> rateBranch(String branchId, int stars);
 

@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
-
-import 'package:extended_image/extended_image.dart' show cacheImageFolderName;
-import 'package:path_provider/path_provider.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/disk_image_cache.dart';
 import '../../../core/storage/token_store.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user.dart';
@@ -87,40 +84,9 @@ class AuthRepositoryImpl implements AuthRepository {
       });
   }
 
-  /// From extended_image's disk cache folder (its clearDiskCachedImages() empties it too), else downloaded
-  /// through Dio and kept there: the request needs the token, which Dio refreshes; a plain network image can't.
-  /// A new picture has a new id, so a cached file is never stale.
-  Future<Uint8List?> _cachedAvatar(String userId, String avatar) async {
-    final file = await _avatarFile(avatar);
-    if (file != null && await file.exists()) {
-      try {
-        return await file.readAsBytes();
-      } catch (_) {} // unreadable: download it again
-    }
-    final bytes = await apiCall(() => _api.avatar(userId));
-    if (bytes != null && file != null) {
-      unawaited(
-        file
-            .create(recursive: true)
-            .then((f) => f.writeAsBytes(bytes))
-            .then((_) {}, onError: (Object _) {}),
-      );
-    }
-    return bytes;
-  }
-
-  static final _avatarId = RegExp(r'^[0-9a-fA-F-]{1,64}$');
-
-  /// null = no disk (tests, web) or not an id the server gives (never a path out of the folder).
-  Future<File?> _avatarFile(String avatar) async {
-    if (!_avatarId.hasMatch(avatar)) return null;
-    try {
-      final dir = await getTemporaryDirectory();
-      return File('${dir.path}/$cacheImageFolderName/avatar-$avatar');
-    } catch (_) {
-      return null;
-    }
-  }
+  /// The avatar id is a uuid; '-' is a safe file name character.
+  Future<Uint8List?> _cachedAvatar(String userId, String avatar) =>
+      diskCached('avatar-$avatar', () => apiCall(() => _api.avatar(userId)));
 
   @override
   Future<User> login(String email, String password) =>

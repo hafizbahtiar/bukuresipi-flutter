@@ -1649,6 +1649,10 @@
   "@recipeCoverChange": {},
   "recipeCoverRemove": "Remove photo",
   "@recipeCoverRemove": {},
+  "placeCoverFailed": "Branch saved, but the cover photo didn't save. Pick it again from the draft.",
+  "@placeCoverFailed": {},
+  "dishRemoveConfirm": "Delete this dish from the catalogue? Everyone loses it; copies people made stay theirs.",
+  "@dishRemoveConfirm": {},
   "recipeCoverFailed": "Recipe saved, but the photo didn't upload. Try again from Edit.",
   "@recipeCoverFailed": {},
   "navHome": "Home",
@@ -1737,7 +1741,11 @@
   "@coverTitle": {},
   "coverNone": "No cover",
   "@coverNone": {},
-  "coverEmpty": "No post photos for this restaurant yet. Share a post of it first.",
+  "coverEmpty": "No post photos for this restaurant yet. Take or pick a photo below.",
+  "coverCamera": "Take photo",
+  "@coverCamera": {},
+  "coverGallery": "From gallery",
+  "@coverGallery": {},
   "@coverEmpty": {},
   "coverSaved": "Cover saved for everyone",
   "@coverSaved": {},
@@ -2301,5 +2309,10 @@
       }
     }
   },
-  "recipeAiDraftPhotos": "Tap a photo to use it as the cover"
+  "recipeAiDraftPhotos": "Tap a photo to use it as the cover",
+  "@recipeAiDraftPhotos": {},
+  "recipeAiDraftWorking": "Finding web recipes and writing a draft. This can take up to a minute.",
+  "@recipeAiDraftWorking": {},
+  "recipeAiDraftUndo": "Undo",
+  "@recipeAiDraftUndo": {}
 }

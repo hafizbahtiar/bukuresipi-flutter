@@ -168,10 +168,43 @@ GoRouter buildRouter(
         path: '/places/:id',
         builder: (_, state) => PlaceDetailPage(id: state.pathParameters['id']!),
       ),
-      _page(
+      GoRoute(
         path: '/recipes/:id',
-        builder: (_, state) =>
-            RecipeDetailPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) {
+          final preview = state.extra is RecipePreview
+              ? state.extra! as RecipePreview
+              : null;
+          final page = RecipeDetailPage(
+            id: state.pathParameters['id']!,
+            preview: preview,
+          );
+          // From a card with a photo: the photo flies into the page's header (hero) while the page fades in; a
+          // page flip would fight it. Anything else opens like every page.
+          if (preview?.hasPhoto ?? false) {
+            return CustomTransitionPage<void>(
+              key: state.pageKey,
+              name: state.name ?? state.path,
+              restorationId: state.pageKey.value,
+              transitionDuration: const Duration(milliseconds: 380),
+              reverseTransitionDuration: const Duration(milliseconds: 320),
+              child: page,
+              transitionsBuilder: (context, animation, _, child) =>
+                  FadeTransition(
+                    opacity: CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                    child: child,
+                  ),
+            );
+          }
+          return MaterialPage<void>(
+            key: state.pageKey,
+            name: state.name ?? state.path,
+            restorationId: state.pageKey.value,
+            child: page,
+          );
+        },
       ),
       _page(
         path: '/branches/:id/reviews',

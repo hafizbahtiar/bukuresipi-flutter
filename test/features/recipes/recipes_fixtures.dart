@@ -65,14 +65,16 @@ RecipeDetail recipeDetail({
   RecipeSourceType sourceType = RecipeSourceType.link,
   String sourceUrl = 'https://www.tiktok.com/@makan/video/1',
   String? cover,
+  String id = 'r-1',
+  String name = 'Nasi Lemak Ayam',
 }) => RecipeDetail(
   cover: cover,
   sourceType: sourceType,
   canEdit: canEdit,
   visibility: visibility,
   owner: owner,
-  id: 'r-1',
-  name: 'Nasi Lemak Ayam',
+  id: id,
+  name: name,
   createdAt: DateTime.utc(2026, 11, 2),
   sourceUrl: sourceUrl,
   missing: missing,
@@ -193,8 +195,12 @@ class FakeRecipes implements RecipesRepository {
   Future<void> report(String id, String reason, {String? note}) async =>
       reports.add((id, reason));
 
+  /// While set and not completed, the recipe detail waits for it (the page still loading).
+  Completer<void>? detailGate;
+
   @override
   Future<RecipeDetail> get(String id) async {
+    await detailGate?.future;
     if (detailError != null) throw detailError!;
     return detailResult!;
   }

@@ -553,6 +553,44 @@ void main() {
     expect(repo.branchUpdates.single.scope, BranchEditScope.shared);
   });
 
+  testWidgets(
+    'the draft offers web photos and page links; a picked photo becomes the cover when the branch is saved',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a')];
+      repo.suggestion = const BranchSuggestion(
+        draft: BranchDraft(label: 'AI Label'),
+        sources: [],
+        aiUsed: true,
+        changed: true,
+        pages: [(url: 'https://www.flow.my/bangi', title: 'FLOW Bangi')],
+        photos: ['https://flow.my/a.jpg', 'https://flow.my/b.jpg'],
+        restaurantId: 'r-9',
+      );
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await t.tap(find.byTooltip('Edit branch'));
+      await t.pumpAndSettle();
+      final suggest = find.text('Suggest with AI');
+      await t.ensureVisible(suggest);
+      await t.tap(suggest);
+      await t.pumpAndSettle();
+
+      expect(find.widgetWithText(ActionChip, 'flow.my'), findsOneWidget);
+      final photo = find.byKey(
+        const ValueKey('draft-photo-https://flow.my/b.jpg'),
+      );
+      await t.ensureVisible(photo);
+      await t.tap(photo);
+      await t.pumpAndSettle();
+
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await t.ensureVisible(save);
+      await t.tap(save);
+      await t.pumpAndSettle();
+      expect(repo.branchUpdates.single.label, 'AI Label');
+      expect(repo.coverUrls, [('r-9', 'https://flow.my/b.jpg')]);
+    },
+  );
+
   testWidgets('the owner can type coordinates instead of using the map', (
     t,
   ) async {

@@ -10,6 +10,7 @@ import '../../../core/constants/image_constant.dart';
 import '../../../core/network/update_gate.dart';
 import '../../../core/widgets/system_pages.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/cover_app_bar.dart';
 import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../places/domain/nearby_branch.dart';
@@ -22,6 +23,7 @@ import '../../places/presentation/location.dart';
 import '../../places/presentation/places_controller.dart';
 import '../../places/presentation/widgets/nearby_sheet.dart';
 import '../../recipes/domain/recipe.dart';
+import '../../recipes/presentation/pages/recipe_detail_page.dart';
 import '../../recipes/presentation/recipes_controller.dart';
 
 enum FeedKind { all, recipes, restaurants }
@@ -78,14 +80,50 @@ class _FeedPageState extends State<FeedPage> {
   /// The nearby request is out: restaurants are coming, so "nothing here" would be early.
   bool _nearbyBusy = false;
 
+  late final _edited = context.read<RecipesController>().edited;
+  late final _removed = context.read<RecipesController>().removed;
+  late final _placesChanged = context.read<PlacesController>().changes;
+
   @override
   void initState() {
     super.initState();
+    _edited.addListener(_patch);
+    _removed.addListener(_drop);
+    // A place edited, pinned, saved or rated anywhere: the restaurant cards fetch theirs again (kept on screen meanwhile).
+    _placesChanged.addListener(_loadNearby);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  /// A recipe or dish edited from its page: its card takes the new name and photo, in place (no reload, no jump).
+  void _patch() {
+    final d = _edited.value;
+    if (d == null || !mounted) return;
+    setState(() {
+      _community = [for (final r in _community) r.id == d.id ? r.edited(d) : r];
+      _dishes = [for (final x in _dishes) x.id == d.id ? x.edited(d) : x];
+    });
+  }
+
+  void _drop() {
+    final id = _removed.value;
+    if (id == null || !mounted) return;
+    setState(() {
+      _community = [
+        for (final r in _community)
+          if (r.id != id) r,
+      ];
+      _dishes = [
+        for (final x in _dishes)
+          if (x.id != id) x,
+      ];
+    });
   }
 
   @override
   void dispose() {
+    _edited.removeListener(_patch);
+    _removed.removeListener(_drop);
+    _placesChanged.removeListener(_loadNearby);
     _search.dispose();
     _scroll.dispose();
     super.dispose();
@@ -403,16 +441,11 @@ class _FeedPageState extends State<FeedPage> {
       ],
       icon: Icons.menu_book_outlined,
       drawing: ImageConstant.recipePlaceholder,
-      photo: switch ((r.cover, r.shareId)) {
-        (final cover?, _) => (ph) => ShareFill(
-          id: cover,
-          recipeId: r.id,
-          fallback: ph,
-        ),
-        (null, final id?) => (ph) => ShareFill(id: id, fallback: ph),
-        _ => null,
-      },
-      onTap: () => context.push('/recipes/${r.id}'),
+      photo: _heroPhoto(r.id, cover: r.cover, shareId: r.shareId),
+      onTap: () => context.push(
+        '/recipes/${r.id}',
+        extra: RecipePreview(name: r.name, cover: r.cover, shareId: r.shareId),
+      ),
     );
     Widget dish(Dish d) => FeedCard(
       key: ValueKey('feed-dish-${d.id}'),
@@ -428,7 +461,11 @@ class _FeedPageState extends State<FeedPage> {
       ],
       icon: Icons.restaurant_menu,
       drawing: ImageConstant.recipePlaceholder,
-      onTap: () => context.push('/recipes/${d.id}'),
+      photo: _heroPhoto(d.id, cover: d.cover),
+      onTap: () => context.push(
+        '/recipes/${d.id}',
+        extra: RecipePreview(name: d.name, cover: d.cover),
+      ),
     );
 
     final restaurants = showRestaurants ? _restaurants : const <NearbyBranch>[];
@@ -650,3 +687,22 @@ class _FeedPageState extends State<FeedPage> {
 
 /// Columns for a width: 2 on a phone, one more per ~220 dp after that.
 int _columns(double width) => math.max(2, (width - 32) ~/ 220);
+
+/// A recipe card's photo, tagged to fly into its page's header (CoverAppBar); null = no photo (the drawing shows).
+Widget Function(Widget)? _heroPhoto(
+  String id, {
+  String? cover,
+  String? shareId,
+}) {
+  if (cover == null && shareId == null) return null;
+  return (placeholder) => Hero(
+    tag: recipePhotoTag(id),
+    flightShuttleBuilder: CoverAppBar.cardShuttle,
+    child: recipePhoto(
+      id,
+      cover: cover,
+      shareId: shareId,
+      fallback: placeholder,
+    )!,
+  );
+}

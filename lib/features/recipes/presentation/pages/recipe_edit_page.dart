@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/draft_photos.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_editor_page.dart';
@@ -230,6 +232,12 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   /// The draft photo picked as the cover; set by the server after Save.
   String? _photo;
 
+  /// The form as it was before the draft, for Undo: the old rows themselves (kept alive until the page closes).
+  ({String name, List<_Ingredient> ingredients, List<_Step> steps})?
+  _beforeDraft;
+
+  final _scroll = ScrollController();
+
   // Catalogue suggestions under the ingredient being typed (GET /recipes/ingredients), so the line gets linked.
   _Ingredient? _suggestFor;
   List<String> _suggestions = const [];
@@ -245,6 +253,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _scroll.dispose();
     _name.dispose();
     for (final r in [..._ingredients, ..._gone.whereType<_Ingredient>()]) {
       r.dispose();
@@ -404,11 +413,20 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   Future<void> _aiDraft() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final owner = context.read<OwnerRepository>();
     setState(() => _drafting = true);
-    try {
-      final d = await context.read<OwnerRepository>().draftDish(
-        widget.recipe!.id,
+    // The placeholder card is at the top of the form: bring it into view.
+    if (_scroll.hasClients) {
+      unawaited(
+        _scroll.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        ),
       );
+    }
+    try {
+      final d = await owner.draftDish(widget.recipe!.id);
       if (!mounted) return;
       if (d.sources.isEmpty) {
         messenger.showSnackBar(
@@ -423,6 +441,12 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       setState(() {
         _draft = d;
         _photo = null;
+        // A second draft keeps the first Undo: back to the form before any draft.
+        _beforeDraft ??= (
+          name: _name.text,
+          ingredients: [..._ingredients],
+          steps: [..._steps],
+        );
         _name.text = d.name;
         _gone.addAll([..._ingredients, ..._steps]);
         _suggestions = const [];
@@ -442,6 +466,87 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     }
   }
 
+  /// Undo the draft: the form as it was before it, the picked draft photo dropped.
+  void _undoDraft() {
+    final before = _beforeDraft;
+    if (before == null) return;
+    setState(() {
+      _gone.addAll([..._ingredients, ..._steps]);
+      for (final r in [...before.ingredients, ...before.steps]) {
+        _gone.remove(r); // live again: disposed with the page, once
+      }
+      _ingredients
+        ..clear()
+        ..addAll(before.ingredients);
+      _steps
+        ..clear()
+        ..addAll(before.steps);
+      _name.text = before.name;
+      _suggestions = const [];
+      _draft = null;
+      _photo = null;
+      _beforeDraft = null;
+    });
+  }
+
+  /// While the draft is being written: the card it will fill, as shimmering shapes.
+  Widget _draftLoading(AppLocalizations l) {
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Container(
+      key: const ValueKey('recipe-draft-loading'),
+      margin: const EdgeInsets.only(top: 8, bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: nb.pandanDeep),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.recipeAiDraftWorking,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Skeleton(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      const Expanded(
+                        child: AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: SkeletonBox(radius: 10),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const SkeletonBox(width: 220),
+                const SizedBox(height: 8),
+                const SkeletonBox(width: 160),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _draftNote(AppLocalizations l, DishDraft d) {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
@@ -458,97 +563,55 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.recipeAiDraftNote(d.sources.length), style: text.bodyMedium),
-          for (final w in d.warnings)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text('⚠ $w', style: small),
-            ),
+          // What happened, and the way back.
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: nb.pandanDeep),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.recipeAiDraftNote(d.sources.length),
+                  style: text.bodyMedium,
+                ),
+              ),
+              TextButton.icon(
+                key: const ValueKey('recipe-draft-undo'),
+                onPressed: _saving ? null : _undoDraft,
+                icon: const Icon(Icons.undo, size: 18),
+                label: Text(l.recipeAiDraftUndo),
+              ),
+            ],
+          ),
+          // The one choice to make: the photo.
           if (d.images.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(l.recipeAiDraftPhotos, style: small),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                for (final (i, url) in d.images.indexed) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(child: _draftPhoto(l, url)),
-                ],
-                // Three slots always: one photo is not stretched across the card.
-                for (var i = d.images.length; i < 3; i++) ...[
-                  const SizedBox(width: 8),
-                  const Expanded(child: SizedBox()),
-                ],
-              ],
+            const SizedBox(height: 8),
+            DraftPhotos(
+              urls: d.images,
+              picked: _photo,
+              // One cover: a draft photo replaces a photo of your own picked on this visit.
+              onPick: (url) => setState(() {
+                _photo = url;
+                if (url != null) _coverPath = null;
+              }),
             ),
           ],
-          for (final s in d.sources)
+          // What to check before saving.
+          for (final w in d.warnings)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '• ${s.title ?? Uri.tryParse(s.url)?.host ?? s.url}  (${Uri.tryParse(s.url)?.host ?? ''})',
-                style: small,
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: nb.margin),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(w, style: small)),
+                ],
               ),
             ),
+          // Where it came from: tap to read the page.
+          const SizedBox(height: 8),
+          DraftSourceChips(sources: d.sources),
         ],
-      ),
-    );
-  }
-
-  /// One draft photo: tap to pick it as the cover, again to drop it.
-  Widget _draftPhoto(AppLocalizations l, String url) {
-    final nb = Notebook.of(context);
-    final picked = _photo == url;
-    return Semantics(
-      button: true,
-      selected: picked,
-      label: l.recipeAiDraftPhotos,
-      child: GestureDetector(
-        key: ValueKey('draft-photo-$url'),
-        // One cover: a draft photo replaces a photo of your own picked on this visit.
-        onTap: () => setState(() {
-          _photo = picked ? null : url;
-          if (!picked) _coverPath = null;
-        }),
-        child: AspectRatio(
-          aspectRatio: 4 / 3,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: picked ? nb.pandan : nb.line,
-                width: picked ? 3 : 1,
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  cacheWidth: 360,
-                  errorBuilder: (_, _, _) => ColoredBox(
-                    color: nb.line,
-                    child: Icon(Icons.broken_image_outlined, color: nb.inkSoft),
-                  ),
-                ),
-                if (picked)
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: CircleAvatar(
-                        radius: 11,
-                        backgroundColor: nb.pandan,
-                        child: Icon(Icons.check, size: 15, color: nb.paper),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -608,11 +671,15 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           done = await recipes.setCover(saved.id, path);
         } else if (_coverRemoved && widget.recipe?.cover != null) {
           await recipes.removeCover(saved.id);
+          done = await recipes.detail(
+            saved.id,
+          ); // the edit's answer still names the old photo
         }
       } catch (_) {
         // The recipe is saved: leave the page (saving again would add a second new recipe), say the photo failed.
         messenger.showSnackBar(SnackBar(content: Text(l.recipeCoverFailed)));
       }
+      recipes.edited.value = done;
       navigator.pop(done);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
@@ -914,20 +981,13 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           actions: [
             if (_catalogue &&
                 (context.read<AuthController?>()?.user?.isOwner ?? false))
-              _drafting
-                  ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : IconButton(
-                      key: const ValueKey('recipe-ai-draft'),
-                      tooltip: l.recipeAiDraft,
-                      icon: const Icon(Icons.auto_awesome_outlined),
-                      onPressed: _saving ? null : _aiDraft,
-                    ),
+              IconButton(
+                key: const ValueKey('recipe-ai-draft'),
+                tooltip: l.recipeAiDraft,
+                icon: const Icon(Icons.auto_awesome_outlined),
+                // The card in the form shows it working.
+                onPressed: _saving || _drafting ? null : _aiDraft,
+              ),
             if (_saving)
               const Padding(
                 padding: EdgeInsets.all(16),
@@ -942,10 +1002,15 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
         ),
         body: NotebookPage(
           child: ListView(
+            controller: _scroll,
             padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 12, 32),
             children: [
+              // First: the button that starts it is at the top, and so is what it gives.
+              if (_drafting)
+                _draftLoading(l)
+              else if (_draft case final d?)
+                _draftNote(l, d),
               _coverField(l),
-              if (_draft case final d?) _draftNote(l, d),
               TextField(
                 controller: _name,
                 maxLength: 200,

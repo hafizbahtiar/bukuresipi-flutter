@@ -170,9 +170,13 @@ class FakeOwner implements OwnerRepository {
   DishDraft? draft;
   final drafted = <String>[];
 
+  /// Holds the draft back until completed (to see the page while it works).
+  Completer<void>? draftGate;
+
   @override
   Future<DishDraft> draftDish(String recipeId) async {
     drafted.add(recipeId);
+    await draftGate?.future;
     return draft!;
   }
 

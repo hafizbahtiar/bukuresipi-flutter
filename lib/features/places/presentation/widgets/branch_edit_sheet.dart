@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/draft_photos.dart';
+
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
@@ -76,6 +79,9 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   List<PinHit>? _pinHits;
   String? _askedQuery; // the server's default words for the last map: not carried to another map
   BranchSuggestion? _suggestion;
+
+  /// A draft photo picked as the restaurant's cover: set when the branch is saved.
+  String? _photo;
   final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
 
@@ -374,6 +380,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
       if (!mounted) return;
       setState(() {
         _suggestion = suggestion;
+        _photo = null;
         _aiFields.clear();
         if (suggestion.draft.label case final label?) {
           _label.text = label;
@@ -450,6 +457,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     final lat = _typedLat;
     final lng = _typedLng;
     final sendPin = _pinChanged && lat != null && lng != null;
+    final places = context.read<PlacesController>();
     setState(() => _saving = true);
     try {
       await widget.onSave((
@@ -460,6 +468,14 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
         lat: sendPin ? lat : null,
         lng: sendPin ? lng : null,
       ), _scope);
+      // The branch is saved: a failed photo only says so (saving again would not help the photo).
+      if ((_photo, _suggestion?.restaurantId) case (final url?, final id?)) {
+        try {
+          await places.setRestaurantCoverUrl(id, url);
+        } catch (_) {
+          messenger.showSnackBar(SnackBar(content: Text(l.placeCoverFailed)));
+        }
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
@@ -545,6 +561,8 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
                           branch: widget.branch,
                           used: _aiFields,
                           onPick: _pickDraft,
+                          photo: _photo,
+                          onPhoto: (url) => setState(() => _photo = url),
                           onUsePin: (c) =>
                               _useFound(c.lat, c.lng, address: c.address),
                         ),
@@ -807,9 +825,15 @@ class _DraftBanner extends StatelessWidget {
     required this.used,
     required this.onPick,
     required this.onUsePin,
+    required this.photo,
+    required this.onPhoto,
   });
 
   final BranchSuggestion suggestion;
+
+  /// The picked cover photo (null = none) and its change.
+  final String? photo;
+  final ValueChanged<String?> onPhoto;
   final Branch branch;
 
   /// The draft fields now in the form; [onPick] takes (field, use) from each row's tick box.
@@ -898,11 +922,30 @@ class _DraftBanner extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(l.aiDraftNoInfo, style: small),
             ),
+          if (suggestion.photos.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            DraftPhotos(
+              urls: suggestion.photos,
+              picked: photo,
+              onPick: onPhoto,
+            ),
+          ],
           for (final warning in suggestion.warnings)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text('• $warning', style: small),
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: nb.margin),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(warning, style: small)),
+                ],
+              ),
             ),
+          if (suggestion.pages.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            DraftSourceChips(sources: suggestion.pages),
+          ],
           if (suggestion.candidates.length > 1) ...[
             const SizedBox(height: 8),
             Text(

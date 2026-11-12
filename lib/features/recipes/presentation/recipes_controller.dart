@@ -32,6 +32,12 @@ class RecipesController extends ChangeNotifier {
   /// ApiException code of the last failed load.
   String? get error => _error;
 
+  /// The last recipe saved by the edit page: lists kept outside this controller (Home's cards) patch their copy.
+  final edited = ValueNotifier<RecipeDetail?>(null);
+
+  /// The last recipe or dish deleted: Home's cards drop it.
+  final removed = ValueNotifier<String?>(null);
+
   Recipe? byId(String id) => _recipes.where((r) => r.id == id).firstOrNull;
 
   void clear() {
@@ -178,6 +184,7 @@ class RecipesController extends ChangeNotifier {
   /// Throws ApiException; the detail page shows it.
   Future<void> remove(String id) async {
     await _repo.delete(id);
+    removed.value = id;
     _recipes = _recipes.where((r) => r.id != id).toList();
     notifyListeners();
   }

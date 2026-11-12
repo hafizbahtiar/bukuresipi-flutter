@@ -3,7 +3,7 @@
 <plist version="1.0">
 	<dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Snap a restaurant receipt.</string>
+	<string>Snap a restaurant receipt, or a photo of a restaurant for its cover.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Pick a photo for your recipe.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>

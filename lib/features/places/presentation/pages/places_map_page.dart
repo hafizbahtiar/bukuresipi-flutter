@@ -130,6 +130,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _places.addListener(_draw);
+    _places.changes.addListener(_loadNearby);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _askLocationOnce();
       _loadAll();
@@ -141,6 +142,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     WidgetsBinding.instance.removeObserver(this);
     _positionSub?.cancel();
     _places.removeListener(_draw);
+    _places.changes.removeListener(_loadNearby);
     _map?.onCircleTapped.remove(_tapped);
     _map?.onFeatureTapped.remove(_featureTapped);
     super.dispose();

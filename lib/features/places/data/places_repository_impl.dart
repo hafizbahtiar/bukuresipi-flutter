@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
 import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
@@ -158,6 +159,13 @@ class PlacesRepositoryImpl implements PlacesRepository {
             fromDraftM: (c['fromDraftM'] as num?)?.round(),
           ),
       ],
+      pages: [
+        for (final p
+            in ((j['pages'] as List?) ?? const []).cast<Map<String, dynamic>>())
+          (url: p['url'] as String, title: p['title'] as String?),
+      ],
+      photos: ((j['photos'] as List?) ?? const []).cast<String>(),
+      restaurantId: j['restaurantId'] as String?,
     );
   });
 
@@ -390,11 +398,14 @@ class PlacesRepositoryImpl implements PlacesRepository {
   Future<Uint8List?> restaurantCover(String restaurantId, String cover) {
     if (_covers.length >= 80) _covers.remove(_covers.keys.first);
     final key = '$restaurantId/$cover';
-    return _covers[key] ??= _bytes('/places/restaurants/$restaurantId/cover')
-      ..catchError((Object _) {
-        _covers.remove(key); // a failed fetch is tried again next time
-        return null;
-      });
+    return _covers[key] ??=
+        diskCached(
+          'rcover-$cover',
+          () => _bytes('/places/restaurants/$restaurantId/cover'),
+        )..catchError((Object _) {
+          _covers.remove(key); // a failed fetch is tried again next time
+          return null;
+        });
   }
 
   @override
@@ -420,6 +431,34 @@ class PlacesRepositoryImpl implements PlacesRepository {
         () => _dio.put<void>(
           '/places/restaurants/$restaurantId/cover',
           data: {'cover': cover},
+        ),
+      );
+
+  @override
+  Future<void> uploadRestaurantCover(String restaurantId, String path) =>
+      apiCall(() async {
+        await _dio.put<void>(
+          '/places/restaurants/$restaurantId/cover/photo',
+          data: FormData.fromMap({
+            'image': await MultipartFile.fromFile(
+              path,
+              contentType: DioMediaType(
+                'image',
+                'jpeg',
+              ), // the photo editor's output
+            ),
+          }),
+        );
+      });
+
+  @override
+  Future<void> setRestaurantCoverUrl(String restaurantId, String url) =>
+      apiCall(
+        () => _dio.put<void>(
+          '/places/restaurants/$restaurantId/cover',
+          data: {'url': url},
+          // The server downloads the photo first.
+          options: Options(receiveTimeout: const Duration(seconds: 60)),
         ),
       );
 

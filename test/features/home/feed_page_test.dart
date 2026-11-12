@@ -8,6 +8,7 @@ import 'package:bukuresipi_flutter/features/places/presentation/places_controlle
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
+import 'package:bukuresipi_flutter/features/shares/presentation/widgets/share_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,7 @@ void main() {
           category: 'Lauk',
           ingredientCount: 9,
         ),
+        Dish(id: 'd-2', name: 'Kari Ayam', cover: 'cv-1'),
       ];
     recipes.dishesGate = dishesGate;
     if (empty) {
@@ -130,6 +132,7 @@ void main() {
         'feed-recipe-c-3',
         'feed-place-b-2', // 300 m
         'feed-dish-d-1',
+        'feed-dish-d-2',
         'feed-place-b-1', // 900 m: after the last recipe
       ]);
       expect(find.text('${l.feedNearMe} · 300 m'), findsOneWidget);
@@ -175,6 +178,11 @@ void main() {
         inCard('feed-dish-d-1', find.text(l.recipeIngredientCount(9))),
         findsOneWidget,
       );
+      // The owner set a cover: the dish card shows it.
+      final dishPhoto = t.widget<ShareFill>(
+        inCard('feed-dish-d-2', find.byType(ShareFill)),
+      );
+      expect([dishPhoto.id, dishPhoto.recipeId], ['cv-1', 'd-2']);
       // No photo: the cooking drawing, not a bare icon.
       expect(
         inCard(
@@ -190,6 +198,59 @@ void main() {
         ),
         findsNothing,
       ); // places keep their shop icon
+    },
+  );
+
+  testWidgets(
+    'a dish edited on its page: its Home card takes the new name and photo',
+    (t) async {
+      await pump(t);
+      t.element(find.byType(FeedPage)).read<RecipesController>().edited.value =
+          recipeDetail(id: 'd-1', name: 'Rendang Tok', cover: 'cv-9');
+      await t.pump();
+      final card = find.byKey(const ValueKey('feed-dish-d-1'));
+      expect(
+        find.descendant(of: card, matching: find.text('Rendang Tok')),
+        findsOneWidget,
+      );
+      expect(
+        t
+            .widget<ShareFill>(
+              find.descendant(of: card, matching: find.byType(ShareFill)),
+            )
+            .id,
+        'cv-9',
+      );
+    },
+  );
+
+  testWidgets('a dish deleted on its page leaves Home', (t) async {
+    await pump(t);
+    t.element(find.byType(FeedPage)).read<RecipesController>().removed.value =
+        'd-1';
+    await t.pump();
+    expect(find.byKey(const ValueKey('feed-dish-d-1')), findsNothing);
+    expect(find.byKey(const ValueKey('feed-dish-d-2')), findsOneWidget);
+  });
+
+  testWidgets(
+    'a place edited anywhere: the Home restaurant cards fetch again, with the new name',
+    (t) async {
+      await pump(t);
+      places.nearbyResults = [
+        nearbyBranch(
+          branchId: 'b-2',
+          name: 'Warung Pak Ali Baru',
+          distanceM: 300,
+        ),
+      ];
+      await t
+          .element(find.byType(FeedPage))
+          .read<PlacesController>()
+          .setRestaurantCover('r-1', null);
+      await t.pumpAndSettle();
+      expect(find.text('Warung Pak Ali Baru'), findsOneWidget);
+      expect(find.text('Kedai Sederhana'), findsNothing);
     },
   );
 

@@ -1,14 +1,17 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../auth/presentation/auth_text.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../places_controller.dart';
 
-/// Owner only: pick the restaurant's cover for everyone from the thumbnails of the posts shared about it.
+/// Owner only: pick the restaurant's cover for everyone from the thumbnails of the posts shared about it, or take
+/// or pick a photo of their own.
 class CoverPickerSheet extends StatefulWidget {
   const CoverPickerSheet({super.key, required this.restaurantId});
 
@@ -34,6 +37,29 @@ class _CoverPickerSheetState extends State<CoverPickerSheet> {
         widget.restaurantId,
         cover,
       );
+      messenger.showSnackBar(SnackBar(content: Text(l.coverSaved)));
+      navigator.pop();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// A photo of the owner's own: camera or gallery, cropped in the photo editor, then uploaded.
+  Future<void> _upload(ImageSource source) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final places = context.read<PlacesController>();
+    final path = await pickPhoto(
+      context,
+      source: source,
+      ratios: [('4:3', 4 / 3), ('1:1', 1), (l.photoFree, null)],
+    );
+    if (path == null || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await places.uploadRestaurantCover(widget.restaurantId, path);
       messenger.showSnackBar(SnackBar(content: Text(l.coverSaved)));
       navigator.pop();
     } catch (e) {
@@ -93,6 +119,32 @@ class _CoverPickerSheetState extends State<CoverPickerSheet> {
                       ],
                     ),
                   ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('cover-camera'),
+                        onPressed: _saving
+                            ? null
+                            : () => _upload(ImageSource.camera),
+                        icon: const Icon(Icons.photo_camera_outlined),
+                        label: Text(l.coverCamera),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('cover-gallery'),
+                        onPressed: _saving
+                            ? null
+                            : () => _upload(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: Text(l.coverGallery),
+                      ),
+                    ),
+                  ],
+                ),
                 if (data?.current != null) ...[
                   const SizedBox(height: 12),
                   OutlinedButton(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/cover_app_bar.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/pill_switch.dart';
@@ -23,10 +25,48 @@ import '../widgets/recipe_variants.dart';
 import 'recipe_edit_page.dart';
 
 /// One imported recipe as a notebook page: what the post said, with the pieces it did not give marked.
+/// What a card already knows of a recipe, handed to its page (go_router `extra`): the page opens with its photo
+/// header at once, so the card's photo can fly into it (hero) instead of the page flip.
+class RecipePreview {
+  const RecipePreview({required this.name, this.cover, this.shareId});
+
+  final String name;
+  final String? cover;
+  final String? shareId;
+
+  bool get hasPhoto => cover != null || shareId != null;
+}
+
+/// The hero tag shared by a recipe's card photo and its page header.
+Object recipePhotoTag(String recipeId) => 'recipe-photo-$recipeId';
+
+/// The photo filling a card or the page header: the recipe's cover, else its share's picture; null = none.
+Widget? recipePhoto(
+  String recipeId, {
+  String? cover,
+  String? shareId,
+  required Widget fallback,
+  int cacheWidth = 600,
+}) => switch ((cover, shareId)) {
+  (final c?, _) => ShareFill(
+    id: c,
+    recipeId: recipeId,
+    fallback: fallback,
+    cacheWidth: cacheWidth,
+  ),
+  (null, final s?) => ShareFill(
+    id: s,
+    fallback: fallback,
+    cacheWidth: cacheWidth,
+  ),
+  _ => null,
+};
+
 class RecipeDetailPage extends StatefulWidget {
-  const RecipeDetailPage({super.key, required this.id});
+  const RecipeDetailPage({super.key, required this.id, this.preview});
 
   final String id;
+  final RecipePreview? preview;
 
   @override
   State<RecipeDetailPage> createState() => _RecipeDetailPageState();
@@ -40,6 +80,64 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   /// The tab under the title: false = ingredients (and allergens), true = steps (and variants).
   bool _steps = false;
   late final _pages = PageController(initialPage: _steps ? 1 : 0);
+
+  /// How far the page has been pulled down past its top in this drag; [_closeAt] closes it.
+  double _pull = 0;
+  bool _closing = false;
+  static const _closeAt = 110.0;
+
+  /// With a photo on top: pulling the page down past its top closes it, and the photo flies back to its card.
+  /// Platform physics stay: Android's clamping scroll reports the pull as overscroll, iOS's bounce as a negative
+  /// offset.
+  Widget _pullToClose(bool on, Widget child) => !on
+      ? child
+      : NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.metrics.axis != Axis.vertical || _closing) return false;
+            final dragging = switch (n) {
+              ScrollUpdateNotification(:final dragDetails) =>
+                dragDetails != null,
+              OverscrollNotification(:final dragDetails) => dragDetails != null,
+              _ => false,
+            };
+            var pull = _pull;
+            if (n is ScrollStartNotification || n is ScrollEndNotification) {
+              pull = 0;
+            } else if (dragging &&
+                n is OverscrollNotification &&
+                n.overscroll < 0) {
+              pull -= n.overscroll;
+            } else if (dragging &&
+                n.metrics.pixels < n.metrics.minScrollExtent) {
+              pull = n.metrics.minScrollExtent - n.metrics.pixels;
+            } else if (dragging) {
+              pull = 0; // scrolled back into the page
+            }
+            if (pull >= _closeAt) {
+              _closing = true;
+              HapticFeedback.lightImpact();
+              Navigator.of(context).maybePop().then((closed) {
+                // Nothing to go back to (the first page): the page settles again.
+                if (!closed && mounted) {
+                  setState(() {
+                    _closing = false;
+                    _pull = 0;
+                  });
+                }
+              });
+            }
+            if (pull != _pull) setState(() => _pull = pull);
+            return false;
+          },
+          // Follows the finger a little: the page shrinks toward its card as it is pulled.
+          child: Transform.scale(
+            scale: 1 - 0.06 * (_pull / _closeAt).clamp(0.0, 1.0),
+            child: child,
+          ),
+        );
+
+  /// The page's NestedScrollView, for its outer scroll (how far the photo bar has collapsed).
+  final _nested = GlobalKey<NestedScrollViewState>();
 
   @override
   void dispose() {
@@ -84,7 +182,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final recipes = context.read<RecipesController>();
     if (!await showNotebookDialog(
       context,
-      message: l.recipeRemoveConfirm,
+      message: recipe.sourceType == RecipeSourceType.catalogue
+          ? l.dishRemoveConfirm
+          : l.recipeRemoveConfirm,
       tone: DialogTone.danger,
       confirmLabel: l.remove,
     )) {
@@ -299,7 +399,42 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final recipe = _recipe;
+    // The header photo: a screen wide, so decoded larger than a card's.
+    final cacheWidth =
+        (MediaQuery.sizeOf(context).width *
+                MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(600, 1600);
+    Widget fallback() => ColoredBox(color: Notebook.of(context).mist);
     if (_loading) {
+      final p = widget.preview;
+      // From a card with a photo: the header is there at once, for the photo to fly into.
+      if (p != null && p.hasPhoto) {
+        return Scaffold(
+          body: _pullToClose(
+            true,
+            CustomScrollView(
+              slivers: [
+                CoverAppBar(
+                  photo: recipePhoto(
+                    widget.id,
+                    cover: p.cover,
+                    shareId: p.shareId,
+                    fallback: fallback(),
+                    cacheWidth: cacheWidth,
+                  )!,
+                  title: p.name,
+                  heroTag: recipePhotoTag(widget.id),
+                ),
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator.adaptive()),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       return Scaffold(
         appBar: AppBar(),
         body: Center(child: CircularProgressIndicator.adaptive()),
@@ -331,14 +466,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final tabs =
         recipe.ingredients.isNotEmpty &&
         (recipe.steps.isNotEmpty || (catalogue && source != null));
+    // A photo opens the page as its top bar (CoverAppBar); none = a plain bar, the title starts the page.
+    final photo = recipePhoto(
+      recipe.id,
+      cover: recipe.cover,
+      shareId: recipe.shareId,
+      fallback: fallback(),
+      cacheWidth: cacheWidth,
+    );
+    final coverBar = photo == null
+        ? null
+        : CoverAppBar(
+            photo: photo,
+            title: recipe.name,
+            heroTag: recipePhotoTag(recipe.id),
+          );
     final header = SliverList.list(
       children: [
-        // A photo opens the page edge to edge; none = the title starts the page (the owner may add one).
-        switch ((recipe.cover, recipe.shareId)) {
-          (final cover?, _) => ShareImage.cover(recipe.id, cover, hero: true),
-          (null, final share?) => ShareImage(share, hero: true),
-          _ => const SizedBox.shrink(),
-        },
         Padding(
           padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 12, 20, 0),
           child: Text(
@@ -549,7 +693,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         ),
     ];
     return Scaffold(
-      appBar: AppBar(),
+      appBar: coverBar == null ? AppBar() : null,
       extendBody: true,
       bottomNavigationBar: ActionDock(
         actions: [
@@ -580,14 +724,22 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               onPressed: () => _remove(recipe),
             ),
           ] else ...[
-            // The app's owner keeps the catalogue: edit (with the AI draft), never remove.
+            // The app's owner keeps the catalogue: edit (with the AI draft) or delete it for everyone.
             if (recipe.sourceType == RecipeSourceType.catalogue &&
-                (context.read<AuthController?>()?.user?.isOwner ?? false))
+                (context.read<AuthController?>()?.user?.isOwner ?? false)) ...[
               DockAction(
                 icon: Icons.edit_outlined,
                 label: l.recipeEdit,
                 onPressed: () => _edit(recipe),
               ),
+              DockAction(
+                icon: Icons.delete_outline,
+                label: l.remove,
+                tooltip: l.recipeRemove,
+                danger: true,
+                onPressed: () => _remove(recipe),
+              ),
+            ],
             DockAction(
               icon: Icons.copy_outlined,
               label: l.recipeCopy,
@@ -611,48 +763,68 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           ],
         ],
       ),
-      body: NotebookPage(
-        child: tabs
-            ? NestedScrollView(
-                headerSliverBuilder: (context, _) => [
-                  header,
-                  // The pinned pill: absorbed so each tab's list starts below it (SliverOverlapInjector).
-                  SliverOverlapAbsorber(
-                    handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
-                      context,
-                    ),
-                    sliver: bar,
-                  ),
-                ],
-                // One page per tab: swiped, or driven by the pill (it follows the swipe).
-                body: PageView(
-                  controller: _pages,
-                  onPageChanged: (i) => setState(() => _steps = i == 1),
-                  children: [
-                    for (final (i, rows) in [ingredientRows, stepRows].indexed)
-                      Builder(
-                        builder: (context) => CustomScrollView(
-                          key: PageStorageKey('recipe-tab-$i'),
-                          slivers: [
-                            SliverOverlapInjector(
-                              handle:
-                                  NestedScrollView.sliverOverlapAbsorberHandleFor(
-                                    context,
-                                  ),
-                            ),
-                            list(rows),
-                          ],
-                        ),
+      body: _pullToClose(
+        coverBar != null,
+        NotebookPage(
+          child: tabs
+              ? NestedScrollView(
+                  key: _nested,
+                  headerSliverBuilder: (context, _) => [
+                    // Pinned on its own: it stays as a bar (back button) once the photo has scrolled away.
+                    ?coverBar,
+                    header,
+                    // The pinned pill (and the photo bar, pinned too): absorbed so each tab's list starts below them
+                    // (SliverOverlapInjector).
+                    SliverOverlapAbsorber(
+                      handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                        context,
                       ),
+                      sliver: bar,
+                    ),
+                  ],
+                  // One page per tab: swiped, or driven by the pill (it follows the swipe).
+                  body: PageView(
+                    controller: _pages,
+                    onPageChanged: (i) => setState(() => _steps = i == 1),
+                    children: [
+                      for (final (i, rows) in [
+                        ingredientRows,
+                        stepRows,
+                      ].indexed)
+                        Builder(
+                          builder: (context) => CustomScrollView(
+                            key: PageStorageKey('recipe-tab-$i'),
+                            slivers: [
+                              if (coverBar != null)
+                                SliverToBoxAdapter(
+                                  child: _UnderBar(
+                                    nested: _nested,
+                                    bar:
+                                        kToolbarHeight +
+                                        MediaQuery.paddingOf(context).top,
+                                  ),
+                                ),
+                              SliverOverlapInjector(
+                                handle:
+                                    NestedScrollView.sliverOverlapAbsorberHandleFor(
+                                      context,
+                                    ),
+                              ),
+                              list(rows),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                )
+              : CustomScrollView(
+                  slivers: [
+                    ?coverBar,
+                    header,
+                    list([...ingredientRows, ...stepRows]),
                   ],
                 ),
-              )
-            : CustomScrollView(
-                slivers: [
-                  header,
-                  list([...ingredientRows, ...stepRows]),
-                ],
-              ),
+        ),
       ),
     );
   }
@@ -691,4 +863,33 @@ String _missingText(AppLocalizations l, List<String> missing) {
     if (missing.contains('steps')) l.recipeMissingSteps,
   ];
   return '${l.recipeIncomplete}: ${parts.join(', ')}';
+}
+
+/// Room at the top of a tab's list for the pinned photo bar, which covers the list's start only as it finishes
+/// collapsing: 0 while the photo is open, growing to the bar's height ([bar]) over the outer scroll's last [bar]
+/// pixels. (The pill has NestedScrollView's absorber; a second fixed one would leave a gap while the photo is open.)
+class _UnderBar extends StatelessWidget {
+  const _UnderBar({required this.nested, required this.bar});
+
+  final GlobalKey<NestedScrollViewState> nested;
+  final double bar;
+
+  @override
+  Widget build(BuildContext context) {
+    final outer = nested.currentState?.outerController;
+    if (outer == null) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: outer,
+      builder: (context, _) {
+        // Before the first layout the outer scroll has no size yet.
+        if (!outer.hasClients || !outer.position.hasContentDimensions) {
+          return const SizedBox.shrink();
+        }
+        final p = outer.position;
+        return SizedBox(
+          height: (p.pixels - (p.maxScrollExtent - bar)).clamp(0.0, bar),
+        );
+      },
+    );
+  }
 }

@@ -72,5 +72,8 @@ void main() {
     await pump(t, [], null);
     expect(find.text(l.coverEmpty), findsOneWidget);
     expect(find.text(l.coverNone), findsNothing);
+    // A photo of the owner's own is always offered: camera or gallery.
+    expect(find.byKey(const ValueKey('cover-camera')), findsOneWidget);
+    expect(find.byKey(const ValueKey('cover-gallery')), findsOneWidget);
   });
 }

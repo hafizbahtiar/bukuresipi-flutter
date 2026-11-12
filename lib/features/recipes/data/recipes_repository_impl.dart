@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
 import '../domain/recipe_variant.dart';
 import '../domain/recipe.dart';
@@ -57,17 +58,20 @@ class RecipesRepositoryImpl implements RecipesRepository {
     // shortcut: FIFO, not LRU; fine for one book of recipes.
     if (_covers.length >= 80) _covers.remove(_covers.keys.first);
     return _covers['$id/$cover'] ??=
-        apiCall(() async {
-          // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
-          final res = await _dio.get<List<int>>(
-            '/recipes/$id/cover',
-            options: Options(
-              responseType: ResponseType.bytes,
-              validateStatus: (s) => s == 200 || s == 404,
-            ),
-          );
-          return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
-        })..catchError((Object _) {
+        diskCached(
+          'cover-$cover',
+          () => apiCall(() async {
+            // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
+            final res = await _dio.get<List<int>>(
+              '/recipes/$id/cover',
+              options: Options(
+                responseType: ResponseType.bytes,
+                validateStatus: (s) => s == 200 || s == 404,
+              ),
+            );
+            return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+          }),
+        )..catchError((Object _) {
           _covers.remove(
             '$id/$cover',
           ); // a failed fetch is tried again next time
@@ -149,6 +153,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
             name: d['name'] as String,
             category: d['category'] as String?,
             ingredientCount: (d['ingredientCount'] as num?)?.toInt() ?? 0,
+            cover: d['cover'] as String?,
           ),
       ],
       next: data['next'] as String?,

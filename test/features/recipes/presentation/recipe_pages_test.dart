@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
@@ -567,18 +569,49 @@ void main() {
         );
         await t.pumpAndSettle();
         expect(find.text('Edit'), owner ? findsOneWidget : findsNothing);
-        expect(
-          find.text('Remove'),
-          findsNothing,
-        ); // the catalogue is never removed
+        // Only the app's owner deletes a catalogue dish (for everyone, after a warning).
+        expect(find.text('Remove'), owner ? findsOneWidget : findsNothing);
         if (!owner) return;
+        await t.tap(find.text('Remove'));
+        await t.pumpAndSettle();
+        expect(find.textContaining('from the catalogue'), findsOneWidget);
+        await t.tap(find.text('Cancel'));
+        await t.pumpAndSettle();
+        expect(fake.deleted, isEmpty);
         await t.tap(find.text('Edit'));
         await t.pumpAndSettle();
         // Catalogue dishes get a cover too: upload one, or pick a draft photo below.
         expect(find.byKey(const ValueKey('cover-pick')), findsOneWidget);
+        // While it works: a placeholder card, the button off.
+        ownerRepo.draftGate = Completer<void>();
+        await t.tap(find.byKey(const ValueKey('recipe-ai-draft')));
+        await t.pump();
+        expect(
+          find.byKey(const ValueKey('recipe-draft-loading')),
+          findsOneWidget,
+        );
+        expect(
+          t
+              .widget<IconButton>(find.byKey(const ValueKey('recipe-ai-draft')))
+              .onPressed,
+          isNull,
+        );
+        // Undo after a draft puts the form back; a second draft fills it again.
+        ownerRepo.draftGate!.complete();
+        await t.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-draft-loading')),
+          findsNothing,
+        );
+        expect(find.text('Kari Ayam Kampung'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('recipe-draft-undo')));
+        await t.pumpAndSettle();
+        expect(find.byKey(const ValueKey('recipe-draft-note')), findsNothing);
+        expect(find.text('Kari Ayam Kampung'), findsNothing);
+        ownerRepo.draftGate = null;
         await t.tap(find.byKey(const ValueKey('recipe-ai-draft')));
         await t.pumpAndSettle();
-        expect(ownerRepo.drafted, ['r-1']);
+        expect(ownerRepo.drafted, ['r-1', 'r-1']);
         expect(find.byKey(const ValueKey('recipe-draft-note')), findsOneWidget);
         expect(find.textContaining('Pages disagree'), findsOneWidget);
         ownerRepo.dishCoverResult = recipeDetail(

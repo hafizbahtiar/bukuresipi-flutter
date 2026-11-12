@@ -42,6 +42,15 @@ class PlacesController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Bumped after every change to shared place data (edits, pins, covers, saves, ratings): lists kept outside this
+  /// controller (Home's restaurant cards, the map's near-me cards) fetch theirs again.
+  final changes = ValueNotifier<int>(0);
+
+  Future<void> _reload() async {
+    await load();
+    changes.value++;
+  }
+
   Future<void> load() async {
     if (_loading) return;
     final generation = _generation;
@@ -101,13 +110,13 @@ class PlacesController extends ChangeNotifier {
   /// Throws ApiException. The branch's pin is the server's call (earliest hand pin), so reload.
   Future<void> setPin(String branchId, double lat, double lng) async {
     await _repo.setPin(branchId, lat, lng);
-    await load();
+    await _reload();
   }
 
   /// Throws ApiException. A found pin reloads the places.
   Future<LocateResult> locate(String branchId) async {
     final result = await _repo.locate(branchId);
-    if (result == LocateResult.found) await load();
+    if (result == LocateResult.found) await _reload();
     return result;
   }
 
@@ -118,20 +127,20 @@ class PlacesController extends ChangeNotifier {
     String? name,
   }) async {
     await _repo.mergeRestaurants(from, into, name: name);
-    await load();
+    await _reload();
   }
 
   /// Owner only. Throws ApiException.
   Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
     final done = await _repo.tidyBranches(restaurantId);
-    await load();
+    await _reload();
     return done;
   }
 
   /// Owner only. Throws ApiException.
   Future<void> deleteBranch(String branchId) async {
     await _repo.deleteBranch(branchId);
-    await load();
+    await _reload();
   }
 
   /// Throws ApiException; reloads the places so the caller's screens see the personal or shared edit.
@@ -155,7 +164,7 @@ class PlacesController extends ChangeNotifier {
       lng: lng,
       scope: scope,
     );
-    await load();
+    await _reload();
   }
 
   /// Owner only: another branch of [branchId]'s restaurant (a pin search hit). Throws ApiException
@@ -176,7 +185,7 @@ class PlacesController extends ChangeNotifier {
       lat: lat,
       lng: lng,
     );
-    await load();
+    await _reload();
   }
 
   /// Owner only. Throws ApiException; the edit sheet shows the draft for review.
@@ -211,7 +220,7 @@ class PlacesController extends ChangeNotifier {
       return rating;
     } on ApiException catch (e) {
       // The branch was merged/deleted, or the caller unsaved elsewhere: refresh the truth.
-      if (e.code == 'not_saved' || e.code == 'not_found') await load();
+      if (e.code == 'not_saved' || e.code == 'not_found') await _reload();
       rethrow;
     }
   }
@@ -227,6 +236,7 @@ class PlacesController extends ChangeNotifier {
         ),
     ];
     notifyListeners();
+    changes.value++;
   }
 
   Future<({RatingSummary rating, Review? review})> saveReview(
@@ -262,6 +272,7 @@ class PlacesController extends ChangeNotifier {
     await _repo.remove(id);
     _places = _places.where((p) => p.id != id).toList();
     notifyListeners();
+    changes.value++;
   }
 
   /// Throws ApiException; the map keeps its last result.
@@ -271,7 +282,7 @@ class PlacesController extends ChangeNotifier {
   /// Saves a branch's restaurant, then reloads the saved places for the map.
   Future<Place> saveBranch(String branchId) async {
     final place = await _repo.saveBranch(branchId);
-    await load();
+    await _reload();
     return place;
   }
 
@@ -286,7 +297,7 @@ class PlacesController extends ChangeNotifier {
   /// Saves a search result not in the app yet, then reloads the saved places for the map.
   Future<Place> savePoi(String poiId) async {
     final place = await _repo.savePoi(poiId);
-    await load();
+    await _reload();
     return place;
   }
 
@@ -309,6 +320,18 @@ class PlacesController extends ChangeNotifier {
   /// Owner only: sets the cover for everyone, then reloads the saved places so the new id shows.
   Future<void> setRestaurantCover(String restaurantId, String? cover) async {
     await _repo.setRestaurantCover(restaurantId, cover);
-    await load();
+    await _reload();
+  }
+
+  /// Owner only: a photo of their own as the cover. Throws ApiException.
+  Future<void> uploadRestaurantCover(String restaurantId, String path) async {
+    await _repo.uploadRestaurantCover(restaurantId, path);
+    await _reload();
+  }
+
+  /// Owner only: a draft's web photo as the cover. Throws ApiException.
+  Future<void> setRestaurantCoverUrl(String restaurantId, String url) async {
+    await _repo.setRestaurantCoverUrl(restaurantId, url);
+    await _reload();
   }
 }

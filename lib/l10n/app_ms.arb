@@ -619,6 +619,8 @@
   "recipeCoverAdd": "Tambah foto",
   "recipeCoverChange": "Tukar foto",
   "recipeCoverRemove": "Buang foto",
+  "placeCoverFailed": "Cawangan disimpan, tetapi foto muka tidak disimpan. Pilih semula dari draf.",
+  "dishRemoveConfirm": "Padam hidangan ini dari katalog? Semua pengguna kehilangannya; salinan yang dibuat kekal milik mereka.",
   "recipeCoverFailed": "Resepi disimpan, tetapi foto tidak dimuat naik. Cuba lagi melalui Sunting.",
   "navHome": "Utama",
   "feedSearchHint": "Cari resepi dan restoran",
@@ -657,7 +659,9 @@
   "feedKindDish": "Hidangan",
   "coverTitle": "Foto muka depan",
   "coverNone": "Tiada foto",
-  "coverEmpty": "Belum ada foto siaran untuk restoran ini. Kongsi siarannya dahulu.",
+  "coverEmpty": "Belum ada foto siaran untuk restoran ini. Ambil atau pilih foto di bawah.",
+  "coverCamera": "Ambil foto",
+  "coverGallery": "Dari galeri",
   "coverSaved": "Foto disimpan untuk semua",
   "mapsLinkLabel": "Pautan Google Maps",
   "mapsLinkHint": "Dalam Google Maps: Kongsi → Salin pautan, kemudian tampal di sini",
@@ -900,5 +904,7 @@
   "recipeAiDraftNote": "Didraf daripada {count} resepi web. Semak, kemudian Simpan.",
   "recipeAiDraftNone": "Tiada resepi web ditemui untuk hidangan ini.",
   "recipeAiDraftOff": "Carian atau AI dimatikan atau sudah had. Cuba lagi nanti.",
-  "recipeAiDraftPhotos": "Ketik foto untuk dijadikan foto muka"
+  "recipeAiDraftPhotos": "Ketik foto untuk dijadikan foto muka",
+  "recipeAiDraftWorking": "Mencari resepi web dan menulis draf. Boleh ambil masa sehingga seminit.",
+  "recipeAiDraftUndo": "Buat asal"
 }

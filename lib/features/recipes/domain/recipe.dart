@@ -51,6 +51,21 @@ class Recipe {
   final List<String> missing;
   final int ingredientCount;
   final int stepCount;
+
+  /// After an edit: the card's name and photo from the saved recipe.
+  Recipe edited(RecipeDetail d) => Recipe(
+    id: id,
+    name: d.name,
+    createdAt: createdAt,
+    sourceUrl: sourceUrl,
+    missing: missing,
+    ingredientCount: ingredientCount,
+    stepCount: stepCount,
+    visibility: visibility,
+    owner: owner,
+    shareId: shareId,
+    cover: d.cover,
+  );
 }
 
 /// The credit a shared recipe shows: the post's link, or what it was made from.
@@ -63,12 +78,25 @@ class Dish {
     required this.name,
     this.category,
     this.ingredientCount = 0,
+    this.cover,
   });
 
   final String id;
   final String name;
   final String? category;
   final int ingredientCount;
+
+  /// The owner's photo id (GET /recipes/:id/cover); null = none.
+  final String? cover;
+
+  /// After an owner edit: the card's name and photo from the saved dish.
+  Dish edited(RecipeDetail d) => Dish(
+    id: id,
+    name: d.name,
+    category: category,
+    ingredientCount: ingredientCount,
+    cover: d.cover,
+  );
 }
 
 class RecipeDetail {
