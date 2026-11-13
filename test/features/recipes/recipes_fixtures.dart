@@ -227,6 +227,17 @@ class FakeRecipes implements RecipesRepository {
     return detailResult!;
   }
 
+  final optionalSet = <(String, int, bool)>[];
+  @override
+  Future<RecipeDetail> setIngredientOptional(
+    String id,
+    int index,
+    bool optional,
+  ) async {
+    optionalSet.add((id, index, optional));
+    return detailResult!;
+  }
+
   final edited = <(String, String, List<String>, List<String>)>[];
 
   final created = <(String, List<String>, List<String>)>[];

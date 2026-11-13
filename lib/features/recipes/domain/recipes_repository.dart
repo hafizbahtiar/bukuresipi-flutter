@@ -45,6 +45,13 @@ abstract interface class RecipesRepository {
   /// Links ingredient line [index] to the catalogue ingredient [name] (null = unlink); returns the updated recipe.
   Future<RecipeDetail> linkIngredient(String id, int index, String? name);
 
+  /// Marks line [index] optional (or needed again). Own recipes; the owner also catalogue dishes.
+  Future<RecipeDetail> setIngredientOptional(
+    String id,
+    int index,
+    bool optional,
+  );
+
   /// A recipe typed from scratch (one line per ingredient and per step); returns it.
   Future<RecipeDetail> create({
     required String name,

@@ -7,25 +7,35 @@ import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../recipes_controller.dart';
 
-/// Picks the catalogue ingredient for a recipe line. null = cancelled; `(name: null)` = unlink the line.
-Future<({String? name})?> pickIngredient(
+/// What the user chose for a recipe line: a catalogue [name] to link it to (null = unlink), or, when [optional] is
+/// set, only that mark (the link is left alone).
+typedef LineChoice = ({String? name, bool? optional});
+
+/// Picks the catalogue ingredient for a recipe line, or flips its "optional" mark. null = cancelled.
+Future<LineChoice?> pickIngredient(
   BuildContext context, {
   required String line,
   required bool linked,
-}) => showModalBottomSheet<({String? name})>(
+  required bool optional,
+}) => showModalBottomSheet<LineChoice>(
   context: context,
   showDragHandle: true,
   isScrollControlled: true,
   builder: (_) => SafeArea(
-    child: _IngredientPicker(line: line, linked: linked),
+    child: _IngredientPicker(line: line, linked: linked, optional: optional),
   ),
 );
 
 class _IngredientPicker extends StatefulWidget {
-  const _IngredientPicker({required this.line, required this.linked});
+  const _IngredientPicker({
+    required this.line,
+    required this.linked,
+    required this.optional,
+  });
 
   final String line;
   final bool linked;
+  final bool optional;
 
   @override
   State<_IngredientPicker> createState() => _IngredientPickerState();
@@ -82,6 +92,14 @@ class _IngredientPickerState extends State<_IngredientPicker> {
           ),
           subtitle: Text(widget.line),
         ),
+        SwitchListTile(
+          key: const ValueKey('ingredient-optional'),
+          value: widget.optional,
+          onChanged: (on) =>
+              Navigator.of(context).pop((name: null, optional: on)),
+          title: Text(l.recipeOptional),
+          subtitle: Text(l.recipeOptionalHint),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: spaceM),
           child: TextField(
@@ -101,13 +119,15 @@ class _IngredientPickerState extends State<_IngredientPicker> {
           ),
         for (final name in _names)
           ListTile(
-            onTap: () => Navigator.of(context).pop((name: name)),
+            onTap: () =>
+                Navigator.of(context).pop((name: name, optional: null)),
             title: Text(name),
           ),
         if (widget.linked)
           ListTile(
             leading: Icon(Icons.link_off, color: error),
-            onTap: () => Navigator.of(context).pop((name: null)),
+            onTap: () =>
+                Navigator.of(context).pop((name: null, optional: null)),
             title: Text(l.ingredientUnlink, style: TextStyle(color: error)),
           ),
       ],

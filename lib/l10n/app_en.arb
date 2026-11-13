@@ -2400,7 +2400,11 @@
   "@splitRemove": {},
   "splitShared": "What nobody takes is shared by everyone.",
   "@splitShared": {},
-  "splitChargesEven": "Tax, service charge and discounts are split evenly between everyone.",
+  "splitTotal": "Total",
+  "@splitTotal": {},
+  "splitChargesTitle": "Tax, service and discounts",
+  "@splitChargesTitle": {},
+  "splitChargesEven": "Split evenly between everyone.",
   "@splitChargesEven": {},
   "splitShares": "Each person pays",
   "@splitShares": {},
@@ -2474,13 +2478,25 @@
   "passkeysAdded": "Passkey created. Next time, tap \"Sign in with a passkey\".",
   "@passkeysAdded": {},
   "passkeysCreated": "Created {date}",
-  "@passkeysCreated": {"placeholders": {"date": {"type": "String"}}},
+  "@passkeysCreated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "passkeysNeverUsed": "Not used yet",
   "@passkeysNeverUsed": {},
   "passkeysRemove": "Remove",
   "@passkeysRemove": {},
   "passkeysRemoveConfirm": "Remove {name}? It stops signing in to Bukuresipi at once. Delete it from the phone's password manager too.",
-  "@passkeysRemoveConfirm": {"placeholders": {"name": {"type": "String"}}},
+  "@passkeysRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "passkeysNoPhone": "This phone can't create passkeys (it needs Android 9 or newer).",
   "@passkeysNoPhone": {},
   "passkeySignIn": "Sign in with a passkey",
@@ -2494,5 +2510,17 @@
   "errNoPasskey": "No Bukuresipi passkey on this phone. Sign in another way, then create one in Account > Passkeys.",
   "@errNoPasskey": {},
   "errPasskeyExists": "This phone already has a passkey for your account.",
-  "@errPasskeyExists": {}
+  "@errPasskeyExists": {},
+  "recipeOptional": "Optional",
+  "@recipeOptional": {},
+  "recipeOptionalHint": "The dish is fine without it. Left off the shopping list unless you ask.",
+  "@recipeOptionalHint": {},
+  "recipeAllergenOptional": "only if you add it",
+  "@recipeAllergenOptional": {},
+  "shoppingOptionalTitle": "{count, plural, =1{1 optional ingredient. Add it too?} other{{count} optional ingredients. Add them too?}}",
+  "@shoppingOptionalTitle": {"placeholders": {"count": {"type": "int"}}},
+  "shoppingOptionalSkip": "Only what's needed",
+  "@shoppingOptionalSkip": {},
+  "shoppingOptionalAll": "Everything, optional too",
+  "@shoppingOptionalAll": {}
 }

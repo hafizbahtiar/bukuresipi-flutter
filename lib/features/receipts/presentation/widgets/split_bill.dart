@@ -349,17 +349,21 @@ class _SplitBillState extends State<SplitBill> {
     // Only Me: nothing to choose yet, so the lines are not buttons and nobody is asked to pay.
     final alone = split.people.length < 2;
     final paid = split.people.where((p) => p.paid).length;
+    // Tax, service, rounding and discounts: what the server shares evenly (never the subtotal).
+    final chargesSen = widget.receipt.charges
+        .where((c) => c.kind != 'subtotal')
+        .fold(0, (sum, c) => sum + c.amountSen);
+    // Who still owes comes first; the paid ones sink to the bottom (each group in the order they were added).
+    final order = [
+      for (final (i, p) in split.people.indexed)
+        if (!p.paid) i,
+      for (final (i, p) in split.people.indexed)
+        if (p.paid) i,
+    ];
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        ListTile(
-          minTileHeight: 56,
-          leading: Icon(Icons.people_outline, color: nb.pandan),
-          title: Text(
-            l.splitPeople,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
+        SectionHeader(l.splitPeople),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: spaceM),
           child: Wrap(
@@ -388,18 +392,7 @@ class _SplitBillState extends State<SplitBill> {
           icon: Icons.touch_app_outlined,
           text: alone ? l.splitHintStart : l.splitHintAssign,
         ),
-        ListTile(
-          minTileHeight: 56,
-          leading: Icon(
-            Icons.receipt_long_outlined,
-            size: 20,
-            color: nb.pandan,
-          ),
-          title: Text(
-            l.receiptItems,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
+        SectionHeader(l.receiptItems),
         if (widget.receipt.items.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
@@ -409,9 +402,22 @@ class _SplitBillState extends State<SplitBill> {
             ),
           )
         else
+          // In the receipt's printed order, so the two tabs read the same.
           for (final (position, item) in widget.receipt.items.indexed)
-            ListTile(
+            BaseTile(
               key: ValueKey('split-line-$position'),
+              dense: true,
+              leading: _Badge(
+                item.quantity == null ? null : '${_qtyText(item.quantity!)}×',
+              ),
+              title: item.name,
+              tags: alone
+                  ? const []
+                  : [
+                      for (final name in _takers(position))
+                        TileTag(name, tone: TagTone.good),
+                      if (_takers(position).isEmpty) TileTag(l.splitEveryone),
+                    ],
               onTap: alone ? null : () => _assign(position),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -422,88 +428,39 @@ class _SplitBillState extends State<SplitBill> {
                     Icon(Icons.chevron_right, size: 20, color: nb.inkSoft),
                 ],
               ),
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.quantity == null
-                        ? item.name
-                        : '${_qtyText(item.quantity!)} × ${item.name}',
-                    style: text.bodyMedium,
-                  ),
-                  if (!alone)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          for (final name in _takers(position))
-                            TagChip(TileTag(name, tone: TagTone.good)),
-                          if (_takers(position).isEmpty)
-                            TagChip(TileTag(l.splitEveryone)),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
             ),
-        if (widget.receipt.charges.any(
-          (c) => c.kind != 'subtotal' && c.amountSen != 0,
-        ))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(spaceM, 10, spaceM, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.call_split, size: 16, color: nb.inkSoft),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l.splitChargesEven,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                ),
-              ],
-            ),
+        if (chargesSen != 0)
+          BaseTile(
+            key: const ValueKey('split-charges'),
+            dense: true,
+            style: TileStyle.filled,
+            leading: const _Badge(null, icon: Icons.call_split),
+            title: l.splitChargesTitle,
+            subtitle: l.splitChargesEven,
+            trailing: Text(rm(chargesSen), style: figures),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, 20, spaceM, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l.splitShares,
-                  style: text.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (split.totalSen != null)
-                Text(
-                  rm(split.totalSen!),
-                  style: text.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-            ],
-          ),
-        ),
-        if (!alone)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(spaceM, 2, spaceM, 0),
-            child: Text(
-              l.splitPaidCount(paid, split.people.length),
-              style: text.bodySmall?.copyWith(color: nb.inkSoft),
-            ),
-          ),
-        for (final (i, person) in split.people.indexed)
-          _ShareRow(
+        SectionHeader(l.splitShares),
+        for (final i in order)
+          _ShareTile(
             key: ValueKey('split-share-$i'),
-            person: person,
+            person: split.people[i],
             share: _shareOf(i),
             onPaid: alone ? null : (paid) => _paid(i, paid),
+          ),
+        if (split.totalSen != null)
+          BaseTile(
+            key: const ValueKey('split-total'),
+            dense: true,
+            style: TileStyle.filled,
+            leading: const _Badge(null, icon: Icons.receipt_long_outlined),
+            title: l.splitTotal,
+            subtitle: alone
+                ? null
+                : l.splitPaidCount(paid, split.people.length),
+            trailing: Text(
+              rm(split.totalSen!),
+              style: figures?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
         if (!alone)
           Padding(
@@ -531,8 +488,33 @@ class _SplitBillState extends State<SplitBill> {
   }
 }
 
-class _ShareRow extends StatelessWidget {
-  const _ShareRow({
+/// A tile's round lead: a short text ("2×", a person's initial) or an icon.
+class _Badge extends StatelessWidget {
+  const _Badge(this.text, {this.icon = Icons.restaurant});
+
+  final String? text;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: nb.pandanDeep.withValues(alpha: 0.12),
+      child: text == null
+          ? Icon(icon, size: 18, color: nb.pandanDeep)
+          : Text(
+              text!,
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(color: nb.pandanDeep, fontWeight: FontWeight.w700),
+            ),
+    );
+  }
+}
+
+/// One person's share: their initial, name, what they had, the amount and a Paid tick (the whole tile toggles it).
+class _ShareTile extends StatelessWidget {
+  const _ShareTile({
     super.key,
     required this.person,
     required this.share,
@@ -551,48 +533,32 @@ class _ShareRow extends StatelessWidget {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final done = onPaid != null && person.paid;
-    return ListTile(
+    return BaseTile(
+      dense: true,
+      muted: done,
+      leading: _Badge(person.name.characters.first.toUpperCase()),
+      title: person.name,
+      subtitle: share?.lines.join(', '),
+      tags: [if (done) TileTag(l.splitPaid, tone: TagTone.good)],
       onTap: onPaid == null ? null : () => onPaid!(!person.paid),
-      trailing: onPaid == null
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l.splitPaid,
-                  style: text.bodySmall?.copyWith(
-                    color: done ? nb.pandanDeep : nb.inkSoft,
-                    fontWeight: done ? FontWeight.w700 : null,
-                  ),
-                ),
-                Checkbox(
-                  value: person.paid,
-                  onChanged: (paid) => onPaid!(paid ?? false),
-                ),
-              ],
-            ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text(person.name, style: text.titleSmall)),
-              Text(
-                rm(share?.amountSen ?? 0),
-                style: text.titleSmall?.copyWith(
-                  // Settled: the amount steps back, like a crossed-off line.
-                  color: done ? nb.inkSoft : null,
-                  decoration: done ? TextDecoration.lineThrough : null,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
+          Text(
+            rm(share?.amountSen ?? 0),
+            style: text.titleSmall?.copyWith(
+              color: done ? nb.inkSoft : null,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
-          if (share != null && share!.lines.isNotEmpty)
-            Text(
-              share!.lines.join(', '),
-              style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          if (onPaid != null)
+            Tooltip(
+              message: l.splitPaid,
+              child: Checkbox(
+                value: person.paid,
+                onChanged: (paid) => onPaid!(paid ?? false),
+              ),
             ),
         ],
       ),

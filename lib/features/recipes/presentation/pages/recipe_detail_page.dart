@@ -211,8 +211,28 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       if (picked == null) return;
       family = picked;
     }
+    // Optional lines: asked every time (it depends on what is being cooked). Closing the sheet adds nothing.
+    final optional = recipe.ingredients.where((i) => i.optional).length;
+    var skipOptional = false;
+    if (optional > 0) {
+      if (!mounted) return;
+      final skip = await showBasePicker<bool>(
+        context,
+        title: l.shoppingOptionalTitle(optional),
+        search: false,
+        options: const [true, false],
+        selected: null,
+        label: (skip) => skip ? l.shoppingOptionalSkip : l.shoppingOptionalAll,
+      );
+      if (skip == null) return;
+      skipOptional = skip;
+    }
     try {
-      final added = await shopping.addRecipe(recipe.id, family: family);
+      final added = await shopping.addRecipe(
+        recipe.id,
+        family: family,
+        skipOptional: skipOptional,
+      );
       _snack(added == 0 ? l.shoppingAlreadyAdded : l.shoppingAdded(added));
     } catch (e) {
       _snack(errorText(l, e));
@@ -340,14 +360,17 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       context,
       line: line.rawText ?? line.label,
       linked: line.name != null,
+      optional: line.optional,
     );
     if (picked == null) return;
     try {
-      final updated = await recipes.linkIngredient(
-        recipe.id,
-        index,
-        picked.name,
-      );
+      final updated = picked.optional != null
+          ? await recipes.setIngredientOptional(
+              recipe.id,
+              index,
+              picked.optional!,
+            )
+          : await recipes.linkIngredient(recipe.id, index, picked.name);
       if (mounted) setState(() => _recipe = updated);
     } catch (e) {
       _snack(errorText(l, e));
@@ -599,6 +622,15 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ],
             ),
           ),
+          subtitle: i.optional
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: TagChip(TileTag(l.recipeOptional)),
+                  ),
+                )
+              : null,
         ),
     ];
     // Only when something was found: no section must never read as "safe".
@@ -620,6 +652,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   TextSpan(text: ' · ${a.ingredients.join(', ')}'),
+                  if (a.optionalOnly)
+                    TextSpan(text: ' (${l.recipeAllergenOptional})'),
                 ],
               ),
             ),

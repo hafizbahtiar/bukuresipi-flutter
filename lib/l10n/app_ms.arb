@@ -939,7 +939,9 @@
   "splitRemovePersonBody": "Item mereka kembali dikongsi semua orang.",
   "splitRemove": "Buang",
   "splitShared": "Yang tiada siapa ambil dikongsi semua orang.",
-  "splitChargesEven": "Cukai, caj perkhidmatan dan diskaun dibahagi sama rata antara semua orang.",
+  "splitTotal": "Jumlah",
+  "splitChargesTitle": "Cukai, servis dan diskaun",
+  "splitChargesEven": "Dibahagi sama rata antara semua orang.",
   "splitShares": "Setiap orang bayar",
   "splitShare": "Hantar jumlah",
   "splitPaid": "Sudah bayar",
@@ -978,5 +980,11 @@
   "errPasskeyLimit": "Akaun ini sudah ada 10 passkey. Buang satu dahulu.",
   "errPasskeyFailed": "Passkey tidak berjaya. Cuba lagi, atau log masuk dengan cara lain.",
   "errNoPasskey": "Tiada passkey Bukuresipi pada telefon ini. Log masuk dengan cara lain, kemudian cipta satu di Akaun > Passkey.",
-  "errPasskeyExists": "Telefon ini sudah ada passkey untuk akaun anda."
+  "errPasskeyExists": "Telefon ini sudah ada passkey untuk akaun anda.",
+  "recipeOptional": "Pilihan",
+  "recipeOptionalHint": "Hidangan tetap jadi tanpanya. Tidak dimasukkan ke senarai beli melainkan diminta.",
+  "recipeAllergenOptional": "hanya jika ditambah",
+  "shoppingOptionalTitle": "{count} bahan pilihan. Tambah juga?",
+  "shoppingOptionalSkip": "Yang perlu sahaja",
+  "shoppingOptionalAll": "Semua, termasuk pilihan"
 }

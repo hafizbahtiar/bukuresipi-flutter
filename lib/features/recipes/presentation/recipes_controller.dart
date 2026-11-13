@@ -115,6 +115,12 @@ class RecipesController extends ChangeNotifier {
   Future<RecipeDetail> linkIngredient(String id, int index, String? name) =>
       _repo.linkIngredient(id, index, name);
 
+  Future<RecipeDetail> setIngredientOptional(
+    String id,
+    int index,
+    bool optional,
+  ) => _repo.setIngredientOptional(id, index, optional);
+
   /// Throws ApiException. The book list is reloaded: the name or counts may have changed.
   Future<RecipeDetail> create({
     required String name,

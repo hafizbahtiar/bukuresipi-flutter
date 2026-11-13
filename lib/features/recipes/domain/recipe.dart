@@ -153,14 +153,30 @@ class RecipeDetail {
 }
 
 class RecipeAllergen {
-  const RecipeAllergen({required this.name, required this.ingredients});
+  const RecipeAllergen({
+    required this.name,
+    required this.ingredients,
+    this.optionalOnly = false,
+  });
 
   final String name;
   final List<String> ingredients;
+
+  /// Every line it comes from is optional: "only if you add it". Still shown: an allergen never goes quiet.
+  final bool optionalOnly;
 }
 
 class RecipeIngredient {
-  const RecipeIngredient({this.name, this.rawText, this.quantity, this.unit});
+  const RecipeIngredient({
+    this.name,
+    this.rawText,
+    this.quantity,
+    this.unit,
+    this.optional = false,
+  });
+
+  /// "If you like": the dish is still the dish without it (the post said so, or the owner marked it).
+  final bool optional;
 
   /// The catalogue name when matched; null = the line is shown as written.
   final String? name;

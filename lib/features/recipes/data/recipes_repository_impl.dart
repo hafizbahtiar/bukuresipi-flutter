@@ -220,6 +220,19 @@ class RecipesRepositoryImpl implements RecipesRepository {
   });
 
   @override
+  Future<RecipeDetail> setIngredientOptional(
+    String id,
+    int index,
+    bool optional,
+  ) => apiCall(() async {
+    final data = (await _dio.put<Map<String, dynamic>>(
+      '/recipes/$id/ingredients/$index',
+      data: {'optional': optional},
+    )).data!;
+    return recipeDetailFromJson(data);
+  });
+
+  @override
   Future<RecipeDetail> linkIngredient(String id, int index, String? name) =>
       apiCall(() async {
         final data = (await _dio.put<Map<String, dynamic>>(
@@ -305,6 +318,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
         rawText: i['rawText'] as String?,
         quantity: i['quantity'] as String?,
         unit: i['unit'] as String?,
+        optional: i['optional'] == true,
       ),
   ],
   steps: [
@@ -321,6 +335,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
       RecipeAllergen(
         name: a['name'] as String,
         ingredients: (a['ingredients'] as List).cast<String>(),
+        optionalOnly: a['optionalOnly'] == true,
       ),
   ],
   uncheckedIngredients: (j['uncheckedIngredients'] as num?)?.toInt() ?? 0,
