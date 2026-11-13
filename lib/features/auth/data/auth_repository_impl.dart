@@ -156,6 +156,14 @@ class AuthRepositoryImpl implements AuthRepository {
       apiCall(() async => _signedIn(await _api.google(idToken, lang)));
 
   @override
+  Future<Map<String, dynamic>> passkeyLoginOptions() =>
+      apiCall(_api.passkeyLoginOptions);
+
+  @override
+  Future<User> loginWithPasskey(Map<String, dynamic> response) =>
+      apiCall(() async => _signedIn(await _api.passkeyLogin(response)));
+
+  @override
   Future<User> linkGoogle(String idToken) => apiCall(
     () async => _remember(
       (await _api.linkGoogle(idToken))['user'] as Map<String, dynamic>,

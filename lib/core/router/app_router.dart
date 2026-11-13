@@ -12,6 +12,7 @@ import '../../features/auth/presentation/pages/usage_page.dart';
 import '../../features/auth/presentation/pages/settings_page.dart';
 import '../../features/auth/presentation/pages/account_page.dart';
 import '../../features/auth/presentation/pages/change_email_page.dart';
+import '../../features/auth/presentation/pages/passkeys_page.dart';
 import '../../features/auth/presentation/pages/sessions_page.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
 import '../../features/auth/presentation/pages/delete_account_page.dart';
@@ -159,6 +160,7 @@ GoRouter buildRouter(
       ),
       _page(path: '/account/email', builder: (_, _) => const ChangeEmailPage()),
       _page(path: '/account/sessions', builder: (_, _) => const SessionsPage()),
+      _page(path: '/account/passkeys', builder: (_, _) => const PasskeysPage()),
       _page(path: '/share', builder: (_, _) => const SharePage()),
       _page(
         path: '/receipts/:id',

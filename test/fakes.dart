@@ -168,6 +168,20 @@ class FakeAuthRepository implements AuthRepository {
     emailChanges.add(email);
   }
 
+  final passkeyLogins = <Map<String, dynamic>>[];
+  @override
+  Future<Map<String, dynamic>> passkeyLoginOptions() async {
+    if (loginError != null) throw loginError!;
+    return {'challenge': 'c-1', 'rpId': 'bukuresipi.com'};
+  }
+
+  @override
+  Future<User> loginWithPasskey(Map<String, dynamic> response) async {
+    passkeyLogins.add(response);
+    session = true;
+    return cached = testUser;
+  }
+
   final googleTokens = <String>[];
   @override
   Future<User> loginWithGoogle(String idToken, String lang) async {

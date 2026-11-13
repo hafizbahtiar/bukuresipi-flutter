@@ -62,3 +62,10 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Passkeys (MainActivity's "bukuresipi/passkey" channel). The same Credential Manager google_sign_in_android
+    // already ships: keep the versions equal. play-services-auth = passkeys on Android 9-13.
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+}

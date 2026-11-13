@@ -302,19 +302,17 @@ class _SplitBillState extends State<SplitBill> {
     }
   }
 
-  String _assignment(int position) {
+  /// Who has a line, one label each ("Ali", or "Ali ×2" on a line of several); nobody = empty (shared by everyone).
+  List<String> _takers(int position) {
     final split = _split!;
-    final parts = [
+    final several = (widget.receipt.items[position].quantity ?? 1) > 1;
+    return [
       for (final p in split.portions)
         if (p.position == position)
-          '${split.people[p.person].name} ${_qtyText(p.quantity)}',
+          several
+              ? '${split.people[p.person].name} ×${_qtyText(p.quantity)}'
+              : split.people[p.person].name,
     ];
-    if (parts.isNotEmpty) return parts.join(', ');
-    if (split.people.length == 1) {
-      final cap = widget.receipt.items[position].quantity ?? 1;
-      return '${split.people.first.name} ${_qtyText(cap > 0 ? cap : 1)}';
-    }
-    return AppLocalizations.of(context).splitShared;
   }
 
   @override
@@ -348,6 +346,9 @@ class _SplitBillState extends State<SplitBill> {
     final figures = text.bodySmall?.copyWith(
       fontFeatures: const [FontFeature.tabularFigures()],
     );
+    // Only Me: nothing to choose yet, so the lines are not buttons and nobody is asked to pay.
+    final alone = split.people.length < 2;
+    final paid = split.people.where((p) => p.paid).length;
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
@@ -359,34 +360,34 @@ class _SplitBillState extends State<SplitBill> {
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
-        for (final (i, person) in split.people.indexed)
-          ListTile(
-            key: ValueKey('split-person-$i'),
-            leading: i == 0
-                ? Icon(Icons.person_outline, size: 20, color: nb.inkSoft)
-                : null,
-            trailing: i == 0
-                ? null
-                : IconButton(
-                    tooltip: l.splitRemove,
-                    icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
-                    onPressed: () => _removePerson(i),
-                  ),
-            title: Text(person.name),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: spaceM),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final (i, person) in split.people.indexed)
+                InputChip(
+                  key: ValueKey('split-person-$i'),
+                  avatar: Icon(Icons.person, size: 18, color: nb.pandan),
+                  label: Text(person.name),
+                  deleteButtonTooltipMessage: l.splitRemove,
+                  onDeleted: i == 0 ? null : () => _removePerson(i),
+                ),
+              if (split.people.length < 10)
+                ActionChip(
+                  key: const ValueKey('split-add-person'),
+                  avatar: Icon(Icons.add, size: 18, color: nb.pandanDeep),
+                  label: Text(l.splitAddPerson),
+                  onPressed: _addPerson,
+                ),
+            ],
           ),
-        if (split.people.length < 10)
-          ListTile(
-            key: const ValueKey('split-add-person'),
-            leading: Icon(Icons.add, size: 20, color: nb.pandanDeep),
-            onTap: _addPerson,
-            title: Text(
-              l.splitAddPerson,
-              style: text.bodyMedium?.copyWith(
-                color: nb.pandanDeep,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+        ),
+        InfoCard(
+          icon: Icons.touch_app_outlined,
+          text: alone ? l.splitHintStart : l.splitHintAssign,
+        ),
         ListTile(
           minTileHeight: 56,
           leading: Icon(
@@ -411,10 +412,16 @@ class _SplitBillState extends State<SplitBill> {
           for (final (position, item) in widget.receipt.items.indexed)
             ListTile(
               key: ValueKey('split-line-$position'),
-              onTap: () => _assign(position),
-              trailing: item.amountSen == null
-                  ? null
-                  : Text(rm(item.amountSen!), style: figures),
+              onTap: alone ? null : () => _assign(position),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (item.amountSen != null)
+                    Text(rm(item.amountSen!), style: figures),
+                  if (!alone)
+                    Icon(Icons.chevron_right, size: 20, color: nb.inkSoft),
+                ],
+              ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -424,10 +431,20 @@ class _SplitBillState extends State<SplitBill> {
                         : '${_qtyText(item.quantity!)} × ${item.name}',
                     style: text.bodyMedium,
                   ),
-                  Text(
-                    _assignment(position),
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
+                  if (!alone)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          for (final name in _takers(position))
+                            TagChip(TileTag(name, tone: TagTone.good)),
+                          if (_takers(position).isEmpty)
+                            TagChip(TileTag(l.splitEveryone)),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -473,24 +490,33 @@ class _SplitBillState extends State<SplitBill> {
             ],
           ),
         ),
+        if (!alone)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, 2, spaceM, 0),
+            child: Text(
+              l.splitPaidCount(paid, split.people.length),
+              style: text.bodySmall?.copyWith(color: nb.inkSoft),
+            ),
+          ),
         for (final (i, person) in split.people.indexed)
           _ShareRow(
             key: ValueKey('split-share-$i'),
             person: person,
             share: _shareOf(i),
-            onPaid: (paid) => _paid(i, paid),
+            onPaid: alone ? null : (paid) => _paid(i, paid),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, 16, spaceM, 0),
-          child: Builder(
-            builder: (button) => FilledButton.icon(
-              key: const ValueKey('split-share-button'),
-              onPressed: _saving ? null : () => _share(button),
-              icon: const Icon(Icons.ios_share),
-              label: Text(l.splitShare),
+        if (!alone)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, 16, spaceM, 0),
+            child: Builder(
+              builder: (button) => FilledButton.icon(
+                key: const ValueKey('split-share-button'),
+                onPressed: _saving ? null : () => _share(button),
+                icon: const Icon(Icons.ios_share),
+                label: Text(l.splitShare),
+              ),
             ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
           child: TextButton(
@@ -515,21 +541,36 @@ class _ShareRow extends StatelessWidget {
 
   final SplitPerson person;
   final SplitShare? share;
-  final ValueChanged<bool> onPaid;
+
+  /// null = no paid tick (only Me on the bill).
+  final ValueChanged<bool>? onPaid;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
+    final done = onPaid != null && person.paid;
     return ListTile(
-      trailing: Tooltip(
-        message: l.splitPaid,
-        child: Checkbox(
-          value: person.paid,
-          onChanged: (paid) => onPaid(paid ?? false),
-        ),
-      ),
+      onTap: onPaid == null ? null : () => onPaid!(!person.paid),
+      trailing: onPaid == null
+          ? null
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l.splitPaid,
+                  style: text.bodySmall?.copyWith(
+                    color: done ? nb.pandanDeep : nb.inkSoft,
+                    fontWeight: done ? FontWeight.w700 : null,
+                  ),
+                ),
+                Checkbox(
+                  value: person.paid,
+                  onChanged: (paid) => onPaid!(paid ?? false),
+                ),
+              ],
+            ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -539,6 +580,9 @@ class _ShareRow extends StatelessWidget {
               Text(
                 rm(share?.amountSen ?? 0),
                 style: text.titleSmall?.copyWith(
+                  // Settled: the amount steps back, like a crossed-off line.
+                  color: done ? nb.inkSoft : null,
+                  decoration: done ? TextDecoration.lineThrough : null,
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
@@ -618,6 +662,11 @@ class _PortionSheetState extends State<_PortionSheet> {
                 widget.item.quantity == null
                     ? widget.item.name
                     : '${_qtyText(widget.item.quantity!)} × ${widget.item.name}',
+                style: text.bodyMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _oneServing ? l.splitPortionsHint : l.splitPortionsCount,
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ],
@@ -626,6 +675,7 @@ class _PortionSheetState extends State<_PortionSheet> {
         for (final (i, person) in widget.people.indexed)
           ListTile(
             key: ValueKey('portion-$i'),
+            onTap: _oneServing ? () => _toggle(i, (_qty[i] ?? 0) <= 0) : null,
             leading: _oneServing
                 ? Checkbox(
                     value: (_qty[i] ?? 0) > 0,

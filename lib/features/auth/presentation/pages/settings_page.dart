@@ -189,6 +189,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             NotebookRow(
+              mark: mark(Icons.fingerprint),
+              onTap: () => context.push('/account/passkeys'),
+              trailing: next,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l.passkeysTitle),
+                  Text(
+                    l.passkeysRowHint,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                ],
+              ),
+            ),
+            NotebookRow(
               mark: mark(Icons.devices_outlined),
               onTap: () => context.push('/account/sessions'),
               trailing: next,
