@@ -128,6 +128,8 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/meals/estimate',
       data: form,
+      // One AI call over a photo while the user waits: past the usual 30 s on a slow day.
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
     )).data!;
     return [for (final i in (j['items'] as List?) ?? const []) _mealItem(i)];
   });
