@@ -113,8 +113,9 @@ class _MealPageState extends State<MealPage> {
     }
   }
 
+  /// 1, 1.5, 0.25: up to two decimals, no trailing zeros.
   static String _num(double n) =>
-      n == n.roundToDouble() ? n.toInt().toString() : n.toStringAsFixed(1);
+      n.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
 
   @override
   Widget build(BuildContext context) {
@@ -228,9 +229,9 @@ class _MealPageState extends State<MealPage> {
                   if (allMacros)
                     Text(
                       l.mealMacros(
-                        _num(sum((i) => i.carbsG)),
-                        _num(sum((i) => i.proteinG)),
-                        _num(sum((i) => i.fatG)),
+                        '${sum((i) => i.carbsG).round()}',
+                        '${sum((i) => i.proteinG).round()}',
+                        '${sum((i) => i.fatG).round()}',
                       ),
                       style: text.bodyMedium,
                     ),

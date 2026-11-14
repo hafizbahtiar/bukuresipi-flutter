@@ -98,4 +98,22 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Total 125 kcal'), findsOneWidget);
   });
+
+  testWidgets('a quarter serving reads 0.25, not 0.3', (t) async {
+    final repo = FakeReceipts()
+      ..estimate = const [
+        (
+          name: 'Sambal',
+          eaten: 0.25,
+          kcal: 80,
+          kcalSource: 'ai',
+          carbsG: null,
+          proteinG: null,
+          fatG: null,
+        ),
+      ];
+    await pump(t, repo);
+    expect(find.text('0.25 serving(s)'), findsOneWidget);
+    expect(find.text('20 kcal'), findsOneWidget);
+  });
 }
