@@ -1,5 +1,6 @@
 import 'package:bukuresipi_flutter/core/theme/app_theme.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/widgets/recipe_variants.dart';
@@ -35,19 +36,31 @@ const kampung = RecipeVariant(
   lacks: ['Serai'],
 );
 
-Future<({FakeOwner owner, FakeShares shares})> pump(
+final dish = RecipeDetail(
+  id: 'd-1',
+  name: 'Kari Ayam',
+  createdAt: DateTime(2026),
+  ingredients: const [
+    RecipeIngredient(name: 'Ayam'),
+    RecipeIngredient(name: 'Serai'),
+  ],
+  steps: const [],
+);
+
+Future<({FakeOwner owner, FakeShares shares, FakeRecipes recipes})> pump(
   WidgetTester t, {
   required bool owner,
   List<RecipeVariant> stored = const [],
 }) async {
+  final recipes = FakeRecipes()
+    ..variantList = stored
+    ..detailResult = dish;
   final ownerRepo = FakeOwner()..foundVariants = const [kampung];
   final shares = FakeShares();
   await t.pumpWidget(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(
-          value: RecipesController(FakeRecipes()..variantList = stored),
-        ),
+        ChangeNotifierProvider.value(value: RecipesController(recipes)),
         Provider<OwnerRepository>.value(value: ownerRepo),
         Provider<ShareRepository>.value(value: shares),
       ],
@@ -62,14 +75,18 @@ Future<({FakeOwner owner, FakeShares shares})> pump(
         supportedLocales: const [Locale('en'), Locale('ms')],
         home: Scaffold(
           body: SingleChildScrollView(
-            child: RecipeVariants(recipeId: 'd-1', owner: owner),
+            child: RecipeVariants(
+              recipe: dish,
+              owner: owner,
+              onChanged: (_) {},
+            ),
           ),
         ),
       ),
     ),
   );
   await t.pumpAndSettle();
-  return (owner: ownerRepo, shares: shares);
+  return (owner: ownerRepo, shares: shares, recipes: recipes);
 }
 
 void main() {
@@ -115,5 +132,31 @@ void main() {
     expect(fakes.owner.variantSearches, ['d-1']);
     expect(find.text('Kari Ayam Kampung'), findsOneWidget);
     expect(find.text('1 variant found'), findsOneWidget);
+  });
+
+  testWidgets(
+    'the owner sees a line most variants leave out and marks it optional',
+    (t) async {
+      const other = RecipeVariant(
+        id: 'v2',
+        url: 'https://b.example.my/kari',
+        site: 'b.example.my',
+        match: 0.8,
+        stepCount: 0,
+        ingredients: [],
+      );
+      final fakes = await pump(t, owner: true, stored: const [kampung, other]);
+      expect(find.text('Often left out'), findsOneWidget);
+      expect(find.text('serai'), findsOneWidget);
+      expect(find.text('Left out by 1 of 2 variants'), findsOneWidget);
+      await t.tap(find.text('Mark optional'));
+      await t.pumpAndSettle();
+      expect(fakes.recipes.optionalSet, [('d-1', 1, true)]);
+    },
+  );
+
+  testWidgets('a user is not offered optional candidates', (t) async {
+    await pump(t, owner: false, stored: const [kampung, kampung]);
+    expect(find.text('Often left out'), findsNothing);
   });
 }
