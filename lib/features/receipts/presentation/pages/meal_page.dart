@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart' show showBaseDialog;
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
+import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
@@ -13,11 +15,14 @@ import '../../domain/receipts_repository.dart';
 
 /// A meal photo's estimate: the photo from the phone (never uploaded for keeps) above the dishes the server found,
 /// each with servings the user can change, rename or remove. Save = the meal counts in today's calories; pops true.
+/// With [meal] instead of [path]: a saved meal to edit (no photo, no estimate) or delete.
 class MealPage extends StatefulWidget {
-  const MealPage({super.key, required this.path});
+  const MealPage({super.key, this.path, this.meal})
+    : assert((path == null) != (meal == null));
 
-  /// The local JPEG.
-  final String path;
+  /// The local JPEG of a new meal.
+  final String? path;
+  final DayMeal? meal;
 
   @override
   State<MealPage> createState() => _MealPageState();
@@ -30,17 +35,55 @@ class _MealPageState extends State<MealPage> {
   final _keys = <Key>[];
   Object? _error;
   bool _saving = false;
+  late DateTime _at = widget.meal?.eatenAt ?? DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _estimate();
+    if (widget.meal case final m?) {
+      _items = [...m.items];
+      _keys.addAll(m.items.map((_) => UniqueKey()));
+    } else {
+      _estimate();
+    }
+  }
+
+  /// Time of day only: a meal snapped later in the day ("lunch") keeps its date.
+  Future<void> _pickTime() async {
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_at),
+    );
+    if (t != null && mounted) {
+      setState(
+        () => _at = DateTime(_at.year, _at.month, _at.day, t.hour, t.minute),
+      );
+    }
+  }
+
+  Future<void> _delete() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final ok = await showBaseDialog(
+      context,
+      message: l.mealDelete,
+      tone: DialogTone.danger,
+      confirmLabel: l.delete,
+    );
+    if (!ok) return;
+    try {
+      await _repo.removeMeal(widget.meal!.id);
+      navigator.pop(true);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
   }
 
   Future<void> _estimate() async {
     setState(() => _error = null);
     try {
-      final items = await _repo.estimateMeal(widget.path);
+      final items = await _repo.estimateMeal(widget.path!);
       if (!mounted) return;
       setState(() {
         _items = [...items];
@@ -101,10 +144,12 @@ class _MealPageState extends State<MealPage> {
     final navigator = Navigator.of(context);
     setState(() => _saving = true);
     try {
-      await _repo.saveMeal(
-        DateTime.now(),
-        _items!.where((i) => i.name.isNotEmpty).toList(),
-      );
+      final items = _items!.where((i) => i.name.isNotEmpty).toList();
+      if (widget.meal case final m?) {
+        await _repo.replaceMeal(m.id, _at, items);
+      } else {
+        await _repo.saveMeal(_at, items);
+      }
       messenger.showSnackBar(SnackBar(content: Text(l.mealSaved)));
       navigator.pop(true);
     } catch (e) {
@@ -133,7 +178,18 @@ class _MealPageState extends State<MealPage> {
     double sum(double? Function(MealItem) f) =>
         named.fold(0, (n, i) => n + i.eaten * f(i)!);
     return Scaffold(
-      appBar: AppBar(title: NotebookTitle(l.mealTitle)),
+      appBar: AppBar(
+        title: NotebookTitle(l.mealTitle),
+        actions: [
+          if (widget.meal != null)
+            IconButton(
+              key: const ValueKey('meal-delete'),
+              tooltip: l.delete,
+              onPressed: _delete,
+              icon: const Icon(Icons.delete_outline),
+            ),
+        ],
+      ),
       bottomNavigationBar: items == null
           ? null
           : SafeArea(
@@ -152,20 +208,21 @@ class _MealPageState extends State<MealPage> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: spaceM),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(spaceM),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                File(widget.path),
-                height: 220,
-                fit: BoxFit.cover,
-                cacheWidth: 1000,
-                errorBuilder: (_, _, _) =>
-                    SizedBox(height: 220, child: ColoredBox(color: nb.mist)),
+          if (widget.path case final path?)
+            Padding(
+              padding: const EdgeInsets.all(spaceM),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(path),
+                  height: 220,
+                  fit: BoxFit.cover,
+                  cacheWidth: 1000,
+                  errorBuilder: (_, _, _) =>
+                      SizedBox(height: 220, child: ColoredBox(color: nb.mist)),
+                ),
               ),
             ),
-          ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: spaceM),
@@ -188,12 +245,24 @@ class _MealPageState extends State<MealPage> {
               ),
             )
           else ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: spaceM),
-              child: Text(
-                l.mealHint,
-                style: text.bodySmall?.copyWith(color: nb.inkSoft),
+            if (widget.path != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                child: Text(
+                  l.mealHint,
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                ),
               ),
+            ListTile(
+              key: const ValueKey('meal-time'),
+              leading: const Icon(Icons.schedule),
+              title: Text(l.mealTime),
+              trailing: Text(
+                MaterialLocalizations.of(context)
+                    .formatTimeOfDay(TimeOfDay.fromDateTime(_at)),
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              onTap: _pickTime,
             ),
             for (var i = 0; i < items.length; i++)
               _DishRow(

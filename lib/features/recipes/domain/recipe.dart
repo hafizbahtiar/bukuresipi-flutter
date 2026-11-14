@@ -202,3 +202,13 @@ class RecipeStep {
   final int stepNo;
   final String instruction;
 }
+
+/// One recipe for "What can I cook?": [have] of [required] lines in the kitchen; [missing] = catalogue names to buy;
+/// [unknown] = lines with no catalogue link, as written (to check by eye). Empty [missing] = cook now.
+typedef PantryMatch = ({
+  Recipe recipe,
+  int have,
+  int required,
+  List<String> missing,
+  List<String> unknown,
+});

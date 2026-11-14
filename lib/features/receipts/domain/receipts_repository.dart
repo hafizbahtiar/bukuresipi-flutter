@@ -39,6 +39,9 @@ abstract interface class ReceiptsRepository {
 
   /// Saves the dishes the user confirmed ([MealItem.name] and [MealItem.eaten] only).
   Future<void> saveMeal(DateTime eatenAt, List<MealItem> items);
+
+  /// Replaces a saved meal's time and dishes (code: not_found).
+  Future<void> replaceMeal(String id, DateTime eatenAt, List<MealItem> items);
   Future<void> removeMeal(String id);
 
   /// The receipt's split (empty [ReceiptSplit.people] = none). Codes: not_ready, not_found.

@@ -39,6 +39,13 @@ abstract interface class RecipesRepository {
   /// Takes the recipe off this user's book.
   Future<void> delete(String id);
 
+  /// Readable recipes ranked by what the user still lacks, from what they have (cook now first, then 1-3 missing).
+  /// [staples] = salt, sugar and cooking oil count as owned.
+  Future<List<PantryMatch>> fromPantry(
+    List<String> ingredients, {
+    bool staples = true,
+  });
+
   /// Catalogue ingredient names matching [query] (2+ characters).
   Future<List<String>> searchIngredients(String query);
 

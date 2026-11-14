@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/pill_switch.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -130,24 +129,11 @@ class CaloriesSectionState extends State<CaloriesSection> {
     if (saved == true && mounted) await refresh();
   }
 
-  Future<void> _removeMeal(String id) async {
-    final l = AppLocalizations.of(context);
-    final ok = await showBaseDialog(
-      context,
-      message: l.mealDelete,
-      tone: DialogTone.danger,
-      confirmLabel: l.delete,
-    );
-    if (!ok || !mounted) return;
-    try {
-      await _repo.removeMeal(id);
-      await refresh();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(errorText(l, e))));
-      }
-    }
+  /// A saved meal: change its dishes, servings or time, or delete it.
+  Future<void> _openMeal(DayMeal meal) async {
+    final changed = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => MealPage(meal: meal)));
+    if (changed == true && mounted) await refresh();
   }
 
   /// Loads again; what is shown stays until the new data is in (FutureBuilder keeps the last data).
@@ -199,7 +185,7 @@ class CaloriesSectionState extends State<CaloriesSection> {
               child: _DayItems(
                 today: today,
                 onOpen: _open,
-                onRemoveMeal: _removeMeal,
+                onOpenMeal: _openMeal,
               ),
             ),
           ],
@@ -328,18 +314,17 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The day's saved receipts and meals with their eaten lines, newest first; a tap opens the receipt or offers to
-/// delete the meal.
+/// The day's saved receipts and meals with their eaten lines, newest first; a tap opens the receipt or the meal.
 class _DayItems extends StatelessWidget {
   const _DayItems({
     required this.today,
     required this.onOpen,
-    required this.onRemoveMeal,
+    required this.onOpenMeal,
   });
 
   final DailyCalories today;
   final ValueChanged<String> onOpen;
-  final ValueChanged<String> onRemoveMeal;
+  final ValueChanged<DayMeal> onOpenMeal;
 
   static String _qty(double n) =>
       n == n.roundToDouble() ? n.toInt().toString() : '$n';
@@ -405,7 +390,7 @@ class _DayItems extends StatelessWidget {
           m.eatenAt,
           entry(
             key: ValueKey('calories-meal-${m.id}'),
-            onTap: () => onRemoveMeal(m.id),
+            onTap: () => onOpenMeal(m),
             title: l.mealRow,
             at: m.eatenAt,
             kcal: m.eatenKcal,
