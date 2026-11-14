@@ -28,7 +28,7 @@ const MealItem teh = (
   fatG: 3,
 );
 
-Future<void> pump(WidgetTester t, FakeReceipts repo) async {
+Future<void> pump(WidgetTester t, FakeReceipts repo, {DayMeal? meal}) async {
   // A phone-tall screen: the total sits below the photo and the dishes.
   t.view.physicalSize = const Size(400, 1400);
   t.view.devicePixelRatio = 1;
@@ -36,11 +36,13 @@ Future<void> pump(WidgetTester t, FakeReceipts repo) async {
   await t.pumpWidget(
     Provider<ReceiptsRepository>.value(
       value: repo,
-      child: const MaterialApp(
+      child: MaterialApp(
         locale: Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: MealPage(path: '/no/such/photo.jpg'),
+        home: meal == null
+            ? const MealPage(path: '/no/such/photo.jpg')
+            : MealPage(meal: meal),
       ),
     ),
   );
@@ -116,4 +118,32 @@ void main() {
     expect(find.text('0.25 serving(s)'), findsOneWidget);
     expect(find.text('20 kcal'), findsOneWidget);
   });
+
+  testWidgets(
+    'a saved meal opens without a photo or an estimate; Save replaces it at its time',
+    (t) async {
+      final repo = FakeReceipts();
+      final at = DateTime(2026, 11, 10, 13, 30);
+      await pump(
+        t,
+        repo,
+        meal: (
+          id: 'm-1',
+          eatenAt: at,
+          eatenKcal: 125,
+          macros: null,
+          items: const [teh],
+        ),
+      );
+      expect(repo.estimated, isEmpty);
+      expect(find.byType(Image), findsNothing);
+      expect(find.text('1:30 PM'), findsOneWidget);
+      await t.tap(find.byIcon(Icons.add_circle_outline));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('meal-save')));
+      await t.pumpAndSettle();
+      final (id, eatenAt, items) = repo.replacedMeals.single;
+      expect((id, eatenAt, items.single.eaten), ('m-1', at, 1.5));
+    },
+  );
 }

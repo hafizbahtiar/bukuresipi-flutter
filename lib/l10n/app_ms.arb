@@ -1006,5 +1006,17 @@
   "mealUnknownKcal": "kcal selepas simpan",
   "mealSaved": "Makanan disimpan",
   "mealRow": "Makanan",
-  "mealDelete": "Padam makanan ini?"
+  "mealDelete": "Padam makanan ini?",
+  "mealTime": "Masa",
+  "pantryTitle": "Nak masak apa?",
+  "pantryHint": "Tambah bahan yang ada di dapur. Kami senaraikan resepi yang boleh dimasak sekarang, kemudian yang kurang sedikit bahan.",
+  "pantryAdd": "Tambah bahan",
+  "pantryStaples": "Garam, gula dan minyak masak ada di dapur",
+  "pantryFind": "Cari resepi",
+  "pantryCookNow": "Boleh masak",
+  "pantryMissing": "Kurang: {items}",
+  "pantryCheck": "Semak: {items}",
+  "pantryNone": "Belum ada resepi yang sesuai. Tambah beberapa bahan lagi.",
+  "pantryAddMissing": "Tambah yang kurang ke senarai belian",
+  "pantryAdded": "Ditambah ke senarai belian"
 }

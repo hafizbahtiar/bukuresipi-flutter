@@ -175,6 +175,15 @@ class FakeReceipts implements ReceiptsRepository {
   @override
   Future<void> removeMeal(String id) async => removedMeals.add(id);
 
+  final replacedMeals = <(String, DateTime, List<MealItem>)>[];
+
+  @override
+  Future<void> replaceMeal(
+    String id,
+    DateTime eatenAt,
+    List<MealItem> items,
+  ) async => replacedMeals.add((id, eatenAt, items));
+
   CalorieDays calorieDaysAnswer = const CalorieDays(days: [], target: null);
   final calorieDayRanges = <int>[];
 

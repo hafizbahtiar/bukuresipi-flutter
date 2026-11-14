@@ -135,17 +135,24 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
   });
 
   @override
-  Future<void> saveMeal(DateTime eatenAt, List<MealItem> items) => apiCall(
-    () => _dio.post<void>(
-      '/meals',
-      data: {
-        'eatenAt': eatenAt.toUtc().toIso8601String(),
-        'items': [
-          for (final i in items) {'name': i.name, 'servings': i.eaten},
-        ],
-      },
-    ),
-  );
+  Future<void> saveMeal(DateTime eatenAt, List<MealItem> items) =>
+      apiCall(() => _dio.post<void>('/meals', data: _mealBody(eatenAt, items)));
+
+  @override
+  Future<void> replaceMeal(String id, DateTime eatenAt, List<MealItem> items) =>
+      apiCall(
+        () => _dio.patch<void>('/meals/$id', data: _mealBody(eatenAt, items)),
+      );
+
+  static Map<String, dynamic> _mealBody(
+    DateTime eatenAt,
+    List<MealItem> items,
+  ) => {
+    'eatenAt': eatenAt.toUtc().toIso8601String(),
+    'items': [
+      for (final i in items) {'name': i.name, 'servings': i.eaten},
+    ],
+  };
 
   @override
   Future<void> removeMeal(String id) =>

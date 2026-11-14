@@ -144,7 +144,7 @@ void main() {
   });
 
   testWidgets(
-    'meals sit among the receipts by time, with the day\'s macros; a tap offers to delete one',
+    'meals sit among the receipts by time, with the day\'s macros; a tap opens the meal, which can be deleted',
     (t) async {
       final repo = FakeReceipts()
         ..today = day(
@@ -193,6 +193,8 @@ void main() {
       expect(meal.dy, lessThan(receipt.dy)); // newest first
       await t.scrollUntilVisible(find.text('1 × Nasi Lemak · 500 kcal'), 100);
       await t.tap(find.text('1 × Nasi Lemak · 500 kcal'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('meal-delete')));
       await t.pumpAndSettle();
       expect(find.text('Delete this meal?'), findsOneWidget);
       await t.tap(find.text('Delete'));

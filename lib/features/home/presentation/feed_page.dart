@@ -16,6 +16,7 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../places/domain/nearby_branch.dart';
 import '../../places/domain/rating.dart';
 import '../../shares/presentation/widgets/share_image.dart';
+import '../../recipes/presentation/pages/pantry_page.dart';
 import 'add_sheet.dart';
 import 'widgets/feed_card.dart';
 import 'widgets/feed_empty.dart';
@@ -519,6 +520,13 @@ class _FeedPageState extends State<FeedPage> {
                 onPressed: () => updateApp(context),
               ),
             ),
+          IconButton(
+            key: const ValueKey('feed-pantry'),
+            tooltip: l.pantryTitle,
+            icon: const Icon(Icons.kitchen_outlined),
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const PantryPage())),
+          ),
           IconButton(
             key: const ValueKey('feed-shopping'),
             tooltip: l.shoppingTitle,

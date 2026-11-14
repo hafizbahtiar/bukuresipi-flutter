@@ -95,6 +95,18 @@ RecipeDetail recipeDetail({
 );
 
 class FakeRecipes implements RecipesRepository {
+  List<PantryMatch> pantryAnswer = const [];
+  final pantryAsked = <(List<String>, bool)>[];
+
+  @override
+  Future<List<PantryMatch>> fromPantry(
+    List<String> ingredients, {
+    bool staples = true,
+  }) async {
+    pantryAsked.add((ingredients, staples));
+    return pantryAnswer;
+  }
+
   final covers = <(String, String)>[];
   final coversRemoved = <String>[];
 
