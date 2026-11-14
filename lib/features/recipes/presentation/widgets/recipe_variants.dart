@@ -11,15 +11,23 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../../owner/domain/owner_repository.dart';
 import '../../../shares/domain/share_repository.dart';
 import '../../../shares/presentation/recent_shares.dart';
+import '../../domain/recipe.dart';
 import '../../domain/recipe_variant.dart';
 import '../recipes_controller.dart';
 
 /// "Recipe variants" under a catalogue dish: other web recipes for it, best match first. Users see the list (nothing
-/// when it is empty); the owner also gets "Find variants", which searches the web again (metered) and replaces it.
+/// when it is empty); the owner also gets "Find variants", which searches the web again (metered) and replaces it,
+/// and the dish's required lines most variants leave out, to mark optional (nothing is set without the owner).
 class RecipeVariants extends StatefulWidget {
-  const RecipeVariants({super.key, required this.recipeId, this.owner = false});
+  const RecipeVariants({
+    super.key,
+    required this.recipe,
+    required this.onChanged,
+    this.owner = false,
+  });
 
-  final String recipeId;
+  final RecipeDetail recipe;
+  final ValueChanged<RecipeDetail> onChanged;
   final bool owner;
 
   @override
@@ -39,7 +47,7 @@ class _RecipeVariantsState extends State<RecipeVariants> {
   Future<void> _load() async {
     try {
       final list = await context.read<RecipesController>().variants(
-        widget.recipeId,
+        widget.recipe.id,
       );
       if (mounted) setState(() => _variants = list);
     } catch (_) {
@@ -53,7 +61,7 @@ class _RecipeVariantsState extends State<RecipeVariants> {
     setState(() => _finding = true);
     try {
       final found = await context.read<OwnerRepository>().findVariants(
-        widget.recipeId,
+        widget.recipe.id,
       );
       if (!mounted) return;
       setState(() => _variants = found.variants);
@@ -73,12 +81,45 @@ class _RecipeVariantsState extends State<RecipeVariants> {
     }
   }
 
+  /// Required lines (by position) left out by at least half the variants, with how many: 2+ variants only.
+  List<(int, int)> _candidates() {
+    if (_variants.length < 2) return const [];
+    final lacked = <String, int>{};
+    for (final v in _variants) {
+      for (final name in v.lacks.map((s) => s.toLowerCase()).toSet()) {
+        lacked[name] = (lacked[name] ?? 0) + 1;
+      }
+    }
+    final lines = widget.recipe.ingredients;
+    return [
+      for (var i = 0; i < lines.length; i++)
+        if (!lines[i].optional && lines[i].name != null)
+          if (lacked[lines[i].name!.toLowerCase()] case final n?
+              when n * 2 >= _variants.length)
+            (i, n),
+    ];
+  }
+
+  Future<void> _markOptional(int index) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final updated = await context
+          .read<RecipesController>()
+          .setIngredientOptional(widget.recipe.id, index, true);
+      widget.onChanged(updated);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     if (_variants.isEmpty && !widget.owner) return const SizedBox.shrink();
+    final candidates = widget.owner ? _candidates() : const <(int, int)>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -106,6 +147,21 @@ class _RecipeVariantsState extends State<RecipeVariants> {
           ),
         ),
         for (final v in _variants) _VariantRow(variant: v),
+        if (candidates.isNotEmpty) ...[
+          SectionHeader(l.variantsOptionalTitle),
+          for (final (index, n) in candidates)
+            ListTile(
+              title: Text(widget.recipe.ingredients[index].label.toLowerCase()),
+              subtitle: Text(
+                l.variantsSkippedBy(n, _variants.length),
+                style: text.bodySmall?.copyWith(color: nb.inkSoft),
+              ),
+              trailing: TextButton(
+                onPressed: () => _markOptional(index),
+                child: Text(l.variantsMarkOptional),
+              ),
+            ),
+        ],
       ],
     );
   }

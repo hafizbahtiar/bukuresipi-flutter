@@ -38,6 +38,7 @@ class _UsagePageState extends State<UsagePage> {
     String label(String code) => switch (code) {
       'shares' => l.usageShares,
       'receipts' => l.usageReceipts,
+      'meals' => l.usageMeals,
       'reports' => l.usageReports,
       'shopping' => l.usageShopping,
       _ => code,

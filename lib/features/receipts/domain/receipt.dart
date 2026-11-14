@@ -83,13 +83,38 @@ typedef DayReceipt = ({
   List<DayItem> items,
 });
 
-/// One day's calories from the user's saved receipts ([target] null = not set), with the day's eaten lines.
+/// Grams eaten; null on a day or meal = some eaten line has no number (a partial sum would read as the total).
+typedef Macros = ({double carbsG, double proteinG, double fatG});
+
+/// One dish of a snapped meal: [eaten] servings, the rest per serving (null = not known; [kcalSource] 'table' | 'ai').
+typedef MealItem = ({
+  String name,
+  double eaten,
+  int? kcal,
+  String? kcalSource,
+  double? carbsG,
+  double? proteinG,
+  double? fatG,
+});
+
+/// A snapped meal (the photo stayed on the phone: only the dishes are saved).
+typedef DayMeal = ({
+  String id,
+  DateTime eatenAt,
+  int eatenKcal,
+  Macros? macros,
+  List<MealItem> items,
+});
+
+/// One day's calories from the user's saved receipts and meals ([target] null = not set), with the day's eaten lines.
 typedef DailyCalories = ({
   int eatenKcal,
   int? target,
   bool hasEstimate,
   double unknownEaten,
+  Macros? macros,
   List<DayReceipt> receipts,
+  List<DayMeal> meals,
 });
 
 /// One Malaysia day of the calories chart ([date] = local midnight).

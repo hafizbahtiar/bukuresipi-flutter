@@ -18,7 +18,9 @@ void main() {
         target: 2000,
         hasEstimate: false,
         unknownEaten: 0,
+        macros: null,
         receipts: const [],
+        meals: const [],
       );
     await t.pumpWidget(
       Provider<ReceiptsRepository>.value(
@@ -103,7 +105,9 @@ void main() {
         target: 2000,
         hasEstimate: false,
         unknownEaten: 0,
+        macros: null,
         receipts: const [],
+        meals: const [],
       );
     await t.pumpWidget(
       Provider<ReceiptsRepository>.value(

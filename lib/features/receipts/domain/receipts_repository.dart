@@ -27,11 +27,19 @@ abstract interface class ReceiptsRepository {
   /// Ticks how many of line [position] the user ate (codes: too_many, not_ready, not_found).
   Future<void> setEaten(String id, int position, double eaten);
 
-  /// Today's calories (Malaysia day) from saved receipts, against the user's target, with the day's eaten lines.
+  /// Today's calories (Malaysia day) from saved receipts and meals, against the user's target, with the day's eaten lines.
   Future<DailyCalories> calories();
 
   /// The last [days] Malaysia days of calories, oldest first, against the target (the chart).
   Future<CalorieDays> calorieDays({int days = 30});
+
+  /// The dishes in a meal photo (a local JPEG path) with servings and per-serving numbers; nothing is saved and the
+  /// photo is not kept. Codes: meal_limit, not_food, ai_unavailable, invalid_image.
+  Future<List<MealItem>> estimateMeal(String path);
+
+  /// Saves the dishes the user confirmed ([MealItem.name] and [MealItem.eaten] only).
+  Future<void> saveMeal(DateTime eatenAt, List<MealItem> items);
+  Future<void> removeMeal(String id);
 
   /// The receipt's split (empty [ReceiptSplit.people] = none). Codes: not_ready, not_found.
   Future<ReceiptSplit> split(String id);

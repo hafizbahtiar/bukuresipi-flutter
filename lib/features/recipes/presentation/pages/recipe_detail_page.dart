@@ -691,7 +691,12 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           ),
           title: Text(s.instruction),
         ),
-      if (catalogue) RecipeVariants(recipeId: recipe.id, owner: isOwner),
+      if (catalogue)
+        RecipeVariants(
+          recipe: recipe,
+          owner: isOwner,
+          onChanged: (r) => setState(() => _recipe = r),
+        ),
     ];
     return Scaffold(
       appBar: coverBar == null ? AppBar(actions: [more]) : null,

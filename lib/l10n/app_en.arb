@@ -1648,6 +1648,21 @@
   "@variantsTitle": {},
   "variantsHint": "Other recipes for this dish on the web. Their steps are on their page.",
   "@variantsHint": {},
+  "variantsOptionalTitle": "Often left out",
+  "@variantsOptionalTitle": {},
+  "variantsSkippedBy": "Left out by {n} of {total} variants",
+  "@variantsSkippedBy": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "variantsMarkOptional": "Mark optional",
+  "@variantsMarkOptional": {},
   "variantsNone": "No variants yet. Find variants searches the web (uses the search and AI meters).",
   "@variantsNone": {},
   "variantsFind": "Find variants",
@@ -2021,6 +2036,8 @@
   "usageShares": "Links and screenshots shared today",
   "@usageShares": {},
   "usageReceipts": "Receipt photos today",
+  "usageMeals": "Meal photos today",
+  "@usageMeals": {},
   "@usageReceipts": {},
   "usageReports": "Place reports today",
   "@usageReports": {},
@@ -2518,9 +2535,71 @@
   "recipeAllergenOptional": "only if you add it",
   "@recipeAllergenOptional": {},
   "shoppingOptionalTitle": "{count, plural, =1{1 optional ingredient. Add it too?} other{{count} optional ingredients. Add them too?}}",
-  "@shoppingOptionalTitle": {"placeholders": {"count": {"type": "int"}}},
+  "@shoppingOptionalTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "shoppingOptionalSkip": "Only what's needed",
   "@shoppingOptionalSkip": {},
   "shoppingOptionalAll": "Everything, optional too",
-  "@shoppingOptionalAll": {}
+  "@shoppingOptionalAll": {},
+  "errMealLimit": "That's 10 meal photos today. Try again tomorrow.",
+  "@errMealLimit": {},
+  "errNotFood": "No food found in that photo. Try another one.",
+  "@errNotFood": {},
+  "errAiUnavailable": "Estimates are not available right now. Try again later.",
+  "@errAiUnavailable": {},
+  "mealSnap": "Snap a meal",
+  "@mealSnap": {},
+  "mealTitle": "Your meal",
+  "@mealTitle": {},
+  "mealReading": "Looking at your plate…",
+  "@mealReading": {},
+  "mealHint": "Check the dishes and servings, then save. The photo stays on your phone.",
+  "@mealHint": {},
+  "mealAddDish": "Add a dish",
+  "@mealAddDish": {},
+  "mealDishName": "Dish",
+  "@mealDishName": {},
+  "mealServings": "{n} serving(s)",
+  "@mealServings": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "mealTotal": "Total {kcal} kcal",
+  "@mealTotal": {
+    "placeholders": {
+      "kcal": {
+        "type": "String"
+      }
+    }
+  },
+  "mealMacros": "Carbs {carbs} g · Protein {protein} g · Fat {fat} g",
+  "@mealMacros": {
+    "placeholders": {
+      "carbs": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      }
+    }
+  },
+  "mealUnknownKcal": "kcal after saving",
+  "@mealUnknownKcal": {},
+  "mealSaved": "Meal saved",
+  "@mealSaved": {},
+  "mealRow": "Meal",
+  "@mealRow": {},
+  "mealDelete": "Delete this meal?",
+  "@mealDelete": {}
 }

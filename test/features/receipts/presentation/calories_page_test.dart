@@ -41,12 +41,16 @@ void main() {
     bool estimate = false,
     double unknown = 0,
     List<DayReceipt> receipts = const [],
+    List<DayMeal> meals = const [],
+    Macros? macros,
   }) => (
     eatenKcal: eaten,
     target: target,
     hasEstimate: estimate,
     unknownEaten: unknown,
+    macros: macros,
     receipts: receipts,
+    meals: meals,
   );
 
   CalorieDays days({int? target, int count = 30}) => CalorieDays(
@@ -138,4 +142,62 @@ void main() {
     await pump(t, FakeReceipts()..today = day(target: 2000));
     expect(find.text('Nothing eaten today.'), findsOneWidget);
   });
+
+  testWidgets(
+    'meals sit among the receipts by time, with the day\'s macros; a tap offers to delete one',
+    (t) async {
+      final repo = FakeReceipts()
+        ..today = day(
+          eaten: 900,
+          macros: (carbsG: 101.4, proteinG: 30, fatG: 22.6),
+          receipts: [
+            (
+              id: 'r-1',
+              shop: 'Port Lepak',
+              visitedAt: DateTime(2026, 11, 10, 13),
+              eatenKcal: 400,
+              items: const [],
+            ),
+          ],
+          meals: [
+            (
+              id: 'm-1',
+              eatenAt: DateTime(2026, 11, 10, 20),
+              eatenKcal: 500,
+              macros: null,
+              items: const [
+                (
+                  name: 'Nasi Lemak',
+                  eaten: 1,
+                  kcal: 500,
+                  kcalSource: 'ai',
+                  carbsG: null,
+                  proteinG: null,
+                  fatG: null,
+                ),
+              ],
+            ),
+          ],
+        );
+      await pump(t, repo);
+      expect(
+        find.text('Carbs 101 g · Protein 30 g · Fat 23 g'),
+        findsOneWidget,
+      );
+      final meal = t.getTopLeft(
+        find.byKey(const ValueKey('calories-meal-m-1')),
+      );
+      final receipt = t.getTopLeft(
+        find.byKey(const ValueKey('calories-receipt-r-1')),
+      );
+      expect(meal.dy, lessThan(receipt.dy)); // newest first
+      await t.scrollUntilVisible(find.text('1 × Nasi Lemak · 500 kcal'), 100);
+      await t.tap(find.text('1 × Nasi Lemak · 500 kcal'));
+      await t.pumpAndSettle();
+      expect(find.text('Delete this meal?'), findsOneWidget);
+      await t.tap(find.text('Delete'));
+      await t.pumpAndSettle();
+      expect(repo.removedMeals, ['m-1']);
+    },
+  );
 }
