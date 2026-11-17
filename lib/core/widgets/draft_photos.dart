@@ -4,7 +4,7 @@ import '../../l10n/gen/app_localizations.dart';
 import '../open_link.dart';
 import '../theme/app_theme.dart';
 
-/// An AI draft's photos from web pages (up to 3, side by side, 4:3): tap one to pick it as the cover, again to drop
+/// An AI draft's photos from web pages (up to 5, side by side and scrolled, 4:3): tap one to pick it as the cover, again to drop
 /// it. Shared by the recipe and place drafts.
 class DraftPhotos extends StatelessWidget {
   const DraftPhotos({
@@ -33,18 +33,22 @@ class DraftPhotos extends StatelessWidget {
               ?.copyWith(color: nb.inkSoft),
         ),
         const SizedBox(height: 6),
-        Row(
-          children: [
-            for (final (i, url) in urls.take(3).indexed) ...[
-              if (i > 0) const SizedBox(width: 8),
-              Expanded(child: _photo(l, nb, url)),
-            ],
-            // Three slots always: one photo is not stretched across the card.
-            for (var i = urls.length; i < 3; i++) ...[
-              const SizedBox(width: 8),
-              const Expanded(child: SizedBox()),
-            ],
-          ],
+        // Up to 5 (the server sends the AI's best first), side by side, scrolled sideways: each a third of the
+        // width, so the next one peeks in when there are more than three.
+        LayoutBuilder(
+          builder: (context, box) {
+            final w = (box.maxWidth - 16) / 3;
+            return SizedBox(
+              height: w * 3 / 4,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: urls.length.clamp(0, 5),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) =>
+                    SizedBox(width: w, child: _photo(l, nb, urls[i])),
+              ),
+            );
+          },
         ),
       ],
     );

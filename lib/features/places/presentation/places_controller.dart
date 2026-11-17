@@ -194,6 +194,8 @@ class PlacesController extends ChangeNotifier {
     String? state,
     required double? lat,
     required double? lng,
+    JakimRow? cert,
+    String? certUrl,
   }) async {
     await _repo.addSiblingBranch(
       branchId,
@@ -202,6 +204,8 @@ class PlacesController extends ChangeNotifier {
       state: state,
       lat: lat,
       lng: lng,
+      cert: cert,
+      certUrl: certUrl,
     );
     await _reload();
   }
@@ -322,6 +326,22 @@ class PlacesController extends ChangeNotifier {
   /// Throws ApiException; the sheet shows it.
   Future<void> report(ReportDraft draft) => _repo.report(draft);
 
+  /// A branch's own cover photo bytes, or null.
+  Future<Uint8List?> branchCover(String branchId, String cover) =>
+      _repo.branchCover(branchId, cover);
+
+  /// Owner only: a branch's cover from a web photo, or none (null); the book reloads. Throws ApiException.
+  Future<void> setBranchCover(String branchId, String? url) async {
+    await _repo.setBranchCover(branchId, url);
+    await _reload();
+  }
+
+  /// Owner only: a photo of their own as the branch's cover; the book reloads. Throws ApiException.
+  Future<void> uploadBranchCover(String branchId, String path) async {
+    await _repo.uploadBranchCover(branchId, path);
+    await _reload();
+  }
+
   /// The restaurant's cover photo bytes, or null (none, or not loaded).
   Future<Uint8List?> restaurantCover(String placeId, String cover) =>
       _repo.placeCover(placeId, cover);
@@ -354,17 +374,12 @@ class PlacesController extends ChangeNotifier {
     return r;
   }
 
-  /// Owner only: "Check JAKIM" on a place (brand + branches); the book reloads. Throws ApiException.
-  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
-    String placeId,
-  ) async {
-    final r = await _repo.checkHalalPlace(placeId);
-    await _reload();
-    return r;
-  }
+  /// Owner only: the brand's JAKIM outlets (Edit place > Halal); nothing written. Throws ApiException.
+  Future<JakimOutlets> placeOutlets(String placeId, {String? q}) =>
+      _repo.placeOutlets(placeId, q: q);
 
   /// Owner only: a draft's JAKIM row as the branch's halal certificate. Throws ApiException.
-  Future<void> setHalalCert(String branchId, JakimRow row, String url) async {
+  Future<void> setHalalCert(String branchId, JakimRow? row, String url) async {
     await _repo.setHalalCert(branchId, row, url);
     await _reload();
   }

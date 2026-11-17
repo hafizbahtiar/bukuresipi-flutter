@@ -69,6 +69,18 @@ typedef JakimCheck = ({
   int? pick,
 });
 
+/// Edit place > Halal: one of the brand's JAKIM outlets, with the branch holding its certificate ([branchId]) and
+/// a branch at the same postcode ([nearBranchId]).
+typedef JakimOutlet = ({JakimRow row, String? branchId, String? nearBranchId});
+
+/// The brand's JAKIM outlets: [status] ok | unavailable; [url] = the directory page; [more] = past 100 rows (in part).
+typedef JakimOutlets = ({
+  String status,
+  String? url,
+  List<JakimOutlet> rows,
+  bool more,
+});
+
 /// One outlet in JAKIM's halal directory (a draft's `jakim` row).
 typedef JakimRow = ({
   String premise,
@@ -283,6 +295,7 @@ class Branch {
     this.closed = false,
     this.rating = const RatingSummary(),
     this.halalCert,
+    this.cover,
   });
 
   final String id;
@@ -304,6 +317,9 @@ class Branch {
 
   /// JAKIM's halal certificate for this outlet; null = not found, never "not halal".
   final HalalCert? halalCert;
+
+  /// This outlet's own cover id (the owner's photo of it); null = none: the place's shows.
+  final String? cover;
 
   Branch copyWith({RatingSummary? rating}) => Branch(
     id: id,

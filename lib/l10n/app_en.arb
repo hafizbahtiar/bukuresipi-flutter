@@ -236,6 +236,132 @@
   "@halalCertOpen": {},
   "halalCertNote": "Listed in JAKIM's directory for this outlet only. Other branches may not be.",
   "@halalCertNote": {},
+  "placeEditTabDetails": "Place",
+  "@placeEditTabDetails": {},
+  "branchTabDetails": "Branch",
+  "@branchTabDetails": {},
+  "jakimDraftSeeHalal": "JAKIM: outlets found. Pick one in the Halal tab.",
+  "@jakimDraftSeeHalal": {},
+  "jakimQuery": "Name to search on JAKIM",
+  "@jakimQuery": {},
+  "jakimQueryHelp": "A shop, company or outlet name (e.g. \"Pelita Samudra\", \"AEON Bukit Raja\"). JAKIM can't be searched by certificate number, address or postcode.",
+  "@jakimQueryHelp": {},
+  "jakimAiPick": "AI pick",
+  "@jakimAiPick": {},
+  "jakimSaveRow": "Save",
+  "@jakimSaveRow": {},
+  "jakimSaved": "Saved",
+  "@jakimSaved": {},
+  "jakimOutletsTag": "{count, plural, =1{JAKIM halal · 1 outlet} other{JAKIM halal · {count} outlets}}",
+  "@jakimOutletsTag": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "halalEmptyTitle": "No halal information yet",
+  "@halalEmptyTitle": {},
+  "halalEmptyText": "No post has said, and we have not found its outlet in JAKIM's directory. Look for the halal certificate at the premises.",
+  "@halalEmptyText": {},
+  "halalDisclaimer": "Bukuresipi does not certify halal. JAKIM certifies each outlet on its own and certificates change: check the certificate displayed at the premises.",
+  "@halalDisclaimer": {},
+  "jakimSearch": "Search JAKIM",
+  "@jakimSearch": {},
+  "jakimOutletsFound": "{count, plural, =1{1 outlet on JAKIM} other{{count} outlets on JAKIM}}",
+  "@jakimOutletsFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "jakimOutletsNone": "JAKIM lists no outlets under this name. Try the company name.",
+  "jakimOutletsMore": "First {count} outlets on JAKIM (more not shown: search a more exact name)",
+  "@jakimOutletsMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@jakimOutletsNone": {},
+  "jakimPairedWith": "Paired with {branch}",
+  "@jakimPairedWith": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimNearBranch": "Same postcode as {branch}",
+  "@jakimNearBranch": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimPair": "Pair with a branch",
+  "jakimPairThis": "Pair",
+  "@jakimPairThis": {},
+  "jakimPairOther": "Another branch",
+  "@jakimPairOther": {},
+  "@jakimPair": {},
+  "jakimUnpair": "Unpair",
+  "@jakimUnpair": {},
+  "jakimAddBranch": "Add as branch",
+  "@jakimAddBranch": {},
+  "jakimPairTitle": "Which branch is {premise}?",
+  "@jakimPairTitle": {
+    "placeholders": {
+      "premise": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimBranchAdded": "Branch added with its certificate. It has no pin yet: pin it in Edit branch.",
+  "@jakimBranchAdded": {},
+  "jakimBranchNone": "No JAKIM outlet matched {branch}. Pair it from Edit place > Halal, where the brand's outlets are listed.",
+  "@jakimBranchNone": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "halalEditTitle": "Halal",
+  "@halalEditTitle": {},
+  "halalEditNoCert": "No JAKIM certificate saved for this outlet.",
+  "@halalEditNoCert": {},
+  "jakimCheck": "Check JAKIM",
+  "@jakimCheck": {},
+  "halalCertRemove": "Remove",
+  "@halalCertRemove": {},
+  "halalEditSays": "Posts say halal: \"{quote}\"",
+  "@halalEditSays": {
+    "placeholders": {
+      "quote": {
+        "type": "String"
+      }
+    }
+  },
+  "halalEditSaysNot": "Posts say not halal: \"{quote}\"",
+  "@halalEditSaysNot": {
+    "placeholders": {
+      "quote": {
+        "type": "String"
+      }
+    }
+  },
+  "halalEditNoClaim": "No post has said anything about halal.",
+  "@halalEditNoClaim": {},
+  "halalEditClaimNote": "Quoted from posts, with their link. Never typed in by hand.",
+  "@halalEditClaimNote": {},
+  "jakimDraftNone": "JAKIM: no outlet of this brand found in this state.",
+  "@jakimDraftNone": {},
+  "jakimDraftDown": "JAKIM did not answer. Use Check JAKIM below later.",
+  "@jakimDraftDown": {},
   "halalBrandTitle": "This brand has JAKIM-certified outlets",
   "@halalBrandTitle": {},
   "halalBrandCount": "JAKIM lists {count} premises under this name.",
@@ -258,8 +384,6 @@
   "@halalBrandNote": {},
   "halalBrandOpen": "See JAKIM's list",
   "@halalBrandOpen": {},
-  "jakimCheckAll": "Check JAKIM for all branches",
-  "@jakimCheckAll": {},
   "jakimCheckBranch": "Check JAKIM: {branch}",
   "@jakimCheckBranch": {
     "placeholders": {
@@ -286,20 +410,6 @@
   },
   "jakimCheckDown": "JAKIM's site did not answer. Try again later.",
   "@jakimCheckDown": {},
-  "jakimCheckPlace": "JAKIM: {outlets} premises under this name; {found} of {total} branches confirmed.",
-  "@jakimCheckPlace": {
-    "placeholders": {
-      "outlets": {
-        "type": "int"
-      },
-      "found": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "jakimChooseTitle": "Is {branch} one of these JAKIM outlets?",
   "@jakimChooseTitle": {
     "placeholders": {
@@ -346,7 +456,7 @@
   "@recipeDetails": {
     "description": "Recipe editor tab: cover photo and name"
   },
-  "placeTabHalal": "Halal claim",
+  "placeTabHalal": "Halal",
   "@placeTabHalal": {
     "description": "Place page tab: what the post says about halal (a claim, never a certificate)"
   },
@@ -672,16 +782,8 @@
   "@branchLongitude": {},
   "branchCoordsInvalid": "Enter a valid latitude and longitude.",
   "@branchCoordsInvalid": {},
-  "branchShared": "This branch is shared by every user.",
-  "@branchShared": {},
   "branchPersonalOnly": "Only you will see these changes.",
   "@branchPersonalOnly": {},
-  "branchScope": "Who sees this edit?",
-  "@branchScope": {},
-  "branchScopeMine": "Just me",
-  "@branchScopeMine": {},
-  "branchScopeEveryone": "Everyone",
-  "@branchScopeEveryone": {},
   "branchUpdatedMine": "Saved for you.",
   "@branchUpdatedMine": {},
   "editBranchMine": "Edit for me",
@@ -1895,7 +1997,7 @@
   "@placeCoverFailed": {},
   "jakimDraftTitle": "JAKIM halal directory: tick this outlet's row",
   "@jakimDraftTitle": {},
-  "jakimDraftRow": "{address} \u00b7 valid until {date}",
+  "jakimDraftRow": "{address} · valid until {date}",
   "@jakimDraftRow": {
     "placeholders": {
       "address": {
@@ -2009,15 +2111,27 @@
     "description": "Marks an ad card on Home (AdMob policy: an ad must say it is one)."
   },
   "coverTitle": "Cover photo",
-  "@coverTitle": {},
+  "coverChange": "Change cover",
+  "coverAdd": "Add cover",
+  "@coverAdd": {},
   "coverNone": "No cover",
-  "@coverNone": {},
+  "coverNoneYet": "No cover photo yet",
+  "@coverNoneYet": {},
   "coverEmpty": "No post photos for this restaurant yet. Take or pick a photo below.",
+  "@coverEmpty": {},
+  "@coverNone": {},
+  "@coverChange": {},
+  "coverAfterSave": "The AI draft's photo: it becomes the cover when you save.",
+  "@coverAfterSave": {},
+  "@coverTitle": {},
   "coverCamera": "Take photo",
   "@coverCamera": {},
   "coverGallery": "From gallery",
+  "branchCoverTitle": "This branch's photo",
+  "@branchCoverTitle": {},
+  "branchCoverNote": "The outlet's own photo (its shop front). Edit place can use it as the place's cover.",
+  "@branchCoverNote": {},
   "@coverGallery": {},
-  "@coverEmpty": {},
   "coverSaved": "Cover saved for everyone",
   "@coverSaved": {},
   "mapsLinkLabel": "Google Maps link",
@@ -2798,5 +2912,9 @@
   "pantryAddMissing": "Add missing to shopping list",
   "@pantryAddMissing": {},
   "pantryAdded": "Added to your shopping list",
-  "@pantryAdded": {}
+  "@pantryAdded": {},
+  "ownerEditsEveryone": "Owner: every user sees what you save here",
+  "@ownerEditsEveryone": {},
+  "saveForEveryone": "Save for everyone",
+  "@saveForEveryone": {}
 }

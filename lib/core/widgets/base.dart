@@ -135,27 +135,20 @@ Future<T?> showBasePicker<T>(
   T Function(String typed)? custom,
 }) {
   FocusScope.of(context).unfocus();
-  return showModalBottomSheet<T>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (sheet) => Padding(
-      // The keyboard (search box) pushes the sheet up instead of covering the list.
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheet).bottom),
-      child: SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(sheet).height * 0.8,
-          ),
-          child: _PickerSheet<T>(
-            title: title,
-            options: options,
-            selected: selected,
-            label: label,
-            search: search,
-            custom: custom,
-          ),
-        ),
+  // Floating, as every sheet: it keeps above the keyboard (search box) by itself.
+  return showBaseSheet<T>(
+    context,
+    builder: (sheet) => ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(sheet).height * 0.8,
+      ),
+      child: _PickerSheet<T>(
+        title: title,
+        options: options,
+        selected: selected,
+        label: label,
+        search: search,
+        custom: custom,
       ),
     ),
   );
@@ -916,6 +909,84 @@ class DetailSection {
   final List<Widget> rows;
 }
 
+/// An edit page's body in its detail page's segments (the same pill, the same [DetailSection]s), each section one
+/// plain scroll view kept alive while another shows: fields keep what was typed, and a field scrolled into view
+/// (Scrollable.ensureVisible) lands right, which DetailTabs' nested scroll does not do. One section = no pill.
+class EditTabs extends StatefulWidget {
+  const EditTabs({super.key, required this.sections});
+
+  final List<DetailSection> sections;
+
+  @override
+  State<EditTabs> createState() => _EditTabsState();
+}
+
+class _EditTabsState extends State<EditTabs> {
+  String? _selected;
+
+  /// Tabs opened so far: a tab is built the first time it is shown (its work, e.g. a search, waits until then),
+  /// then kept, so typed text survives a switch.
+  final _seen = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = widget.sections;
+    final selected = sections.indexWhere((s) => s.id == _selected);
+    Widget body(DetailSection s) => SingleChildScrollView(
+      padding: EdgeInsets.only(
+        // Under the pill: with the pill's own fixed gap, 16 before a tab's first row (rows bring no top padding).
+        top: sections.length > 1 ? spaceS : 0,
+        bottom: MediaQuery.paddingOf(context).bottom + spaceL,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: s.rows,
+      ),
+    );
+    if (sections.length < 2) return body(sections.first);
+    final index = selected < 0 ? 0 : selected;
+    _seen.add(sections[index].id);
+    return Column(
+      children: [
+        Padding(
+          // A fixed gap under the pill: scrolled content never runs up against it.
+          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceS),
+          child: PillSwitch<String>(
+            expand: true,
+            value: sections[index].id,
+            onChanged: (v) => setState(() => _selected = v),
+            options: [
+              for (final s in sections)
+                (
+                  s.id,
+                  Text(
+                    s.label,
+                    key: ValueKey(s.id),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  null,
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: IndexedStack(
+            index: index,
+            children: [
+              for (final s in sections)
+                if (s.id == sections[index].id || _seen.contains(s.id))
+                  body(s)
+                else
+                  const SizedBox.shrink(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// A detail page's body (recipe, place): an optional photo bar ([coverBar], a pinned sliver such as CoverAppBar),
 /// a [header] sliver, then the [sections]: tabs under a pinned pill when there are two or more (swiped, or picked
 /// on the pill), else one list. Pass only sections with something in them.
@@ -952,8 +1023,10 @@ class _DetailTabsState extends State<DetailTabs> {
   Widget build(BuildContext context) {
     final sections = widget.sections;
     final coverBar = widget.coverBar;
-    Widget list(List<Widget> rows) => SliverPadding(
+    Widget list(List<Widget> rows, {bool tab = false}) => SliverPadding(
       padding: EdgeInsets.only(
+        // Under the pill: a clear gap before the tab's content (a section title brings its own).
+        top: tab && rows.firstOrNull is! SectionHeader ? spaceS : 0,
         bottom: MediaQuery.paddingOf(context).bottom + spaceL,
       ),
       sliver: SliverList.list(children: rows),
@@ -1042,7 +1115,7 @@ class _DetailTabsState extends State<DetailTabs> {
                       context,
                     ),
                   ),
-                  list(s.rows),
+                  list(s.rows, tab: true),
                 ],
               ),
             ),
@@ -1077,6 +1150,43 @@ class _UnderBar extends StatelessWidget {
           height: (p.pixels - (p.maxScrollExtent - bar)).clamp(0.0, bar),
         );
       },
+    );
+  }
+}
+
+/// Under an owner's edit page's bar: says, the whole time, that Save changes what every user sees (no mode to
+/// switch: the owner's edits are always for everyone; a user's are always their own).
+class OwnerStrip extends StatelessWidget implements PreferredSizeWidget {
+  const OwnerStrip(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(32);
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return Container(
+      key: const ValueKey('owner-strip'),
+      height: 32,
+      color: nb.kunyit.withValues(alpha: 0.22),
+      padding: const EdgeInsets.symmetric(horizontal: spaceM),
+      child: Row(
+        children: [
+          Icon(Icons.public, size: 16, color: nb.ink),
+          const SizedBox(width: spaceS),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

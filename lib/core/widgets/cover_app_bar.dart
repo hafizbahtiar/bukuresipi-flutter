@@ -41,13 +41,18 @@ class CoverAppBar extends StatelessWidget {
   /// The flight between a card and this bar: always the card's picture, so it never shows a blank while the bar's
   /// own copy decodes. Its top corners round off into the bar's square ones on the way (and back).
   static Widget cardShuttle(
-    BuildContext _,
+    BuildContext flight,
     Animation<double> animation,
     HeroFlightDirection direction,
     BuildContext from,
     BuildContext to,
   ) {
     final card = direction == HeroFlightDirection.push ? from : to;
+    // A card with its own way to fly (a list row's snapshot) uses it.
+    if ((card.widget as Hero).flightShuttleBuilder case final own?
+        when own != cardShuttle) {
+      return own(flight, animation, direction, from, to);
+    }
     final picture = (card.widget as Hero).child;
     final pace = heroPace(animation);
     return AnimatedBuilder(
@@ -61,6 +66,17 @@ class CoverAppBar extends StatelessWidget {
       child: picture,
     );
   }
+
+  /// For a list row's photo (a small tilted, framed snapshot, decoded small): the flight shows the page's own photo
+  /// (decoded at the screen's width before the push), so nothing stretched or tilted flies.
+  static Widget pageShuttle(
+    BuildContext _,
+    Animation<double> _,
+    HeroFlightDirection direction,
+    BuildContext from,
+    BuildContext to,
+  ) => (((direction == HeroFlightDirection.push ? to : from).widget) as Hero)
+      .child;
 
   @override
   Widget build(BuildContext context) {

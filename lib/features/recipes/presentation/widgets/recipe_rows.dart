@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/widgets/cover_app_bar.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../domain/recipe.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
+import '../pages/recipe_detail_page.dart' show RecipePreview, recipePhotoTag;
 
 /// A recipe on its line (Book, Home feed) and a catalogue dish on its line (Home feed).
 class RecipeRow extends StatelessWidget {
@@ -31,8 +33,22 @@ class RecipeRow extends StatelessWidget {
         size: 20,
         color: nb.inkSoft,
       ),
-      trailing: recipeSnapshot(recipe),
-      onTap: () => context.push('/recipes/${recipe.id}'),
+      // The same hero as Home's card when there is a photo (not the drawing).
+      trailing: recipe.cover == null && recipe.shareId == null
+          ? recipeSnapshot(recipe)
+          : Hero(
+              tag: recipePhotoTag(recipe.id),
+              flightShuttleBuilder: CoverAppBar.pageShuttle,
+              child: recipeSnapshot(recipe),
+            ),
+      onTap: () => context.push(
+        '/recipes/${recipe.id}',
+        extra: RecipePreview(
+          name: recipe.name,
+          cover: recipe.cover,
+          shareId: recipe.shareId,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -307,7 +307,7 @@ void main() {
     expect(adapter.requests.single.path, '/places/branches/b-1/suggest');
     expect(
       adapter.requests.single.receiveTimeout,
-      const Duration(seconds: 120),
+      const Duration(seconds: 240),
     );
     expect(s.draft.label, 'AI Branch');
     expect(s.draft.lat, 2.99);

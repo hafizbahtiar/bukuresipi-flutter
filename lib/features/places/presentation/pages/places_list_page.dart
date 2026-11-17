@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart' show TagChip, TagTone, TileTag;
+import '../../../../core/widgets/cover_app_bar.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -18,6 +21,9 @@ import '../../domain/place.dart';
 import '../places_controller.dart';
 import '../widgets/merge_sheet.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
+import '../../../recipes/presentation/pages/recipe_detail_page.dart'
+    show RecipePreview, recipePhotoTag;
+import 'place_detail_page.dart' show PlacePhotoFlight, placePhotoTag;
 
 enum BookFilter { all, mine, family }
 
@@ -354,6 +360,17 @@ class PlaceTile extends StatelessWidget {
     final pinned = place.pins.isNotEmpty;
     final where = pinned ? (branch?.where ?? branch?.label) : l.noPin;
     final others = place.savedByOthers;
+    final r = place.restaurant;
+    // As Home and the map: an outlet on JAKIM (valid) first, else the post's quoted claim. Food only.
+    final halal = !r.isFood
+        ? null
+        : place.branches.any(
+            (b) => !b.closed && b.halalCert?.expiredAt(DateTime.now()) == false,
+          )
+        ? TileTag(l.feedJakimHalal, tone: TagTone.good)
+        : r.halalClaim == 'says_halal' && r.halalQuote != null
+        ? TileTag(l.feedSaysHalal)
+        : null;
     return NotebookRow(
       trailing:
           place.private ||
@@ -371,7 +388,13 @@ class PlaceTile extends StatelessWidget {
                       color: nb.inkSoft,
                     ),
                   ),
-                ?placePhoto(place),
+                // The same hero as Home's card: the photo flies into the page's header.
+                if (placePhoto(place) case final photo?)
+                  Hero(
+                    tag: placePhotoTag(place.id),
+                    flightShuttleBuilder: CoverAppBar.pageShuttle,
+                    child: photo,
+                  ),
               ],
             )
           : null,
@@ -381,7 +404,10 @@ class PlaceTile extends StatelessWidget {
         size: 20,
         color: pinned ? nb.pandan : nb.kunyit,
       ),
-      onTap: () => context.push('/places/${place.id}'),
+      onTap: () => context.push(
+        '/places/${place.id}',
+        extra: placePhoto(place) == null ? null : const PlacePhotoFlight(),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -409,6 +435,12 @@ class PlaceTile extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+          if (halal != null)
+            Padding(
+              key: ValueKey('place-halal-tag-${place.id}'),
+              padding: const EdgeInsets.only(top: spaceXs),
+              child: TagChip(halal),
+            ),
         ],
       ),
     );
@@ -432,8 +464,22 @@ class RecipeTile extends StatelessWidget {
     ];
     return NotebookRow(
       mark: Icon(Icons.menu_book, size: 20, color: nb.inkSoft),
-      trailing: recipeSnapshot(recipe),
-      onTap: () => context.push('/recipes/${recipe.id}'),
+      // The same hero as Home's card when there is a photo (not the drawing).
+      trailing: recipe.cover == null && recipe.shareId == null
+          ? recipeSnapshot(recipe)
+          : Hero(
+              tag: recipePhotoTag(recipe.id),
+              flightShuttleBuilder: CoverAppBar.pageShuttle,
+              child: recipeSnapshot(recipe),
+            ),
+      onTap: () => context.push(
+        '/recipes/${recipe.id}',
+        extra: RecipePreview(
+          name: recipe.name,
+          cover: recipe.cover,
+          shareId: recipe.shareId,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -121,6 +121,9 @@ class NotebookTitle extends StatelessWidget {
     alignment: Alignment.centerLeft,
     child: Text(
       text,
+      maxLines: 1,
+      overflow: TextOverflow
+          .ellipsis, // a long name is cut, never wrapped under the actions
       style: Notebook.of(context).hand.copyWith(fontSize: 34, height: 1),
     ),
   );

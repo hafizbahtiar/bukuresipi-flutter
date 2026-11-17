@@ -13,6 +13,9 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
+import '../widgets/cover_picker_sheet.dart';
+import '../widgets/halal_status.dart';
 import '../widgets/notebook_rating.dart';
 import '../widgets/unpinned_actions.dart';
 import 'branch_edit_page.dart';
@@ -29,6 +32,8 @@ List<TileTag> branchTags(
       tone: TagTone.danger,
       key: ValueKey('branch-closed-${b.id}'),
     ),
+  if (b.halalCert case final c? when !c.expiredAt(DateTime.now()))
+    TileTag(l.feedJakimHalal, tone: TagTone.good),
   if (!b.hasPin) TileTag(l.noPin, tone: TagTone.warn),
   if (b.pinnedByUser) TileTag(l.pinnedByUser, tone: TagTone.good),
   if (b.pinnedByOwner) TileTag(l.pinnedByOwner, tone: TagTone.good),
@@ -129,6 +134,7 @@ class BranchPage extends StatelessWidget {
     final fromPost =
         branch.id == place.savedBranch?.id && place.branchId != null;
     final tags = branchTags(l, branch, fromPost: fromPost);
+    final r = place.restaurant;
     final pinned = branch.hasPin;
     String shown(String? v) => v == null || v.trim().isEmpty ? '—' : v;
 
@@ -196,6 +202,32 @@ class BranchPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: spaceL),
         children: [
+          // The outlet's own photo, else the place's cover (or its post's picture).
+          if (branch.cover != null || r.cover != null || place.shareId != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceM),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: switch (branch.cover) {
+                    final c? => BranchPhoto(
+                      key: const ValueKey('branch-photo'),
+                      branchId: branch.id,
+                      cover: c,
+                      fallback: ColoredBox(color: nb.mist),
+                    ),
+                    null => ShareFill(
+                      id: (r.cover ?? place.shareId)!,
+                      placeId: r.cover == null ? null : r.id,
+                      fallbackShareId: r.cover == null ? null : place.shareId,
+                      fallback: ColoredBox(color: nb.mist),
+                      cacheWidth: 1000,
+                    ),
+                  },
+                ),
+              ),
+            ),
           // Header: whose branch, its status, then the two ways to go.
           Padding(
             padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 0),
@@ -258,27 +290,63 @@ class BranchPage extends StatelessWidget {
           ),
           SectionHeader(l.branchDetails),
           fact(
-            Icons.label_outline,
-            l.branchLabel,
-            shown(branch.label),
-            key: const ValueKey('branch-view-label'),
-          ),
-          fact(
             Icons.place_outlined,
             l.branchAddress,
             shown(branch.address),
             key: const ValueKey('branch-view-address'),
           ),
-          fact(Icons.location_city_outlined, l.branchCity, shown(branch.city)),
-          fact(Icons.map_outlined, l.branchState, shown(branch.state)),
-          SectionHeader(l.branchLocation),
           fact(
-            pinned ? Icons.my_location : Icons.location_off_outlined,
-            '${l.branchLatitude}, ${l.branchLongitude}',
-            pinned
-                ? '${branch.lat!.toStringAsFixed(6)}, ${branch.lng!.toStringAsFixed(6)}'
-                : l.noPin,
+            Icons.location_city_outlined,
+            '${l.branchCity}, ${l.branchState}',
+            shown(
+              [
+                ?branch.city,
+                ?branch.state,
+              ].where((v) => v.trim().isNotEmpty).join(', '),
+            ),
           ),
+          // The pin's numbers: for fixing it (the owner); everyone else has Directions and Map.
+          if (owner && pinned)
+            fact(
+              Icons.my_location,
+              '${l.branchLatitude}, ${l.branchLongitude}',
+              '${branch.lat!.toStringAsFixed(6)}, ${branch.lng!.toStringAsFixed(6)}',
+            ),
+          // Halal (food only): this outlet's JAKIM certificate, else the brand's note, else nothing known.
+          if (r.isFood) ...[
+            SectionHeader(l.placeTabHalal),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: HalalStatus(
+                  claim: r.halalQuote == null ? null : r.halalClaim,
+                ),
+              ),
+            ),
+            if (branch.halalCert != null)
+              HalalCertRow(branch: branch)
+            else if (r.halalBrand case final brand?)
+              HalalBrandRow(
+                outlets: brand.outlets,
+                url: brand.url,
+                branches: [branch],
+              )
+            else
+              ListTile(
+                key: const ValueKey('branch-halal-empty'),
+                leading: Icon(Icons.help_outline, color: nb.inkSoft),
+                title: Text(l.halalEmptyTitle),
+                subtitle: Text(l.halalEmptyText),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 0),
+              child: Text(
+                l.halalDisclaimer,
+                style: text.bodySmall?.copyWith(color: nb.inkSoft),
+              ),
+            ),
+          ],
           SectionHeader(l.reviewsTitle),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: spaceM),

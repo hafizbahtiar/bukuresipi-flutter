@@ -145,8 +145,8 @@ class PlacesRepositoryImpl implements PlacesRepository {
   Future<BranchSuggestion> suggestBranch(String branchId) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/suggest',
-      // Geocoding + the AI can take longer than the usual 30 s.
-      options: Options(receiveTimeout: const Duration(seconds: 120)),
+      // Map lookups, the web pages, JAKIM (1 s between pages), the AI draft and the photo pick: minutes at worst.
+      options: Options(receiveTimeout: const Duration(seconds: 240)),
     )).data!;
     final d = j['draft'] as Map<String, dynamic>;
     return BranchSuggestion(
@@ -189,12 +189,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
             for (final r
                 in ((k['rows'] as List?) ?? const [])
                     .cast<Map<String, dynamic>>())
-              (
-                premise: r['premise'] as String,
-                company: r['company'] as String?,
-                address: r['address'] as String,
-                expiresOn: DateTime.parse(r['expiresOn'] as String),
-              ),
+              _jakimRow(r),
           ],
           pick: (k['pick'] as num?)?.toInt(),
         ),
@@ -211,6 +206,8 @@ class PlacesRepositoryImpl implements PlacesRepository {
     String? state,
     required double? lat,
     required double? lng,
+    JakimRow? cert,
+    String? certUrl,
   }) => apiCall(
     () => _dio.post<void>(
       '/places/branches/$branchId/sibling',
@@ -220,6 +217,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
         'state': state,
         'lat': lat,
         'lng': lng,
+        if (cert != null && certUrl != null) 'cert': _certJson(cert, certUrl),
       },
     ),
   );
@@ -432,6 +430,47 @@ class PlacesRepositoryImpl implements PlacesRepository {
   final _covers = <String, Future<Uint8List?>>{};
 
   @override
+  Future<Uint8List?> branchCover(String branchId, String cover) {
+    if (_covers.length >= 80) _covers.remove(_covers.keys.first);
+    final key = 'b/$branchId/$cover';
+    return _covers[key] ??=
+        diskCached(
+          'rcover-$cover', // the same photo as a place cover that took it
+          () => _bytes('/places/branches/$branchId/cover'),
+        )..catchError((Object _) {
+          _covers.remove(key);
+          return null;
+        });
+  }
+
+  @override
+  Future<void> setBranchCover(String branchId, String? url) => apiCall(
+    () => _dio.put<void>(
+      '/places/branches/$branchId/cover',
+      data: {'url': url},
+      // The server downloads the photo first.
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+    ),
+  );
+
+  @override
+  Future<void> uploadBranchCover(String branchId, String path) =>
+      apiCall(() async {
+        await _dio.put<void>(
+          '/places/branches/$branchId/cover/photo',
+          data: FormData.fromMap({
+            'image': await MultipartFile.fromFile(
+              path,
+              contentType: DioMediaType(
+                'image',
+                'jpeg',
+              ), // the photo editor's output
+            ),
+          }),
+        );
+      });
+
+  @override
   Future<Uint8List?> placeCover(String placeId, String cover) {
     if (_covers.length >= 80) _covers.remove(_covers.keys.first);
     final key = '$placeId/$cover';
@@ -512,41 +551,37 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
-  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
-    String placeId,
-  ) => apiCall(() async {
-    final j = (await _dio.post<Map<String, dynamic>>(
-      '/places/restaurants/$placeId/halal-check',
-      options: Options(receiveTimeout: const Duration(seconds: 180)),
-    )).data!;
-    return (
-      outlets: (j['outlets'] as num?)?.toInt(),
-      branches: {
-        for (final b
-            in ((j['branches'] as List?) ?? const [])
-                .cast<Map<String, dynamic>>())
-          b['branchId'] as String: b['status'] as String,
-      },
-    );
-  });
+  Future<JakimOutlets> placeOutlets(String placeId, {String? q}) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/places/restaurants/$placeId/halal-outlets',
+          data: q == null ? null : {'q': q},
+          // JAKIM's site, up to 5 pages a second apart.
+          options: Options(receiveTimeout: const Duration(seconds: 90)),
+        )).data!;
+        return (
+          status: j['status'] as String,
+          url: j['url'] as String?,
+          rows: [
+            for (final r
+                in ((j['rows'] as List?) ?? const [])
+                    .cast<Map<String, dynamic>>())
+              (
+                row: _jakimRow(r),
+                branchId: r['branchId'] as String?,
+                nearBranchId: r['nearBranchId'] as String?,
+              ),
+          ],
+          more: j['more'] as bool? ?? false,
+        );
+      });
 
   @override
   Future<void> setHalalCert(String branchId, JakimRow? row, String url) =>
       apiCall(
         () => _dio.put<void>(
           '/places/branches/$branchId/halal-cert',
-          data: {
-            'cert': row == null
-                ? null
-                : {
-                    'premise': row.premise,
-                    'expiresOn': row.expiresOn.toIso8601String().substring(
-                      0,
-                      10,
-                    ),
-                    'url': url,
-                  },
-          },
+          data: {'cert': row == null ? null : _certJson(row, url)},
         ),
       );
 
@@ -695,7 +730,21 @@ Place placeFromJson(Map<String, dynamic> j) {
           closed: b['closedAt'] != null,
           rating: ratingFromJson(b['rating']),
           halalCert: HalalCert.fromJson(b['halalCert']),
+          cover: b['cover'] as String?,
         ),
     ],
   );
 }
+
+Map<String, dynamic> _certJson(JakimRow row, String url) => {
+  'premise': row.premise,
+  'expiresOn': row.expiresOn.toIso8601String().substring(0, 10),
+  'url': url,
+};
+
+JakimRow _jakimRow(Map<String, dynamic> r) => (
+  premise: r['premise'] as String,
+  company: r['company'] as String?,
+  address: r['address'] as String,
+  expiresOn: DateTime.parse(r['expiresOn'] as String),
+);

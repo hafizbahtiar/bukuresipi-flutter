@@ -317,7 +317,16 @@ class NearbyCard extends StatelessWidget {
                                 Flexible(child: tag(cuisine)),
                                 const SizedBox(width: 6),
                               ],
-                              if (saysHalal)
+                              // This outlet on JAKIM (not expired) first, as Home; else the post's quoted claim.
+                              if (place.jakimHalal)
+                                Flexible(
+                                  child: tag(
+                                    l.feedJakimHalal,
+                                    icon: Icons.verified_outlined,
+                                    color: nb.pandanDeep,
+                                  ),
+                                )
+                              else if (saysHalal)
                                 Flexible(
                                   child: tag(
                                     l.feedSaysHalal,

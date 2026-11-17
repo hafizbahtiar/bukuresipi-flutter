@@ -8,10 +8,12 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/place.dart';
 import '../places_controller.dart';
+import '../widgets/cover_picker_sheet.dart';
+import '../widgets/jakim_check.dart';
 import '../widgets/place_category.dart';
 
-/// Owner: edit mode of the main place (shared by every user): its name, category + type and (food only) cuisine. Halal is not here: it stays
-/// a quoted claim. Branches have their own page.
+/// Owner: edit mode of the main place (shared by every user): its name, category + type and (food only) cuisine and
+/// halal (the quoted claim read only, JAKIM checked here). Branches have their own page.
 class PlaceEditPage extends StatefulWidget {
   const PlaceEditPage({super.key, required this.restaurant});
 
@@ -35,6 +37,9 @@ class _PlaceEditPageState extends State<PlaceEditPage> {
   late String? _subcategory = widget.restaurant.subcategory;
   bool _saving = false;
   bool _tried = false;
+
+  /// The cover picked here; applied by Save (null = unchanged).
+  CoverChoice? _cover;
 
   Future<void> _pickCategory() async {
     final l = AppLocalizations.of(context);
@@ -89,8 +94,9 @@ class _PlaceEditPageState extends State<PlaceEditPage> {
     }
     final cuisine = _cuisine.text.trim();
     setState(() => _saving = true);
+    final places = context.read<PlacesController>();
     try {
-      await context.read<PlacesController>().updateRestaurant(
+      await places.updateRestaurant(
         widget.restaurant.id,
         name: name,
         category: _category,
@@ -98,6 +104,13 @@ class _PlaceEditPageState extends State<PlaceEditPage> {
         // Cuisine is for food: another category clears it.
         cuisine: cuisine.isEmpty || !_food ? null : cuisine,
       );
+      switch (_cover) {
+        case (cover: _, path: final path?):
+          await places.uploadRestaurantCover(widget.restaurant.id, path);
+        case (cover: final cover, path: null):
+          await places.setRestaurantCover(widget.restaurant.id, cover);
+        case null:
+      }
       messenger.showSnackBar(SnackBar(content: Text(l.placeSaved)));
       nav.pop();
     } catch (e) {
@@ -137,6 +150,7 @@ class _PlaceEditPageState extends State<PlaceEditPage> {
       appBar: AppBar(
         toolbarHeight: 76,
         title: NotebookTitle(l.placeEdit),
+        bottom: OwnerStrip(l.ownerEditsEveryone),
         actions: [
           _saving
               ? const Padding(
@@ -148,61 +162,96 @@ class _PlaceEditPageState extends State<PlaceEditPage> {
                 )
               : IconButton(
                   key: const ValueKey('place-save'),
-                  tooltip: l.save,
+                  tooltip: l.saveForEveryone,
                   icon: const Icon(Icons.check),
                   onPressed: _save,
                 ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(spaceM),
-        children: [
-          InfoCard(text: l.placeEditShared, icon: Icons.groups_outlined),
-          const SizedBox(height: spaceM),
-          TextField(
-            key: const ValueKey('place-name'),
-            controller: _name,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            maxLength: 120,
-            onChanged: (_) {
-              if (_tried) setState(() {});
-            },
-            decoration: InputDecoration(
-              labelText: l.placeName,
-              errorText: _tried && _name.text.trim().isEmpty
-                  ? l.placeNameRequired
-                  : null,
-            ),
+      // The standard segments (as the place page): Place, and Halal for a food place.
+      body: EditTabs(
+        sections: [
+          DetailSection(
+            id: 'place-edit-tab-details',
+            label: l.placeEditTabDetails,
+            rows: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceM),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    PlaceCoverField(
+                      restaurantId: widget.restaurant.id,
+                      choice: _cover,
+                      onChanged: (c) => setState(() => _cover = c),
+                    ),
+                    const SizedBox(height: spaceM),
+                    InfoCard(
+                      text: l.placeEditShared,
+                      icon: Icons.groups_outlined,
+                    ),
+                    const SizedBox(height: spaceM),
+                    TextField(
+                      key: const ValueKey('place-name'),
+                      controller: _name,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                      maxLength: 120,
+                      onChanged: (_) {
+                        if (_tried) setState(() {});
+                      },
+                      decoration: InputDecoration(
+                        labelText: l.placeName,
+                        errorText: _tried && _name.text.trim().isEmpty
+                            ? l.placeNameRequired
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: spaceS),
+                    _pickerField(
+                      key: const ValueKey('place-category'),
+                      label: l.placeCategory,
+                      icon: placeCategoryIcon(_category),
+                      value: placeCategoryLabel(l, _category),
+                      onTap: _pickCategory,
+                    ),
+                    if (PlaceRestaurant.categories[_category]?.isNotEmpty ??
+                        false) ...[
+                      const SizedBox(height: spaceM),
+                      _pickerField(
+                        key: const ValueKey('place-subcategory'),
+                        label: l.placeSubcategory,
+                        icon: placeCategoryIcon(_category, _subcategory),
+                        value: placeSubcategoryLabel(l, _subcategory ?? ''),
+                        onTap: _pickSubcategory,
+                      ),
+                    ],
+                    const SizedBox(height: spaceM),
+                    if (_food)
+                      TextField(
+                        key: const ValueKey('place-cuisine'),
+                        controller: _cuisine,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.done,
+                        maxLength: 100,
+                        onSubmitted: (_) => _save(),
+                        decoration: InputDecoration(labelText: l.placeCuisine),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: spaceS),
-          _pickerField(
-            key: const ValueKey('place-category'),
-            label: l.placeCategory,
-            icon: placeCategoryIcon(_category),
-            value: placeCategoryLabel(l, _category),
-            onTap: _pickCategory,
-          ),
-          if (PlaceRestaurant.categories[_category]?.isNotEmpty ?? false) ...[
-            const SizedBox(height: spaceM),
-            _pickerField(
-              key: const ValueKey('place-subcategory'),
-              label: l.placeSubcategory,
-              icon: placeCategoryIcon(_category, _subcategory),
-              value: placeSubcategoryLabel(l, _subcategory ?? ''),
-              onTap: _pickSubcategory,
-            ),
-          ],
-          const SizedBox(height: spaceM),
           if (_food)
-            TextField(
-              key: const ValueKey('place-cuisine'),
-              controller: _cuisine,
-              textCapitalization: TextCapitalization.sentences,
-              textInputAction: TextInputAction.done,
-              maxLength: 100,
-              onSubmitted: (_) => _save(),
-              decoration: InputDecoration(labelText: l.placeCuisine),
+            DetailSection(
+              id: 'place-edit-tab-halal',
+              label: l.halalEditTitle,
+              rows: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                  child: PlaceHalalEditor(restaurant: widget.restaurant),
+                ),
+              ],
             ),
         ],
       ),

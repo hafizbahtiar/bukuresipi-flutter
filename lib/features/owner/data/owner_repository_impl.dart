@@ -185,6 +185,8 @@ class OwnerRepositoryImpl implements OwnerRepository {
   ) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/owner/recipes/$recipeId/variants',
+      // A web search, each page read and every line named by the AI: past the default 30 s.
+      options: Options(receiveTimeout: const Duration(seconds: 180)),
     )).data!;
     return (
       variants: [
@@ -200,7 +202,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/owner/recipes/$recipeId/draft',
       // A web search, up to 6 pages and an AI call: longer than the default 30 s wait.
-      options: Options(receiveTimeout: const Duration(seconds: 120)),
+      options: Options(receiveTimeout: const Duration(seconds: 180)),
     )).data!;
     List<String> texts(String k) => (j[k] as List).cast<String>();
     return (

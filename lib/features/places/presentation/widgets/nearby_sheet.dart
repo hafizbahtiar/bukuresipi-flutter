@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
@@ -170,6 +171,43 @@ class _NearbySheetState extends State<NearbySheet> {
                   onTap: () => context.push('/branches/${p.branchId}/reviews'),
                 ),
               ),
+              // JAKIM's directory lists this outlet: its own block, apart from what posts say.
+              if (p.halalCert case final cert?) ...[
+                SectionHeader(l.halalCertTitle),
+                ListTile(
+                  key: const ValueKey('nearby-jakim'),
+                  leading: Icon(
+                    Icons.verified_outlined,
+                    color: cert.expiredAt(DateTime.now())
+                        ? nb.margin
+                        : nb.pandanDeep,
+                  ),
+                  title: Text(cert.premise),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (cert.expiredAt(DateTime.now())
+                            ? l.halalCertExpired
+                            : l.halalCertValid)(
+                          _day(context, cert.expiresOn),
+                          _day(context, cert.checkedAt),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () =>
+                            openLink(context, cert.url, failed: l.openFailed),
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: Text(l.halalCertOpen),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (p.halalClaim != null && p.halalQuote != null) ...[
                 SectionHeader(l.halalTitle),
                 ListTile(
@@ -244,3 +282,6 @@ class _NearbySheetState extends State<NearbySheet> {
     );
   }
 }
+
+String _day(BuildContext context, DateTime d) =>
+    DateFormat.yMMMd(Localizations.localeOf(context).toString()).format(d);

@@ -14,6 +14,7 @@ import '../../../../core/widgets/system_pages.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../places/domain/nearby_branch.dart';
@@ -282,7 +283,7 @@ class _FeedPageState extends State<FeedPage> {
       return;
     }
     final places = context.read<PlacesController>();
-    showNotebookSheet<void>(
+    showBaseSheet<void>(
       context,
       builder: (_) => NearbySheet(
         place: place,
@@ -431,6 +432,12 @@ class _FeedPageState extends State<FeedPage> {
     final showRestaurants = _kind != FeedKind.recipes;
     final showRecipes = _kind != FeedKind.restaurants;
 
+    // One flight per place: two branches of a saved place near you would share its photo's Hero tag (an assert).
+    final flies = <String, String>{
+      for (final p in _nearby.reversed) // nearest last: it wins
+        if (p.saved && p.savedPlaceId != null) p.savedPlaceId!: p.branchId,
+    };
+
     Widget place(NearbyBranch p) => FeedCard(
       key: ValueKey('feed-place-${p.branchId}'),
       kind: l.feedKindRestaurant,
@@ -459,7 +466,7 @@ class _FeedPageState extends State<FeedPage> {
           final photo = ShareFill(id: cover, placeId: p.placeId, fallback: ph);
           // A saved place opens its page: the photo flies into the header there. Not saved = a sheet, no flight.
           return switch (p.savedPlaceId) {
-            final id? when p.saved => Hero(
+            final id? when p.saved && flies[id] == p.branchId => Hero(
               tag: placePhotoTag(id),
               createRectTween: CoverAppBar.flight,
               flightShuttleBuilder: CoverAppBar.cardShuttle,

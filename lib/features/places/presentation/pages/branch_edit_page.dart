@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/widgets/draft_photos.dart';
 
@@ -18,6 +17,8 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../domain/place.dart';
 import 'pin_picker_page.dart';
 import '../places_controller.dart';
+import '../widgets/cover_picker_sheet.dart';
+import '../widgets/jakim_check.dart';
 
 typedef BranchEdit = ({
   String? label,
@@ -76,7 +77,8 @@ class _BranchEditPageState extends State<BranchEditPage> {
   late final _lngText = TextEditingController(
     text: widget.branch.lng?.toStringAsFixed(6) ?? '',
   );
-  late BranchEditScope _scope = widget.canEditShared
+  // One door per role: the owner edits for everyone, a user for themselves (no switch to get wrong).
+  late final BranchEditScope _scope = widget.canEditShared
       ? BranchEditScope.shared
       : BranchEditScope.personal;
   bool _pinChanged = false;
@@ -95,8 +97,6 @@ class _BranchEditPageState extends State<BranchEditPage> {
   /// A draft photo picked as the restaurant's cover: set when the branch is saved.
   String? _photo;
 
-  /// The draft's JAKIM row ticked as this outlet's halal certificate (index): stored when the branch is saved.
-  int? _jakim;
   final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
 
@@ -258,21 +258,17 @@ class _BranchEditPageState extends State<BranchEditPage> {
       'jakim' => l.pinSearchJakim,
       _ => l.pinSearchGrab,
     };
-    final picked = await showModalBottomSheet<PinHit>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheet) => SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(sheet).height * 0.8,
-          ),
-          child: _PinHitsSheet(
-            title: l.pinResultsTitle(hits.length, map),
-            query: _pinQuery.text,
-            hits: hits,
-            onAdd: _addBranch,
-          ),
+    final picked = await showBaseSheet<PinHit>(
+      context,
+      builder: (sheet) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheet).height * 0.8,
+        ),
+        child: _PinHitsSheet(
+          title: l.pinResultsTitle(hits.length, map),
+          query: _pinQuery.text,
+          hits: hits,
+          onAdd: _addBranch,
         ),
       ),
     );
@@ -392,7 +388,6 @@ class _BranchEditPageState extends State<BranchEditPage> {
       setState(() {
         _suggestion = suggestion;
         _photo = null;
-        _jakim = suggestion.jakim?.pick;
         _aiFields.clear();
         if (suggestion.draft.label case final label?) {
           _label.text = label;
@@ -481,20 +476,12 @@ class _BranchEditPageState extends State<BranchEditPage> {
         lng: sendPin ? lng : null,
       ), _scope);
       // The branch is saved: a failed photo only says so (saving again would not help the photo).
-      if ((_photo, _suggestion?.placeId) case (final url?, final id?)) {
+      // The draft's photo is this outlet's own (Edit place can take it as the place's cover).
+      if (_photo case final url?) {
         try {
-          await places.setRestaurantCoverUrl(id, url);
+          await places.setBranchCover(widget.branch.id, url);
         } catch (_) {
           messenger.showSnackBar(SnackBar(content: Text(l.placeCoverFailed)));
-        }
-      }
-      if ((_jakim, _suggestion?.jakim) case (final i?, final jakim?)) {
-        try {
-          await places.setHalalCert(widget.branch.id, jakim.rows[i], jakim.url);
-        } catch (_) {
-          messenger.showSnackBar(
-            SnackBar(content: Text(l.halalCertSaveFailed)),
-          );
         }
       }
       if (!mounted) return;
@@ -529,6 +516,9 @@ class _BranchEditPageState extends State<BranchEditPage> {
         title: NotebookTitle(
           _scope == BranchEditScope.shared ? l.editBranch : l.editBranchMine,
         ),
+        bottom: _scope == BranchEditScope.shared
+            ? OwnerStrip(l.ownerEditsEveryone)
+            : null,
         actions: [
           if (_saving)
             const Padding(
@@ -541,7 +531,9 @@ class _BranchEditPageState extends State<BranchEditPage> {
           else
             IconButton(
               key: const ValueKey('branch-save'),
-              tooltip: l.save,
+              tooltip: _scope == BranchEditScope.shared
+                  ? l.saveForEveryone
+                  : l.save,
               icon: const Icon(Icons.check),
               onPressed: canSave ? _save : null,
             ),
@@ -549,167 +541,176 @@ class _BranchEditPageState extends State<BranchEditPage> {
       ),
       body: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        // Not a lazy list: every field exists at once (a draft fills fields below the fold).
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceL),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.canEditShared) ...[
-                Text(
-                  l.branchScope,
-                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                ),
-                const SizedBox(height: 6),
-                SegmentedButton<BranchEditScope>(
-                  showSelectedIcon: false,
-                  selected: {_scope},
-                  onSelectionChanged: (picked) =>
-                      setState(() => _scope = picked.first),
-                  segments: [
-                    ButtonSegment(
-                      value: BranchEditScope.personal,
-                      label: Text(l.branchScopeMine),
-                    ),
-                    ButtonSegment(
-                      value: BranchEditScope.shared,
-                      label: Text(l.branchScopeEveryone),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-              Text(
-                _scope == BranchEditScope.shared
-                    ? l.branchShared
-                    : l.branchPersonalOnly,
-                style: text.bodySmall?.copyWith(color: nb.inkSoft),
-              ),
-              const SizedBox(height: 8),
-              if (widget.canEditShared && widget.onSuggest != null) ...[
-                if (_suggesting)
-                  const _AiLoading()
-                else ...[
-                  if (_suggestion case final suggestion?)
-                    _DraftBanner(
-                      suggestion: suggestion,
-                      branch: widget.branch,
-                      used: _aiFields,
-                      onPick: _pickDraft,
-                      photo: _photo,
-                      onPhoto: (url) => setState(() => _photo = url),
-                      jakim: _jakim,
-                      onJakim: (i) => setState(() => _jakim = i),
-                      onUsePin: (c) =>
-                          _useFound(c.lat, c.lng, address: c.address),
-                    ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: AiButton(
-                      label: _suggestion == null
-                          ? l.aiSuggest
-                          : l.aiSuggestAgain,
-                      onPressed: _saving ? null : _suggest,
-                    ),
-                  ),
-                ],
-                _pinSearch(l, nb, text),
-              ],
-              const SizedBox(height: 16),
-              KeyedSubtree(
-                key: _labelAnchor,
-                child: _field(
-                  key: const ValueKey('branch-label'),
-                  controller: _label,
-                  label: l.branchLabel,
-                  ai: _aiFields.contains('label'),
-                ),
-              ),
-              _field(
-                key: const ValueKey('branch-address'),
-                controller: _address,
-                label: l.branchAddress,
-                ai: _aiFields.contains('address'),
-              ),
-              FutureBuilder(
-                future: _areas,
-                builder: (context, s) => _areaFields(l, s.data ?? const []),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l.branchLocation,
-                style: text.labelLarge?.copyWith(color: nb.inkSoft),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _field(
-                      key: const ValueKey('branch-lat'),
-                      controller: _latText,
-                      label: l.branchLatitude,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                        signed: true,
-                      ),
-                      errorText: latError,
-                      ai: _aiFields.contains('location'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _field(
-                      key: const ValueKey('branch-lng'),
-                      controller: _lngText,
-                      label: l.branchLongitude,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                        signed: true,
-                      ),
-                      errorText: lngError,
-                      ai: _aiFields.contains('location'),
-                    ),
-                  ),
-                ],
-              ),
-              TextField(
-                key: const ValueKey('branch-maps-link'),
-                controller: _mapsLink,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.go,
-                onSubmitted: (_) => _useMapsLink(),
-                decoration: InputDecoration(
-                  labelText: l.mapsLinkLabel,
-                  helperText: l.mapsLinkHint,
-                  helperMaxLines: 2,
-                  prefixIcon: const Icon(Icons.link, size: 20),
-                  suffixIcon: _readingLink
-                      ? const Padding(
-                          padding: EdgeInsets.all(14),
-                          child: SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
+        // The standard segments (as the place page): Branch, and Halal for the owner.
+        child: EditTabs(
+          sections: [
+            DetailSection(
+              id: 'branch-tab-details',
+              label: l.branchTabDetails,
+              rows: [
+                // One row, not a lazy list: every field exists at once (a draft fills fields below the fold).
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (widget.canEditShared) ...[
+                        BranchCoverField(
+                          branchId: widget.branch.id,
+                          picked: _photo,
+                        ),
+                        const SizedBox(height: spaceM),
+                      ] else ...[
+                        // The owner's page says it in its strip; a user's edit is theirs alone.
+                        Text(
+                          l.branchPersonalOnly,
+                          style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (widget.canEditShared && widget.onSuggest != null) ...[
+                        if (_suggesting)
+                          const _AiLoading()
+                        else ...[
+                          if (_suggestion case final suggestion?)
+                            _DraftBanner(
+                              suggestion: suggestion,
+                              branch: widget.branch,
+                              used: _aiFields,
+                              onPick: _pickDraft,
+                              photo: _photo,
+                              onPhoto: (url) => setState(() => _photo = url),
+                              onUsePin: (c) =>
+                                  _useFound(c.lat, c.lng, address: c.address),
+                            ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: AiButton(
+                              label: _suggestion == null
+                                  ? l.aiSuggest
+                                  : l.aiSuggestAgain,
+                              onPressed: _saving ? null : _suggest,
                             ),
                           ),
-                        )
-                      : TextButton(
-                          onPressed: _useMapsLink,
-                          child: Text(l.mapsLinkUse),
+                        ],
+                        _pinSearch(l, nb, text),
+                      ],
+                      const SizedBox(height: 16),
+                      KeyedSubtree(
+                        key: _labelAnchor,
+                        child: _field(
+                          key: const ValueKey('branch-label'),
+                          controller: _label,
+                          label: l.branchLabel,
+                          ai: _aiFields.contains('label'),
                         ),
+                      ),
+                      _field(
+                        key: const ValueKey('branch-address'),
+                        controller: _address,
+                        label: l.branchAddress,
+                        ai: _aiFields.contains('address'),
+                      ),
+                      FutureBuilder(
+                        future: _areas,
+                        builder: (context, s) =>
+                            _areaFields(l, s.data ?? const []),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l.branchLocation,
+                        style: text.labelLarge?.copyWith(color: nb.inkSoft),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _field(
+                              key: const ValueKey('branch-lat'),
+                              controller: _latText,
+                              label: l.branchLatitude,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
+                              errorText: latError,
+                              ai: _aiFields.contains('location'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _field(
+                              key: const ValueKey('branch-lng'),
+                              controller: _lngText,
+                              label: l.branchLongitude,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
+                              errorText: lngError,
+                              ai: _aiFields.contains('location'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextField(
+                        key: const ValueKey('branch-maps-link'),
+                        controller: _mapsLink,
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.go,
+                        onSubmitted: (_) => _useMapsLink(),
+                        decoration: InputDecoration(
+                          labelText: l.mapsLinkLabel,
+                          helperText: l.mapsLinkHint,
+                          helperMaxLines: 2,
+                          prefixIcon: const Icon(Icons.link, size: 20),
+                          suffixIcon: _readingLink
+                              ? const Padding(
+                                  padding: EdgeInsets.all(14),
+                                  child: SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator.adaptive(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : TextButton(
+                                  onPressed: _useMapsLink,
+                                  child: Text(l.mapsLinkUse),
+                                ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: _pickOnMap,
+                          icon: const Icon(Icons.map_outlined, size: 18),
+                          label: Text(l.setOnMap),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            if (widget.canEditShared)
+              DetailSection(
+                id: 'branch-tab-halal',
+                label: l.halalEditTitle,
+                rows: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                    child: BranchHalalEditor(
+                      branch: widget.branch,
+                      draft: _suggestion?.jakim,
+                    ),
+                  ),
+                ],
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _pickOnMap,
-                  icon: const Icon(Icons.map_outlined, size: 18),
-                  label: Text(l.setOnMap),
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -817,15 +818,9 @@ class _DraftBanner extends StatelessWidget {
     required this.onUsePin,
     required this.photo,
     required this.onPhoto,
-    required this.jakim,
-    required this.onJakim,
   });
 
   final BranchSuggestion suggestion;
-
-  /// The ticked JAKIM row (null = none) and its change.
-  final int? jakim;
-  final ValueChanged<int?> onJakim;
 
   /// The picked cover photo (null = none) and its change.
   final String? photo;
@@ -926,41 +921,17 @@ class _DraftBanner extends StatelessWidget {
               onPick: onPhoto,
             ),
           ],
-          if (suggestion.jakim case final k? when k.rows.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              l.jakimDraftTitle,
-              style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            // Its own Material: the banner's colour would hide the tiles' ink otherwise.
-            Material(
-              type: MaterialType.transparency,
-              child: Column(
-                children: [
-                  for (final (i, r) in k.rows.indexed)
-                    CheckboxListTile(
-                      key: ValueKey('jakim-$i'),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: jakim == i,
-                      onChanged: (on) => onJakim(on == true ? i : null),
-                      title: Text(r.premise, style: text.bodyMedium),
-                      subtitle: Text(
-                        l.jakimDraftRow(
-                          r.address,
-                          DateFormat.yMMMd(
-                            Localizations.localeOf(context).toString(),
-                          ).format(r.expiresOn),
-                        ),
-                        style: small,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Text(l.jakimDraftNote, style: small),
-          ],
+          // JAKIM's rows are in the Halal tab; here only what the draft got from it.
+          const SizedBox(height: 8),
+          Text(
+            switch (suggestion.jakim) {
+              null => l.jakimDraftDown,
+              (rows: [], url: _, pick: _) => l.jakimDraftNone,
+              _ => l.jakimDraftSeeHalal,
+            },
+            key: const ValueKey('jakim-draft-status'),
+            style: small,
+          ),
           for (final warning in suggestion.warnings)
             Padding(
               padding: const EdgeInsets.only(top: 6),

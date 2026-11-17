@@ -62,6 +62,8 @@ abstract interface class PlacesRepository {
     String? state,
     required double? lat,
     required double? lng,
+    JakimRow? cert,
+    String? certUrl,
   });
 
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
@@ -83,6 +85,15 @@ abstract interface class PlacesRepository {
   /// The restaurant's chosen cover photo; null = none. [cover] is the id from the DTO (cache key).
   Future<Uint8List?> placeCover(String placeId, String cover);
 
+  /// A branch's own cover photo bytes; null = none.
+  Future<Uint8List?> branchCover(String branchId, String cover);
+
+  /// Owner only: a branch's own cover from a web photo ([url]), or none (null).
+  Future<void> setBranchCover(String branchId, String? url);
+
+  /// Owner only: a photo of their own (camera or gallery) as the branch's cover.
+  Future<void> uploadBranchCover(String branchId, String path);
+
   /// Owner only: the post thumbnails to pick a cover from, and the current pick.
   Future<({List<String> covers, String? current})> coverCandidates(
     String placeId,
@@ -97,10 +108,8 @@ abstract interface class PlacesRepository {
   /// Owner only: "Check JAKIM" on one branch now. Throws ApiException.
   Future<JakimCheck> checkHalalBranch(String branchId);
 
-  /// Owner only: "Check JAKIM" on a place: the brand's count across Malaysia, then each branch's status by id.
-  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
-    String placeId,
-  );
+  /// Owner only: the brand's JAKIM outlets across Malaysia ([q] = the owner's own words); nothing written.
+  Future<JakimOutlets> placeOutlets(String placeId, {String? q});
 
   /// Owner only: a branch's JAKIM halal certificate from a draft row ([url] = the directory page); null clears it.
   Future<void> setHalalCert(String branchId, JakimRow? row, String url);

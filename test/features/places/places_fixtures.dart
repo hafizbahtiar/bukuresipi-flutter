@@ -188,6 +188,20 @@ class FakePlaces implements PlacesRepository {
   Future<Uint8List?> placeCover(String placeId, String cover) async => null;
 
   @override
+  Future<Uint8List?> branchCover(String branchId, String cover) async => null;
+
+  /// Branch cover calls: (branch, url, `file:PATH` for an upload, or null).
+  final branchCovers = <(String, String?)>[];
+
+  @override
+  Future<void> setBranchCover(String branchId, String? url) async =>
+      branchCovers.add((branchId, url));
+
+  @override
+  Future<void> uploadBranchCover(String branchId, String path) async =>
+      branchCovers.add((branchId, 'file:$path'));
+
+  @override
   Future<({List<String> covers, String? current})> coverCandidates(
     String placeId,
   ) async => (covers: coverIds, current: currentCover);
@@ -215,10 +229,9 @@ class FakePlaces implements PlacesRepository {
     rows: const [],
     pick: null,
   );
-  ({int? outlets, Map<String, String> branches}) placeHalalCheck = (
-    outlets: null,
-    branches: const {},
-  );
+  JakimOutlets outlets = (status: 'ok', url: null, rows: const [], more: false);
+
+  /// `branch:ID` per branch check, `place:ID` (or `place:ID:q`) per outlet list.
   final halalChecks = <String>[];
 
   @override
@@ -228,11 +241,9 @@ class FakePlaces implements PlacesRepository {
   }
 
   @override
-  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
-    String placeId,
-  ) async {
-    halalChecks.add('place:$placeId');
-    return placeHalalCheck;
+  Future<JakimOutlets> placeOutlets(String placeId, {String? q}) async {
+    halalChecks.add(q == null ? 'place:$placeId' : 'place:$placeId:$q');
+    return outlets;
   }
 
   /// [setHalalCert] calls: (branch, JAKIM outlet or null, directory url).
@@ -394,8 +405,8 @@ class FakePlaces implements PlacesRepository {
     return suggestion;
   }
 
-  /// [addSiblingBranch] calls: (branch, address, lat).
-  final siblings = <(String, String?, double?)>[];
+  /// [addSiblingBranch] calls: (branch, address, lat, JAKIM premise).
+  final siblings = <(String, String?, double?, String?)>[];
 
   @override
   Future<void> addSiblingBranch(
@@ -405,7 +416,9 @@ class FakePlaces implements PlacesRepository {
     String? state,
     required double? lat,
     required double? lng,
-  }) async => siblings.add((branchId, address, lat));
+    JakimRow? cert,
+    String? certUrl,
+  }) async => siblings.add((branchId, address, lat, cert?.premise));
 
   /// What [searchPin] answers; [pinSearches] records (branch, source, q).
   List<PinHit> pinHits = const [];

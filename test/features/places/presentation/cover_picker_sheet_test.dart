@@ -10,6 +10,7 @@ import '../places_fixtures.dart';
 
 void main() {
   final l = lookupAppLocalizations(const Locale('en'));
+  CoverChoice? picked;
 
   Future<FakePlaces> pump(
     WidgetTester t,
@@ -19,6 +20,7 @@ void main() {
     final places = FakePlaces()
       ..coverIds = covers
       ..currentCover = current;
+    picked = null;
     await t.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => PlacesController(places),
@@ -33,7 +35,7 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) => TextButton(
-                onPressed: () => showModalBottomSheet<void>(
+                onPressed: () async => picked = await showModalBottomSheet(
                   context: context,
                   builder: (_) => const CoverPickerSheet(placeId: 'r-1'),
                 ),
@@ -49,21 +51,22 @@ void main() {
     return places;
   }
 
-  testWidgets('the owner taps a post photo and it becomes the cover', (
+  testWidgets('tapping a photo picks it; nothing is saved by the sheet', (
     t,
   ) async {
     final places = await pump(t, ['aa', 'bb'], 'aa');
     await t.tap(find.byKey(const ValueKey('cover-bb')));
     await t.pumpAndSettle();
-    expect(places.coverPicks, ['bb']);
-    expect(find.text(l.coverSaved), findsOneWidget);
+    expect(picked, (cover: 'bb', path: null));
+    expect(places.coverPicks, isEmpty);
   });
 
   testWidgets('the cover can be cleared', (t) async {
     final places = await pump(t, ['aa'], 'aa');
     await t.tap(find.text(l.coverNone));
     await t.pumpAndSettle();
-    expect(places.coverPicks, [null]);
+    expect(picked, (cover: null, path: null));
+    expect(places.coverPicks, isEmpty);
   });
 
   testWidgets('no post photos yet: says how to get one, nothing to clear', (

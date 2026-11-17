@@ -198,6 +198,11 @@ void main() {
         inCard('feed-place-b-2', find.text(l.feedJakimHalal)),
         findsNothing,
       );
+      // Not saved: the standard sheet, with the certificate apart from what posts say.
+      await t.tap(find.byKey(const ValueKey('feed-place-b-1')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('nearby-jakim')), findsOneWidget);
+      expect(find.text('KEDAI SEDERHANA'), findsOneWidget);
     },
   );
 
@@ -351,6 +356,15 @@ void main() {
           cover: 'cv-3',
         ),
         nearbyBranch(branchId: 'b-4', name: 'Not Saved', cover: 'cv-4'),
+        // Another branch of the same saved place, farther: no second hero with the same tag.
+        nearbyBranch(
+          branchId: 'b-5',
+          name: 'Nasi Kandar Ali Dua',
+          distanceM: 900,
+          saved: true,
+          savedPlaceId: 'up-1',
+          cover: 'cv-3',
+        ),
       ];
       await t
           .element(find.byType(FeedPage))
@@ -365,6 +379,7 @@ void main() {
           .evaluate()
           .map((e) => (e.widget as Hero).tag);
       expect(tags('feed-place-b-3'), [placePhotoTag('up-1')]);
+      expect(tags('feed-place-b-5'), isEmpty);
       expect(
         tags('feed-place-b-4'),
         isEmpty,
