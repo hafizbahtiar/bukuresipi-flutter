@@ -7,6 +7,7 @@ import '../../../../core/widgets/draft_photos.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/router/base_page_transitions.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/ai_button.dart';
@@ -29,11 +30,11 @@ typedef BranchEdit = ({
   double? lng,
 });
 
-/// Opens the branch edit page; true = saved.
+/// Opens the branch edit page (the standard page transition, not the book flip); true = saved.
 Future<bool?> showBranchEdit(
   BuildContext context, {
   required WidgetBuilder builder,
-}) => Navigator.of(context).push<bool>(MaterialPageRoute(builder: builder));
+}) => Navigator.of(context).push<bool>(standardRoute<bool>(builder));
 
 /// Edit for one branch, as a page (back = cancel). A normal user's edit is private to them; an owner can also choose to change the shared
 /// branch. Moving a shared pin claims it as 'owner'; a text-only edit keeps the existing source.

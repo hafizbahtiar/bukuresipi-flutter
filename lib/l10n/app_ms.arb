@@ -1092,5 +1092,9 @@
   "pantryAddMissing": "Tambah yang kurang ke senarai belian",
   "pantryAdded": "Ditambah ke senarai belian",
   "ownerEditsEveryone": "Pemilik: semua pengguna nampak apa yang anda simpan di sini",
-  "saveForEveryone": "Simpan untuk semua"
+  "saveForEveryone": "Simpan untuk semua",
+  "deleteScopePlaceMine": "Hanya anda: ia keluar dari buku anda (bersama rating dan ulasan anda). Tempat, cawangan dan fotonya kekal untuk pengguna lain.",
+  "deleteScopeBranch": "Semua pengguna: cawangan, pin, foto, rating dan ulasannya hilang untuk semua. Tempat itu kekal dalam buku mereka.",
+  "deleteScopeDish": "Semua pengguna: hidangan ini keluar dari katalog. Salinan dan senarai belian orang lain kekal.",
+  "deleteScopeRecipeMine": "Resipi anda sahaja. Salinan yang dibuat orang lain kekal."
 }

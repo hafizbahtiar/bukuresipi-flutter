@@ -2,6 +2,8 @@ import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/pages/branch_edit_page.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/pages/branch_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/places_list_page.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
@@ -498,6 +500,45 @@ void main() {
     expect(find.text('What the post says about halal'), findsNothing);
   });
 
+  testWidgets(
+    'the owner\'s delete dialogs say who they reach: own book, or every user',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await tapKey(t, 'more-menu');
+      await t.tap(find.text('Remove from my book'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('delete-scope-mine')), findsOneWidget);
+      await t.tap(find.text('Cancel'));
+      await t.pumpAndSettle();
+      expect(repo.removed, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'a branch and the edit pages open with the standard transition, not the flip',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      final branch = repo.places.single.branches.first;
+      await t.tap(find.byKey(ValueKey('branch-${branch.id}')));
+      await t.pumpAndSettle();
+      expect(
+        ModalRoute.of(t.element(find.byType(BranchPage))),
+        isNot(isA<MaterialPageRoute<void>>()),
+      );
+      await tapKey(t, 'branch-edit');
+      expect(
+        ModalRoute.of(t.element(find.byType(BranchEditPage))),
+        isA<PageRouteBuilder<bool>>(),
+      );
+    },
+  );
+
   testWidgets('remove asks first, then takes the place off the book', (
     t,
   ) async {
@@ -508,6 +549,8 @@ void main() {
     await t.tap(find.text('Remove from my book'));
     await t.pumpAndSettle();
     expect(repo.removed, isEmpty);
+    // A user has only their own book: no scope card.
+    expect(find.byKey(const ValueKey('delete-scope-mine')), findsNothing);
     await t.tap(find.widgetWithText(FilledButton, 'Remove'));
     await t.pumpAndSettle();
     expect(repo.removed, ['a']);

@@ -141,7 +141,18 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     final question = hasRating
         ? '${l.removeConfirm}\n\n${l.removePlaceWithRatings}'
         : l.removeConfirm;
-    if (!await _confirm(context, question, l.remove)) return;
+    final owner = context.read<AuthController>().user?.isOwner ?? false;
+    if (!await showBaseDialog(
+      context,
+      message: question,
+      tone: DialogTone.danger,
+      confirmLabel: l.remove,
+      content: owner
+          ? DeleteScopeCard(everyone: false, text: l.deleteScopePlaceMine)
+          : null,
+    )) {
+      return;
+    }
     try {
       await places.remove(place.id);
       await navigator.maybePop();
@@ -490,14 +501,6 @@ class _NoPhoto extends StatelessWidget {
 }
 
 /// Removing or deleting: the red dialog.
-Future<bool> _confirm(BuildContext context, String question, String action) =>
-    showBaseDialog(
-      context,
-      message: question,
-      tone: DialogTone.danger,
-      confirmLabel: action,
-    );
-
 class _BranchRow extends StatelessWidget {
   const _BranchRow({
     required this.place,

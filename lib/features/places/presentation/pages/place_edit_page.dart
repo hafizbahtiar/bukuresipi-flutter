@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/router/base_page_transitions.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
@@ -19,10 +20,10 @@ class PlaceEditPage extends StatefulWidget {
 
   final PlaceRestaurant restaurant;
 
+  /// The standard page transition, not the book flip (as the branch pages).
   static Future<void> open(BuildContext context, PlaceRestaurant r) =>
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => PlaceEditPage(restaurant: r)),
-      );
+      Navigator.of(context)
+          .push(standardRoute<void>((_) => PlaceEditPage(restaurant: r)));
 
   @override
   State<PlaceEditPage> createState() => _PlaceEditPageState();

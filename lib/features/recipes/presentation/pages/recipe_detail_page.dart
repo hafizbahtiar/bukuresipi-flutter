@@ -174,13 +174,18 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final l = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
     final recipes = context.read<RecipesController>();
+    final catalogue = recipe.sourceType == RecipeSourceType.catalogue;
+    final owner = context.read<AuthController?>()?.user?.isOwner ?? false;
     if (!await showBaseDialog(
       context,
-      message: recipe.sourceType == RecipeSourceType.catalogue
-          ? l.dishRemoveConfirm
-          : l.recipeRemoveConfirm,
+      message: catalogue ? l.dishRemoveConfirm : l.recipeRemoveConfirm,
       tone: DialogTone.danger,
       confirmLabel: l.remove,
+      content: !owner
+          ? null
+          : catalogue
+          ? DeleteScopeCard(everyone: true, text: l.deleteScopeDish)
+          : DeleteScopeCard(everyone: false, text: l.deleteScopeRecipeMine),
     )) {
       return;
     }

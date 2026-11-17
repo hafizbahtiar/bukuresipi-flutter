@@ -1190,3 +1190,51 @@ class OwnerStrip extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
+
+/// The owner's delete dialogs (their content): who this delete reaches, so a delete for every user is never mistaken
+/// for one from their own book. Not a choice: each delete button does one of the two.
+class DeleteScopeCard extends StatelessWidget {
+  const DeleteScopeCard({
+    super.key,
+    required this.everyone,
+    required this.text,
+  });
+
+  final bool everyone;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final accent = everyone ? scheme.error : nb.pandanDeep;
+    return Container(
+      key: ValueKey(everyone ? 'delete-scope-everyone' : 'delete-scope-mine'),
+      margin: const EdgeInsets.only(top: spaceM),
+      padding: const EdgeInsets.all(spaceS + 4),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            everyone ? Icons.public : Icons.person_outline,
+            size: 20,
+            color: accent,
+          ),
+          const SizedBox(width: spaceS),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: nb.ink),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

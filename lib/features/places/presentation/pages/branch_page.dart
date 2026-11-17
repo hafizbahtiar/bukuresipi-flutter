@@ -6,6 +6,7 @@ import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
+import '../../../../core/router/base_page_transitions.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
 import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../l10n/gen/app_localizations.dart';
@@ -79,6 +80,8 @@ Future<bool> deleteBranch(BuildContext context, Branch branch) async {
     message: l.deleteBranchConfirm(branch.label ?? branch.where ?? ''),
     tone: DialogTone.danger,
     confirmLabel: l.delete,
+    // Only the owner deletes a branch.
+    content: DeleteScopeCard(everyone: true, text: l.deleteScopeBranch),
   );
   if (!yes) return false;
   try {
@@ -98,11 +101,10 @@ class BranchPage extends StatelessWidget {
   final String placeId;
   final String branchId;
 
+  /// The standard page transition, not the book flip.
   static Future<void> open(BuildContext context, Place place, Branch b) =>
       Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => BranchPage(placeId: place.id, branchId: b.id),
-        ),
+        standardRoute((_) => BranchPage(placeId: place.id, branchId: b.id)),
       );
 
   @override

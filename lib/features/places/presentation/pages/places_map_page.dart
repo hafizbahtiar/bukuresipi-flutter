@@ -1545,6 +1545,7 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
       ),
       tone: DialogTone.danger,
       confirmLabel: l.delete,
+      content: DeleteScopeCard(everyone: true, text: l.deleteScopeBranch),
     );
     if (!sure) return null;
     await places.deleteBranch(place.branchId);
@@ -1641,11 +1642,14 @@ Future<Uint8List> _roundFace(Uint8List photo, Color ring, double dpr) async {
 }
 
 /// A map call that may outlive its map: leaving the map page mid-animation (or the activity being recreated)
-/// destroys the native view, and the call then fails with MAP_NOT_READY. Nothing is left to update, so it is dropped.
+/// destroys the native view, and the call then fails with MAP_NOT_READY, or with MissingPluginException once its
+/// channel is gone (a redraw still running when the page was left). Nothing is left to update, so it is dropped.
 Future<void> quietMap(Future<Object?>? call) async {
   try {
     await call;
   } on PlatformException {
     // The map has gone.
+  } on MissingPluginException {
+    // Its channel has gone too.
   }
 }

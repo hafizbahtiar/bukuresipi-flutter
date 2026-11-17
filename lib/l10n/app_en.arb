@@ -2916,5 +2916,13 @@
   "ownerEditsEveryone": "Owner: every user sees what you save here",
   "@ownerEditsEveryone": {},
   "saveForEveryone": "Save for everyone",
-  "@saveForEveryone": {}
+  "@saveForEveryone": {},
+  "deleteScopePlaceMine": "Only you: it leaves your book (with your ratings and reviews). The place, its branches and photos stay for every other user.",
+  "@deleteScopePlaceMine": {},
+  "deleteScopeBranch": "Every user: the branch, its pin, photo, ratings and reviews are gone for everyone. The place stays in their books.",
+  "@deleteScopeBranch": {},
+  "deleteScopeDish": "Every user: the dish leaves the catalogue. Copies people made and their shopping lines stay.",
+  "@deleteScopeDish": {},
+  "deleteScopeRecipeMine": "Only your recipe. Copies other people made stay.",
+  "@deleteScopeRecipeMine": {}
 }
