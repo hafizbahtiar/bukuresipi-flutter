@@ -23,7 +23,7 @@ import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
 
-/// Edits a recipe: its name, then one row per ingredient (amount, unit, ingredient) and per step. Drag to reorder;
+/// Edits a recipe: its name, then one row per ingredient (amount, unit, ingredient, Optional) and per step. Drag to reorder;
 /// Enter starts the next row and moves the cursor there; a pasted list splits into rows. The API still takes one line
 /// per ingredient ("2 cawan tepung gandum"): the rows are joined back and the server reads amount and unit from it.
 /// A row left as it was is sent exactly as stored, so its catalogue link stays. Pops the saved recipe.
@@ -127,21 +127,36 @@ String completeLine(String line, String name) {
 
 const _maxRows = 100; // the API's limit per section
 
-/// One ingredient row: amount, unit, ingredient. [original] = the stored line it was loaded from.
+/// One ingredient row: amount, unit, ingredient, optional. [original] = the stored line it was loaded from.
 class _Ingredient {
-  _Ingredient({String amount = '', this.unit, String name = '', this.original})
-    : amount = TextEditingController(text: amount),
-      name = TextEditingController(text: name);
+  _Ingredient({
+    String amount = '',
+    this.unit,
+    String name = '',
+    this.original,
+    this.optional = false,
+  }) : amount = TextEditingController(text: amount),
+       name = TextEditingController(text: name);
 
-  factory _Ingredient.fromLine(String line, {bool stored = false}) {
+  factory _Ingredient.fromLine(
+    String line, {
+    bool stored = false,
+    bool optional = false,
+  }) {
     final s = splitLine(line);
     return _Ingredient(
       amount: s.amount,
       unit: s.unit,
       name: s.name,
       original: stored ? line : null,
+      optional: optional,
     );
   }
+
+  /// "The dish is fine without it". Sent with the line when on, or when the user switched it (off wins over the
+  /// line's own words, e.g. "jika suka"); otherwise the server reads the words as before.
+  bool optional;
+  bool optionalSwitched = false;
 
   final TextEditingController amount;
   String? unit;
@@ -204,7 +219,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   late final List<_Ingredient> _ingredients = switch (widget.recipe) {
     final r? when r.ingredients.isNotEmpty => [
       for (final i in r.ingredients)
-        _Ingredient.fromLine(i.rawText ?? i.label, stored: true),
+        _Ingredient.fromLine(
+          i.rawText ?? i.label,
+          stored: true,
+          optional: i.optional,
+        ),
     ],
     _ => [_Ingredient()],
   };
@@ -282,7 +301,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
 
   String _snapshot() => [
     _name.text.trim(),
-    for (final r in _ingredients) r.line,
+    for (final r in _ingredients) '${r.line} ${r.optional}',
     '|',
     for (final s in _steps) s.text.text.trim(),
     '|',
@@ -663,10 +682,15 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     }
     FocusScope.of(context).unfocus();
     setState(() => _saving = true);
-    final ingredients = [
+    final rows = [
       for (final r in _ingredients)
-        if (!r.isEmpty) r.sent,
+        if (!r.isEmpty) r,
     ];
+    final ingredients = [for (final r in rows) r.sent];
+    final optional = {
+      for (final (i, r) in rows.indexed)
+        if (r.optional || r.optionalSwitched) i: r.optional,
+    };
     final steps = [
       for (final s in _steps)
         if (s.text.text.trim().isNotEmpty) s.text.text.trim(),
@@ -681,11 +705,13 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           name: name,
           ingredients: ingredients,
           steps: steps,
+          optional: optional,
         ),
         null => await recipes.create(
           name: name,
           ingredients: ingredients,
           steps: steps,
+          optional: optional,
         ),
       };
       var done = saved;
@@ -899,6 +925,22 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                         ),
                       ),
                     ],
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Tooltip(
+                      message: l.recipeOptionalHint,
+                      child: FilterChip(
+                        key: ValueKey('ingredient-optional-$i'),
+                        label: Text(l.recipeOptional),
+                        selected: r.optional,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (on) => setState(() {
+                          r.optional = on;
+                          r.optionalSwitched = true;
+                        }),
+                      ),
+                    ),
                   ),
                 ],
               ),

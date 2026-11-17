@@ -19,6 +19,7 @@ class _FakeApi extends AuthApi {
       {'code': 'shares', 'used': 3, 'limit': 20, 'period': 'day'},
       {'code': 'receipts', 'used': 10, 'limit': 10, 'period': 'day'},
       {'code': 'reports', 'used': 0, 'limit': 20, 'period': 'day'},
+      {'code': 'recipes', 'used': 2, 'limit': 50, 'period': 'day'},
       {'code': 'shopping', 'used': 12, 'limit': 200, 'period': 'total'},
     ],
     'resetsAt': '2026-11-09T00:00:00.000Z',
@@ -61,6 +62,8 @@ void main() {
       expect(find.text('10 / 10'), findsOneWidget);
       expect(find.text('3 / 20'), findsOneWidget);
       expect(find.text('12 / 200'), findsOneWidget);
+      expect(find.text('Recipes typed or copied today'), findsOneWidget);
+      expect(find.text('2 / 50'), findsOneWidget);
       expect(
         find.textContaining('Daily counts start again at'),
         findsOneWidget,

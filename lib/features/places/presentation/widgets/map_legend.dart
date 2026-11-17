@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 
@@ -76,7 +77,7 @@ class MapLegendButton extends StatelessWidget {
         shape: CircleBorder(side: BorderSide(color: nb.line)),
         child: InkWell(
           customBorder: const CircleBorder(),
-          onTap: () => showNotebookSheet<void>(
+          onTap: () => showBaseSheet<void>(
             context,
             builder: (_) => MapLegend(
               owner: owner,

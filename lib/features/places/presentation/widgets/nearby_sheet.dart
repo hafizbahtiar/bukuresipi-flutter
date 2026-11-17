@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -17,7 +18,7 @@ import 'halal_status.dart';
 import 'notebook_rating.dart';
 import 'place_report_sheet.dart';
 
-/// A nearby branch on a notebook sheet: where it is, how far, the post's halal claim, and Save.
+/// A nearby branch on a sheet: where it is, how far, the post's halal claim, and Save.
 class NearbySheet extends StatefulWidget {
   const NearbySheet({
     super.key,
@@ -39,7 +40,7 @@ class NearbySheet extends StatefulWidget {
 class _NearbySheetState extends State<NearbySheet> {
   bool _saving = false;
 
-  Future<void> _report() => showNotebookSheet<void>(
+  Future<void> _report() => showBaseSheet<void>(
     context,
     builder: (_) => PlaceReportSheet(
       subject: ReportSubject.fromNearby(widget.place),
@@ -117,12 +118,7 @@ class _NearbySheetState extends State<NearbySheet> {
             shrinkWrap: true,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  0,
-                  20,
-                  8,
-                ),
+                padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceXs),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -139,13 +135,9 @@ class _NearbySheetState extends State<NearbySheet> {
                   ],
                 ),
               ),
-              NotebookRow(
-                mark: Icon(
-                  Icons.place_outlined,
-                  size: 20,
-                  color: nb.pandanDeep,
-                ),
-                child: Column(
+              ListTile(
+                leading: Icon(Icons.place_outlined, color: nb.pandanDeep),
+                title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (final line in where)
@@ -171,22 +163,18 @@ class _NearbySheetState extends State<NearbySheet> {
                   ],
                 ),
               ),
-              NotebookRow(
-                mark: Icon(
-                  Icons.star_outline_rounded,
-                  size: 20,
-                  color: nb.kunyit,
-                ),
-                child: RatingLine(
+              ListTile(
+                leading: Icon(Icons.star_outline_rounded, color: nb.kunyit),
+                title: RatingLine(
                   rating: p.rating,
                   onTap: () => context.push('/branches/${p.branchId}/reviews'),
                 ),
               ),
               if (p.halalClaim != null && p.halalQuote != null) ...[
-                NotebookHeading(l.halalTitle),
-                NotebookRow(
-                  mark: Icon(Icons.info_outline, size: 18, color: nb.kunyit),
-                  child: Column(
+                SectionHeader(l.halalTitle),
+                ListTile(
+                  leading: Icon(Icons.info_outline, color: nb.kunyit),
+                  title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -220,7 +208,7 @@ class _NearbySheetState extends State<NearbySheet> {
         Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.only(right: 20),
+            padding: const EdgeInsets.only(right: spaceS),
             // Wraps on a narrow phone or with large text instead of running off the edge.
             child: Wrap(
               alignment: WrapAlignment.end,
@@ -240,7 +228,7 @@ class _NearbySheetState extends State<NearbySheet> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 0),
           child: FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
             onPressed: _saving ? null : _save,

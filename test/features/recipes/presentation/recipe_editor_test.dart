@@ -160,6 +160,32 @@ void main() {
     },
   );
 
+  testWidgets(
+    'the Optional chip: a stored mark shows and is kept, a switch is sent, an untouched line is left to its words',
+    (t) async {
+      final fake = await pumpEditor(
+        t,
+        recipe: recipeDetail(
+          ingredients: const [
+            RecipeIngredient(rawText: '1 cawan susu', optional: true),
+            RecipeIngredient(rawText: '2 cawan tepung'),
+            RecipeIngredient(rawText: 'kismis kalau suka'),
+          ],
+        ),
+      );
+      await editTab(t, 'ingredients');
+      Finder chip(int i) => find.byKey(ValueKey('ingredient-optional-$i'));
+      expect(t.widget<FilterChip>(chip(0)).selected, isTrue);
+      expect(t.widget<FilterChip>(chip(1)).selected, isFalse);
+      await t.tap(chip(1)); // on
+      await t.pumpAndSettle();
+      await t.tap(find.byTooltip('Save'));
+      await t.pumpAndSettle();
+      // Line 0 keeps its mark, line 1 was switched on, line 2 is not sent (the server reads "kalau suka").
+      expect(fake.optionals.single, {0: true, 1: true});
+    },
+  );
+
   testWidgets('a missing name on Save brings back the Details tab', (t) async {
     await pumpEditor(t);
     await editTab(t, 'steps');

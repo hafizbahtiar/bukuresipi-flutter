@@ -1,7 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- No ads: Analytics (screen views only) must not read the advertising ID. Play Console: "Advertising ID" = No. -->
+    <!-- No advertising ID yet: Analytics (screen views only) must not read it, and Play Console says "Advertising ID" = No.
+         Home ads (AdMob) still load without it, less targeted. Before ads go to production: delete these three lines
+         AND change Play Console (Advertising ID = Yes, Data safety) in the same release
+         (bukuresipi-hono docs/superpowers/specs/2026-11-17-home-ads-design.md). -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove"/>
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove"/>
@@ -17,6 +20,8 @@
         android:icon="@mipmap/ic_launcher">
         <!-- Pushes without a channel of their own (e.g. a Firebase console test) land on "share_ready" (MainActivity). -->
         <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false"/>
+        <!-- AdMob (Home ads, lib/core/ads/ads.dart). Public: it ships in every APK. -->
+        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1300180769466949~4313134076"/>
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="share_ready"/>
         <activity
             android:name=".MainActivity"

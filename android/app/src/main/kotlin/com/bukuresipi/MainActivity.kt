@@ -26,12 +26,14 @@ import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCreden
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin
 
 class MainActivity : FlutterActivity() {
     // For "Signed-in devices" (lib/features/auth/data/auth_api.dart). Android has no field for the shop name
     // ("Infinix HOT 40 Pro"); the phone's own name in Settings > About phone is usually it, unless the user renamed it.
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        GoogleMobileAdsPlugin.registerNativeAdFactory(flutterEngine, "feedCard", FeedAdFactory(this))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "bukuresipi/device").setMethodCallHandler { call, result ->
             if (call.method != "info") return@setMethodCallHandler result.notImplemented()
             val model = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
@@ -49,6 +51,11 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        GoogleMobileAdsPlugin.unregisterNativeAdFactory(flutterEngine, "feedCard")
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 
     // Passkeys (lib/features/auth/data/passkey_auth.dart). Credential Manager takes the API's WebAuthn options as JSON

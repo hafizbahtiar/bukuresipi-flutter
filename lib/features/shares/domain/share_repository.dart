@@ -6,7 +6,8 @@ import 'share.dart';
 abstract interface class ShareRepository {
   /// Returns the share id; the API reads the post in the background (poll [get]). [caption]: what the phone read
   /// from the post, for sites the API cannot read itself.
-  Future<String> submitLink(String url, {String? caption});
+  /// [done]: answered at once from an earlier read of the same post (nothing left to read).
+  Future<({String id, bool done})> submitLink(String url, {String? caption});
 
   /// A screenshot or photo: JPG, PNG or WebP up to 5 MB.
   Future<String> submitImage(String path);
@@ -15,6 +16,10 @@ abstract interface class ShareRepository {
 
   /// Reads a failed/unreadable share again (it goes back to pending).
   Future<void> retry(String id);
+
+  /// The caption the phone read, sent after the link (PUT /shares/:id/caption): the API uses it when it cannot read
+  /// the post itself. A share already read keeps its result.
+  Future<void> addCaption(String id, String caption);
 
   /// Takes a failed/unreadable share off the list.
   Future<void> dismiss(String id);
