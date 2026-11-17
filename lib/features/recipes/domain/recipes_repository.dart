@@ -60,10 +60,13 @@ abstract interface class RecipesRepository {
   );
 
   /// A recipe typed from scratch (one line per ingredient and per step); returns it.
+  /// [optional]: line index -> the editor's "optional" switch, sent only for those lines (it then wins over the
+  /// line's own words); others are read as before.
   Future<RecipeDetail> create({
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   });
 
   /// The owner's photo from a local jpeg/png/webp file (5 MB max); returns the recipe with its new cover.
@@ -80,5 +83,6 @@ abstract interface class RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   });
 }

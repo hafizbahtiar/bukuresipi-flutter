@@ -24,20 +24,21 @@ class ShareRepositoryImpl implements ShareRepository {
   static const maxImageBytes = 5 * 1024 * 1024;
 
   @override
-  Future<String> submitLink(String url, {String? caption}) => apiCall(() async {
-    final body = {
-      'url': url,
-      if (caption != null && caption.trim().isNotEmpty)
-        'caption': caption.trim().length > 4000
-            ? caption.trim().substring(0, 4000)
-            : caption.trim(),
-    };
-    return (await _dio.post<Map<String, dynamic>>(
+  Future<({String id, bool done})> submitLink(String url, {String? caption}) =>
+      apiCall(() async {
+        final body = {
+          'url': url,
+          if (caption != null && caption.trim().isNotEmpty)
+            'caption': caption.trim().length > 4000
+                ? caption.trim().substring(0, 4000)
+                : caption.trim(),
+        };
+        final j = (await _dio.post<Map<String, dynamic>>(
           '/shares',
           data: body,
-        )).data!['id']
-        as String;
-  });
+        )).data!;
+        return (id: j['id'] as String, done: j['status'] == 'done');
+      });
 
   @override
   Future<String> submitImage(String path) async {
@@ -76,6 +77,16 @@ class ShareRepositoryImpl implements ShareRepository {
   @override
   Future<void> retry(String id) =>
       apiCall(() => _dio.post<void>('/shares/$id/retry'));
+
+  @override
+  Future<void> addCaption(String id, String caption) => apiCall(
+    () => _dio.put<void>(
+      '/shares/$id/caption',
+      data: {
+        'caption': caption.length > 4000 ? caption.substring(0, 4000) : caption,
+      },
+    ),
+  );
 
   // A list scrolls rows out and back, and the detail page shows the same image: fetch each once per session.
   final _images = <String, Future<Uint8List?>>{};

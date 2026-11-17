@@ -24,7 +24,15 @@ void main() {
 
   test('a link is posted as JSON and the share id comes back', () async {
     final repo = make((_) => (202, {'id': 's-1', 'status': 'pending'}));
-    expect(await repo.submitLink('https://www.tiktok.com/@a/video/1'), 's-1');
+    expect(await repo.submitLink('https://www.tiktok.com/@a/video/1'), (
+      id: 's-1',
+      done: false,
+    ));
+    final reused = make((_) => (202, {'id': 's-2', 'status': 'done'}));
+    expect(
+      (await reused.submitLink('https://www.tiktok.com/@a/video/1')).done,
+      isTrue,
+    );
     expect(adapter.requests.single.path, '/shares');
     expect(adapter.requests.single.data, {
       'url': 'https://www.tiktok.com/@a/video/1',

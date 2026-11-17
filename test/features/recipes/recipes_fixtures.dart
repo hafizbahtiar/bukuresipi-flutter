@@ -252,6 +252,9 @@ class FakeRecipes implements RecipesRepository {
 
   final edited = <(String, String, List<String>, List<String>)>[];
 
+  /// The optional switches sent with each create/edit, in order.
+  final optionals = <Map<int, bool>>[];
+
   final created = <(String, List<String>, List<String>)>[];
 
   @override
@@ -259,8 +262,10 @@ class FakeRecipes implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) async {
     created.add((name, ingredients, steps));
+    optionals.add(optional);
     return detailResult!;
   }
 
@@ -270,8 +275,10 @@ class FakeRecipes implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) async {
     edited.add((id, name, ingredients, steps));
+    optionals.add(optional);
     return detailResult!;
   }
 }

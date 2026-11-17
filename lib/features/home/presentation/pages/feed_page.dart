@@ -2,14 +2,17 @@ import 'dart:async';
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/ads/ads.dart';
 import '../../../../core/constants/image_constant.dart';
 import '../../../../core/network/update_gate.dart';
 import '../../../../core/widgets/system_pages.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -18,6 +21,8 @@ import '../../../places/domain/rating.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../../recipes/presentation/pages/pantry_page.dart';
 import '../add_sheet.dart';
+import '../../../auth/presentation/auth_controller.dart';
+import '../widgets/feed_ad.dart';
 import '../widgets/feed_card.dart';
 import '../widgets/feed_empty.dart';
 import '../../../places/presentation/location.dart';
@@ -55,6 +60,7 @@ class FeedPage extends StatefulWidget {
 class _FeedPageState extends State<FeedPage> {
   static const _nearbyKm = 5.0; // as the map
   static const _every = 4; // a restaurant in every 4th slot
+  static const _gap = spaceS; // between cards, both ways
 
   final _search = SearchController();
   final _scroll = ScrollController();
@@ -62,6 +68,9 @@ class _FeedPageState extends State<FeedPage> {
   FeedKind _kind = FeedKind.all;
   bool _halal = false;
   String? _cuisine;
+
+  /// Ad slots whose ad did not load: left out until a refresh.
+  final _deadAds = <int>{};
 
   bool? _located; // null = asking
   List<NearbyBranch> _nearby = const [];
@@ -90,6 +99,7 @@ class _FeedPageState extends State<FeedPage> {
   @override
   void initState() {
     super.initState();
+    Ads.ready.addListener(_adsReady);
     _edited.addListener(_patch);
     _removed.addListener(_drop);
     // A place edited, pinned, saved or rated anywhere: the restaurant cards fetch theirs again (kept on screen meanwhile).
@@ -124,6 +134,7 @@ class _FeedPageState extends State<FeedPage> {
 
   @override
   void dispose() {
+    Ads.ready.removeListener(_adsReady);
     _edited.removeListener(_patch);
     _removed.removeListener(_drop);
     _placesChanged.removeListener(_loadNearby);
@@ -132,7 +143,12 @@ class _FeedPageState extends State<FeedPage> {
     super.dispose();
   }
 
-  Future<void> _refresh() => Future.wait([_loadNearby(), _restart()]);
+  void _adsReady() => setState(() {});
+
+  Future<void> _refresh() {
+    setState(_deadAds.clear);
+    return Future.wait([_loadNearby(), _restart()]);
+  }
 
   Future<void> _loadNearby() async {
     final here = await widget.locate();
@@ -390,7 +406,7 @@ class _FeedPageState extends State<FeedPage> {
     final width = MediaQuery.sizeOf(context).width;
     final columns = _columns(width);
     final cardHeight = FeedCard.heightFor(
-      (width - 32 - 12 * (columns - 1)) / columns,
+      (width - 32 - _gap * (columns - 1)) / columns,
       MediaQuery.textScalerOf(context),
     );
     final cuisines = {
@@ -498,6 +514,22 @@ class _FeedPageState extends State<FeedPage> {
     if (_done || !showRecipes) {
       cards.addAll(restaurants.skip(next).map(place));
     }
+    // Ads among the cards. Not for the owner in release (their use is not ad traffic); debug builds show the owner
+    // the test ads, so the card can be checked.
+    final ads =
+        Ads.ready.value &&
+        !(kReleaseMode &&
+            (context.read<AuthController?>()?.user?.isOwner ?? false));
+    final shown = ads
+        ? withAds<Widget>(
+            cards,
+            (slot) => FeedAd(
+              key: ValueKey('feed-ad-$slot'),
+              onFailed: () => setState(() => _deadAds.add(slot)),
+            ),
+            skip: _deadAds,
+          )
+        : cards;
     // Still coming: a recipe page out, or more pages to fetch while the grid is empty (they chain on their own),
     // restaurants being asked for, or location not answered yet. Until then, no empty state.
     final loading =
@@ -672,8 +704,8 @@ class _FeedPageState extends State<FeedPage> {
                 sliver: SliverGrid(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
+                    mainAxisSpacing: _gap,
+                    crossAxisSpacing: _gap,
                     mainAxisExtent: cardHeight,
                   ),
                   // First load: cards' shapes in their place; more pages: the spinner below.
@@ -686,7 +718,7 @@ class _FeedPageState extends State<FeedPage> {
                                 wide: (i ~/ columns + i).isEven,
                               ),
                           ]
-                        : cards,
+                        : shown,
                   ),
                 ),
               ),

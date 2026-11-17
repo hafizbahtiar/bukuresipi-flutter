@@ -12,7 +12,8 @@ import '../../domain/usage.dart';
 import '../auth_controller.dart';
 import '../auth_text.dart';
 
-/// Account > Usage: the caller's own limits (links shared, receipt photos, reports today; the shopping list size).
+/// Account > Usage: the caller's own limits (links shared, receipt and meal photos, reports, recipes made, Find location
+/// today; the shopping list size).
 /// The owner also gets the service meters (AI, maps, email).
 class UsagePage extends StatefulWidget {
   const UsagePage({super.key, this.api});
@@ -40,6 +41,8 @@ class _UsagePageState extends State<UsagePage> {
       'receipts' => l.usageReceipts,
       'meals' => l.usageMeals,
       'reports' => l.usageReports,
+      'recipes' => l.usageRecipes,
+      'locates' => l.usageLocates,
       'shopping' => l.usageShopping,
       _ => code,
     };

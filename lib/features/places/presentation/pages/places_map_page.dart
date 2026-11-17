@@ -11,6 +11,8 @@ import 'package:provider/provider.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
@@ -815,7 +817,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       if (nearby != null) {
         _focusNearby(nearby);
       } else if (all != null) {
-        showNotebookSheet<void>(
+        showBaseSheet<void>(
           context,
           builder: (_) => _OwnerPlaceSheet(place: all, onChanged: _loadAll),
         );
@@ -840,7 +842,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     if (nearby != null) {
       setState(() => _selectedNearbyId = nearby.branchId);
     }
-    showNotebookSheet<void>(
+    showBaseSheet<void>(
       context,
       builder: (context) => _PinSheet(place: place, branch: branch),
     );
@@ -865,18 +867,18 @@ class _PlacesMapPageState extends State<PlacesMapPage>
             if (b.id == hit.branchId) (p, b),
       ].firstOrNull;
       if (saved != null) {
-        showNotebookSheet<void>(
+        showBaseSheet<void>(
           context,
           builder: (context) => _PinSheet(place: saved.$1, branch: saved.$2),
         );
         return;
       }
-      final place = await showNotebookSheet<Place>(
+      final place = await showBaseSheet<Place>(
         context,
         builder: (_) => _HitSheet(hit: hit, places: _places),
       );
       if (place != null && mounted) {
-        showNotebookSheet<void>(
+        showBaseSheet<void>(
           context,
           builder: (context) =>
               _PinSheet(place: place, branch: place.savedBranch),
@@ -886,7 +888,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     }
     final (place, branch) = hit as (Place, Branch);
     _flyTo(branch.lat!, branch.lng!);
-    showNotebookSheet<void>(
+    showBaseSheet<void>(
       context,
       builder: (context) => _PinSheet(place: place, branch: branch),
     );
@@ -940,7 +942,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       return;
     }
     final places = context.read<PlacesController>();
-    showNotebookSheet<void>(
+    showBaseSheet<void>(
       context,
       builder: (context) => NearbySheet(
         place: place,
@@ -973,8 +975,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
 
   void _showUnpinned() {
     final l = AppLocalizations.of(context);
-    showNotebookSheet<void>(
-      context,
+    showBaseSheet<void>(
+      context, // floating like the add sheet; it caps its height and the list scrolls
       // Rebuilds as places get pinned: a found place leaves this list.
       builder: (context) => Consumer<PlacesController>(
         builder: (context, places, _) {
@@ -983,12 +985,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
             shrinkWrap: true,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  0,
-                  20,
-                  12,
-                ),
+                padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
                 child: Text(
                   l.unpinnedHelp,
                   style: text.bodyMedium?.copyWith(
@@ -997,10 +994,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                 ),
               ),
               for (final p in places.unpinned)
-                NotebookRow(
-                  mark: const PinMark(pinned: false),
+                ListTile(
+                  leading: const PinMark(pinned: false),
                   onTap: () => context.push('/places/${p.id}'),
-                  child: Column(
+                  title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -1235,7 +1232,6 @@ class _Slip extends StatelessWidget {
   }
 }
 
-/// A pin tapped on the map: the place on a notebook sheet, then open it or get directions.
 /// A search result not in your book: name, where, and Save (a place new to the app becomes a restaurant). Pops the
 /// saved Place.
 class _HitSheet extends StatefulWidget {
@@ -1275,7 +1271,7 @@ class _HitSheetState extends State<_HitSheet> {
     final text = Theme.of(context).textTheme;
     final h = widget.hit;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 16),
+      padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1311,6 +1307,7 @@ class _HitSheetState extends State<_HitSheet> {
   }
 }
 
+/// A pin tapped on the map: the place on a sheet, then open it or get directions.
 class _PinSheet extends StatelessWidget {
   const _PinSheet({required this.place, this.branch});
 
@@ -1354,7 +1351,7 @@ class _PinSheet extends StatelessWidget {
       shrinkWrap: true,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceXs),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1372,14 +1369,14 @@ class _PinSheet extends StatelessWidget {
           ),
         ),
         if (b != null)
-          NotebookRow(
-            mark: PinMark(pinned: b.hasPin),
+          ListTile(
+            leading: PinMark(pinned: b.hasPin),
             trailing: IconButton(
               tooltip: l.editBranch,
               icon: Icon(Icons.edit_outlined, color: nb.inkSoft),
               onPressed: () => _edit(context, b),
             ),
-            child: Column(
+            title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -1420,14 +1417,12 @@ class _PinSheet extends StatelessWidget {
             ),
           ),
         if (place.note case final note? when note.isNotEmpty)
-          NotebookRow(
-            child: Text(
-              note,
-              style: nb.hand.copyWith(fontSize: 22, color: nb.ink),
-            ),
+          ListTile(
+            leading: Icon(Icons.sticky_note_2_outlined, color: nb.inkSoft),
+            title: Text(note),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 16, 20, 8),
+          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
           child: Row(
             children: [
               Expanded(
@@ -1543,7 +1538,7 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
   Future<String?> _delete() async {
     final l = AppLocalizations.of(context);
     final places = context.read<PlacesController>();
-    final sure = await showNotebookDialog(
+    final sure = await showBaseDialog(
       context,
       message: l.deleteBranchConfirm(
         place.label ?? place.address ?? place.name,
@@ -1568,9 +1563,9 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
     return ListView(
       shrinkWrap: true,
       children: [
-        NotebookRow(
-          mark: MapMarkDot(MapMark.forSource(place.pinSource)),
-          child: Column(
+        ListTile(
+          leading: MapMarkDot(MapMark.forSource(place.pinSource)),
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -1590,29 +1585,32 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
             ],
           ),
         ),
-        NotebookRow(
-          mark: Icon(Icons.bookmark_border, size: 20, color: nb.inkSoft),
-          child: Text(l.ownerPlaceSavers(place.savers)),
+        ListTile(
+          leading: Icon(Icons.bookmark_border, color: nb.inkSoft),
+          title: Text(l.ownerPlaceSavers(place.savers)),
         ),
-        NotebookRow(
-          mark: Icon(Icons.place_outlined, size: 20, color: nb.inkSoft),
-          child: Text(l.ownerPlacePinSource(place.pinSource ?? '-')),
+        ListTile(
+          leading: Icon(Icons.place_outlined, color: nb.inkSoft),
+          title: Text(l.ownerPlacePinSource(place.pinSource ?? '-')),
         ),
-        NotebookHeading(l.ownerTools),
-        NotebookRow(
-          mark: Icon(Icons.edit_outlined, size: 20, color: nb.pandanDeep),
-          onTap: _busy ? null : _edit,
-          child: Text(l.editBranch),
+        SectionHeader(l.ownerTools),
+        ListTile(
+          leading: const Icon(Icons.edit_outlined),
+          enabled: !_busy,
+          onTap: _edit,
+          title: Text(l.editBranch),
         ),
-        NotebookRow(
-          mark: Icon(Icons.merge_type, size: 20, color: nb.pandanDeep),
-          onTap: _busy ? null : () => _run(_check),
-          child: Text(l.checkBranches),
+        ListTile(
+          leading: const Icon(Icons.merge_type),
+          enabled: !_busy,
+          onTap: () => _run(_check),
+          title: Text(l.checkBranches),
         ),
-        NotebookRow(
-          mark: Icon(Icons.delete_outline, size: 20, color: nb.margin),
-          onTap: _busy ? null : () => _run(_delete),
-          child: Text(l.deleteBranch, style: TextStyle(color: nb.margin)),
+        ListTile(
+          leading: Icon(Icons.delete_outline, color: nb.margin),
+          enabled: !_busy,
+          onTap: () => _run(_delete),
+          title: Text(l.deleteBranch, style: TextStyle(color: nb.margin)),
         ),
       ],
     );

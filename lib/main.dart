@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'core/ads/ads.dart';
 import 'core/env/env.dart';
 import 'core/network/api_client.dart';
 import 'core/network/update_gate.dart';
@@ -139,6 +140,8 @@ Future<void> main() async {
     }
   });
 
+  // Home ads: consent, then the SDK, after the first frame (the consent form needs the app on screen).
+  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(Ads.start()));
   runApp(
     MultiProvider(
       providers: [

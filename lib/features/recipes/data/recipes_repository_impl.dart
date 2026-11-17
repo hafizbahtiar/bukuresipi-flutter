@@ -268,10 +268,15 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) => apiCall(() async {
     final data = (await _dio.post<Map<String, dynamic>>(
       '/recipes',
-      data: {'name': name, 'ingredients': ingredients, 'steps': steps},
+      data: {
+        'name': name,
+        'ingredients': _lines(ingredients, optional),
+        'steps': steps,
+      },
     )).data!;
     return recipeDetailFromJson(data);
   });
@@ -282,14 +287,25 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) => apiCall(() async {
     final data = (await _dio.patch<Map<String, dynamic>>(
       '/recipes/$id',
-      data: {'name': name, 'ingredients': ingredients, 'steps': steps},
+      data: {
+        'name': name,
+        'ingredients': _lines(ingredients, optional),
+        'steps': steps,
+      },
     )).data!;
     return recipeDetailFromJson(data);
   });
 }
+
+/// A line as text, or { text, optional } when the editor's switch is sent for it.
+List<Object> _lines(List<String> lines, Map<int, bool> optional) => [
+  for (final (i, text) in lines.indexed)
+    if (optional[i] case final on?) {'text': text, 'optional': on} else text,
+];
 
 List<String> _missing(Object? v) => [
   ...((v as List?) ?? const []).cast<String>(),
