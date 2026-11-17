@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/constants/image_constant.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../places/domain/place.dart';
 import '../../../places/presentation/places_controller.dart';
+import '../../../recipes/domain/recipe.dart';
 import '../../../recipes/presentation/recipes_controller.dart';
 import '../../domain/share_repository.dart';
 
@@ -93,26 +95,45 @@ class SharePhoto extends StatefulWidget {
     super.key,
     this.size = 52,
     this.drawing = false,
-  }) : recipeId = null;
+  }) : recipeId = null,
+       placeId = null,
+       fallbackShareId = null;
 
   /// A recipe with no photo at all (typed, or its share's photo is gone): the cooking drawing, taped in the same way.
   const SharePhoto.placeholder({super.key, this.size = 52})
     : shareId = '',
       recipeId = null,
+      placeId = null,
+      fallbackShareId = null,
       drawing = true;
 
-  /// A recipe's own cover photo ([cover] = its cover id) in place of a share's.
+  /// A recipe's own cover photo ([cover] = its cover id) in place of a share's; [fallbackShareId] if it won't load.
   const SharePhoto.cover(
     String this.recipeId,
     String cover, {
     super.key,
     this.size = 52,
+    this.fallbackShareId,
   }) : shareId = cover,
+       placeId = null,
        drawing = true;
 
-  /// The share id, or the cover id when [recipeId] is set.
+  /// A restaurant's chosen cover ([cover] = its cover id) in place of a share's; [fallbackShareId] if it won't load.
+  const SharePhoto.place(
+    String this.placeId,
+    String cover, {
+    super.key,
+    this.size = 52,
+    this.fallbackShareId,
+  }) : shareId = cover,
+       recipeId = null,
+       drawing = false;
+
+  /// The share id, or the cover id when [recipeId] or [placeId] is set.
   final String shareId;
   final String? recipeId;
+  final String? placeId;
+  final String? fallbackShareId;
   final double size;
   final bool drawing;
 
@@ -123,21 +144,39 @@ class SharePhoto extends StatefulWidget {
 class _SharePhotoState extends State<SharePhoto> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => widget.shareId.isEmpty
-      ? Future.value(null)
-      : switch (widget.recipeId) {
-          final recipe? => context.read<RecipesController>().cover(
-            recipe,
-            widget.shareId,
-          ),
-          null => context.read<ShareRepository>().image(widget.shareId),
-        }.catchError((Object _) => null);
+  Future<Uint8List?> _load() async {
+    if (widget.shareId.isEmpty) return null;
+    final shares = context.read<ShareRepository>();
+    final cover = switch ((widget.recipeId, widget.placeId)) {
+      (final recipe?, _) => context.read<RecipesController>().cover(
+        recipe,
+        widget.shareId,
+      ),
+      (_, final place?) => context.read<PlacesController>().restaurantCover(
+        place,
+        widget.shareId,
+      ),
+      _ => shares.image(widget.shareId),
+    };
+    final bytes = await cover.catchError((Object _) => null);
+    if (bytes != null) return bytes;
+    // A cover that won't load: the share's photo rather than nothing.
+    final fallback = widget.fallbackShareId;
+    return fallback == null
+        ? null
+        : shares.image(fallback).catchError((Object _) => null);
+  }
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
   void didUpdateWidget(covariant SharePhoto old) {
     super.didUpdateWidget(old);
-    if (old.shareId != widget.shareId) _bytes = _load();
+    if (old.shareId != widget.shareId ||
+        old.recipeId != widget.recipeId ||
+        old.placeId != widget.placeId ||
+        old.fallbackShareId != widget.fallbackShareId) {
+      _bytes = _load();
+    }
   }
 
   @override
@@ -221,6 +260,31 @@ class _SharePhotoState extends State<SharePhoto> {
     },
   );
 }
+
+/// A saved place's snapshot: the restaurant's chosen cover first (as the Home feed), else its share's photo.
+SharePhoto? placePhoto(Place place, {double size = 52}) =>
+    switch ((place.restaurant.cover, place.shareId)) {
+      (final cover?, final share) => SharePhoto.place(
+        place.restaurant.id,
+        cover,
+        size: size,
+        fallbackShareId: share,
+      ),
+      (null, final share?) => SharePhoto(share, size: size),
+      _ => null,
+    };
+
+/// A recipe's snapshot: its own cover first, else its share's photo, else the cooking drawing.
+SharePhoto recipeSnapshot(Recipe recipe) =>
+    switch ((recipe.cover, recipe.shareId)) {
+      (final cover?, final share) => SharePhoto.cover(
+        recipe.id,
+        cover,
+        fallbackShareId: share,
+      ),
+      (null, final share?) => SharePhoto(share, drawing: true),
+      _ => const SharePhoto.placeholder(),
+    };
 
 /// A share's photo, a recipe's cover ([recipeId]) or a restaurant's cover ([placeId]), filling its box
 /// (BoxFit.cover). [fallback] shows while loading, when there is none, or on error. For cards (Home feed); the list

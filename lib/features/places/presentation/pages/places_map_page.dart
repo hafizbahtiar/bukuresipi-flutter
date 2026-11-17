@@ -1367,7 +1367,7 @@ class _PinSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              if (place.shareId case final id?) SharePhoto(id, size: 64),
+              ?placePhoto(place, size: 64),
             ],
           ),
         ),

@@ -355,7 +355,10 @@ class PlaceTile extends StatelessWidget {
     final where = pinned ? (branch?.where ?? branch?.label) : l.noPin;
     final others = place.savedByOthers;
     return NotebookRow(
-      trailing: place.private || place.shareId != null
+      trailing:
+          place.private ||
+              place.shareId != null ||
+              place.restaurant.cover != null
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -368,7 +371,7 @@ class PlaceTile extends StatelessWidget {
                       color: nb.inkSoft,
                     ),
                   ),
-                if (place.shareId case final id?) SharePhoto(id),
+                ?placePhoto(place),
               ],
             )
           : null,
@@ -429,11 +432,7 @@ class RecipeTile extends StatelessWidget {
     ];
     return NotebookRow(
       mark: Icon(Icons.menu_book, size: 20, color: nb.inkSoft),
-      trailing: switch ((recipe.cover, recipe.shareId)) {
-        (final cover?, _) => SharePhoto.cover(recipe.id, cover),
-        (null, final id?) => SharePhoto(id, drawing: true),
-        _ => const SharePhoto.placeholder(),
-      },
+      trailing: recipeSnapshot(recipe),
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -31,11 +31,7 @@ class RecipeRow extends StatelessWidget {
         size: 20,
         color: nb.inkSoft,
       ),
-      trailing: switch ((recipe.cover, recipe.shareId)) {
-        (final cover?, _) => SharePhoto.cover(recipe.id, cover),
-        (null, final id?) => SharePhoto(id, drawing: true),
-        _ => const SharePhoto.placeholder(),
-      },
+      trailing: recipeSnapshot(recipe),
       onTap: () => context.push('/recipes/${recipe.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
