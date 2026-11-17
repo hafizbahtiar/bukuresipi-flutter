@@ -38,13 +38,8 @@ class ShareImage extends StatefulWidget {
 class _ShareImageState extends State<ShareImage> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => switch (widget.recipeId) {
-    final recipe? => context.read<RecipesController>().cover(
-      recipe,
-      widget.shareId,
-    ),
-    null => context.read<ShareRepository>().image(widget.shareId),
-  }.catchError((Object _) => null);
+  Future<Uint8List?> _load() =>
+      loadPhoto(context, widget.shareId, recipeId: widget.recipeId);
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
@@ -83,6 +78,29 @@ class _ShareImageState extends State<ShareImage> {
       null => const SizedBox.shrink(),
     },
   );
+}
+
+/// A share's photo, or a recipe's ([recipeId]) or restaurant's ([placeId]) cover; [id] is the share or cover id.
+/// A cover that won't load falls back to [fallbackShareId]'s photo. null = none or an error.
+Future<Uint8List?> loadPhoto(
+  BuildContext context,
+  String id, {
+  String? recipeId,
+  String? placeId,
+  String? fallbackShareId,
+}) async {
+  final shares = context.read<ShareRepository>();
+  final first = switch ((recipeId, placeId)) {
+    (final recipe?, _) => context.read<RecipesController>().cover(recipe, id),
+    (_, final place?) => context.read<PlacesController>().restaurantCover(
+      place,
+      id,
+    ),
+    _ => shares.image(id),
+  };
+  final bytes = await first.catchError((Object _) => null);
+  if (bytes != null || fallbackShareId == null) return bytes;
+  return shares.image(fallbackShareId).catchError((Object _) => null);
 }
 
 /// A share's photo as a small snapshot taped into the book: white border, a strip of tape, a slight tilt (the same for
@@ -144,28 +162,15 @@ class SharePhoto extends StatefulWidget {
 class _SharePhotoState extends State<SharePhoto> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() async {
-    if (widget.shareId.isEmpty) return null;
-    final shares = context.read<ShareRepository>();
-    final cover = switch ((widget.recipeId, widget.placeId)) {
-      (final recipe?, _) => context.read<RecipesController>().cover(
-        recipe,
-        widget.shareId,
-      ),
-      (_, final place?) => context.read<PlacesController>().restaurantCover(
-        place,
-        widget.shareId,
-      ),
-      _ => shares.image(widget.shareId),
-    };
-    final bytes = await cover.catchError((Object _) => null);
-    if (bytes != null) return bytes;
-    // A cover that won't load: the share's photo rather than nothing.
-    final fallback = widget.fallbackShareId;
-    return fallback == null
-        ? null
-        : shares.image(fallback).catchError((Object _) => null);
-  }
+  Future<Uint8List?> _load() => widget.shareId.isEmpty
+      ? Future.value(null)
+      : loadPhoto(
+          context,
+          widget.shareId,
+          recipeId: widget.recipeId,
+          placeId: widget.placeId,
+          fallbackShareId: widget.fallbackShareId,
+        );
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
@@ -295,6 +300,7 @@ class ShareFill extends StatefulWidget {
     required this.id,
     this.recipeId,
     this.placeId,
+    this.fallbackShareId,
     required this.fallback,
     this.cacheWidth = 600,
   });
@@ -303,6 +309,9 @@ class ShareFill extends StatefulWidget {
   final String id;
   final String? recipeId;
   final String? placeId;
+
+  /// The share whose photo shows when the cover won't load.
+  final String? fallbackShareId;
   final Widget fallback;
 
   /// Decoded at this width: a card is at most ~240 dp wide (600); a page's header photo is the screen's width.
@@ -322,29 +331,25 @@ class _ShareFillState extends State<ShareFill> {
 
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => _fetch().then((b) {
-    if (b != null) _ready[_key] = b;
-    return b;
-  });
-
-  Future<Uint8List?> _fetch() => switch ((widget.recipeId, widget.placeId)) {
-    (final recipe?, _) => context.read<RecipesController>().cover(
-      recipe,
-      widget.id,
-    ),
-    (_, final r?) => context.read<PlacesController>().restaurantCover(
-      r,
-      widget.id,
-    ),
-    _ => context.read<ShareRepository>().image(widget.id),
-  }.catchError((Object _) => null);
+  Future<Uint8List?> _load() =>
+      loadPhoto(
+        context,
+        widget.id,
+        recipeId: widget.recipeId,
+        placeId: widget.placeId,
+        fallbackShareId: widget.fallbackShareId,
+      ).then((b) {
+        if (b != null) _ready[_key] = b;
+        return b;
+      });
 
   @override
   void didUpdateWidget(covariant ShareFill old) {
     super.didUpdateWidget(old);
     if (old.id != widget.id ||
         old.recipeId != widget.recipeId ||
-        old.placeId != widget.placeId) {
+        old.placeId != widget.placeId ||
+        old.fallbackShareId != widget.fallbackShareId) {
       _bytes = _load();
     }
   }

@@ -252,6 +252,7 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
               key: ValueKey('place-cover-$photoId'),
               id: photoId,
               placeId: r.cover == null ? null : r.id,
+              fallbackShareId: r.cover == null ? null : place.shareId,
               fallback: ColoredBox(color: nb.mist),
             ),
       height: photoId == null ? 140 : null,

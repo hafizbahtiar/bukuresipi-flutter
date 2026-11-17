@@ -169,6 +169,9 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   final passkeyLogins = <Map<String, dynamic>>[];
+
+  /// The API refusing the phone's answer (e.g. `invalid_credentials`: a passkey removed on the server).
+  ApiException? passkeyLoginError;
   @override
   Future<Map<String, dynamic>> passkeyLoginOptions() async {
     if (loginError != null) throw loginError!;
@@ -178,6 +181,7 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<User> loginWithPasskey(Map<String, dynamic> response) async {
     passkeyLogins.add(response);
+    if (passkeyLoginError != null) throw passkeyLoginError!;
     session = true;
     return cached = testUser;
   }

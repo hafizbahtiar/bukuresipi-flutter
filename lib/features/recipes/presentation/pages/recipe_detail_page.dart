@@ -49,9 +49,10 @@ Widget? recipePhoto(
   required Widget fallback,
   int cacheWidth = 600,
 }) => switch ((cover, shareId)) {
-  (final c?, _) => ShareFill(
+  (final c?, final s) => ShareFill(
     id: c,
     recipeId: recipeId,
+    fallbackShareId: s,
     fallback: fallback,
     cacheWidth: cacheWidth,
   ),

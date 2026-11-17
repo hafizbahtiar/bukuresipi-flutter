@@ -128,7 +128,14 @@ class AuthController extends ChangeNotifier {
   Future<bool> loginWithPasskey(PasskeyAuth passkeys) async {
     final response = await passkeys.get(await _repo.passkeyLoginOptions());
     if (response == null) return false;
-    _set(AuthStatus.signedIn, await _repo.loginWithPasskey(response));
+    try {
+      _set(AuthStatus.signedIn, await _repo.loginWithPasskey(response));
+    } on ApiException catch (e) {
+      // The API answers a refused passkey (e.g. removed in Account > Passkeys, still on the phone) like a bad
+      // password; "wrong email or password" makes no sense when nothing was typed.
+      if (e.code != 'invalid_credentials') rethrow;
+      throw ApiException('invalid_passkey', status: e.status);
+    }
     return true;
   }
 

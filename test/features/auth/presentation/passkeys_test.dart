@@ -144,6 +144,21 @@ void main() {
       expect(find.textContaining('No Bukuresipi passkey'), findsOneWidget);
       expect(auth.status, AuthStatus.signedOut);
     });
+
+    testWidgets('a passkey the API refuses is not called a wrong password', (
+      t,
+    ) async {
+      await pump(t, _FakePhone());
+      repo.passkeyLoginError = const ApiException(
+        'invalid_credentials',
+        status: 401,
+      );
+      await t.tap(find.text('Sign in with a passkey'));
+      await t.pumpAndSettle();
+      expect(find.textContaining("The passkey didn't work"), findsOneWidget);
+      expect(find.text('Wrong email or password.'), findsNothing);
+      expect(auth.status, AuthStatus.signedOut);
+    });
   });
 
   group('Account > Passkeys', () {
