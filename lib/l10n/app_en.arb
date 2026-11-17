@@ -208,6 +208,110 @@
   "@halalSource": {},
   "halalNotCert": "This is a quote from a post, not a halal certificate. Check JAKIM for certification.",
   "@halalNotCert": {},
+  "halalCertTitle": "JAKIM halal certificate",
+  "@halalCertTitle": {},
+  "halalCertValid": "Valid until {date} · checked {checked}",
+  "@halalCertValid": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "checked": {
+        "type": "String"
+      }
+    }
+  },
+  "halalCertExpired": "Expired {date} · checked {checked}",
+  "@halalCertExpired": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "checked": {
+        "type": "String"
+      }
+    }
+  },
+  "halalCertOpen": "Check on JAKIM",
+  "@halalCertOpen": {},
+  "halalCertNote": "Listed in JAKIM's directory for this outlet only. Other branches may not be.",
+  "@halalCertNote": {},
+  "halalBrandTitle": "This brand has JAKIM-certified outlets",
+  "@halalBrandTitle": {},
+  "halalBrandCount": "JAKIM lists {count} premises under this name.",
+  "@halalBrandCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "halalBrandBranch": "{branch}: this outlet is not confirmed in JAKIM's directory.",
+  "@halalBrandBranch": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "halalBrandNote": "JAKIM certifies each outlet separately. Check for the certificate displayed at the premises.",
+  "@halalBrandNote": {},
+  "halalBrandOpen": "See JAKIM's list",
+  "@halalBrandOpen": {},
+  "jakimCheckAll": "Check JAKIM for all branches",
+  "@jakimCheckAll": {},
+  "jakimCheckBranch": "Check JAKIM: {branch}",
+  "@jakimCheckBranch": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimCheckFound": "{branch}: found on JAKIM, certificate saved.",
+  "@jakimCheckFound": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimCheckNone": "{branch}: no matching outlet in JAKIM's directory.",
+  "@jakimCheckNone": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimCheckDown": "JAKIM's site did not answer. Try again later.",
+  "@jakimCheckDown": {},
+  "jakimCheckPlace": "JAKIM: {outlets} premises under this name; {found} of {total} branches confirmed.",
+  "@jakimCheckPlace": {
+    "placeholders": {
+      "outlets": {
+        "type": "int"
+      },
+      "found": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "jakimChooseTitle": "Is {branch} one of these JAKIM outlets?",
+  "@jakimChooseTitle": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimChooseNone": "None of these",
+  "@jakimChooseNone": {},
+  "jakimCertSaved": "JAKIM certificate saved.",
+  "@jakimCertSaved": {},
   "noteTitle": "Your note",
   "@noteTitle": {},
   "noteHint": "For example: order the ayam goreng",
@@ -1789,6 +1893,23 @@
   "@recipeCoverRemove": {},
   "placeCoverFailed": "Branch saved, but the cover photo didn't save. Pick it again from the draft.",
   "@placeCoverFailed": {},
+  "jakimDraftTitle": "JAKIM halal directory: tick this outlet's row",
+  "@jakimDraftTitle": {},
+  "jakimDraftRow": "{address} \u00b7 valid until {date}",
+  "@jakimDraftRow": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimDraftNote": "Ticked = saved as this branch's JAKIM certificate when you save. Pre-ticked only when the AI and Clef both say it is this outlet.",
+  "@jakimDraftNote": {},
+  "halalCertSaveFailed": "Branch saved, but the JAKIM certificate didn't save. Tick it again from the draft.",
+  "@halalCertSaveFailed": {},
   "dishRemoveConfirm": "Delete this dish from the catalogue? Everyone loses it; copies people made stay theirs.",
   "@dishRemoveConfirm": {},
   "recipeCoverFailed": "Recipe saved, but the photo didn't upload. Try again from Edit.",
@@ -1803,6 +1924,8 @@
   "@feedRestaurants": {},
   "feedSaysHalal": "Says halal",
   "@feedSaysHalal": {},
+  "feedJakimHalal": "JAKIM halal",
+  "@feedJakimHalal": {},
   "feedCuisine": "Cuisine",
   "@feedCuisine": {},
   "feedAnyCuisine": "Any cuisine",
@@ -2019,13 +2142,17 @@
   },
   "pinSearchTitle": "Search a map",
   "@pinSearchTitle": {},
-  "pinSearchHelp": "Pick the map to ask. Use a result, check it, then save for Everyone.",
+  "pinSearchHelp": "Pick the map to ask (JAKIM: its halal-listed outlets, no pin: pin them with another map). Use a result, check it, then save for Everyone.",
   "@pinSearchHelp": {},
   "pinSearchOsm": "OpenStreetMap",
   "@pinSearchOsm": {},
   "pinSearchHere": "HERE",
   "@pinSearchHere": {},
   "pinSearchGrab": "AWS (Grab)",
+  "pinSearchJakim": "JAKIM",
+  "pinSearchNoPin": "No pin: pin it with OpenStreetMap, HERE or AWS",
+  "@pinSearchNoPin": {},
+  "@pinSearchJakim": {},
   "@pinSearchGrab": {},
   "pinSearchQuery": "Search for",
   "@pinSearchQuery": {},
@@ -2034,6 +2161,8 @@
   "pinSearchNone": "This map found nothing for this search. Try another map or other words.",
   "@pinSearchNone": {},
   "pinSearchUsed": "Pin, town and state filled from the map. Check them, then save.",
+  "pinSearchUsedNoPin": "Address, town and state filled from JAKIM. Pin it with another map, then save.",
+  "@pinSearchUsedNoPin": {},
   "@pinSearchUsed": {},
   "errSourceOff": "This map is off (no key, or its usage cap is reached). See Owner > Usage.",
   "@errSourceOff": {},

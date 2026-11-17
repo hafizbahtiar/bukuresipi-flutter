@@ -91,6 +91,22 @@ void main() {
     );
     expect(saved.restaurant.name, 'Nasi Kandar Pelita');
     expect(saved.branchId, 'b-2');
+    expect(saved.branches[0].halalCert, isNull);
+    final cert = saved.branches[1].halalCert!;
+    expect(
+      [cert.premise, cert.expiresOn, cert.url, cert.checkedAt.toUtc()],
+      [
+        'NASI KANDAR PELITA - JALAN AMPANG',
+        DateTime(2026, 11, 30),
+        'https://www.halal.gov.my/index.php?cari=pelita',
+        DateTime.utc(2026, 11, 17),
+      ],
+    );
+    expect(
+      cert.expiredAt(DateTime(2026, 11, 30, 23)),
+      isFalse,
+    ); // valid through its last day
+    expect(cert.expiredAt(DateTime(2026, 12, 1, 1)), isTrue);
   });
 
   test('note: PATCH with null for empty; remove: DELETE', () async {

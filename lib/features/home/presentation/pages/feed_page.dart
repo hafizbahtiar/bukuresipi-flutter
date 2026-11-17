@@ -49,7 +49,10 @@ Future<({double lat, double lng})?> _phone() async {
 /// "Near me" tag and its distance. One search box with suggestions; filters for kind, "says halal" and cuisine.
 /// Restaurants are filtered on the phone (the nearby list is at most 100), recipes on the server.
 class FeedPage extends StatefulWidget {
-  const FeedPage({super.key, this.locate = _phone});
+  const FeedPage({super.key, this.locate = _phone, this.toTop});
+
+  /// Changes when Home's tab is tapped again: back to the top.
+  final ValueListenable<int>? toTop;
 
   final Locate locate;
 
@@ -99,6 +102,7 @@ class _FeedPageState extends State<FeedPage> {
   @override
   void initState() {
     super.initState();
+    widget.toTop?.addListener(_toTop);
     Ads.ready.addListener(_adsReady);
     _edited.addListener(_patch);
     _removed.addListener(_drop);
@@ -139,11 +143,22 @@ class _FeedPageState extends State<FeedPage> {
     _removed.removeListener(_drop);
     _placesChanged.removeListener(_loadNearby);
     _search.dispose();
+    widget.toTop?.removeListener(_toTop);
     _scroll.dispose();
     super.dispose();
   }
 
   void _adsReady() => setState(() {});
+
+  void _toTop() {
+    if (!_scroll.hasClients) return;
+    if (MediaQuery.disableAnimationsOf(context)) return _scroll.jumpTo(0);
+    _scroll.animateTo(
+      0,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+    );
+  }
 
   Future<void> _refresh() {
     setState(_deadAds.clear);
@@ -252,7 +267,7 @@ class _FeedPageState extends State<FeedPage> {
     return [
       for (final p in _nearby)
         if ((q.isEmpty || _matches(p, q)) &&
-            (!_halal || p.halalClaim == 'says_halal') &&
+            (!_halal || p.halalClaim == 'says_halal' || p.jakimHalal) &&
             (_cuisine == null || p.cuisine?.trim() == _cuisine))
           p,
     ];
@@ -429,8 +444,11 @@ class _FeedPageState extends State<FeedPage> {
             '${average.toStringAsFixed(1)} ($count)',
             strong: true,
           ),
+        // This outlet in JAKIM's directory, not expired: the only "certified" we show (places/jakim.ts).
+        if (p.jakimHalal)
+          FeedFact(Icons.verified_outlined, l.feedJakimHalal, strong: true)
         // A quoted claim from the post, never "certified": the words stay "Says halal".
-        if (p.halalClaim == 'says_halal')
+        else if (p.halalClaim == 'says_halal')
           FeedFact(Icons.format_quote_rounded, l.feedSaysHalal, strong: true),
       ],
       tag: '${l.feedNearMe} · ${distanceText(p.distanceM)}',

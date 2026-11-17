@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
@@ -49,6 +50,9 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
   bool _savingNote = false;
   bool _checking = false;
 
+  /// Owner's "Check JAKIM" running (a place or a branch): its buttons wait.
+  bool _checkingHalal = false;
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +100,74 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
       _snack(errorText(l, e));
     } finally {
       if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  /// Owner: the brand's JAKIM count and every branch, now.
+  Future<void> _checkJakimPlace(Place place) async {
+    final l = AppLocalizations.of(context);
+    setState(() => _checkingHalal = true);
+    try {
+      final r = await context.read<PlacesController>().checkHalalPlace(
+        place.restaurant.id,
+      );
+      if (r.outlets == null &&
+          r.branches.values.every((s) => s == 'unavailable')) {
+        _snack(l.jakimCheckDown);
+      } else {
+        _snack(
+          l.jakimCheckPlace(
+            r.outlets ?? 0,
+            r.branches.values.where((s) => s == 'found').length,
+            r.branches.length,
+          ),
+        );
+      }
+    } catch (e) {
+      _snack(errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _checkingHalal = false);
+    }
+  }
+
+  /// Owner: one branch now; no automatic match = JAKIM's rows to choose from.
+  Future<void> _checkJakimBranch(Branch branch) async {
+    final l = AppLocalizations.of(context);
+    final places = context.read<PlacesController>();
+    final name = branch.label ?? branch.where ?? '-';
+    setState(() => _checkingHalal = true);
+    try {
+      final r = await places.checkHalalBranch(branch.id);
+      switch (r.status) {
+        case 'found':
+          _snack(l.jakimCheckFound(name));
+        case 'unavailable':
+          _snack(l.jakimCheckDown);
+        default:
+          final url = r.url;
+          if (r.rows.isEmpty || url == null || !mounted) {
+            _snack(l.jakimCheckNone(name));
+            break;
+          }
+          setState(
+            () => _checkingHalal = false,
+          ); // the check is done: no progress bar behind the sheet
+          final row = await showBaseSheet<JakimRow>(
+            context,
+            floating: false,
+            builder: (sheet) => _JakimChooser(branch: name, rows: r.rows),
+          );
+          if (row == null) {
+            _snack(l.jakimCheckNone(name));
+            break;
+          }
+          await places.setHalalCert(branch.id, row, url);
+          _snack(l.jakimCertSaved);
+      }
+    } catch (e) {
+      _snack(errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _checkingHalal = false);
     }
   }
 
@@ -185,6 +257,17 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
       for (final s in place.savedBy) s.isMe ? l.savedByYou : (s.name ?? '?'),
     ];
     final halal = r.halalClaim != null && r.halalQuote != null;
+    final certified = [
+      for (final b in branches)
+        if (b.halalCert != null) b,
+    ];
+    // The brand is on JAKIM but these outlets are not confirmed: said as such, never as halal.
+    final brandOnly = r.halalBrand == null
+        ? const <Branch>[]
+        : [
+            for (final b in branches)
+              if (b.halalCert == null && !b.closed) b,
+          ];
 
     void pickCover() => showModalBottomSheet<void>(
       context: context,
@@ -360,13 +443,38 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                   ],
                 ],
               ),
-            if (halal)
+            if (halal ||
+                certified.isNotEmpty ||
+                brandOnly.isNotEmpty ||
+                (owner && r.isFood))
               DetailSection(
                 id: 'place-tab-halal',
                 label: l.placeTabHalal,
                 rows: [
-                  SectionHeader(l.halalTitle),
-                  _HalalQuote(restaurant: r),
+                  if (certified.isNotEmpty) ...[
+                    SectionHeader(l.halalCertTitle),
+                    for (final b in certified) _HalalCertRow(branch: b),
+                  ],
+                  if (r.halalBrand case final brand?
+                      when brandOnly.isNotEmpty) ...[
+                    SectionHeader(l.halalBrandTitle),
+                    _HalalBrandRow(
+                      outlets: brand.outlets,
+                      url: brand.url,
+                      branches: brandOnly,
+                    ),
+                  ],
+                  if (owner && r.isFood)
+                    _OwnerJakim(
+                      branches: branches,
+                      busy: _checkingHalal,
+                      onPlace: () => _checkJakimPlace(place),
+                      onBranch: _checkJakimBranch,
+                    ),
+                  if (halal) ...[
+                    SectionHeader(l.halalTitle),
+                    _HalalQuote(restaurant: r),
+                  ],
                 ],
               ),
             if (place.mine)
@@ -488,6 +596,208 @@ class _BranchRow extends StatelessWidget {
             onTap: () => deleteBranch(context, branch),
           ),
       ],
+    );
+  }
+}
+
+/// A branch's JAKIM directory row: the outlet, until when, when we checked, and JAKIM's own page to check it.
+/// Expired stays shown (in red, with its date): never silently dropped, never "not halal".
+class _HalalCertRow extends StatelessWidget {
+  const _HalalCertRow({required this.branch});
+
+  final Branch branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final cert = branch.halalCert!;
+    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    final expired = cert.expiredAt(DateTime.now());
+    final dates = (expired ? l.halalCertExpired : l.halalCertValid)(
+      day.format(cert.expiresOn),
+      day.format(cert.checkedAt),
+    );
+    return Container(
+      key: ValueKey('halal-cert-${branch.id}'),
+      margin: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(color: expired ? nb.margin : nb.pandan, width: 4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            branch.label ?? branch.where ?? cert.premise,
+            style: text.titleSmall,
+          ),
+          Text(
+            cert.premise,
+            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          ),
+          Text(
+            dates,
+            style: text.bodyMedium?.copyWith(color: expired ? nb.margin : null),
+          ),
+          TextButton.icon(
+            onPressed: () => openLink(context, cert.url, failed: l.openFailed),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: Text(l.halalCertOpen),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          Text(
+            l.halalCertNote,
+            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The brand has JAKIM-certified premises, but these outlets are not matched: each premises is certified on its own,
+/// so the words say "not confirmed", never "halal", and send the user to the certificate at the premises.
+class _HalalBrandRow extends StatelessWidget {
+  const _HalalBrandRow({
+    required this.outlets,
+    required this.url,
+    required this.branches,
+  });
+
+  final int outlets;
+  final String url;
+  final List<Branch> branches;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Container(
+      key: const ValueKey('halal-brand'),
+      margin: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: nb.line, width: 4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.halalBrandCount(outlets), style: text.bodyMedium),
+          for (final b in branches)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.halalBrandBranch(b.label ?? b.where ?? '-'),
+                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          TextButton.icon(
+            onPressed: () => openLink(context, url, failed: l.openFailed),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: Text(l.halalBrandOpen),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          Text(
+            l.halalBrandNote,
+            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Owner only: "Check JAKIM" for the whole place (the brand + every branch) or one branch.
+class _OwnerJakim extends StatelessWidget {
+  const _OwnerJakim({
+    required this.branches,
+    required this.busy,
+    required this.onPlace,
+    required this.onBranch,
+  });
+
+  final List<Branch> branches;
+  final bool busy;
+  final VoidCallback onPlace;
+  final ValueChanged<Branch> onBranch;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: spaceM),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (busy) const LinearProgressIndicator(),
+          TextButton.icon(
+            key: const ValueKey('jakim-check-place'),
+            onPressed: busy ? null : onPlace,
+            icon: const Icon(Icons.verified_outlined, size: 18),
+            label: Text(l.jakimCheckAll),
+          ),
+          for (final b in branches.where((b) => !b.closed))
+            TextButton(
+              key: ValueKey('jakim-check-${b.id}'),
+              onPressed: busy ? null : () => onBranch(b),
+              child: Text(l.jakimCheckBranch(b.label ?? b.where ?? '-')),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// JAKIM's rows for a branch the check did not match: the owner picks the one that is it, or none.
+class _JakimChooser extends StatelessWidget {
+  const _JakimChooser({required this.branch, required this.rows});
+
+  final String branch;
+  final List<JakimRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, spaceM, spaceM, spaceS),
+            child: Text(l.jakimChooseTitle(branch), style: text.titleMedium),
+          ),
+          for (final (i, r) in rows.indexed)
+            ListTile(
+              key: ValueKey('jakim-choose-$i'),
+              title: Text(r.premise),
+              subtitle: Text(
+                l.jakimDraftRow(r.address, day.format(r.expiresOn)),
+                style: text.bodySmall?.copyWith(color: nb.inkSoft),
+              ),
+              onTap: () => Navigator.of(context).pop(r),
+            ),
+          TextButton(
+            key: const ValueKey('jakim-choose-none'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.jakimChooseNone),
+          ),
+        ],
+      ),
     );
   }
 }

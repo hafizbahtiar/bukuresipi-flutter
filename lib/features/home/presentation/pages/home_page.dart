@@ -77,7 +77,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Bumped when Home's tab is tapped while open: the feed scrolls back to the top.
+  final _feedTop = ValueNotifier(0);
+
   void _select(int tab) {
+    if (tab == _tab) {
+      if (tab == 0) _feedTop.value++;
+      return;
+    }
     _restore?.cancel();
     _run = 0;
     setState(() {
@@ -125,6 +132,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _restore?.cancel();
     _life.dispose();
+    _feedTop.dispose();
     super.dispose();
   }
 
@@ -143,11 +151,11 @@ class _HomePageState extends State<HomePage> {
         },
         child: IndexedStack(
           index: _tab,
-          children: const [
-            FeedPage(),
-            PlacesListPage(),
-            ReceiptsTab(),
-            AccountPage(),
+          children: [
+            FeedPage(toTop: _feedTop),
+            const PlacesListPage(),
+            const ReceiptsTab(),
+            const AccountPage(),
           ],
         ),
       ),

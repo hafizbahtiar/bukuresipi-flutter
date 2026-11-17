@@ -42,6 +42,12 @@ const placeJson = {
       'lat': 3.1579,
       'lng': 101.7123,
       'pinSource': 'user',
+      'halalCert': {
+        'premise': 'NASI KANDAR PELITA - JALAN AMPANG',
+        'expiresOn': '2026-11-30',
+        'url': 'https://www.halal.gov.my/index.php?cari=pelita',
+        'checkedAt': 1794873600000,
+      },
     },
   ],
 };
@@ -53,6 +59,8 @@ Place place({
   String? halal = 'says_halal',
   String? sourceUrl,
   RatingSummary? rating,
+  HalalCert? cert,
+  ({int outlets, String url})? brand,
 }) => Place(
   id: id,
   sourceUrl: sourceUrl,
@@ -67,6 +75,7 @@ Place place({
     halalSourceUrl: halal == null
         ? null
         : 'https://www.tiktok.com/@makan/video/1',
+    halalBrand: brand,
   ),
   branches: [
     Branch(
@@ -76,6 +85,7 @@ Place place({
       lng: lat == null ? null : 101.7,
       pinSource: lat == null ? null : 'osm',
       rating: rating ?? const RatingSummary(),
+      halalCert: cert,
     ),
   ],
 );
@@ -107,6 +117,7 @@ NearbyBranch nearbyBranch({
   String? savedPlaceId,
   String? cover,
   RatingSummary? rating,
+  HalalCert? cert,
 }) => NearbyBranch(
   branchId: branchId,
   placeId: 'r-1',
@@ -124,6 +135,7 @@ NearbyBranch nearbyBranch({
   savedPlaceId: savedPlaceId,
   cover: cover,
   rating: rating ?? const RatingSummary(),
+  halalCert: cert,
 );
 
 class FakePlaces implements PlacesRepository {
@@ -195,6 +207,40 @@ class FakePlaces implements PlacesRepository {
   @override
   Future<void> uploadRestaurantCover(String placeId, String path) async =>
       coverUploads.add((placeId, path));
+
+  /// What "Check JAKIM" answers, and the branches / places it was asked for.
+  JakimCheck halalCheck = (
+    status: 'none',
+    url: null,
+    rows: const [],
+    pick: null,
+  );
+  ({int? outlets, Map<String, String> branches}) placeHalalCheck = (
+    outlets: null,
+    branches: const {},
+  );
+  final halalChecks = <String>[];
+
+  @override
+  Future<JakimCheck> checkHalalBranch(String branchId) async {
+    halalChecks.add('branch:$branchId');
+    return halalCheck;
+  }
+
+  @override
+  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
+    String placeId,
+  ) async {
+    halalChecks.add('place:$placeId');
+    return placeHalalCheck;
+  }
+
+  /// [setHalalCert] calls: (branch, JAKIM outlet or null, directory url).
+  final halalCerts = <(String, String?, String)>[];
+
+  @override
+  Future<void> setHalalCert(String branchId, JakimRow? row, String url) async =>
+      halalCerts.add((branchId, row?.premise, url));
 
   /// [setRestaurantCoverUrl] calls: (restaurant, photo url).
   final coverUrls = <(String, String)>[];
@@ -349,7 +395,7 @@ class FakePlaces implements PlacesRepository {
   }
 
   /// [addSiblingBranch] calls: (branch, address, lat).
-  final siblings = <(String, String?, double)>[];
+  final siblings = <(String, String?, double?)>[];
 
   @override
   Future<void> addSiblingBranch(
@@ -357,8 +403,8 @@ class FakePlaces implements PlacesRepository {
     String? address,
     String? city,
     String? state,
-    required double lat,
-    required double lng,
+    required double? lat,
+    required double? lng,
   }) async => siblings.add((branchId, address, lat));
 
   /// What [searchPin] answers; [pinSearches] records (branch, source, q).

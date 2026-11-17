@@ -60,8 +60,8 @@ abstract interface class PlacesRepository {
     String? address,
     String? city,
     String? state,
-    required double lat,
-    required double lng,
+    required double? lat,
+    required double? lng,
   });
 
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
@@ -93,6 +93,17 @@ abstract interface class PlacesRepository {
 
   /// Owner only: picks a candidate as the cover for everyone; null clears it.
   Future<void> setRestaurantCover(String placeId, String? cover);
+
+  /// Owner only: "Check JAKIM" on one branch now. Throws ApiException.
+  Future<JakimCheck> checkHalalBranch(String branchId);
+
+  /// Owner only: "Check JAKIM" on a place: the brand's count across Malaysia, then each branch's status by id.
+  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
+    String placeId,
+  );
+
+  /// Owner only: a branch's JAKIM halal certificate from a draft row ([url] = the directory page); null clears it.
+  Future<void> setHalalCert(String branchId, JakimRow? row, String url);
 
   /// Owner only: a photo from the AI draft's web pages as the cover (the server downloads it). Throws ApiException.
   Future<void> setRestaurantCoverUrl(String placeId, String url);

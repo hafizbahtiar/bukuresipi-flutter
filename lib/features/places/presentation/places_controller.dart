@@ -192,8 +192,8 @@ class PlacesController extends ChangeNotifier {
     String? address,
     String? city,
     String? state,
-    required double lat,
-    required double lng,
+    required double? lat,
+    required double? lng,
   }) async {
     await _repo.addSiblingBranch(
       branchId,
@@ -344,6 +344,28 @@ class PlacesController extends ChangeNotifier {
   /// Owner only: a photo of their own as the cover. Throws ApiException.
   Future<void> uploadRestaurantCover(String placeId, String path) async {
     await _repo.uploadRestaurantCover(placeId, path);
+    await _reload();
+  }
+
+  /// Owner only: "Check JAKIM" on one branch; the book reloads (a found certificate shows). Throws ApiException.
+  Future<JakimCheck> checkHalalBranch(String branchId) async {
+    final r = await _repo.checkHalalBranch(branchId);
+    await _reload();
+    return r;
+  }
+
+  /// Owner only: "Check JAKIM" on a place (brand + branches); the book reloads. Throws ApiException.
+  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
+    String placeId,
+  ) async {
+    final r = await _repo.checkHalalPlace(placeId);
+    await _reload();
+    return r;
+  }
+
+  /// Owner only: a draft's JAKIM row as the branch's halal certificate. Throws ApiException.
+  Future<void> setHalalCert(String branchId, JakimRow row, String url) async {
+    await _repo.setHalalCert(branchId, row, url);
     await _reload();
   }
 

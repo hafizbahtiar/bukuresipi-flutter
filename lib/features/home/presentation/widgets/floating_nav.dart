@@ -41,6 +41,8 @@ class FloatingNav extends StatefulWidget {
 
   final List<NavItem> items;
   final int selected;
+
+  /// A tab tapped (the open one too: the page may go back to its top) or dragged to.
   final ValueChanged<int> onSelected;
   final String addLabel;
   final VoidCallback onAdd;
@@ -150,15 +152,19 @@ class _FloatingNavState extends State<FloatingNav>
                 return GestureDetector(
                   // From the touch, not from where the drag was recognised: the chip stays under the finger.
                   dragStartBehavior: DragStartBehavior.down,
-                  onHorizontalDragStart: (_) => setState(
-                    () => _drag = _slotOf(widget.selected).toDouble(),
-                  ),
-                  onHorizontalDragUpdate: (d) => setState(
-                    () => _drag = ((_drag ?? 0) + d.delta.dx / w).clamp(
-                      0,
-                      _slots - 1,
-                    ),
-                  ),
+                  // Only the chip is dragged: a drag that starts on another tab, or on "+", moves nothing.
+                  onHorizontalDragStart: (d) {
+                    final at = _slotOf(widget.selected);
+                    if (d.localPosition.dx ~/ w != at) return;
+                    setState(() => _drag = at.toDouble());
+                  },
+                  onHorizontalDragUpdate: (d) {
+                    final at = _drag;
+                    if (at == null) return;
+                    setState(
+                      () => _drag = (at + d.delta.dx / w).clamp(0, _slots - 1),
+                    );
+                  },
                   onHorizontalDragEnd: _dragEnd,
                   onHorizontalDragCancel: () => setState(() => _drag = null),
                   child: Stack(
@@ -207,11 +213,8 @@ class _FloatingNavState extends State<FloatingNav>
                                       selected: _tabOf(s) == widget.selected,
                                       lit: s == lit,
                                       still: still,
-                                      onTap: () {
-                                        if (_tabOf(s) != widget.selected) {
-                                          widget.onSelected(_tabOf(s));
-                                        }
-                                      },
+                                      // Also the tab already open: its page goes back to the top.
+                                      onTap: () => widget.onSelected(_tabOf(s)),
                                     ),
                             ),
                         ],

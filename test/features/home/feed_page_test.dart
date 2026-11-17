@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:bukuresipi_flutter/features/home/presentation/pages/feed_page.dart';
 import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
+import 'package:bukuresipi_flutter/features/places/domain/place.dart'
+    show HalalCert;
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart'
     show PlacePhotoFlight, placePhotoTag;
@@ -11,6 +13,7 @@ import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:bukuresipi_flutter/features/shares/presentation/widgets/share_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,6 +38,8 @@ void main() {
     bool locating = false, // the location answer never comes: still loading
     bool settle = true,
     Completer<void>? dishesGate,
+    ValueListenable<int>? toTop,
+    HalalCert? cert, // on b-1
   }) async {
     t.view.physicalSize = const Size(
       2400,
@@ -43,7 +48,12 @@ void main() {
     addTearDown(t.view.reset);
     places = FakePlaces()
       ..nearbyResults = [
-        nearbyBranch(branchId: 'b-1', name: 'Kedai Sederhana', distanceM: 900),
+        nearbyBranch(
+          branchId: 'b-1',
+          name: 'Kedai Sederhana',
+          distanceM: 900,
+          cert: cert,
+        ),
         nearbyBranch(
           branchId: 'b-2',
           name: 'Warung Pak Ali',
@@ -78,6 +88,7 @@ void main() {
         GoRoute(
           path: '/',
           builder: (_, _) => FeedPage(
+            toTop: toTop,
             locate: () => locating
                 ? Completer<({double lat, double lng})?>().future
                 : Future.value(located ? (lat: 3.15, lng: 101.7) : null),
@@ -160,6 +171,54 @@ void main() {
   );
 
   testWidgets(
+    'a branch with a valid JAKIM certificate is tagged JAKIM halal instead of Says halal',
+    (t) async {
+      HalalCert cert(DateTime expires) => HalalCert(
+        premise: 'KEDAI SEDERHANA',
+        expiresOn: expires,
+        url: 'https://www.halal.gov.my/x',
+        checkedAt: DateTime(2026, 11, 17),
+      );
+      Finder inCard(String key, Finder f) =>
+          find.descendant(of: find.byKey(ValueKey(key)), matching: f);
+      await pump(t, cert: cert(DateTime(2099)));
+      expect(
+        inCard('feed-place-b-1', find.text(l.feedJakimHalal)),
+        findsOneWidget,
+      );
+      expect(
+        inCard('feed-place-b-1', find.text(l.feedSaysHalal)),
+        findsNothing,
+      );
+      expect(
+        inCard('feed-place-b-2', find.text(l.feedSaysHalal)),
+        findsOneWidget,
+      );
+      expect(
+        inCard('feed-place-b-2', find.text(l.feedJakimHalal)),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets('an expired JAKIM certificate is no JAKIM tag', (t) async {
+    Finder inCard(String key, Finder f) =>
+        find.descendant(of: find.byKey(ValueKey(key)), matching: f);
+    final cert = HalalCert(
+      premise: 'KEDAI SEDERHANA',
+      expiresOn: DateTime(2020),
+      url: 'https://www.halal.gov.my/x',
+      checkedAt: DateTime(2026, 11, 17),
+    );
+    await pump(t, cert: cert);
+    expect(inCard('feed-place-b-1', find.text(l.feedJakimHalal)), findsNothing);
+    expect(
+      inCard('feed-place-b-1', find.text(l.feedSaysHalal)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
     'a restaurant card says what it is and its key facts: stars only when rated, the halal claim as a claim',
     (t) async {
       await pump(t);
@@ -231,6 +290,22 @@ void main() {
       );
     },
   );
+
+  testWidgets('Home tapped again scrolls the feed back to the top', (t) async {
+    final top = ValueNotifier(0);
+    await pump(t, community: 30, toTop: top);
+    t.view.physicalSize = const Size(1080, 2400); // a phone: the feed scrolls
+    await t.pumpAndSettle();
+    final scroll = t
+        .widget<CustomScrollView>(find.byType(CustomScrollView))
+        .controller!;
+    scroll.jumpTo(600);
+    await t.pump();
+    expect(scroll.offset, 600);
+    top.value++;
+    await t.pumpAndSettle();
+    expect(scroll.offset, 0);
+  });
 
   testWidgets('a dish deleted on its page leaves Home', (t) async {
     await pump(t);

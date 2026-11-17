@@ -282,6 +282,112 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a JAKIM certificate shows on its branch with dates and JAKIM\'s link; expired stays, marked',
+    (t) async {
+      HalalCert cert(DateTime expires) => HalalCert(
+        premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+        expiresOn: expires,
+        url: 'https://www.halal.gov.my/x',
+        checkedAt: DateTime(2026, 11, 17),
+      );
+      repo = FakePlaces()
+        ..places = [
+          place(id: 'a', halal: null, cert: cert(DateTime(2099, 1, 31))),
+          place(id: 'b', halal: null, cert: cert(DateTime(2020, 1, 31))),
+        ];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      await tapKey(t, 'place-tab-halal');
+      expect(find.text('JAKIM halal certificate'), findsOneWidget);
+      expect(find.text('NASI KANDAR PELITA - JALAN AMPANG'), findsOneWidget);
+      expect(find.textContaining('Valid until Jan 31, 2099'), findsOneWidget);
+      expect(find.text('Check on JAKIM'), findsOneWidget);
+      expect(find.text('What the post says about halal'), findsNothing);
+      await pump(t, const PlaceDetailPage(id: 'b'));
+      await tapKey(t, 'place-tab-halal');
+      expect(find.textContaining('Expired Jan 31, 2020'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the brand is on JAKIM but this outlet is not: said as not confirmed, with JAKIM\'s list; no check for users',
+    (t) async {
+      repo = FakePlaces()
+        ..places = [
+          place(
+            id: 'a',
+            halal: null,
+            brand: (outlets: 22, url: 'https://www.halal.gov.my/brand'),
+          ),
+        ];
+      await pump(t, const PlaceDetailPage(id: 'a'));
+      await tapKey(t, 'place-tab-halal');
+      expect(
+        find.text('This brand has JAKIM-certified outlets'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('JAKIM lists 22 premises under this name.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Nasi Kandar Pelita Ampang: this outlet is not confirmed in JAKIM\'s directory.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('certifies each outlet separately'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('jakim-check-place')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'the owner checks JAKIM for the place, and for a branch: no match = choose from JAKIM\'s rows',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a', halal: null)];
+      repo.placeHalalCheck = (outlets: 22, branches: {'b-1': 'none'});
+      repo.halalCheck = (
+        status: 'none',
+        url: 'https://www.halal.gov.my/x',
+        rows: [
+          (
+            premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+            company: null,
+            address: '149 JALAN AMPANG, 50450',
+            expiresOn: DateTime(2027, 1, 31),
+          ),
+        ],
+        pick: null,
+      );
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await tapKey(t, 'place-tab-halal');
+      await tapKey(t, 'jakim-check-place');
+      expect(
+        find.text(
+          'JAKIM: 22 premises under this name; 0 of 1 branches confirmed.',
+        ),
+        findsOneWidget,
+      );
+      await tapKey(t, 'jakim-check-b-1');
+      expect(
+        find.text('Is Nasi Kandar Pelita Ampang one of these JAKIM outlets?'),
+        findsOneWidget,
+      );
+      await tapKey(t, 'jakim-choose-0');
+      expect(repo.halalChecks, ['place:r-a', 'branch:b-1']);
+      expect(repo.halalCerts, [
+        (
+          'b-1',
+          'NASI KANDAR PELITA - JALAN AMPANG',
+          'https://www.halal.gov.my/x',
+        ),
+      ]);
+    },
+  );
+
   testWidgets('no claim, no halal section', (t) async {
     repo = FakePlaces()..places = [place(id: 'a', halal: null)];
     await pump(t, const PlaceDetailPage(id: 'a'));
@@ -695,6 +801,68 @@ void main() {
     },
   );
 
+  testWidgets(
+    'the draft lists JAKIM\'s rows with the AI + Clef pick ticked; the ticked row is saved with the branch',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a')];
+      repo.suggestion = BranchSuggestion(
+        draft: const BranchDraft(label: 'AI Label'),
+        sources: const ['jakim'],
+        aiUsed: true,
+        changed: true,
+        jakim: (
+          url: 'https://www.halal.gov.my/index.php?cari=pelita',
+          rows: [
+            (
+              premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+              company: 'PELITA SDN BHD',
+              address: '149 JALAN AMPANG, 50450, Kuala Lumpur',
+              expiresOn: DateTime(2026, 11, 30),
+            ),
+            (
+              premise: 'NASI KANDAR PELITA - KLCC',
+              company: 'PELITA SDN BHD',
+              address: 'LOT 1, 50088, Kuala Lumpur',
+              expiresOn: DateTime(2027, 1, 31),
+            ),
+          ],
+          pick: 0,
+        ),
+      );
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await branchMenu(t);
+      await t.tap(find.text('Edit branch'));
+      await t.pumpAndSettle();
+      final suggest = find.text('Suggest with AI');
+      await t.ensureVisible(suggest);
+      await t.tap(suggest);
+      await t.pumpAndSettle();
+
+      expect(find.text('NASI KANDAR PELITA - JALAN AMPANG'), findsOneWidget);
+      expect(find.textContaining('valid until Nov 30, 2026'), findsOneWidget);
+      CheckboxListTile tile(int i) =>
+          t.widget<CheckboxListTile>(find.byKey(ValueKey('jakim-$i')));
+      expect([tile(0).value, tile(1).value], [true, false]);
+      // The owner disagrees: KLCC instead.
+      await t.ensureVisible(find.byKey(const ValueKey('jakim-1')));
+      await t.tap(find.byKey(const ValueKey('jakim-1')));
+      await t.pumpAndSettle();
+      expect([tile(0).value, tile(1).value], [false, true]);
+
+      final save = find.byKey(const ValueKey('branch-save'));
+      await t.ensureVisible(save);
+      await t.tap(save);
+      await t.pumpAndSettle();
+      expect(repo.halalCerts, [
+        (
+          'b-1',
+          'NASI KANDAR PELITA - KLCC',
+          'https://www.halal.gov.my/index.php?cari=pelita',
+        ),
+      ]);
+    },
+  );
+
   testWidgets('the owner can type coordinates instead of using the map', (
     t,
   ) async {
@@ -812,6 +980,16 @@ void main() {
           city: 'Kuala Lumpur',
           state: 'Wilayah Persekutuan Kuala Lumpur',
           source: 'grab',
+          name: null,
+        ),
+        (
+          lat: null,
+          lng: null,
+          address: 'D-7-G, Bangi Gateway',
+          city: 'Bandar Baru Bangi',
+          state: 'Selangor',
+          source: 'jakim',
+          name: 'FLOW SMOKE & BREW - BANGI GATEWAY',
         ),
       ];
     await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
@@ -825,9 +1003,16 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.pinSearches.last.$2, 'osm');
     // Results open in a sheet; closed, the form keeps a button to show them again.
-    expect(find.text('1 result from OpenStreetMap'), findsOneWidget);
+    expect(find.text('2 results from OpenStreetMap'), findsOneWidget);
     await closeMenu(t);
-    expect(find.text('Show 1 result'), findsOneWidget);
+    expect(find.text('Show 2 results'), findsOneWidget);
+    // JAKIM: the halal-listed outlets, each named as JAKIM lists it.
+    await t.tap(find.text('JAKIM'));
+    await t.pumpAndSettle();
+    expect(repo.pinSearches.last.$2, 'jakim');
+    expect(find.text('FLOW SMOKE & BREW - BANGI GATEWAY'), findsOneWidget);
+    expect(find.textContaining('No pin: pin it with'), findsOneWidget);
+    await closeMenu(t);
     await t.tap(find.text('AWS (Grab)'));
     await t.pumpAndSettle();
     expect(repo.pinSearches.last.$2, 'grab');

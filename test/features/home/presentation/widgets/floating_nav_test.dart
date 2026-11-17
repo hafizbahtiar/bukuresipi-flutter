@@ -62,6 +62,9 @@ void main() {
       await t.tap(find.byKey(const ValueKey('nav-add')));
       expect(r.adds, [1]);
       expect(r.picked, [2]);
+      // The open tab tapped again is reported too (Home scrolls back to the top).
+      await t.tap(find.byKey(const ValueKey('nav-tab-2')));
+      expect(r.picked, [2, 2]);
     },
   );
 
@@ -83,6 +86,27 @@ void main() {
       await g.up();
       await t.pumpAndSettle();
       expect(r.picked.single, anyOf(1, 2)); // Book or Receipts, never "+"
+    },
+  );
+
+  testWidgets(
+    'only the chip drags: a drag from another tab or "+" moves nothing',
+    (t) async {
+      final r = await _pump(t);
+      final rest = _chipX(t);
+      for (final key in ['nav-tab-1', 'nav-tab-3']) {
+        final g = await t.startGesture(t.getCenter(find.byKey(ValueKey(key))));
+        await g.moveBy(const Offset(-60, 0));
+        await t.pump();
+        expect(_chipX(t), closeTo(rest, 1), reason: key); // the chip stays put
+        await g.up();
+        await t.pumpAndSettle();
+      }
+      expect(r.picked, isEmpty);
+      // A tap still switches tabs.
+      await t.tap(find.byKey(const ValueKey('nav-tab-1')));
+      await t.pumpAndSettle();
+      expect(r.picked, [1]);
     },
   );
 

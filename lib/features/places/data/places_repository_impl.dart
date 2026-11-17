@@ -182,6 +182,24 @@ class PlacesRepositoryImpl implements PlacesRepository {
       ],
       photos: ((j['photos'] as List?) ?? const []).cast<String>(),
       placeId: j['placeId'] as String?,
+      jakim: switch (j['jakim']) {
+        final Map<String, dynamic> k => (
+          url: k['url'] as String,
+          rows: [
+            for (final r
+                in ((k['rows'] as List?) ?? const [])
+                    .cast<Map<String, dynamic>>())
+              (
+                premise: r['premise'] as String,
+                company: r['company'] as String?,
+                address: r['address'] as String,
+                expiresOn: DateTime.parse(r['expiresOn'] as String),
+              ),
+          ],
+          pick: (k['pick'] as num?)?.toInt(),
+        ),
+        _ => null,
+      },
     );
   });
 
@@ -191,8 +209,8 @@ class PlacesRepositoryImpl implements PlacesRepository {
     String? address,
     String? city,
     String? state,
-    required double lat,
-    required double lng,
+    required double? lat,
+    required double? lng,
   }) => apiCall(
     () => _dio.post<void>(
       '/places/branches/$branchId/sibling',
@@ -215,18 +233,21 @@ class PlacesRepositoryImpl implements PlacesRepository {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/search-pin',
       data: {'source': source, 'q': ?q},
+      // JAKIM: up to 5 pages, 1 a second.
+      options: Options(receiveTimeout: const Duration(seconds: 90)),
     )).data!;
     return (
       query: j['query'] as String,
       hits: [
         for (final h in (j['hits'] as List).cast<Map<String, dynamic>>())
           (
-            lat: (h['lat'] as num).toDouble(),
-            lng: (h['lng'] as num).toDouble(),
+            lat: (h['lat'] as num?)?.toDouble(),
+            lng: (h['lng'] as num?)?.toDouble(),
             address: h['address'] as String,
             city: h['city'] as String?,
             state: h['state'] as String?,
             source: h['source'] as String,
+            name: h['name'] as String?,
           ),
       ],
     );
@@ -467,6 +488,69 @@ class PlacesRepositoryImpl implements PlacesRepository {
       });
 
   @override
+  Future<JakimCheck> checkHalalBranch(String branchId) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/branches/$branchId/halal-check',
+      // JAKIM's site, a page at a time, then Clef.
+      options: Options(receiveTimeout: const Duration(seconds: 90)),
+    )).data!;
+    return (
+      status: j['status'] as String,
+      url: j['url'] as String?,
+      rows: [
+        for (final r
+            in ((j['rows'] as List?) ?? const []).cast<Map<String, dynamic>>())
+          (
+            premise: r['premise'] as String,
+            company: r['company'] as String?,
+            address: r['address'] as String,
+            expiresOn: DateTime.parse(r['expiresOn'] as String),
+          ),
+      ],
+      pick: (j['pick'] as num?)?.toInt(),
+    );
+  });
+
+  @override
+  Future<({int? outlets, Map<String, String> branches})> checkHalalPlace(
+    String placeId,
+  ) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/restaurants/$placeId/halal-check',
+      options: Options(receiveTimeout: const Duration(seconds: 180)),
+    )).data!;
+    return (
+      outlets: (j['outlets'] as num?)?.toInt(),
+      branches: {
+        for (final b
+            in ((j['branches'] as List?) ?? const [])
+                .cast<Map<String, dynamic>>())
+          b['branchId'] as String: b['status'] as String,
+      },
+    );
+  });
+
+  @override
+  Future<void> setHalalCert(String branchId, JakimRow? row, String url) =>
+      apiCall(
+        () => _dio.put<void>(
+          '/places/branches/$branchId/halal-cert',
+          data: {
+            'cert': row == null
+                ? null
+                : {
+                    'premise': row.premise,
+                    'expiresOn': row.expiresOn.toIso8601String().substring(
+                      0,
+                      10,
+                    ),
+                    'url': url,
+                  },
+          },
+        ),
+      );
+
+  @override
   Future<void> setRestaurantCoverUrl(String placeId, String url) => apiCall(
     () => _dio.put<void>(
       '/places/restaurants/$placeId/cover',
@@ -517,6 +601,7 @@ NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   savedPlaceId: j['savedPlaceId'] as String?,
   rating: ratingFromJson(j['rating']),
   cover: j['cover'] as String?,
+  halalCert: HalalCert.fromJson(j['halalCert']),
 );
 
 ReviewVotes reviewVotesFromJson(Object? json) {
@@ -588,6 +673,13 @@ Place placeFromJson(Map<String, dynamic> j) {
       halalQuote: r['halalQuote'] as String?,
       halalSourceUrl: r['halalSourceUrl'] as String?,
       cover: r['cover'] as String?,
+      halalBrand: switch (r['halalBrand']) {
+        final Map<String, dynamic> b => (
+          outlets: (b['outlets'] as num).toInt(),
+          url: b['url'] as String,
+        ),
+        _ => null,
+      },
     ),
     branches: [
       for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())
@@ -602,6 +694,7 @@ Place placeFromJson(Map<String, dynamic> j) {
           pinSource: b['pinSource'] as String?,
           closed: b['closedAt'] != null,
           rating: ratingFromJson(b['rating']),
+          halalCert: HalalCert.fromJson(b['halalCert']),
         ),
     ],
   );

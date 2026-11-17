@@ -1,3 +1,4 @@
+import 'place.dart' show HalalCert;
 import 'rating.dart';
 
 /// A pinned branch near the map camera, from GET /places/nearby.
@@ -19,6 +20,7 @@ class NearbyBranch {
     this.savedPlaceId,
     this.rating = const RatingSummary(),
     this.cover,
+    this.halalCert,
   });
 
   final String branchId;
@@ -49,6 +51,12 @@ class NearbyBranch {
   /// The restaurant's cover photo id (PlacesRepository.restaurantCover); null = none.
   final String? cover;
 
+  /// JAKIM's halal certificate for this outlet; null = not found, never "not halal".
+  final HalalCert? halalCert;
+
+  /// A JAKIM certificate for this outlet, not past its expiry.
+  bool get jakimHalal => halalCert?.expiredAt(DateTime.now()) == false;
+
   NearbyBranch copyWith({
     bool? saved,
     String? savedPlaceId,
@@ -71,6 +79,7 @@ class NearbyBranch {
     savedPlaceId: savedPlaceId ?? this.savedPlaceId,
     rating: rating ?? this.rating,
     cover: cover,
+    halalCert: halalCert,
   );
 }
 

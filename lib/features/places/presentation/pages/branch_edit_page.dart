@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/widgets/draft_photos.dart';
 
@@ -93,6 +94,9 @@ class _BranchEditPageState extends State<BranchEditPage> {
 
   /// A draft photo picked as the restaurant's cover: set when the branch is saved.
   String? _photo;
+
+  /// The draft's JAKIM row ticked as this outlet's halal certificate (index): stored when the branch is saved.
+  int? _jakim;
   final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
 
@@ -213,14 +217,15 @@ class _BranchEditPageState extends State<BranchEditPage> {
   }
 
   /// "Use" on a map's result (a pin search hit or a draft's pin): its pin, address, town and state go into the form.
+  /// No pin (a JAKIM outlet) = the text only; the owner pins it with another map.
   void _useFound(
-    double lat,
-    double lng, {
+    double? lat,
+    double? lng, {
     String? address,
     String? city,
     String? state,
   }) {
-    _setPin(lat, lng);
+    if (lat != null && lng != null) _setPin(lat, lng);
     setState(() {
       if (address case final a? when a.trim().isNotEmpty) _address.text = a;
       if (city case final c?) _city.text = c;
@@ -228,7 +233,13 @@ class _BranchEditPageState extends State<BranchEditPage> {
       _aiFields.removeAll(['location', 'address', 'city', 'state']);
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).pinSearchUsed)),
+      SnackBar(
+        content: Text(
+          lat == null
+              ? AppLocalizations.of(context).pinSearchUsedNoPin
+              : AppLocalizations.of(context).pinSearchUsed,
+        ),
+      ),
     );
   }
 
@@ -244,6 +255,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
     final map = switch (_pinSource) {
       'osm' => l.pinSearchOsm,
       'here' => l.pinSearchHere,
+      'jakim' => l.pinSearchJakim,
       _ => l.pinSearchGrab,
     };
     final picked = await showModalBottomSheet<PinHit>(
@@ -322,6 +334,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
             ButtonSegment(value: 'osm', label: Text(l.pinSearchOsm)),
             ButtonSegment(value: 'here', label: Text(l.pinSearchHere)),
             ButtonSegment(value: 'grab', label: Text(l.pinSearchGrab)),
+            ButtonSegment(value: 'jakim', label: Text(l.pinSearchJakim)),
           ],
         ),
         const SizedBox(height: 8),
@@ -379,6 +392,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
       setState(() {
         _suggestion = suggestion;
         _photo = null;
+        _jakim = suggestion.jakim?.pick;
         _aiFields.clear();
         if (suggestion.draft.label case final label?) {
           _label.text = label;
@@ -472,6 +486,15 @@ class _BranchEditPageState extends State<BranchEditPage> {
           await places.setRestaurantCoverUrl(id, url);
         } catch (_) {
           messenger.showSnackBar(SnackBar(content: Text(l.placeCoverFailed)));
+        }
+      }
+      if ((_jakim, _suggestion?.jakim) case (final i?, final jakim?)) {
+        try {
+          await places.setHalalCert(widget.branch.id, jakim.rows[i], jakim.url);
+        } catch (_) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l.halalCertSaveFailed)),
+          );
         }
       }
       if (!mounted) return;
@@ -575,6 +598,8 @@ class _BranchEditPageState extends State<BranchEditPage> {
                       onPick: _pickDraft,
                       photo: _photo,
                       onPhoto: (url) => setState(() => _photo = url),
+                      jakim: _jakim,
+                      onJakim: (i) => setState(() => _jakim = i),
                       onUsePin: (c) =>
                           _useFound(c.lat, c.lng, address: c.address),
                     ),
@@ -792,9 +817,15 @@ class _DraftBanner extends StatelessWidget {
     required this.onUsePin,
     required this.photo,
     required this.onPhoto,
+    required this.jakim,
+    required this.onJakim,
   });
 
   final BranchSuggestion suggestion;
+
+  /// The ticked JAKIM row (null = none) and its change.
+  final int? jakim;
+  final ValueChanged<int?> onJakim;
 
   /// The picked cover photo (null = none) and its change.
   final String? photo;
@@ -894,6 +925,41 @@ class _DraftBanner extends StatelessWidget {
               picked: photo,
               onPick: onPhoto,
             ),
+          ],
+          if (suggestion.jakim case final k? when k.rows.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              l.jakimDraftTitle,
+              style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            // Its own Material: the banner's colour would hide the tiles' ink otherwise.
+            Material(
+              type: MaterialType.transparency,
+              child: Column(
+                children: [
+                  for (final (i, r) in k.rows.indexed)
+                    CheckboxListTile(
+                      key: ValueKey('jakim-$i'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: jakim == i,
+                      onChanged: (on) => onJakim(on == true ? i : null),
+                      title: Text(r.premise, style: text.bodyMedium),
+                      subtitle: Text(
+                        l.jakimDraftRow(
+                          r.address,
+                          DateFormat.yMMMd(
+                            Localizations.localeOf(context).toString(),
+                          ).format(r.expiresOn),
+                        ),
+                        style: small,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Text(l.jakimDraftNote, style: small),
           ],
           for (final warning in suggestion.warnings)
             Padding(
@@ -1174,6 +1240,13 @@ class _PinHitsSheetState extends State<_PinHitsSheet> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (h.name case final name?)
+                                Text(
+                                  name,
+                                  style: text.labelMedium?.copyWith(
+                                    color: nb.pandanDeep,
+                                  ),
+                                ),
                               Text(
                                 h.address,
                                 style: text.bodyLarge?.copyWith(
@@ -1191,7 +1264,9 @@ class _PinHitsSheetState extends State<_PinHitsSheet> {
                                 ),
                               const SizedBox(height: 2),
                               Text(
-                                '${h.lat.toStringAsFixed(5)}, ${h.lng.toStringAsFixed(5)}',
+                                h.lat == null || h.lng == null
+                                    ? l.pinSearchNoPin
+                                    : '${h.lat!.toStringAsFixed(5)}, ${h.lng!.toStringAsFixed(5)}',
                                 style: text.bodySmall?.copyWith(
                                   color: nb.inkSoft,
                                   fontFeatures: const [

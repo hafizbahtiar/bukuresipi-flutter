@@ -49,6 +49,8 @@ android {
         // Minify (R8) and resource shrinking are on by default for release in the Flutter Gradle plugin.
         release {
             signingConfig = signingConfigs.getByName("release")
+            // Our keep rules on top of Flutter's (proguard-rules.pro: why).
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
