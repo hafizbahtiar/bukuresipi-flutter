@@ -26,6 +26,14 @@ import '../widgets/place_report_sheet.dart';
 import '../widgets/unpinned_actions.dart';
 
 /// One saved place as a notebook page; its actions (directions, save note, check branches, remove) float in a dock.
+/// The route `extra` from a card whose photo flies into the page's header: the page fades in instead of flipping.
+class PlacePhotoFlight {
+  const PlacePhotoFlight();
+}
+
+/// The hero tag shared by a place card's photo and its page header ([id] = the saved place's id).
+Object placePhotoTag(String id) => 'place-photo-$id';
+
 class PlaceDetailPage extends StatefulWidget {
   const PlaceDetailPage({super.key, required this.id});
 
@@ -245,18 +253,31 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
 
     // The cover the owner picked, else the post's picture, else a short banner (the owner can add a cover there).
     final photoId = r.cover ?? place.shareId;
+    // A screen wide, so decoded larger than a card's (as a recipe's header).
+    final cacheWidth =
+        (MediaQuery.sizeOf(context).width *
+                MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(600, 1600);
+    final photo = photoId == null
+        ? null
+        : ShareFill(
+            key: ValueKey('place-cover-$photoId'),
+            id: photoId,
+            placeId: r.cover == null ? null : r.id,
+            fallbackShareId: r.cover == null ? null : place.shareId,
+            fallback: ColoredBox(color: nb.mist),
+            cacheWidth: cacheWidth,
+          );
+    ShareFill.warm(
+      context,
+      photo,
+    ); // decoded during a card's flight, not on landing
     final coverBar = CoverAppBar(
-      photo: photoId == null
-          ? _NoPhoto(onAdd: owner ? pickCover : null)
-          : ShareFill(
-              key: ValueKey('place-cover-$photoId'),
-              id: photoId,
-              placeId: r.cover == null ? null : r.id,
-              fallbackShareId: r.cover == null ? null : place.shareId,
-              fallback: ColoredBox(color: nb.mist),
-            ),
-      height: photoId == null ? 140 : null,
+      photo: photo ?? _NoPhoto(onAdd: owner ? pickCover : null),
+      height: photo == null ? 140 : null,
       title: r.name,
+      heroTag: photo == null ? null : placePhotoTag(widget.id),
       actions: [more],
     );
     final header = SliverList.list(

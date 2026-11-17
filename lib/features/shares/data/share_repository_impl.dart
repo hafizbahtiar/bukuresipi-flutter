@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/disk_image_cache.dart';
 import '../domain/share.dart';
 import '../domain/share_repository.dart';
 
@@ -89,7 +90,9 @@ class ShareRepositoryImpl implements ShareRepository {
     if (_images.length >= _imageCacheSize) {
       _images.remove(_images.keys.first);
     }
-    final f = _fetchImage(id);
+    // On disk too: a share's photo never changes, so each is downloaded once per phone, not once per launch. A share
+    // with none (404) isn't stored, so a thumbnail added later still shows.
+    final f = diskCached('share-$id', () => _fetchImage(id));
     _images[id] = f;
     f.catchError((Object _) {
       _images.remove(id); // a failed fetch is tried again next time

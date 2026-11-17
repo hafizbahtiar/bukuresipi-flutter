@@ -1,9 +1,11 @@
 import 'dart:async';
 
-import 'package:bukuresipi_flutter/features/home/presentation/feed_page.dart';
+import 'package:bukuresipi_flutter/features/home/presentation/pages/feed_page.dart';
 import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/pages/place_detail_page.dart'
+    show PlacePhotoFlight, placePhotoTag;
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
@@ -85,6 +87,12 @@ void main() {
         GoRoute(
           path: '/shopping',
           builder: (_, _) => const Text('the shopping list'),
+        ),
+        GoRoute(
+          path: '/places/:id',
+          builder: (_, st) => Text(
+            'place ${st.pathParameters['id']} ${st.extra is PlacePhotoFlight ? 'flying' : 'flat'}',
+          ),
         ),
         GoRoute(
           path: '/recipes/:id',
@@ -251,6 +259,47 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('Warung Pak Ali Baru'), findsOneWidget);
       expect(find.text('Kedai Sederhana'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a saved place with a photo: its card photo is the hero that flies into the place page',
+    (t) async {
+      await pump(t);
+      places.nearbyResults = [
+        nearbyBranch(
+          branchId: 'b-3',
+          name: 'Nasi Kandar Ali',
+          distanceM: 200,
+          saved: true,
+          savedPlaceId: 'up-1',
+          cover: 'cv-3',
+        ),
+        nearbyBranch(branchId: 'b-4', name: 'Not Saved', cover: 'cv-4'),
+      ];
+      await t
+          .element(find.byType(FeedPage))
+          .read<PlacesController>()
+          .setRestaurantCover('r-1', null); // refetches nearby
+      await t.pumpAndSettle();
+      Iterable<Object> tags(String key) => find
+          .descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(Hero),
+          )
+          .evaluate()
+          .map((e) => (e.widget as Hero).tag);
+      expect(tags('feed-place-b-3'), [placePhotoTag('up-1')]);
+      expect(
+        tags('feed-place-b-4'),
+        isEmpty,
+      ); // opens a sheet: nothing to fly to
+      await t.tap(find.text('Nasi Kandar Ali'));
+      await t.pumpAndSettle();
+      expect(
+        find.text('place up-1 flying'),
+        findsOneWidget,
+      ); // fades in, no page flip
     },
   );
 

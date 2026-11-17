@@ -6,26 +6,28 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/constants/image_constant.dart';
-import '../../../core/network/update_gate.dart';
-import '../../../core/widgets/system_pages.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/cover_app_bar.dart';
-import '../../../core/widgets/notebook.dart';
-import '../../../l10n/gen/app_localizations.dart';
-import '../../places/domain/nearby_branch.dart';
-import '../../places/domain/rating.dart';
-import '../../shares/presentation/widgets/share_image.dart';
-import '../../recipes/presentation/pages/pantry_page.dart';
-import 'add_sheet.dart';
-import 'widgets/feed_card.dart';
-import 'widgets/feed_empty.dart';
-import '../../places/presentation/location.dart';
-import '../../places/presentation/places_controller.dart';
-import '../../places/presentation/widgets/nearby_sheet.dart';
-import '../../recipes/domain/recipe.dart';
-import '../../recipes/presentation/pages/recipe_detail_page.dart';
-import '../../recipes/presentation/recipes_controller.dart';
+import '../../../../core/constants/image_constant.dart';
+import '../../../../core/network/update_gate.dart';
+import '../../../../core/widgets/system_pages.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/cover_app_bar.dart';
+import '../../../../core/widgets/notebook.dart';
+import '../../../../l10n/gen/app_localizations.dart';
+import '../../../places/domain/nearby_branch.dart';
+import '../../../places/domain/rating.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
+import '../../../recipes/presentation/pages/pantry_page.dart';
+import '../add_sheet.dart';
+import '../widgets/feed_card.dart';
+import '../widgets/feed_empty.dart';
+import '../../../places/presentation/location.dart';
+import '../../../places/presentation/pages/place_detail_page.dart'
+    show PlacePhotoFlight, placePhotoTag;
+import '../../../places/presentation/places_controller.dart';
+import '../../../places/presentation/widgets/nearby_sheet.dart';
+import '../../../recipes/domain/recipe.dart';
+import '../../../recipes/presentation/pages/recipe_detail_page.dart';
+import '../../../recipes/presentation/recipes_controller.dart';
 
 enum FeedKind { all, recipes, restaurants }
 
@@ -242,7 +244,10 @@ class _FeedPageState extends State<FeedPage> {
 
   void _open(NearbyBranch place) {
     if (place.saved && place.savedPlaceId != null) {
-      context.push('/places/${place.savedPlaceId}');
+      context.push(
+        '/places/${place.savedPlaceId}',
+        extra: place.cover == null ? null : const PlacePhotoFlight(),
+      );
       return;
     }
     final places = context.read<PlacesController>();
@@ -416,11 +421,19 @@ class _FeedPageState extends State<FeedPage> {
       tagIcon: Icons.near_me,
       icon: Icons.storefront_outlined,
       photo: switch (p.cover) {
-        final cover? => (ph) => ShareFill(
-          id: cover,
-          placeId: p.placeId,
-          fallback: ph,
-        ),
+        final cover? => (ph) {
+          final photo = ShareFill(id: cover, placeId: p.placeId, fallback: ph);
+          // A saved place opens its page: the photo flies into the header there. Not saved = a sheet, no flight.
+          return switch (p.savedPlaceId) {
+            final id? when p.saved => Hero(
+              tag: placePhotoTag(id),
+              createRectTween: CoverAppBar.flight,
+              flightShuttleBuilder: CoverAppBar.cardShuttle,
+              child: photo,
+            ),
+            _ => photo,
+          };
+        },
         null => null,
       },
       onTap: () => _open(p),
@@ -520,13 +533,6 @@ class _FeedPageState extends State<FeedPage> {
                 onPressed: () => updateApp(context),
               ),
             ),
-          IconButton(
-            key: const ValueKey('feed-pantry'),
-            tooltip: l.pantryTitle,
-            icon: const Icon(Icons.kitchen_outlined),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const PantryPage())),
-          ),
           IconButton(
             key: const ValueKey('feed-shopping'),
             tooltip: l.shoppingTitle,
@@ -634,6 +640,18 @@ class _FeedPageState extends State<FeedPage> {
                   ),
                 ),
               ),
+              // "What can I cook?" says what it is, not just a kitchen icon: a card above the recipes.
+              if (showRecipes)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: _PantryCard(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const PantryPage()),
+                      ),
+                    ),
+                  ),
+                ),
               if (_failed)
                 note(
                   l.recipesLoadFailed2,
@@ -693,6 +711,68 @@ class _FeedPageState extends State<FeedPage> {
   }
 }
 
+/// Home's way into "What can I cook?": the kitchen icon, the name, one line on what it does, a chevron.
+class _PantryCard extends StatelessWidget {
+  const _PantryCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Material(
+      key: const ValueKey('feed-pantry'),
+      color: nb.paper,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: nb.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: nb.mist,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.kitchen_outlined, color: nb.pandanDeep),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.pantryTitle,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l.pantryPromo,
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: nb.inkSoft),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Columns for a width: 2 on a phone, one more per ~220 dp after that.
 int _columns(double width) => math.max(2, (width - 32) ~/ 220);
 
@@ -705,6 +785,7 @@ Widget Function(Widget)? _heroPhoto(
   if (cover == null && shareId == null) return null;
   return (placeholder) => Hero(
     tag: recipePhotoTag(id),
+    createRectTween: CoverAppBar.flight,
     flightShuttleBuilder: CoverAppBar.cardShuttle,
     child: recipePhoto(
       id,

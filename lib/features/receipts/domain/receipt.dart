@@ -177,8 +177,20 @@ class ReceiptStats {
   final int totalSen;
   final int visits;
   final List<({String month, int visits, int totalSen})> months;
-  final List<({String placeId, String name, int visits, int totalSen})> places;
+
+  /// Top 10 by spend, most first.
+  final List<SpendPlace> places;
 }
+
+/// One place in [ReceiptStats.places]; [cover] = the restaurant's cover id (PlacesRepository.placeCover), null = none.
+typedef SpendPlace = ({
+  String placeId,
+  String name,
+  String? cover,
+  int visits,
+  int totalSen,
+  DateTime? lastVisitAt,
+});
 
 /// "RM 41.15" from sen; "-RM 2.00" for a discount.
 String rm(int sen) {

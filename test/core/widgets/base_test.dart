@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/core/widgets/base.dart';
 import 'package:bukuresipi_flutter/core/widgets/notebook_dialog.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -108,4 +110,70 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('picker-search')), findsNothing);
   });
+
+  testWidgets(
+    'a floating sheet sits off the screen edges; floating: false is full width',
+    (t) async {
+      // A phone: on a wide screen Material centres every sheet at 640 dp.
+      t.view.physicalSize = const Size(390 * 3, 844 * 3);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      final ctx = await pump(t);
+      final screen = t.view.physicalSize / t.view.devicePixelRatio;
+
+      Future<String?> open() => showBaseSheet<String>(
+        ctx,
+        builder: (s) => ListTile(
+          key: const ValueKey('sheet-row'),
+          title: const Text('Pick'),
+          onTap: () => Navigator.pop(s, 'picked'),
+        ),
+      );
+      Rect card() => t.getRect(
+        find
+            .ancestor(
+              of: find.byKey(const ValueKey('sheet-row')),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+
+      var answer = open();
+      // Half way in: the bottom edge is already on its line; only the top has further to rise.
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 120));
+      final growing = card();
+      await t.pumpAndSettle();
+      final open_ = card();
+      expect(open_.left, 12);
+      expect(screen.width - open_.right, 12);
+      expect(screen.height - open_.bottom, 12);
+      expect(growing.bottom, open_.bottom);
+      expect(growing.height, lessThan(open_.height));
+      await t.tap(find.byKey(const ValueKey('sheet-row')));
+      await t.pumpAndSettle();
+      expect(await answer, 'picked');
+
+      // Dragged down past a third: it closes, with nothing picked.
+      answer = open();
+      await t.pumpAndSettle();
+      await t.drag(
+        find.byKey(const ValueKey('sheet-row')),
+        const Offset(0, 60),
+      );
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('sheet-row')), findsNothing);
+      expect(await answer, isNull);
+
+      unawaited(
+        showBaseSheet<void>(
+          ctx,
+          floating: false,
+          builder: (_) => const SizedBox(key: ValueKey('wide'), height: 40),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(t.getRect(find.byType(BottomSheet)).width, screen.width);
+    },
+  );
 }

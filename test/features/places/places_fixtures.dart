@@ -105,6 +105,7 @@ NearbyBranch nearbyBranch({
   int distanceM = 2400,
   bool saved = false,
   String? savedPlaceId,
+  String? cover,
   RatingSummary? rating,
 }) => NearbyBranch(
   branchId: branchId,
@@ -121,6 +122,7 @@ NearbyBranch nearbyBranch({
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',
   saved: saved,
   savedPlaceId: savedPlaceId,
+  cover: cover,
   rating: rating ?? const RatingSummary(),
 );
 

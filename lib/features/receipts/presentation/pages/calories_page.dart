@@ -94,26 +94,7 @@ class CaloriesSectionState extends State<CaloriesSection> {
   /// Camera or photos, then the estimate page; a saved meal reloads the day.
   Future<void> _snapMeal() async {
     final l = AppLocalizations.of(context);
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: Text(l.mealSnap),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l.receiptFromGallery),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
+    final source = await showPhotoSourceSheet(context, camera: l.mealSnap);
     if (source == null || !mounted) return;
     // 1600 px is plenty to tell dishes apart and keeps the upload small.
     final picked = await ImagePicker().pickImage(
@@ -225,9 +206,25 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l.caloriesToday,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          // The target belongs to today's number: its button sits on the title's line.
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.caloriesToday,
+                  style: text.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton(
+                key: const ValueKey('kcal-target-button'),
+                onPressed: onTarget,
+                child: Text(
+                  target == null ? l.caloriesSetTarget : l.caloriesChangeTarget,
+                ),
+              ),
+            ],
           ),
           Text(
             target == null
@@ -269,26 +266,15 @@ class _Header extends StatelessWidget {
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ),
-          Wrap(
-            spacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              FilledButton.tonalIcon(
-                key: const ValueKey('snap-meal'),
-                onPressed: onSnap,
-                icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                label: Text(l.mealSnap),
-              ),
-              TextButton(
-                key: const ValueKey('kcal-target-button'),
-                onPressed: onTarget,
-                child: Text(
-                  target == null ? l.caloriesSetTarget : l.caloriesChangeTarget,
-                ),
-              ),
-            ],
+          const SizedBox(height: 12),
+          // The page's main action: the app's standard full-width button (theme: 52 dp pill).
+          FilledButton.icon(
+            key: const ValueKey('snap-meal'),
+            onPressed: onSnap,
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: Text(l.mealSnap),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
             child: PillSwitch<int>(

@@ -1,7 +1,7 @@
 import 'package:bukuresipi_flutter/core/settings/locale_controller.dart';
 import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
-import 'package:bukuresipi_flutter/features/home/presentation/home_page.dart';
+import 'package:bukuresipi_flutter/features/home/presentation/pages/home_page.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/floating_nav.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
@@ -97,6 +97,77 @@ void main() {
     await t.pump();
     expect(selectedTab(t), 3);
   });
+
+  testWidgets(
+    'the nav shrinks while a list scrolls either way, and grows back once it has rested',
+    (t) async {
+      await pumpHome(t, open: HomePage.bookTab);
+      await t.pump();
+      bool compact() => t.widget<FloatingNav>(find.byType(FloatingNav)).compact;
+      final tab = t.element(find.byType(Scrollable).first);
+      ScrollMetrics metrics(AxisDirection axis) => FixedScrollMetrics(
+        minScrollExtent: 0,
+        maxScrollExtent: 1000,
+        pixels: 200,
+        viewportDimension: 600,
+        axisDirection: axis,
+        devicePixelRatio: 1,
+      );
+      Future<void> send(ScrollNotification n) async {
+        n.dispatch(tab);
+        await t.pump();
+      }
+
+      Future<void> start([AxisDirection axis = AxisDirection.down]) =>
+          send(ScrollStartNotification(metrics: metrics(axis), context: tab));
+      Future<void> scroll(
+        double delta, [
+        AxisDirection axis = AxisDirection.down,
+      ]) => send(
+        ScrollUpdateNotification(
+          metrics: metrics(axis),
+          context: tab,
+          scrollDelta: delta,
+        ),
+      );
+      Future<void> stop() => send(
+        ScrollEndNotification(
+          metrics: metrics(AxisDirection.down),
+          context: tab,
+        ),
+      );
+
+      await start();
+      await scroll(10); // a jitter: nothing yet
+      expect(compact(), isFalse);
+      await scroll(-20); // 30 moved in all, up counts too
+      expect(compact(), isTrue);
+      await stop();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(compact(), isTrue); // stopped only a moment: still small
+      await start(); // scrolling again cancels the return
+      await scroll(40);
+      await stop();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(compact(), isTrue);
+      await t.pump(const Duration(milliseconds: 300)); // rested past 0.5 s
+      expect(compact(), isFalse);
+
+      await start();
+      await scroll(40);
+      expect(compact(), isTrue);
+      await t.tap(find.byKey(const ValueKey('nav-tab-3'))); // another tab
+      await t.pump();
+      expect(compact(), isFalse);
+
+      // A card strip scrolled sideways leaves the nav as it is.
+      await start(AxisDirection.right);
+      await scroll(200, AxisDirection.right);
+      expect(compact(), isFalse);
+      // Not settle: Home's location spinner never stops in tests. A second lets the spring rest.
+      await t.pump(const Duration(seconds: 1));
+    },
+  );
 
   testWidgets('Done after a share opens Home on the Book tab', (t) async {
     await pumpHome(t, open: HomePage.bookTab);

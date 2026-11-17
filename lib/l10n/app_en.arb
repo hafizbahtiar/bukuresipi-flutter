@@ -1831,6 +1831,12 @@
   "@avatarChange": {},
   "avatarRemove": "Remove profile picture",
   "@avatarRemove": {},
+  "avatarActionChange": "Change",
+  "@avatarActionChange": {},
+  "avatarActionRemove": "Remove",
+  "@avatarActionRemove": {},
+  "avatarRemoveConfirm": "Remove your profile picture? Your family will see your initial instead.",
+  "@avatarRemoveConfirm": {},
   "feedEmptyTitle": "Nothing here yet",
   "@feedEmptyTitle": {},
   "feedEmptyBody": "Share a TikTok, Instagram, Facebook or YouTube post and Bukuresipi turns it into a recipe or a place to eat.",
@@ -1973,6 +1979,22 @@
   "@spendingVisits": {},
   "spendingTopPlaces": "Top places",
   "@spendingTopPlaces": {},
+  "spendingShare": "{percent}% of spending",
+  "@spendingShare": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "spendingLastVisit": "Last {date}",
+  "@spendingLastVisit": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "errDuplicateReceipt": "You already added this receipt.",
   "@errDuplicateReceipt": {},
   "errReceiptLimit": "That's 10 receipts today. Try again tomorrow.",
@@ -2608,6 +2630,8 @@
   "@pantryTitle": {},
   "pantryHint": "Add what's in your kitchen. We list the recipes you can cook now, then those missing a few things.",
   "@pantryHint": {},
+  "pantryPromo": "Tell us what's in your kitchen: we find the recipes you can cook with it.",
+  "@pantryPromo": {},
   "pantryAdd": "Add an ingredient",
   "@pantryAdd": {},
   "pantryStaples": "Salt, sugar and cooking oil are in my kitchen",
@@ -2617,9 +2641,21 @@
   "pantryCookNow": "Cook now",
   "@pantryCookNow": {},
   "pantryMissing": "Missing: {items}",
-  "@pantryMissing": {"placeholders": {"items": {"type": "String"}}},
+  "@pantryMissing": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
   "pantryCheck": "Check: {items}",
-  "@pantryCheck": {"placeholders": {"items": {"type": "String"}}},
+  "@pantryCheck": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
   "pantryNone": "No recipe fits yet. Add a few more ingredients.",
   "@pantryNone": {},
   "pantryAddMissing": "Add missing to shopping list",

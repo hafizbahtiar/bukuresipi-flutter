@@ -25,7 +25,7 @@ import '../../features/about/presentation/pages/about_page.dart';
 import '../../features/credits/presentation/pages/credits_page.dart';
 import '../../features/family/presentation/pages/family_join_page.dart';
 import '../../features/family/presentation/pages/family_page.dart';
-import '../../features/home/presentation/home_page.dart';
+import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_rating_bursts_page.dart';
@@ -166,9 +166,13 @@ GoRouter buildRouter(
         path: '/receipts/:id',
         builder: (_, state) => ReceiptPage(id: state.pathParameters['id']!),
       ),
-      _page(
+      GoRoute(
         path: '/places/:id',
-        builder: (_, state) => PlaceDetailPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) => _flightPage(
+          state,
+          flight: state.extra is PlacePhotoFlight,
+          child: PlaceDetailPage(id: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/recipes/:id',
@@ -176,35 +180,13 @@ GoRouter buildRouter(
           final preview = state.extra is RecipePreview
               ? state.extra! as RecipePreview
               : null;
-          final page = RecipeDetailPage(
-            id: state.pathParameters['id']!,
-            preview: preview,
-          );
-          // From a card with a photo: the photo flies into the page's header (hero) while the page fades in; a
-          // page flip would fight it. Anything else opens like every page.
-          if (preview?.hasPhoto ?? false) {
-            return CustomTransitionPage<void>(
-              key: state.pageKey,
-              name: state.name ?? state.path,
-              restorationId: state.pageKey.value,
-              transitionDuration: const Duration(milliseconds: 380),
-              reverseTransitionDuration: const Duration(milliseconds: 320),
-              child: page,
-              transitionsBuilder: (context, animation, _, child) =>
-                  FadeTransition(
-                    opacity: CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    ),
-                    child: child,
-                  ),
-            );
-          }
-          return MaterialPage<void>(
-            key: state.pageKey,
-            name: state.name ?? state.path,
-            restorationId: state.pageKey.value,
-            child: page,
+          return _flightPage(
+            state,
+            flight: preview?.hasPhoto ?? false,
+            child: RecipeDetailPage(
+              id: state.pathParameters['id']!,
+              preview: preview,
+            ),
           );
         },
       ),
@@ -262,3 +244,33 @@ GoRoute _page({
     child: builder(context, state),
   ),
 );
+
+/// [flight]: opened from a card with a photo; the photo flies into the page's header (hero) while the page fades in,
+/// since a page flip would fight it. Otherwise it opens like every page.
+Page<void> _flightPage(
+  GoRouterState state, {
+  required bool flight,
+  required Widget child,
+}) => flight
+    ? CustomTransitionPage<void>(
+        key: state.pageKey,
+        name: state.name ?? state.path,
+        restorationId: state.pageKey.value,
+        // Long enough for the eased flight to read as one glide (iOS's zoom is about half a second).
+        transitionDuration: const Duration(milliseconds: 480),
+        reverseTransitionDuration: const Duration(milliseconds: 420),
+        child: child,
+        transitionsBuilder: (context, animation, _, child) => FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          ),
+          child: child,
+        ),
+      )
+    : MaterialPage<void>(
+        key: state.pageKey,
+        name: state.name ?? state.path,
+        restorationId: state.pageKey.value,
+        child: child,
+      );

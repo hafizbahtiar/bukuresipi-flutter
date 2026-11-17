@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:extended_image/extended_image.dart' show clearDiskCachedImages;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -124,6 +125,8 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> clearLocal() async {
     await _tokens.clear();
     await _prefs.remove(_userKey);
+    // Photos saved on disk (shares, covers, avatars) are this account's: the next one on the phone starts clean.
+    unawaited(clearDiskCachedImages().then((_) {}, onError: (Object _) {}));
   }
 
   @override

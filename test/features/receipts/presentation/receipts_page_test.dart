@@ -50,7 +50,24 @@ void main() {
         totalSen: 5615,
         visits: 3,
         months: [(month: '2026-10', visits: 1, totalSen: 4115)],
-        places: [(placeId: 'x', name: 'Port Lepak', visits: 2, totalSen: 5115)],
+        places: [
+          (
+            placeId: 'x',
+            name: 'Port Lepak',
+            cover: null,
+            visits: 2,
+            totalSen: 5115,
+            lastVisitAt: null,
+          ),
+          (
+            placeId: 'y',
+            name: 'Kopi Kita',
+            cover: null,
+            visits: 1,
+            totalSen: 500,
+            lastVisitAt: null,
+          ),
+        ],
       )
       ..items = [receipt(id: 'r-1', status: 'saved')];
     await pump(t, repo);
@@ -58,5 +75,13 @@ void main() {
     expect(find.text('RM 56.15'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Top places'), findsOneWidget);
+    // A strip of cards, most spent first, each with its share of the spending.
+    expect(find.byKey(const ValueKey('top-place-x')), findsOneWidget);
+    expect(find.text('RM 51.15'), findsOneWidget);
+    expect(find.text('91% of spending'), findsOneWidget);
+    expect(
+      t.getTopLeft(find.byKey(const ValueKey('top-place-y'))).dx,
+      greaterThan(t.getTopLeft(find.byKey(const ValueKey('top-place-x'))).dx),
+    );
   });
 }

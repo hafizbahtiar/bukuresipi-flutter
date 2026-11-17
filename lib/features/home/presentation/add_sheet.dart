@@ -7,6 +7,8 @@ import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme_constant.dart';
+import '../../../core/widgets/base.dart';
 import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
@@ -19,45 +21,45 @@ import '../../shares/presentation/share_intake.dart';
 /// intake as the phone's share sheet; a receipt is uploaded and opened; a typed recipe opens the editor.
 Future<void> showAddSheet(BuildContext context) async {
   final l = AppLocalizations.of(context);
-  final pick = await showModalBottomSheet<String>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true, // as tall as its rows; scrolls on a small screen
-    builder: (context) => SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        children: [
-          Center(
+  final pick = await showBaseSheet<String>(
+    context,
+    builder: (context) => ListView(
+      shrinkWrap: true, // as tall as its rows; scrolls on a small screen
+      padding: EdgeInsets.zero,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: spaceXs),
+          child: Center(
             child: Text(
               l.addTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-          for (final (key, icon, title, hint) in [
-            ('link', Icons.link, l.addLink, l.addLinkHint),
-            (
-              'screenshot',
-              Icons.image_outlined,
-              l.addScreenshot,
-              l.addScreenshotHint,
-            ),
-            (
-              'receipt',
-              Icons.receipt_long_outlined,
-              l.addReceipt,
-              l.addReceiptHint,
-            ),
-            ('recipe', Icons.edit_note, l.addRecipe, l.addRecipeHint),
-          ])
-            ListTile(
-              key: ValueKey('add-$key'),
-              leading: Icon(icon),
-              title: Text(title),
-              subtitle: Text(hint),
-              onTap: () => Navigator.pop(context, key),
-            ),
-        ],
-      ),
+        ),
+        for (final (key, icon, title, hint) in [
+          ('link', Icons.link, l.addLink, l.addLinkHint),
+          (
+            'screenshot',
+            Icons.image_outlined,
+            l.addScreenshot,
+            l.addScreenshotHint,
+          ),
+          (
+            'receipt',
+            Icons.receipt_long_outlined,
+            l.addReceipt,
+            l.addReceiptHint,
+          ),
+          ('recipe', Icons.edit_note, l.addRecipe, l.addRecipeHint),
+        ])
+          ListTile(
+            key: ValueKey('add-$key'),
+            leading: Icon(icon),
+            title: Text(title),
+            subtitle: Text(hint),
+            onTap: () => Navigator.pop(context, key),
+          ),
+      ],
     ),
   );
   if (pick == null || !context.mounted) return;
@@ -185,26 +187,7 @@ class _LinkSheetState extends State<_LinkSheet> {
 
 Future<void> _addReceipt(BuildContext context) async {
   final l = AppLocalizations.of(context);
-  final source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: Text(l.receiptSnap),
-            onTap: () => Navigator.pop(context, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: Text(l.receiptFromGallery),
-            onTap: () => Navigator.pop(context, ImageSource.gallery),
-          ),
-        ],
-      ),
-    ),
-  );
+  final source = await showPhotoSourceSheet(context, camera: l.receiptSnap);
   if (source == null || !context.mounted) return;
   final repo = context.read<ReceiptsRepository>();
   final messenger = ScaffoldMessenger.of(context);

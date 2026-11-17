@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -32,7 +33,11 @@ class FloatingNav extends StatefulWidget {
     required this.onSelected,
     required this.addLabel,
     required this.onAdd,
+    this.compact = false,
   });
+
+  /// The page is scrolling: the whole bar shrinks a little (towards the bottom edge), back to full size after.
+  final bool compact;
 
   final List<NavItem> items;
   final int selected;
@@ -46,9 +51,45 @@ class FloatingNav extends StatefulWidget {
   State<FloatingNav> createState() => _FloatingNavState();
 }
 
-class _FloatingNavState extends State<FloatingNav> {
+class _FloatingNavState extends State<FloatingNav>
+    with SingleTickerProviderStateMixin {
   /// The chip's place in slots while a finger drags it; null = resting on the selected tab.
   double? _drag;
+
+  static const _compactScale = 0.88;
+
+  /// Slightly under-damped, as iOS's: soft, with a barely-there settle at the end.
+  static final _spring = SpringDescription.withDampingRatio(
+    mass: 1,
+    stiffness: 220,
+    ratio: 0.82,
+  );
+
+  /// The bar's scale, moved by a spring: a change mid-way carries on from the current speed instead of restarting.
+  late final _scale = AnimationController.unbounded(
+    vsync: this,
+    value: widget.compact ? _compactScale : 1,
+  );
+
+  @override
+  void didUpdateWidget(covariant FloatingNav old) {
+    super.didUpdateWidget(old);
+    if (old.compact == widget.compact) return;
+    final target = widget.compact ? _compactScale : 1.0;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _scale.value = target;
+    } else {
+      _scale.animateWith(
+        SpringSimulation(_spring, _scale.value, target, _scale.velocity),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scale.dispose();
+    super.dispose();
+  }
 
   int get _slots => widget.items.length + 1;
   int get _mid => widget.items.length ~/ 2; // the "+" slot
@@ -95,81 +136,92 @@ class _FloatingNavState extends State<FloatingNav> {
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-      child: GlassBar(
-        child: LayoutBuilder(
-          builder: (context, box) {
-            final w = box.maxWidth / _slots;
-            final chipAt = _drag ?? _slotOf(widget.selected).toDouble();
-            return GestureDetector(
-              // From the touch, not from where the drag was recognised: the chip stays under the finger.
-              dragStartBehavior: DragStartBehavior.down,
-              onHorizontalDragStart: (_) =>
-                  setState(() => _drag = _slotOf(widget.selected).toDouble()),
-              onHorizontalDragUpdate: (d) => setState(
-                () => _drag = ((_drag ?? 0) + d.delta.dx / w).clamp(
-                  0,
-                  _slots - 1,
-                ),
-              ),
-              onHorizontalDragEnd: _dragEnd,
-              onHorizontalDragCancel: () => setState(() => _drag = null),
-              child: Stack(
-                children: [
-                  // The chip: follows the finger while dragged, slides when a tab is picked.
-                  AnimatedPositioned(
-                    key: const ValueKey('nav-chip'),
-                    duration: _drag != null || still ? Duration.zero : _motion,
-                    curve: _curve,
-                    left: chipAt * w,
-                    top: 0,
-                    bottom: 0,
-                    width: w,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: dark
-                            ? Color.alphaBlend(
-                                nb.pandan.withValues(alpha: 0.24),
-                                nb.mist,
-                              )
-                            : nb.mist,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: nb.pandan.withValues(
-                            alpha: dark ? 0.55 : 0.25,
+      child: ScaleTransition(
+        key: const ValueKey('nav-bar-scale'),
+        scale: _scale,
+        alignment: Alignment.bottomCenter,
+        // The spring only changes the transform: the bar (icons, shadow) is not repainted each frame of it.
+        child: RepaintBoundary(
+          child: GlassBar(
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final w = box.maxWidth / _slots;
+                final chipAt = _drag ?? _slotOf(widget.selected).toDouble();
+                return GestureDetector(
+                  // From the touch, not from where the drag was recognised: the chip stays under the finger.
+                  dragStartBehavior: DragStartBehavior.down,
+                  onHorizontalDragStart: (_) => setState(
+                    () => _drag = _slotOf(widget.selected).toDouble(),
+                  ),
+                  onHorizontalDragUpdate: (d) => setState(
+                    () => _drag = ((_drag ?? 0) + d.delta.dx / w).clamp(
+                      0,
+                      _slots - 1,
+                    ),
+                  ),
+                  onHorizontalDragEnd: _dragEnd,
+                  onHorizontalDragCancel: () => setState(() => _drag = null),
+                  child: Stack(
+                    children: [
+                      // The chip: follows the finger while dragged, slides when a tab is picked.
+                      AnimatedPositioned(
+                        key: const ValueKey('nav-chip'),
+                        duration: _drag != null || still
+                            ? Duration.zero
+                            : _motion,
+                        curve: _curve,
+                        left: chipAt * w,
+                        top: 0,
+                        bottom: 0,
+                        width: w,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: dark
+                                ? Color.alphaBlend(
+                                    nb.pandan.withValues(alpha: 0.24),
+                                    nb.mist,
+                                  )
+                                : nb.mist,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: nb.pandan.withValues(
+                                alpha: dark ? 0.55 : 0.25,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      for (var s = 0; s < _slots; s++)
-                        SizedBox(
-                          width: w,
-                          child: s == _mid
-                              ? _AddButton(
-                                  label: widget.addLabel,
-                                  onTap: widget.onAdd,
-                                )
-                              : _Tab(
-                                  key: ValueKey('nav-tab-${_tabOf(s)}'),
-                                  item: widget.items[_tabOf(s)],
-                                  selected: _tabOf(s) == widget.selected,
-                                  lit: s == lit,
-                                  still: still,
-                                  onTap: () {
-                                    if (_tabOf(s) != widget.selected) {
-                                      widget.onSelected(_tabOf(s));
-                                    }
-                                  },
-                                ),
-                        ),
+                      Row(
+                        children: [
+                          for (var s = 0; s < _slots; s++)
+                            SizedBox(
+                              width: w,
+                              child: s == _mid
+                                  ? _AddButton(
+                                      label: widget.addLabel,
+                                      onTap: widget.onAdd,
+                                    )
+                                  : _Tab(
+                                      key: ValueKey('nav-tab-${_tabOf(s)}'),
+                                      item: widget.items[_tabOf(s)],
+                                      selected: _tabOf(s) == widget.selected,
+                                      lit: s == lit,
+                                      still: still,
+                                      onTap: () {
+                                        if (_tabOf(s) != widget.selected) {
+                                          widget.onSelected(_tabOf(s));
+                                        }
+                                      },
+                                    ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/constants/image_constant.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../places/domain/place.dart';
 import '../../../places/presentation/places_controller.dart';
 import '../../../recipes/domain/recipe.dart';
@@ -162,6 +163,9 @@ class SharePhoto extends StatefulWidget {
 class _SharePhotoState extends State<SharePhoto> {
   late Future<Uint8List?> _bytes = _load();
 
+  // The same cache as ShareFill: a row scrolled back into a list draws its photo at once, not a shimmer for a frame.
+  String get _key => '${widget.recipeId}/${widget.placeId}/${widget.shareId}';
+
   Future<Uint8List?> _load() => widget.shareId.isEmpty
       ? Future.value(null)
       : loadPhoto(
@@ -170,7 +174,11 @@ class _SharePhotoState extends State<SharePhoto> {
           recipeId: widget.recipeId,
           placeId: widget.placeId,
           fallbackShareId: widget.fallbackShareId,
-        );
+        ).then((b) {
+          // "No photo" too: a row rebuilt above the screen must have its final height in its first frame.
+          _ShareFillState._remember(_key, b);
+          return b;
+        });
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
@@ -187,13 +195,27 @@ class _SharePhotoState extends State<SharePhoto> {
   @override
   Widget build(BuildContext context) => FutureBuilder(
     future: _bytes,
+    initialData: _ShareFillState._ready[_key],
     builder: (context, s) {
       final bytes = s.data;
-      // Nothing while loading (no flash of the drawing before a real photo), nor for a place with no photo.
+      // Loading: a shimmering square where the snapshot goes (not the drawing, which would flash before a photo).
+      final known = _ShareFillState._ready.containsKey(_key);
       if (bytes == null &&
-          (!widget.drawing || s.connectionState != ConnectionState.done)) {
-        return const SizedBox.shrink();
+          !known &&
+          s.connectionState != ConnectionState.done) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 6, left: 8),
+          child: Skeleton(
+            child: SkeletonBox(
+              width: widget.size + 6, // the snapshot's white border
+              height: widget.size + 6,
+              radius: 2,
+            ),
+          ),
+        );
       }
+      // A place with no photo: nothing.
+      if (bytes == null && !widget.drawing) return const SizedBox.shrink();
       final nb = Notebook.of(context);
       final tilt = ((widget.shareId.hashCode % 5) - 2) * 0.025;
       return Padding(
@@ -319,15 +341,38 @@ class ShareFill extends StatefulWidget {
 
   @override
   State<ShareFill> createState() => _ShareFillState();
+
+  /// Decodes [photo] at its [cacheWidth] now, when its bytes are already loaded (a card showed them). A page header
+  /// behind a hero is only built when the flight lands; decoding a screen-wide photo then blinked on first open.
+  static void warm(BuildContext context, Widget? photo) {
+    if (photo is! ShareFill) return;
+    final bytes = _ShareFillState._ready[_ShareFillState._keyOf(photo)];
+    if (bytes == null) return;
+    // The same provider Image.memory(cacheWidth:) builds, so the header finds it in the cache.
+    precacheImage(
+      ResizeImage(MemoryImage(bytes), width: photo.cacheWidth),
+      context,
+    );
+  }
 }
 
 class _ShareFillState extends State<ShareFill> {
-  /// Photos already loaded this run, so a new ShareFill of one (a page's header after the card's hero flies there)
-  /// draws it in its first frame instead of the fallback for a frame. The bytes are also in the repositories' caches.
-  // shortcut: unbounded for the run's photos seen (~100 KB-1 MB each); bound it if a long session ever matters.
-  static final _ready = <String, Uint8List>{};
+  /// Photos already loaded this run, so a new ShareFill or SharePhoto of one (a page's header after the card's hero
+  /// flies there, a list row scrolled back into view) draws it in its first frame instead of a shimmer.
+  /// null = loaded, and there is no photo.
+  static final _ready = <String, Uint8List?>{};
 
-  String get _key => '${widget.recipeId}/${widget.placeId}/${widget.id}';
+  /// The most recent [_readyMax] photos (~100 KB-1 MB of compressed bytes each): a long Book scroll can't grow it.
+  static const _readyMax = 80;
+
+  static void _remember(String key, Uint8List? bytes) {
+    _ready.remove(key); // re-insert = most recently used
+    if (_ready.length >= _readyMax) _ready.remove(_ready.keys.first);
+    _ready[key] = bytes;
+  }
+
+  static String _keyOf(ShareFill f) => '${f.recipeId}/${f.placeId}/${f.id}';
+  String get _key => _keyOf(widget);
 
   late Future<Uint8List?> _bytes = _load();
 
@@ -339,7 +384,7 @@ class _ShareFillState extends State<ShareFill> {
         placeId: widget.placeId,
         fallbackShareId: widget.fallbackShareId,
       ).then((b) {
-        if (b != null) _ready[_key] = b;
+        if (b != null) _remember(_key, b);
         return b;
       });
 
@@ -368,6 +413,14 @@ class _ShareFillState extends State<ShareFill> {
         gaplessPlayback: true,
         excludeFromSemantics: true,
         errorBuilder: (_, _, _) => widget.fallback,
+      ),
+      // Still loading: a shimmer filling the box, so "loading" never looks like "no photo".
+      null when s.connectionState != ConnectionState.done => const Skeleton(
+        child: SkeletonBox(
+          width: double.infinity,
+          height: double.infinity,
+          radius: 0,
+        ),
       ),
       null => widget.fallback,
     },

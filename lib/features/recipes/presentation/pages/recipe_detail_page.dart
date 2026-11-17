@@ -393,19 +393,24 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       final p = widget.preview;
       // From a card with a photo: the header is there at once, for the photo to fly into.
       if (p != null && p.hasPhoto) {
+        final photo = recipePhoto(
+          widget.id,
+          cover: p.cover,
+          shareId: p.shareId,
+          fallback: fallback(),
+          cacheWidth: cacheWidth,
+        )!;
+        ShareFill.warm(
+          context,
+          photo,
+        ); // decoded during the flight, not on landing
         return Scaffold(
           body: _pullToClose(
             true,
             CustomScrollView(
               slivers: [
                 CoverAppBar(
-                  photo: recipePhoto(
-                    widget.id,
-                    cover: p.cover,
-                    shareId: p.shareId,
-                    fallback: fallback(),
-                    cacheWidth: cacheWidth,
-                  )!,
+                  photo: photo,
                   title: p.name,
                   heroTag: recipePhotoTag(widget.id),
                 ),
@@ -518,6 +523,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       fallback: fallback(),
       cacheWidth: cacheWidth,
     );
+    ShareFill.warm(context, photo);
     final coverBar = photo == null
         ? null
         : CoverAppBar(

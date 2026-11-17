@@ -8,7 +8,7 @@ import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
 import '../../push/push_controller.dart';
-import '../../home/presentation/home_page.dart';
+import '../../home/presentation/pages/home_page.dart';
 import 'recent_shares.dart';
 import 'share_intake.dart';
 import 'widgets/share_reading.dart';

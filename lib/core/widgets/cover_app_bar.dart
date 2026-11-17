@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'hero_motion.dart';
 
 /// A page's photo as its top bar: full width at the top, about 4:3, zooming on overscroll and drifting slower than
 /// the page (parallax) as it scrolls away, then a plain paper bar with [title]. Pinned: the back button is always in
@@ -31,17 +32,34 @@ class CoverAppBar extends StatelessWidget {
   /// The photo's height for a screen [width]: 4:3, at most 360 (a tablet keeps room for the recipe).
   static double heightFor(double width) => math.min(width * 3 / 4, 360);
 
+  /// The path between a card's photo and this bar: give both Heroes this.
+  static final flight = heroFlight();
+
+  /// The card's photo's top corners (FeedCard clips the card at 11).
+  static const _cardRadius = 11.0;
+
   /// The flight between a card and this bar: always the card's picture, so it never shows a blank while the bar's
-  /// own copy decodes.
+  /// own copy decodes. Its top corners round off into the bar's square ones on the way (and back).
   static Widget cardShuttle(
     BuildContext _,
-    Animation<double> _,
+    Animation<double> animation,
     HeroFlightDirection direction,
     BuildContext from,
     BuildContext to,
   ) {
     final card = direction == HeroFlightDirection.push ? from : to;
-    return (card.widget as Hero).child;
+    final picture = (card.widget as Hero).child;
+    final pace = heroPace(animation);
+    return AnimatedBuilder(
+      animation: pace,
+      builder: (_, child) => ClipRRect(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(_cardRadius * (1 - pace.value)),
+        ),
+        child: child,
+      ),
+      child: picture,
+    );
   }
 
   @override
@@ -72,6 +90,7 @@ class CoverAppBar extends StatelessWidget {
                 ? photo
                 : Hero(
                     tag: heroTag!,
+                    createRectTween: flight,
                     flightShuttleBuilder: cardShuttle,
                     child: photo,
                   ),

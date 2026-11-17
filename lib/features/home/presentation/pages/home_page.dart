@@ -1,21 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../l10n/gen/app_localizations.dart';
-import '../../auth/domain/user.dart';
-import '../../auth/presentation/auth_controller.dart';
-import '../../auth/presentation/pages/account_page.dart';
-import '../../auth/presentation/widgets/avatar.dart';
-import '../../family/presentation/family_controller.dart';
-import '../../places/presentation/pages/places_list_page.dart';
-import '../../places/presentation/places_controller.dart';
-import '../../recipes/presentation/recipes_controller.dart';
-import '../../shopping/presentation/shopping_controller.dart';
-import '../../shares/presentation/recent_shares.dart';
-import 'add_sheet.dart';
+import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/domain/user.dart';
+import '../../../auth/presentation/auth_controller.dart';
+import '../../../auth/presentation/pages/account_page.dart';
+import '../../../auth/presentation/widgets/avatar.dart';
+import '../../../family/presentation/family_controller.dart';
+import '../../../places/presentation/pages/places_list_page.dart';
+import '../../../places/presentation/places_controller.dart';
+import '../../../recipes/presentation/recipes_controller.dart';
+import '../../../shopping/presentation/shopping_controller.dart';
+import '../../../shares/presentation/recent_shares.dart';
+import '../add_sheet.dart';
 import 'feed_page.dart';
-import 'receipts_tab.dart';
-import 'widgets/floating_nav.dart';
+import '../receipts_tab.dart';
+import '../widgets/floating_nav.dart';
 
 /// Signed-in home: Home (feed, with the map and shopping-list buttons), Book, Receipts and Account tabs, and "+" in
 /// the middle (add anything: [showAddSheet]; it is a button, not a tab). Rebuilt after every share (the share page goes
@@ -39,6 +41,50 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late int _tab = _tabOf(widget.open);
+
+  /// A tab's list is moving: the nav sits smaller ([FloatingNav.compact]); full size again [_rest] after it stops.
+  bool _compact = false;
+
+  /// How far the list moved since this scroll began (either way); [_compact] only past [_travel].
+  double _run = 0;
+
+  /// Movement that counts as scrolling: a jitter of the finger never shrinks the bar.
+  static const _travel = 24.0;
+
+  /// The pause after the list comes to rest before the bar grows back: a quick stop-and-go does not pulse it.
+  static const _rest = Duration(milliseconds: 500);
+  Timer? _restore;
+
+  void _setCompact(bool compact) {
+    if (compact != _compact && mounted) setState(() => _compact = compact);
+  }
+
+  void _onScroll(ScrollNotification n) {
+    // Vertical only (a card strip scrolled sideways is not the page moving); depth 1 = a NestedScrollView's inner list.
+    if (n.metrics.axis != Axis.vertical || n.depth > 1) return;
+    switch (n) {
+      case ScrollStartNotification():
+        _run = 0;
+        _restore?.cancel();
+      case ScrollUpdateNotification(:final scrollDelta?):
+        _restore?.cancel();
+        _run += scrollDelta.abs();
+        if (_run > _travel) _setCompact(true);
+      case ScrollEndNotification():
+        _restore?.cancel();
+        _restore = Timer(_rest, () => _setCompact(false));
+      default:
+    }
+  }
+
+  void _select(int tab) {
+    _restore?.cancel();
+    _run = 0;
+    setState(() {
+      _tab = tab;
+      _compact = false; // another tab: show the bar in full
+    });
+  }
 
   static int _tabOf(Object? open) => open is HomeOpen ? open.tab : 0;
 
@@ -77,6 +123,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _restore?.cancel();
     _life.dispose();
     super.dispose();
   }
@@ -88,18 +135,26 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       // The nav floats: the tabs run under it (each pads its list by navRoom).
       extendBody: true,
-      body: IndexedStack(
-        index: _tab,
-        children: const [
-          FeedPage(),
-          PlacesListPage(),
-          ReceiptsTab(),
-          AccountPage(),
-        ],
+      // While a list scrolls, either way, the nav shrinks out of the way; it grows back once the list is at rest.
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (n) {
+          _onScroll(n);
+          return false;
+        },
+        child: IndexedStack(
+          index: _tab,
+          children: const [
+            FeedPage(),
+            PlacesListPage(),
+            ReceiptsTab(),
+            AccountPage(),
+          ],
+        ),
       ),
       bottomNavigationBar: FloatingNav(
+        compact: _compact,
         selected: _tab,
-        onSelected: (i) => setState(() => _tab = i),
+        onSelected: _select,
         addLabel: l.navAdd,
         onAdd: () => showAddSheet(context),
         items: [

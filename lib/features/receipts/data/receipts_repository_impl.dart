@@ -335,8 +335,11 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
           (
             placeId: p['placeId'] as String,
             name: p['name'] as String,
+            cover: p['cover'] as String?,
             visits: p['visits'] as int,
             totalSen: p['totalSen'] as int,
+            lastVisitAt: DateTime.tryParse(p['lastVisitAt'] as String? ?? '')
+                ?.toLocal(),
           ),
       ],
     );
