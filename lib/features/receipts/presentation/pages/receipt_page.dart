@@ -48,6 +48,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
   Receipt? _r;
   Object? _error;
   Timer? _timer;
+  int _polls = 0;
   final _total = TextEditingController();
   DateTime? _at;
   String? _branchId; // a place picked by the user, when the read found none
@@ -89,7 +90,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
         }
       });
       _timer?.cancel(); // one poll at a time (a segment switch also reloads)
-      if (r.reading || r.caloriesPending) _timer = Timer(widget.poll, _load);
+      // [poll] for the first minute (a read takes seconds), then 5x slower: calories can wait on the cron for long.
+      if (r.reading || r.caloriesPending) {
+        _timer = Timer(_polls++ < 20 ? widget.poll : widget.poll * 5, _load);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e);
     }
