@@ -61,6 +61,67 @@ class BranchSuggestion {
   final ({String url, List<JakimRow> rows, int? pick})? jakim;
 }
 
+/// Owner, Edit branch > Halal: the company behind the branch's JAKIM certificate. [status] only after a refresh:
+/// ok | unavailable (JAKIM down, the stored info kept) | none (no certificate or company).
+class BranchCompany {
+  const BranchCompany({
+    this.premise,
+    this.brand,
+    this.premiseAddress,
+    this.company,
+    this.status,
+  });
+
+  factory BranchCompany.fromJson(Map<String, dynamic> j) {
+    final c = j['company'] as Map<String, dynamic>?;
+    return BranchCompany(
+      premise: j['premise'] as String?,
+      brand: j['brand'] as String?,
+      premiseAddress: j['premiseAddress'] as String?,
+      status: j['status'] as String?,
+      company: c == null
+          ? null
+          : HalalCompany(
+              code: c['code'] as String,
+              name: c['name'] as String,
+              address: c['address'] as String?,
+              state: c['state'] as String?,
+              phone: c['phone'] as String?,
+              fax: c['fax'] as String?,
+              email: c['email'] as String?,
+              website: c['website'] as String?,
+              reference: c['reference'] as String?,
+              readAt: c['readAt'] == null
+                  ? null
+                  : DateTime.parse(c['readAt'] as String),
+            ),
+    );
+  }
+
+  final String? premise, brand, premiseAddress, status;
+  final HalalCompany? company;
+}
+
+/// A company holding JAKIM certificates (its halal.gov.my page). [readAt] null = only its name, page not read yet.
+class HalalCompany {
+  const HalalCompany({
+    required this.code,
+    required this.name,
+    this.address,
+    this.state,
+    this.phone,
+    this.fax,
+    this.email,
+    this.website,
+    this.reference,
+    this.readAt,
+  });
+
+  final String code, name;
+  final String? address, state, phone, fax, email, website, reference;
+  final DateTime? readAt;
+}
+
 /// The owner's "Check JAKIM" on one branch: [status] found (saved) | none | unavailable; [rows] to choose from.
 typedef JakimCheck = ({
   String status,

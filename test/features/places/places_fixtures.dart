@@ -238,6 +238,21 @@ class FakePlaces implements PlacesRepository {
   /// `branch:ID` per branch check, `place:ID` (or `place:ID:q`) per outlet list.
   final halalChecks = <String>[];
 
+  BranchCompany company = const BranchCompany();
+  BranchCompany refreshed = const BranchCompany(status: 'none');
+
+  /// `get:ID` / `refresh:ID` per company call.
+  final companyCalls = <String>[];
+
+  @override
+  Future<BranchCompany> branchCompany(
+    String branchId, {
+    bool refresh = false,
+  }) async {
+    companyCalls.add('${refresh ? 'refresh' : 'get'}:$branchId');
+    return refresh ? (company = refreshed) : company;
+  }
+
   @override
   Future<JakimCheck> checkHalalBranch(String branchId) async {
     halalChecks.add('branch:$branchId');
