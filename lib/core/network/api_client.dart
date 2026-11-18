@@ -119,6 +119,9 @@ class ApiClient {
     DioException original,
   ) async {
     options.extra['retried'] = true;
+    // A FormData can be sent only once (Dio finalizes it): an upload retried after the refresh needs a fresh copy.
+    final data = options.data;
+    if (data is FormData) options.data = data.clone();
     try {
       handler.resolve(await dio.fetch(options));
     } on DioException catch (e) {

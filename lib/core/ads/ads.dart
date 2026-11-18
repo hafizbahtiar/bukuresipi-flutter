@@ -20,7 +20,13 @@ class Ads {
   /// AD_ID lines (design doc, "Left before ads reach production").
   static const _unit = 'ca-app-pub-1300180769466949/9206368100';
 
-  static String get unitId => kReleaseMode ? _unit : _testUnit;
+  /// false = release builds show no ads (debug/profile keep the test ads). Set true in the release that finishes the
+  /// design doc's "Left before ads reach production" list (AD_ID lines, Play Console ads + Data safety, Privacy
+  /// options row, app-ads.txt): real ads before that are undeclared to Play.
+  static const _releaseReady = false;
+
+  static String get unitId =>
+      kReleaseMode ? (_releaseReady ? _unit : '') : _testUnit;
 
   /// True once consent allows ad requests and the SDK has started.
   static final ready = ValueNotifier(false);

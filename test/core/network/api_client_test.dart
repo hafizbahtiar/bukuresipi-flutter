@@ -55,6 +55,16 @@ void main() {
     },
   );
 
+  test('an upload (FormData) is sent again after the refresh, not refused as already sent', () async {
+    final adapter = FakeAdapter(server);
+    final form = FormData.fromMap({
+      'image': MultipartFile.fromBytes([1, 2, 3], filename: 'a.jpg'),
+    });
+    final res = await client(adapter).dio.post('/shares', data: form);
+    expect(res.statusCode, 200);
+    expect(adapter.requests.last.headers['Authorization'], 'Bearer new-a');
+  });
+
   test('a 401 refreshes once, saves the rotated tokens and retries', () async {
     final adapter = FakeAdapter(server);
     final res = await client(adapter).dio.get('/auth/me');
