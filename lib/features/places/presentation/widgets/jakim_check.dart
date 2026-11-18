@@ -33,6 +33,9 @@ class BranchHalalEditor extends StatefulWidget {
 class _BranchHalalEditorState extends State<BranchHalalEditor> {
   bool _busy = false;
 
+  /// Bumped after a check, save or remove: the company card reads again.
+  int _revision = 0;
+
   /// The last check (or the AI draft's rows): null = not asked yet.
   JakimCheck? _result;
 
@@ -60,6 +63,7 @@ class _BranchHalalEditorState extends State<BranchHalalEditor> {
     setState(() => _busy = true);
     try {
       await work(places);
+      if (mounted) setState(() => _revision++);
     } catch (e) {
       if (mounted) _snack(context, errorText(l, e));
     } finally {
@@ -98,7 +102,7 @@ class _BranchHalalEditorState extends State<BranchHalalEditor> {
     final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
     final name = widget.branch.label ?? widget.branch.where ?? '-';
     final result = _result;
-    return _HalalBox(
+    final box = _HalalBox(
       key: const ValueKey('branch-halal'),
       busy: _busy,
       children: [
@@ -184,6 +188,17 @@ class _BranchHalalEditorState extends State<BranchHalalEditor> {
           if (result.status == 'draft' && result.rows.isNotEmpty)
             Text(l.jakimDraftNote, style: soft),
         ],
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        box,
+        if (cert != null)
+          _CompanyBox(
+            key: ValueKey('branch-company-$_revision'),
+            branchId: widget.branch.id,
+          ),
       ],
     );
   }
@@ -501,6 +516,159 @@ class _HalalBox extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [if (busy) const LinearProgressIndicator(), ...children],
       ),
+    );
+  }
+}
+
+/// Owner only: the company behind this branch's certificate (from JAKIM's directory row and its company page), and
+/// "Get company info again" (the page read now; a hand-paired certificate is checked first).
+class _CompanyBox extends StatefulWidget {
+  const _CompanyBox({super.key, required this.branchId});
+
+  final String branchId;
+
+  @override
+  State<_CompanyBox> createState() => _CompanyBoxState();
+}
+
+class _CompanyBoxState extends State<_CompanyBox> {
+  BranchCompany? _info;
+  bool _busy = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load(refresh: false);
+    });
+  }
+
+  Future<void> _load({required bool refresh}) async {
+    final l = AppLocalizations.of(context);
+    final places = context.read<PlacesController>();
+    setState(() => _busy = true);
+    try {
+      final r = await places.branchCompany(widget.branchId, refresh: refresh);
+      if (!mounted) return;
+      setState(() => _info = r);
+      if (refresh) {
+        _snack(context, switch (r.status) {
+          'ok' => l.companyUpdated,
+          'unavailable' => l.jakimCheckDown,
+          _ => l.companyNone,
+        });
+      }
+    } catch (e) {
+      if (mounted) _snack(context, errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
+    final info = _info;
+    final c = info?.company;
+    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    // Label on the left, value on the right; a missing value leaves no row.
+    Widget row(
+      String key,
+      String label,
+      String? value, {
+      VoidCallback? onTap,
+    }) => value == null || value.isEmpty
+        ? const SizedBox.shrink()
+        : Padding(
+            key: ValueKey('company-$key'),
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 112, child: Text(label, style: soft)),
+                Expanded(
+                  child: onTap == null
+                      ? SelectableText(value, style: text.bodyMedium)
+                      : InkWell(
+                          onTap: onTap,
+                          child: Text(
+                            value,
+                            style: text.bodyMedium?.copyWith(
+                              color: nb.pandanDeep,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          );
+    final hq = c == null
+        ? null
+        : [
+            c.address,
+            // JAKIM's address usually ends with the state already.
+            if (c.state != null && c.address?.endsWith(c.state!) != true)
+              c.state,
+          ].nonNulls.join(', ');
+    return _HalalBox(
+      key: const ValueKey('branch-company'),
+      busy: _busy,
+      children: [
+        Text(
+          l.companyTitle,
+          style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        Text(l.companyOwnerOnly, style: soft),
+        const SizedBox(height: spaceS),
+        if (c != null)
+          Text(
+            c.name,
+            key: const ValueKey('company-name'),
+            style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+          )
+        else if (info != null)
+          Text(l.companyNone, style: text.bodyMedium),
+        row('brand', l.companyBrand, info?.brand),
+        row('premise-address', l.companyPremiseAddress, info?.premiseAddress),
+        if (c != null) ...[
+          row('hq', l.companyHq, hq),
+          row('phone', l.companyPhone, c.phone),
+          row('fax', l.companyFax, c.fax),
+          row('email', l.companyEmail, c.email),
+          row(
+            'website',
+            l.companyWebsite,
+            c.website,
+            onTap: () => openLink(
+              context,
+              c.website!.startsWith('http')
+                  ? c.website!
+                  : 'https://${c.website}',
+              failed: l.openFailed,
+            ),
+          ),
+          row('reference', l.companyReference, c.reference),
+          const SizedBox(height: 6),
+          Text(
+            c.readAt == null
+                ? l.companyNotRead
+                : l.companyReadAt(day.format(c.readAt!.toLocal())),
+            key: const ValueKey('company-read-at'),
+            style: soft,
+          ),
+        ],
+        const SizedBox(height: spaceS),
+        OutlinedButton.icon(
+          key: const ValueKey('branch-company-refresh'),
+          onPressed: _busy ? null : () => _load(refresh: true),
+          icon: const Icon(Icons.refresh, size: 18),
+          label: Text(l.companyRefresh),
+        ),
+      ],
     );
   }
 }

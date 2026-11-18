@@ -370,6 +370,16 @@ class PlacesController extends ChangeNotifier {
     await _reload();
   }
 
+  /// Owner only: the company behind a branch's certificate ([refresh]: read again now). Throws ApiException.
+  Future<BranchCompany> branchCompany(
+    String branchId, {
+    bool refresh = false,
+  }) async {
+    final r = await _repo.branchCompany(branchId, refresh: refresh);
+    if (refresh) await _reload(); // a refresh may have checked JAKIM (the certificate's expiry)
+    return r;
+  }
+
   /// Owner only: "Check JAKIM" on one branch; the book reloads (a found certificate shows). Throws ApiException.
   Future<JakimCheck> checkHalalBranch(String branchId) async {
     final r = await _repo.checkHalalBranch(branchId);

@@ -494,6 +494,73 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Edit branch > Halal: the company behind the certificate, and Get company info again',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      repo = FakePlaces()
+        ..places = [
+          place(
+            id: 'a',
+            cert: HalalCert(
+              premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+              expiresOn: DateTime(2028, 4, 15),
+              url: 'https://www.halal.gov.my/x',
+              checkedAt: DateTime.utc(2026, 11, 17),
+            ),
+          ),
+        ]
+        ..company = const BranchCompany(
+          premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+          brand: 'Pelita',
+          premiseAddress: '149 Jalan Ampang, 50450, Kuala Lumpur',
+          company: HalalCompany(code: 'COMP-1', name: 'PELITA SDN BHD'),
+        )
+        ..refreshed = BranchCompany(
+          status: 'ok',
+          brand: 'Pelita',
+          company: HalalCompany(
+            code: 'COMP-1',
+            name: 'PELITA SDN BHD',
+            phone: '60321620000',
+            website: 'www.pelita.com.my',
+            readAt: DateTime.utc(2026, 11, 19),
+          ),
+        );
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await branchMenu(t);
+      await t.tap(find.text('Edit branch'));
+      await t.pumpAndSettle();
+      await tapKey(t, 'branch-tab-halal');
+      expect(repo.companyCalls, ['get:b-1']);
+      expect(find.text('PELITA SDN BHD'), findsOneWidget);
+      expect(find.text('Company page not read yet.'), findsOneWidget);
+      expect(
+        find.text('149 Jalan Ampang, 50450, Kuala Lumpur'),
+        findsOneWidget,
+      );
+
+      await tapKey(t, 'branch-company-refresh');
+      expect(repo.companyCalls, ['get:b-1', 'refresh:b-1']);
+      expect(find.text('60321620000'), findsOneWidget);
+      expect(find.text('www.pelita.com.my'), findsOneWidget);
+      expect(find.text('Read from JAKIM on Nov 19, 2026'), findsOneWidget);
+      expect(find.text('Company info updated.'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a branch with no certificate shows no company card', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+    await branchMenu(t);
+    await t.tap(find.text('Edit branch'));
+    await t.pumpAndSettle();
+    await tapKey(t, 'branch-tab-halal');
+    expect(find.byKey(const ValueKey('branch-company')), findsNothing);
+    expect(repo.companyCalls, isEmpty);
+  });
+
   testWidgets('no claim, no halal section', (t) async {
     repo = FakePlaces()..places = [place(id: 'a', halal: null)];
     await pump(t, const PlaceDetailPage(id: 'a'));

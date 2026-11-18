@@ -534,6 +534,22 @@ class PlacesRepositoryImpl implements PlacesRepository {
       });
 
   @override
+  Future<BranchCompany> branchCompany(
+    String branchId, {
+    bool refresh = false,
+  }) => apiCall(() async {
+    final path = '/places/branches/$branchId/halal-company';
+    final res = refresh
+        ? await _dio.post<Map<String, dynamic>>(
+            path,
+            // JAKIM's site, maybe a "Check JAKIM" first (a page at a time).
+            options: Options(receiveTimeout: const Duration(seconds: 90)),
+          )
+        : await _dio.get<Map<String, dynamic>>(path);
+    return BranchCompany.fromJson(res.data!);
+  });
+
+  @override
   Future<JakimCheck> checkHalalBranch(String branchId) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/halal-check',

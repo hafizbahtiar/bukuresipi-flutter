@@ -1121,5 +1121,20 @@
   "sourceAiDraft": "Draf AI",
   "sourceWeb": "Halaman web",
   "sourceOwner": "Pemilik",
-  "sourceHandPins": "Pin pengguna"
+  "sourceHandPins": "Pin pengguna",
+  "companyTitle": "Syarikat (dari JAKIM)",
+  "companyOwnerOnly": "Pemilik sahaja. Pengguna tidak melihat ini.",
+  "companyBrand": "Jenama",
+  "companyPremiseAddress": "Alamat premis",
+  "companyHq": "Ibu pejabat",
+  "companyPhone": "Telefon",
+  "companyFax": "Faks",
+  "companyEmail": "E-mel",
+  "companyWebsite": "Laman web",
+  "companyReference": "Rujukan JAKIM",
+  "companyReadAt": "Dibaca dari JAKIM pada {date}",
+  "companyNotRead": "Halaman syarikat belum dibaca.",
+  "companyRefresh": "Dapatkan maklumat syarikat semula",
+  "companyNone": "Belum ada syarikat dipautkan. Dapatkan maklumat syarikat akan menyemaknya di JAKIM.",
+  "companyUpdated": "Maklumat syarikat dikemas kini."
 }

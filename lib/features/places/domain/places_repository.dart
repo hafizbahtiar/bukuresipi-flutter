@@ -108,6 +108,9 @@ abstract interface class PlacesRepository {
   /// Owner only: "Check JAKIM" on one branch now. Throws ApiException.
   Future<JakimCheck> checkHalalBranch(String branchId);
 
+  /// Owner: the company behind the branch's certificate; [refresh] = read JAKIM's company page again now.
+  Future<BranchCompany> branchCompany(String branchId, {bool refresh = false});
+
   /// Owner only: the brand's JAKIM outlets across Malaysia ([q] = the owner's own words); nothing written.
   Future<JakimOutlets> placeOutlets(String placeId, {String? q});
 
