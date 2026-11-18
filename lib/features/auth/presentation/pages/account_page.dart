@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/base.dart'
+    show MenuAction, showPhotoSourceSheet;
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_editor_page.dart';
@@ -33,60 +35,72 @@ class _AccountPageState extends State<AccountPage> {
   bool _avatarBusy = false;
   static const _avatarHero = 'photo:account-avatar';
 
-  /// The picture: view it full size, change (pick + square crop) or remove. Upload errors show; the old
-  /// picture stays.
-  Future<void> _avatarMenu({required bool has}) async {
+  /// Tapping the picture: with one, it opens full size with Change and Remove under it; with none, straight to
+  /// picking one.
+  Future<void> _avatarTap() async {
     final l = AppLocalizations.of(context);
     final auth = context.read<AuthController>();
-    final choice = await showNotebookSheet<String>(
+    final user = auth.user!;
+    if (user.avatar == null) return _changeAvatar();
+    final bytes = await auth
+        .avatar(user.id, user.avatar!)
+        .catchError((Object _) => null);
+    if (!mounted) return;
+    if (bytes == null) return _snack(l.errUnknown);
+    return showPhotoDialog(
       context,
-      builder: (sheet) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (has)
-            ListTile(
-              key: const ValueKey('avatar-view'),
-              leading: const Icon(Icons.photo_outlined),
-              title: Text(l.avatarView),
-              onTap: () => Navigator.of(sheet).pop('view'),
-            ),
-          ListTile(
-            leading: const Icon(Icons.add_a_photo_outlined),
-            title: Text(has ? l.avatarChange : l.avatarAdd),
-            onTap: () => Navigator.of(sheet).pop('change'),
-          ),
-          if (has)
-            ListTile(
-              leading: const Icon(Icons.hide_image_outlined),
-              title: Text(l.avatarRemove),
-              onTap: () => Navigator.of(sheet).pop('remove'),
-            ),
-        ],
-      ),
+      bytes,
+      heroTag: _avatarHero,
+      heroRadius: 20, // the 40 px avatar's circle
+      aspectRatio: 1, // avatars are cropped square
+      actions: [
+        MenuAction(
+          icon: Icons.edit_outlined,
+          label: l.avatarActionChange,
+          onTap: _changeAvatar,
+        ),
+        MenuAction(
+          icon: Icons.delete_outline,
+          label: l.avatarActionRemove,
+          danger: true,
+          onTap: _removeAvatar,
+        ),
+      ],
     );
-    if (choice == null || !mounted) return;
-    if (choice == 'view') {
-      final user = auth.user!;
-      final bytes = await auth
-          .avatar(user.id, user.avatar!)
-          .catchError((Object _) => null);
-      if (!mounted) return;
-      if (bytes == null) return _snack(l.errUnknown);
-      return showPhotoDialog(
-        context,
-        bytes,
-        heroTag: _avatarHero,
-        heroRadius: 20, // the 40 px avatar's circle
-        aspectRatio: 1, // avatars are cropped square
-      );
-    }
-    final path = choice == 'change'
-        ? await pickPhoto(context, ratios: [('1:1', 1)], maxSide: 1024)
-        : null;
-    if (choice == 'change' && path == null) return;
+  }
+
+  /// Camera or photos, then the square crop, then upload. An upload error shows; the old picture stays.
+  Future<void> _changeAvatar() async {
+    final l = AppLocalizations.of(context);
+    final source = await showPhotoSourceSheet(context, camera: l.coverCamera);
+    if (source == null || !mounted) return;
+    final path = await pickPhoto(
+      context,
+      ratios: [('1:1', 1)],
+      maxSide: 1024,
+      source: source,
+    );
+    if (path == null || !mounted) return;
+    await _saveAvatar(() => context.read<AuthController>().setAvatar(path));
+  }
+
+  Future<void> _removeAvatar() async {
+    final l = AppLocalizations.of(context);
+    final sure = await showNotebookDialog(
+      context,
+      message: l.avatarRemoveConfirm,
+      tone: DialogTone.danger,
+      confirmLabel: l.avatarActionRemove,
+    );
+    if (!sure || !mounted) return;
+    await _saveAvatar(() => context.read<AuthController>().removeAvatar());
+  }
+
+  Future<void> _saveAvatar(Future<void> Function() save) async {
+    final l = AppLocalizations.of(context);
     setState(() => _avatarBusy = true);
     try {
-      await (path == null ? auth.removeAvatar() : auth.setAvatar(path));
+      await save();
     } catch (e) {
       _snack(errorText(l, e));
     } finally {
@@ -128,18 +142,16 @@ class _AccountPageState extends State<AccountPage> {
             (Object e) => _snack(errorText(l, e)),
           ),
           child: ListView(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: EdgeInsets.only(bottom: navRoom(context)),
             children: [
               NotebookRow(
                 mark: Semantics(
                   button: true,
-                  label: user.avatar == null ? l.avatarAdd : l.avatarChange,
+                  label: user.avatar == null ? l.avatarAdd : l.avatarView,
                   child: InkWell(
                     key: const ValueKey('account-avatar'),
                     customBorder: const CircleBorder(),
-                    onTap: _avatarBusy
-                        ? null
-                        : () => _avatarMenu(has: user.avatar != null),
+                    onTap: _avatarBusy ? null : _avatarTap,
                     child: _avatarBusy
                         ? const SizedBox.square(
                             dimension: 40,

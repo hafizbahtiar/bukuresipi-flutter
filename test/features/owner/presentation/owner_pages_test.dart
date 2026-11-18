@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
@@ -270,8 +272,15 @@ void main() {
       expect(find.text('Delete 2 accounts'), findsOneWidget);
       await t.tap(find.byKey(const ValueKey('delete-reason-1')));
       await t.pump();
+      repo.deleteGate = Completer();
       await t.tap(find.byKey(const ValueKey('delete-confirm')));
+      await t.pump(
+        const Duration(seconds: 1),
+      ); // the sheet closes, the first delete waits
+      expect(find.text('Deleting 0 of 2…'), findsOneWidget);
+      repo.deleteGate!.complete();
       await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('deleting')), findsNothing);
       expect(repo.deleted, [
         ('u-a@b.c', 'Test account (Google Play)', true),
         ('u-b@b.c', 'Test account (Google Play)', true),

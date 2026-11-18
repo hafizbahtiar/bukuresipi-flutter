@@ -8,7 +8,7 @@ import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
 import '../../push/push_controller.dart';
-import '../../home/presentation/home_page.dart';
+import '../../home/presentation/pages/home_page.dart';
 import 'recent_shares.dart';
 import 'share_intake.dart';
 import 'widgets/share_reading.dart';
@@ -35,12 +35,10 @@ class SharePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final intake = context.watch<ShareIntake>();
-    void close() {
+    // Home, not the tab left open before the share; Done goes to the Book, where the place or recipe lands.
+    void close({bool book = false}) {
       intake.dismiss();
-      context.go(
-        '/',
-        extra: HomePage.homeTab,
-      ); // the Home tab, not the one left open before the share
+      context.go('/', extra: book ? HomePage.bookTab : HomePage.homeTab);
     }
 
     Future<void> leaveApp() async {
@@ -121,7 +119,10 @@ class SharePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                FilledButton(onPressed: close, child: Text(l.doneButton)),
+                FilledButton(
+                  onPressed: () => close(book: true),
+                  child: Text(l.doneButton),
+                ),
               ],
             ),
           ),

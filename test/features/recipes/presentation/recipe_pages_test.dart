@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
@@ -101,7 +103,36 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Goreng ayam hingga masak.'), findsOneWidget);
     expect(find.textContaining('500 g'), findsNothing);
+    // The page's actions are in the app bar's ⋮ menu.
+    await openMore(t);
     expect(find.text('Open video'), findsOneWidget);
+  });
+
+  testWidgets('swiping the ingredients sideways turns to the steps, and back', (
+    t,
+  ) async {
+    final recipes = RecipesController(
+      FakeRecipes()..detailResult = recipeDetail(),
+    );
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.fling(find.textContaining('500 g'), const Offset(-300, 0), 1000);
+    await t.pumpAndSettle();
+    expect(find.text('Goreng ayam hingga masak.'), findsOneWidget);
+    expect(find.textContaining('500 g'), findsNothing);
+
+    await t.fling(
+      find.text('Goreng ayam hingga masak.'),
+      const Offset(300, 0),
+      1000,
+    );
+    await t.pumpAndSettle();
+    expect(find.textContaining('500 g'), findsOneWidget);
   });
 
   testWidgets(
@@ -165,6 +196,9 @@ void main() {
       );
       await t.pumpAndSettle();
 
+      // Allergens have their own tab, Others.
+      await t.tap(find.byKey(const ValueKey('recipe-tab-others')));
+      await t.pumpAndSettle();
       expect(find.text('Allergens'), findsOneWidget);
       expect(find.textContaining('Susu segar'), findsOneWidget);
       expect(
@@ -192,7 +226,8 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    await t.tap(find.byTooltip('Remove from my book'));
+    await openMore(t);
+    await t.tap(find.text('Remove from my book'));
     await t.pumpAndSettle();
     expect(fake.deleted, isEmpty);
     await t.tap(find.widgetWithText(FilledButton, 'Remove'));
@@ -286,11 +321,11 @@ void main() {
       );
       await t.pumpAndSettle();
 
+      await openMore(t);
       await t.tap(find.text('Edit'));
       await t.pumpAndSettle();
-      expect(find.widgetWithText(TextField, '500g ayam'), findsOneWidget);
       await t.enterText(find.widgetWithText(TextField, 'Name'), '  ');
-      await t.tap(find.text('Save'));
+      await t.tap(find.byTooltip('Save'));
       await t.pump();
       expect(find.text('Give the recipe a name.'), findsOneWidget);
       expect(fake.edited, isEmpty);
@@ -298,6 +333,8 @@ void main() {
         find.widgetWithText(TextField, 'Name'),
         'Nasi Lemak Sambal',
       );
+      await editTab(t, 'ingredients');
+      expect(find.widgetWithText(TextField, '500g ayam'), findsOneWidget);
 
       // Drag the first ingredient below the second.
       final drag = await t.startGesture(
@@ -312,6 +349,7 @@ void main() {
       await t.pumpAndSettle();
 
       // Replace the step with two typed on one row.
+      await editTab(t, 'steps');
       await t.tap(find.byTooltip('Remove').last);
       await t.pumpAndSettle();
       await t.tap(find.text('Add step'));
@@ -326,13 +364,13 @@ void main() {
         findsOneWidget,
       ); // each pasted line trimmed
 
-      await t.tap(find.text('Save'));
+      await t.tap(find.byTooltip('Save'));
       await t.pumpAndSettle();
       final (id, name, ingredients, steps) = fake.edited.single;
       expect([id, name], ['r-1', 'Nasi Lemak Sambal']);
       expect(ingredients, ['sedikit bahan rahsia', '500g ayam']);
       expect(steps, ['Masak nasi.', 'Goreng ayam.']);
-      expect(find.text('Save'), findsNothing); // back on the recipe
+      expect(find.byTooltip('Save'), findsNothing); // back on the recipe
     },
   );
 
@@ -356,12 +394,15 @@ void main() {
       final l = lookupAppLocalizations(const Locale('en'));
       expect(find.textContaining(l.recipeBy('Siti')), findsOneWidget);
       expect(find.byTooltip('Remove from my book'), findsNothing);
+      await openMore(t);
+      expect(find.text('Remove from my book'), findsNothing);
       expect(find.text(l.recipeEdit), findsNothing);
       await t.tap(find.text(l.report));
       await t.pumpAndSettle();
       await t.tap(find.text(l.reasonCopyright));
       await t.pumpAndSettle();
       expect(fake.reports, [('r-1', 'copyright')]);
+      await openMore(t);
       expect(
         find.text(l.recipeCopy),
         findsOneWidget,
@@ -396,7 +437,8 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      final ingredientRow = find.byType(TextField).at(1);
+      await editTab(t, 'ingredients');
+      final ingredientRow = find.byType(TextField).first;
       await t.enterText(ingredientRow, '2 cawan tep');
       await t.pump(const Duration(milliseconds: 300));
       await t.pump();
@@ -448,6 +490,7 @@ void main() {
           ),
         );
         await t.pumpAndSettle();
+        await openMore(t);
         expect(find.text('Hide'), owner ? findsOneWidget : findsNothing);
         expect(find.text('Report'), owner ? findsNothing : findsOneWidget);
         if (!owner) return;
@@ -487,8 +530,159 @@ void main() {
       await t.tap(find.byKey(const ValueKey('recipe-tab-steps')));
       await t.pumpAndSettle();
       expect(find.text('How to cook: see the original recipe'), findsOneWidget);
+      await openMore(t);
       expect(find.text('Original recipe'), findsOneWidget);
       expect(find.text('Open video'), findsNothing);
     },
   );
+
+  for (final owner in [true, false]) {
+    testWidgets(
+      'a catalogue dish: ${owner ? 'the owner edits it from an AI draft' : 'a user cannot edit it'}',
+      (t) async {
+        final auth = AuthController(
+          FakeAuthRepository()
+            ..session = true
+            ..meResult = User(
+              id: 'u-1',
+              email: 'a@example.com',
+              name: 'Ali',
+              role: owner ? 'owner' : 'user',
+              lang: 'ms',
+              emailVerified: true,
+            ),
+        );
+        await auth.restore();
+        final ownerRepo = FakeOwner()
+          ..draft = (
+            name: 'Kari Ayam Kampung',
+            ingredients: ['1 ekor ayam', '400 ml santan'],
+            steps: ['Tumis rempah.', 'Masak ayam.'],
+            sources: [
+              (url: 'https://masak.example.my/kari', title: 'Kari Ayam'),
+            ],
+            images: ['https://masak.example.my/kari.jpg'],
+            warnings: ['Pages disagree on santan.'],
+            complete: true,
+          );
+        final fake = FakeRecipes()
+          ..detailResult = recipeDetail(
+            canEdit: false,
+            missing: const [],
+            steps: const [],
+            sourceType: RecipeSourceType.catalogue,
+          );
+        await t.pumpWidget(
+          app(
+            providers: [
+              ChangeNotifierProvider.value(value: RecipesController(fake)),
+              ChangeNotifierProvider.value(value: auth),
+              Provider<OwnerRepository>.value(value: ownerRepo),
+            ],
+            home: const RecipeDetailPage(id: 'r-1'),
+          ),
+        );
+        await t.pumpAndSettle();
+        // The owner links a catalogue dish's lines too; a user's tap does nothing.
+        await t.tap(find.textContaining('sedikit bahan rahsia'));
+        await t.pumpAndSettle();
+        expect(find.byType(TextField), owner ? findsOneWidget : findsNothing);
+        if (owner) {
+          await t.tapAt(const Offset(200, 20)); // outside the sheet
+          await t.pumpAndSettle();
+        }
+        await openMore(t);
+        expect(find.text('Edit'), owner ? findsOneWidget : findsNothing);
+        // Only the app's owner deletes a catalogue dish (for everyone, after a warning).
+        expect(find.text('Remove'), owner ? findsOneWidget : findsNothing);
+        if (!owner) return;
+        await t.tap(find.text('Remove'));
+        await t.pumpAndSettle();
+        expect(find.textContaining('from the catalogue'), findsOneWidget);
+        await t.tap(find.text('Cancel'));
+        await t.pumpAndSettle();
+        expect(fake.deleted, isEmpty);
+        await openMore(t);
+        await t.tap(find.text('Edit'));
+        await t.pumpAndSettle();
+        // Catalogue dishes get a cover too: upload one, or pick a draft photo below.
+        expect(find.byKey(const ValueKey('cover-pick')), findsOneWidget);
+        // While it works: a placeholder card, the button off.
+        ownerRepo.draftGate = Completer<void>();
+        await t.tap(find.byKey(const ValueKey('recipe-ai-draft')));
+        await t.pump();
+        expect(
+          find.byKey(const ValueKey('recipe-draft-loading')),
+          findsOneWidget,
+        );
+        expect(
+          t
+              .widget<IconButton>(
+                find.descendant(
+                  of: find.byKey(const ValueKey('recipe-ai-draft')),
+                  matching: find.byType(IconButton),
+                ),
+              )
+              .onPressed,
+          isNull,
+        );
+        // Undo after a draft puts the form back; a second draft fills it again.
+        ownerRepo.draftGate!.complete();
+        await t.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-draft-loading')),
+          findsNothing,
+        );
+        expect(find.text('Kari Ayam Kampung'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('recipe-draft-undo')));
+        await t.pumpAndSettle();
+        expect(find.byKey(const ValueKey('recipe-draft-note')), findsNothing);
+        expect(find.text('Kari Ayam Kampung'), findsNothing);
+        ownerRepo.draftGate = null;
+        await t.tap(find.byKey(const ValueKey('recipe-ai-draft')));
+        await t.pumpAndSettle();
+        expect(ownerRepo.drafted, ['r-1', 'r-1']);
+        expect(find.byKey(const ValueKey('recipe-draft-note')), findsOneWidget);
+        expect(find.textContaining('Pages disagree'), findsOneWidget);
+        ownerRepo.dishCoverResult = recipeDetail(
+          canEdit: false,
+          sourceType: RecipeSourceType.catalogue,
+        );
+        await t.tap(
+          find.byKey(
+            const ValueKey('draft-photo-https://masak.example.my/kari.jpg'),
+          ),
+        );
+        await t.pump();
+        expect(find.byKey(const ValueKey('cover-draft-photo')), findsOneWidget);
+        await t.tap(find.byTooltip('Save'));
+        await t.pumpAndSettle();
+        final (id, name, ingredients, steps) = fake.edited.single;
+        expect(
+          [id, name, ingredients, steps],
+          [
+            'r-1',
+            'Kari Ayam Kampung',
+            ['1 ekor ayam', '400 ml santan'],
+            ['Tumis rempah.', 'Masak ayam.'],
+          ],
+        );
+        expect(ownerRepo.dishCovers, [
+          ('r-1', 'https://masak.example.my/kari.jpg'),
+        ]);
+      },
+    );
+  }
+}
+
+/// Opens the app bar's ⋮ menu, where a page's actions are.
+Future<void> openMore(WidgetTester t) async {
+  await t.tap(find.byKey(const ValueKey('more-menu')));
+  await t.pumpAndSettle();
+}
+
+/// The recipe editor's tabs: Details | Ingredients | Steps.
+Future<void> editTab(WidgetTester t, String name) async {
+  await t.tap(find.byKey(ValueKey('recipe-edit-tab-$name')));
+  await t.pumpAndSettle();
 }

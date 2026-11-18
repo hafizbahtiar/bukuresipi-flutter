@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
@@ -96,12 +99,18 @@ class FakeOwner implements OwnerRepository {
   @override
   Future<void> unban(String userId) async => unbans.add(userId);
 
+  /// Set to hold each delete until it completes (to see what shows meanwhile).
+  Completer<void>? deleteGate;
+
   @override
   Future<void> deleteUser(
     String userId, {
     required String reason,
     bool banEmail = false,
-  }) async => deleted.add((userId, reason, banEmail));
+  }) async {
+    await deleteGate?.future;
+    deleted.add((userId, reason, banEmail));
+  }
 
   @override
   Future<List<FailedShare>> failedShares() async => shares;
@@ -156,6 +165,28 @@ class FakeOwner implements OwnerRepository {
   ) async {
     variantSearches.add(recipeId);
     return (variants: foundVariants, complete: true);
+  }
+
+  DishDraft? draft;
+  final drafted = <String>[];
+
+  /// Holds the draft back until completed (to see the page while it works).
+  Completer<void>? draftGate;
+
+  @override
+  Future<DishDraft> draftDish(String recipeId) async {
+    drafted.add(recipeId);
+    await draftGate?.future;
+    return draft!;
+  }
+
+  final dishCovers = <(String, String)>[];
+  RecipeDetail? dishCoverResult;
+
+  @override
+  Future<RecipeDetail> setDishCover(String recipeId, String url) async {
+    dishCovers.add((recipeId, url));
+    return dishCoverResult!;
   }
 
   final hiddenRecipes = <String>[];

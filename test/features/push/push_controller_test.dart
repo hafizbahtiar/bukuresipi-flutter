@@ -108,6 +108,25 @@ void main() {
     expect(calls().length, 3); // off: no new registration
   });
 
+  test('the switch shows the choice at once, before the dialog and the server answer', () async {
+    fcm.granted = true;
+    final push = await start(prefs: {'push.asked': true});
+    final shown = <bool>[];
+    push.addListener(() => shown.add(push.enabled));
+    final off = push.setEnabled(false);
+    expect(push.enabled, isFalse); // before the DELETE has gone out
+    await off;
+    expect(push.enabled, isFalse);
+
+    fcm.answer = false; // turning it back on, the system dialog says no
+    final on = push.setEnabled(true);
+    expect(push.enabled, isTrue);
+    await on;
+    expect(push.enabled, isFalse); // settled: refused permission = off
+    expect(shown.first, isFalse);
+    expect(shown.last, isFalse);
+  });
+
   test('said no at the system dialog: nothing is registered', () async {
     fcm.answer = false;
     final push = await start();

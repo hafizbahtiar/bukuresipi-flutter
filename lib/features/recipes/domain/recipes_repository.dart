@@ -39,17 +39,34 @@ abstract interface class RecipesRepository {
   /// Takes the recipe off this user's book.
   Future<void> delete(String id);
 
+  /// Readable recipes ranked by what the user still lacks, from what they have (cook now first, then 1-3 missing).
+  /// [staples] = salt, sugar and cooking oil count as owned.
+  Future<List<PantryMatch>> fromPantry(
+    List<String> ingredients, {
+    bool staples = true,
+  });
+
   /// Catalogue ingredient names matching [query] (2+ characters).
   Future<List<String>> searchIngredients(String query);
 
   /// Links ingredient line [index] to the catalogue ingredient [name] (null = unlink); returns the updated recipe.
   Future<RecipeDetail> linkIngredient(String id, int index, String? name);
 
+  /// Marks line [index] optional (or needed again). Own recipes; the owner also catalogue dishes.
+  Future<RecipeDetail> setIngredientOptional(
+    String id,
+    int index,
+    bool optional,
+  );
+
   /// A recipe typed from scratch (one line per ingredient and per step); returns it.
+  /// [optional]: line index -> the editor's "optional" switch, sent only for those lines (it then wins over the
+  /// line's own words); others are read as before.
   Future<RecipeDetail> create({
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   });
 
   /// The owner's photo from a local jpeg/png/webp file (5 MB max); returns the recipe with its new cover.
@@ -66,5 +83,6 @@ abstract interface class RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   });
 }

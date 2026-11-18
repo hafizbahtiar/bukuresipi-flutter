@@ -5,14 +5,53 @@ import '../../../../core/theme/app_theme.dart';
 
 /// The last 12 months as bars: rounded pandan bars on a light grid, a month with no spend a short stub, the current
 /// Malaysia month in the deeper green, and the largest month's ringgit at the top left. No dependency: one painter.
-class SpendChart extends StatelessWidget {
+/// New amounts morph: each bar grows or shrinks from its old height, and the scale (and its ringgit) with it.
+class SpendChart extends StatefulWidget {
   const SpendChart({super.key, required this.months});
 
   /// 'YYYY-MM' with visits only; a month with none is left out (drawn as an empty stub).
   final List<({String month, int visits, int totalSen})> months;
 
   @override
+  State<SpendChart> createState() => _SpendChartState();
+}
+
+class _SpendChartState extends State<SpendChart>
+    with SingleTickerProviderStateMixin {
+  late final _morph = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 450),
+    value: 1,
+  );
+
+  /// What was drawn before the last change (the morph's start).
+  List<int>? _fromValues;
+  int _fromTop = 0;
+  List<int> _values = const [];
+  int _top = 0;
+
+  @override
+  void didUpdateWidget(SpendChart old) {
+    super.didUpdateWidget(old);
+    if (old.months == widget.months) return;
+    _fromValues = _values;
+    _fromTop = _top;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _morph.value = 1;
+    } else {
+      _morph.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _morph.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final months = widget.months;
     final nb = Notebook.of(context);
     final now = DateTime.now();
     final last = [
@@ -22,13 +61,22 @@ class SpendChart extends StatelessWidget {
     final byMonth = {for (final m in months) m.month: m.totalSen};
     final top = byMonth.values.fold(0, (a, b) => a > b ? a : b);
     final locale = Localizations.localeOf(context).toString();
+    final values = [for (final m in last) byMonth[key(m)] ?? 0];
+    _values = values;
+    _top = top;
+    final from = _fromValues;
     return SizedBox(
       key: const ValueKey('spend-chart'),
       height: 132,
       child: CustomPaint(
         painter: _SpendPainter(
+          t: CurvedAnimation(parent: _morph, curve: Curves.easeInOutCubic),
           nb: nb,
-          values: [for (final m in last) byMonth[key(m)] ?? 0],
+          fromValues: from != null && from.length == values.length
+              ? from
+              : values,
+          fromTop: from == null ? top : _fromTop,
+          values: values,
           labels: [for (final m in last) DateFormat.MMM(locale).format(m)],
           current: last.length - 1,
           top: top,
@@ -41,15 +89,21 @@ class SpendChart extends StatelessWidget {
 }
 
 class _SpendPainter extends CustomPainter {
-  const _SpendPainter({
+  _SpendPainter({
+    required this.t,
+    required this.fromValues,
+    required this.fromTop,
     required this.nb,
     required this.values,
     required this.labels,
     required this.current,
     required this.top,
     required this.textScaler,
-  });
+  }) : super(repaint: t);
 
+  final Animation<double> t;
+  final List<int> fromValues;
+  final int fromTop;
   final Notebook nb;
   final List<int> values;
   final List<String> labels;
@@ -63,9 +117,12 @@ class _SpendPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (values.isEmpty) return;
+    final k = t.value;
+    double lerp(num a, num b) => a + (b - a) * k;
     final bottom = size.height - _labelHeight;
     final plot = bottom - _topPad;
-    final max = top <= 0 ? 1 : top;
+    final shownTop = lerp(fromTop, top);
+    final max = shownTop <= 0 ? 1.0 : shownTop;
     final grid = Paint()
       ..color = nb.line
       ..strokeWidth = 1;
@@ -75,7 +132,7 @@ class _SpendPainter extends CustomPainter {
     }
     _label(
       canvas,
-      'RM ${(top / 100).round()}',
+      'RM ${(shownTop / 100).round()}',
       const Offset(0, 0),
       nb.inkSoft,
       FontWeight.w500,
@@ -83,7 +140,7 @@ class _SpendPainter extends CustomPainter {
     final slot = size.width / values.length;
     final barWidth = (slot * 0.62).clamp(2.0, 22.0);
     for (var i = 0; i < values.length; i++) {
-      final value = values[i];
+      final value = lerp(fromValues[i], values[i]);
       final height = value <= 0 ? 2.0 : 2 + (plot - 2) * value / max;
       final left = slot * i + (slot - barWidth) / 2;
       final paint = Paint()
@@ -131,6 +188,8 @@ class _SpendPainter extends CustomPainter {
   @override
   bool shouldRepaint(_SpendPainter old) =>
       old.top != top ||
+      old.fromTop != fromTop ||
+      !_same(old.fromValues, fromValues) ||
       old.current != current ||
       old.nb != nb ||
       old.textScaler != textScaler ||

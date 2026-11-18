@@ -21,7 +21,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       place: place == null
           ? null
           : (
-              restaurantId: place['restaurantId'] as String,
+              placeId: place['placeId'] as String,
               branchId: place['branchId'] as String?,
               name: place['name'] as String,
             ),
@@ -65,6 +65,19 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       target: j['target'] as int?,
       hasEstimate: j['hasEstimate'] as bool,
       unknownEaten: (j['unknownEaten'] as num).toDouble(),
+      macros: _macros(j['macros']),
+      meals: [
+        for (final m in (j['meals'] as List?) ?? const [])
+          (
+            id: m['id'] as String,
+            eatenAt: DateTime.parse(m['eatenAt'] as String).toLocal(),
+            eatenKcal: (m['eatenKcal'] as num).round(),
+            macros: _macros(m['macros']),
+            items: [
+              for (final i in (m['items'] as List?) ?? const []) _mealItem(i),
+            ],
+          ),
+      ],
       receipts: [
         for (final r in (j['receipts'] as List?) ?? const [])
           (
@@ -85,6 +98,65 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       ],
     );
   });
+
+  static Macros? _macros(Object? j) => j is Map
+      ? (
+          carbsG: (j['carbsG'] as num).toDouble(),
+          proteinG: (j['proteinG'] as num).toDouble(),
+          fatG: (j['fatG'] as num).toDouble(),
+        )
+      : null;
+
+  static MealItem _mealItem(dynamic i) => (
+    name: i['name'] as String,
+    eaten: (i['eaten'] as num).toDouble(),
+    kcal: (i['kcal'] as num?)?.round(),
+    kcalSource: i['kcalSource'] as String?,
+    carbsG: (i['carbsG'] as num?)?.toDouble(),
+    proteinG: (i['proteinG'] as num?)?.toDouble(),
+    fatG: (i['fatG'] as num?)?.toDouble(),
+  );
+
+  @override
+  Future<List<MealItem>> estimateMeal(String path) => apiCall(() async {
+    final form = FormData.fromMap({
+      'image': await MultipartFile.fromFile(
+        path,
+        contentType: DioMediaType('image', 'jpeg'),
+      ),
+    });
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/meals/estimate',
+      data: form,
+      // One AI call over a photo while the user waits: past the usual 30 s on a slow day.
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+    )).data!;
+    return [for (final i in (j['items'] as List?) ?? const []) _mealItem(i)];
+  });
+
+  @override
+  Future<void> saveMeal(DateTime eatenAt, List<MealItem> items) =>
+      apiCall(() => _dio.post<void>('/meals', data: _mealBody(eatenAt, items)));
+
+  @override
+  Future<void> replaceMeal(String id, DateTime eatenAt, List<MealItem> items) =>
+      apiCall(
+        () => _dio.patch<void>('/meals/$id', data: _mealBody(eatenAt, items)),
+      );
+
+  static Map<String, dynamic> _mealBody(
+    DateTime eatenAt,
+    List<MealItem> items,
+  ) => {
+    'eatenAt': eatenAt.toUtc().toIso8601String(),
+    'items': [
+      for (final i in items) {'name': i.name, 'servings': i.eaten},
+    ],
+  };
+
+  @override
+  Future<void> removeMeal(String id) =>
+      apiCall(() => _dio.delete<void>('/meals/$id'));
 
   @override
   Future<CalorieDays> calorieDays({int days = 30}) => apiCall(() async {
@@ -261,10 +333,13 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       places: [
         for (final p in (j['places'] as List).cast<Map<String, dynamic>>())
           (
-            restaurantId: p['restaurantId'] as String,
+            placeId: p['placeId'] as String,
             name: p['name'] as String,
+            cover: p['cover'] as String?,
             visits: p['visits'] as int,
             totalSen: p['totalSen'] as int,
+            lastVisitAt: DateTime.tryParse(p['lastVisitAt'] as String? ?? '')
+                ?.toLocal(),
           ),
       ],
     );

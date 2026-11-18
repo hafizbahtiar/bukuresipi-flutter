@@ -26,7 +26,7 @@ void main() {
         home: Scaffold(
           body: PlaceReportSheet(
             subject: ReportSubject(
-              restaurantId: 'r-1',
+              placeId: 'r-1',
               restaurantName: 'Kedai A',
               branches: [
                 ReportBranch(id: 'b-1', label: 'Kedai A KL', closed: closed),

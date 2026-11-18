@@ -163,14 +163,14 @@ void main() {
   });
 
   testWidgets(
-    'the picture: no photo shows the initial; with one, Remove sends the delete',
+    'the picture: none = straight to camera or photos; one = it opens, with Change and Remove under it',
     (t) async {
       await pump(t);
       expect(find.text('A'), findsOneWidget); // Ali's initial
       await t.tap(find.byKey(const ValueKey('account-avatar')));
       await t.pumpAndSettle();
-      expect(find.text('Add profile picture'), findsOneWidget);
-      expect(find.text('Remove profile picture'), findsNothing);
+      expect(find.text('Take photo'), findsOneWidget);
+      expect(find.text('From photos'), findsOneWidget);
       await t.tapAt(const Offset(10, 10)); // close the sheet
       await t.pumpAndSettle();
 
@@ -187,23 +187,44 @@ void main() {
         t.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
       ); // completes only as frames are pumped
       await t.pumpAndSettle();
-      // View photo opens it (pinch to zoom).
+      // The photo is decoded before it flies (a real decode: needs real time in a test).
+      Future<void> openPhoto() async {
+        await t.tap(find.byKey(const ValueKey('account-avatar')));
+        await t.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await t.pumpAndSettle();
+      }
+
+      // A tap opens the photo itself (pinch to zoom).
       repo.avatarBytes = base64Decode(
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       );
-      await t.tap(find.byKey(const ValueKey('account-avatar')));
-      await t.pumpAndSettle();
-      await t.tap(find.text('View photo'));
-      await t.pumpAndSettle();
+      await openPhoto();
       expect(find.byKey(const ValueKey('photo-viewer')), findsOneWidget);
       // In a dialog: a swipe down is the photo's slide-out; ✕ closes it.
       expect(find.byType(ExtendedImageSlidePage), findsOneWidget);
+      expect(find.text('Change'), findsOneWidget);
       await t.tap(find.byKey(const ValueKey('photo-close')));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('photo-viewer')), findsNothing);
-      await t.tap(find.byKey(const ValueKey('account-avatar')));
+
+      // Remove asks first; Cancel keeps the picture, Remove deletes it.
+      await openPhoto();
+      await t.tap(find.text('Remove'));
       await t.pumpAndSettle();
-      await t.tap(find.text('Remove profile picture'));
+      expect(find.byKey(const ValueKey('photo-viewer')), findsNothing);
+      expect(
+        find.textContaining('Remove your profile picture?'),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('dialog-cancel')));
+      await t.pumpAndSettle();
+      expect(repo.avatarsRemoved, 0);
+      await openPhoto();
+      await t.tap(find.text('Remove'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('dialog-confirm')));
       await t.pumpAndSettle();
       expect(repo.avatarsRemoved, 1);
     },

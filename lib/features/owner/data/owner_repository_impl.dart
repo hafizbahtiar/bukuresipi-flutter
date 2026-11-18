@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
+import '../../recipes/data/recipes_repository_impl.dart';
+import '../../recipes/domain/recipe.dart';
 import '../../recipes/domain/recipe_variant.dart';
 import '../domain/owner.dart';
 import '../domain/owner_repository.dart';
@@ -183,6 +185,8 @@ class OwnerRepositoryImpl implements OwnerRepository {
   ) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/owner/recipes/$recipeId/variants',
+      // A web search, each page read and every line named by the AI: past the default 30 s.
+      options: Options(receiveTimeout: const Duration(seconds: 180)),
     )).data!;
     return (
       variants: [
@@ -194,13 +198,47 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
+  Future<DishDraft> draftDish(String recipeId) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/recipes/$recipeId/draft',
+      // A web search, up to 6 pages and an AI call: longer than the default 30 s wait.
+      options: Options(receiveTimeout: const Duration(seconds: 180)),
+    )).data!;
+    List<String> texts(String k) => (j[k] as List).cast<String>();
+    return (
+      name: j['name'] as String,
+      ingredients: texts('ingredients'),
+      steps: texts('steps'),
+      sources: [
+        for (final s in (j['sources'] as List).cast<Map<String, dynamic>>())
+          (url: s['url'] as String, title: s['title'] as String?),
+      ],
+      images: [...?(j['images'] as List?)?.cast<String>()],
+      warnings: texts('warnings'),
+      complete: j['complete'] as bool? ?? true,
+    );
+  });
+
+  @override
+  Future<RecipeDetail> setDishCover(String recipeId, String url) =>
+      apiCall(() async {
+        final j = (await _dio.put<Map<String, dynamic>>(
+          '/owner/recipes/$recipeId/cover',
+          data: {'url': url},
+          // The server downloads the photo first.
+          options: Options(receiveTimeout: const Duration(seconds: 60)),
+        )).data!;
+        return recipeDetailFromJson(j);
+      });
+
+  @override
   Future<List<OwnerPlace>> places() => apiCall(() async {
     final j = await _get('/owner/places');
     return [
       for (final p in (j['places'] as List).cast<Map<String, dynamic>>())
         OwnerPlace(
           branchId: p['branchId'] as String,
-          restaurantId: p['restaurantId'] as String,
+          placeId: p['placeId'] as String,
           name: p['name'] as String,
           label: p['label'] as String?,
           address: p['address'] as String?,

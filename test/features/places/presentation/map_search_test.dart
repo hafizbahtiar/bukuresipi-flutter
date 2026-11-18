@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/core/theme/app_theme.dart';
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/map_search.dart';
@@ -137,6 +139,44 @@ void main() {
       ); // nothing open: leaves
       await t.pumpAndSettle();
       expect(find.text('home'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'while the server is asked and nothing matched yet, loading rows show; the answer replaces them',
+    (t) async {
+      final answer = Completer<List<PlaceHit>>();
+      await t.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [Notebook.light]),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: MapSearchBar(
+              places: const [],
+              search: (q, {required submit}) => answer.future,
+              onPicked: (_) {},
+            ),
+          ),
+        ),
+      );
+      await t.enterText(find.byKey(const ValueKey('map-search')), 'family');
+      await t.pump(const Duration(milliseconds: 350)); // past the typing pause
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.byKey(const ValueKey('search-loading-0')), findsOneWidget);
+
+      answer.complete(const [
+        PlaceHit(
+          poiId: 'osm:N42',
+          name: 'FamilyMart',
+          lat: 3.14,
+          lng: 101.7,
+          distanceM: 1200,
+        ),
+      ]);
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('search-loading-0')), findsNothing);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+      expect(find.text('FamilyMart'), findsOneWidget);
     },
   );
 }

@@ -44,11 +44,16 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
   Future<List<ShoppingItem>> addRecipe(
     String recipeId, {
     bool family = false,
+    bool skipOptional = false,
   }) => apiCall(
     () => _items(
       _dio.post<Map<String, dynamic>>(
         '/shopping',
-        data: {'recipeId': recipeId, 'list': _list(family)},
+        data: {
+          'recipeId': recipeId,
+          'list': _list(family),
+          if (skipOptional) 'skipOptional': true,
+        },
       ),
     ),
   );

@@ -51,6 +51,21 @@ class Recipe {
   final List<String> missing;
   final int ingredientCount;
   final int stepCount;
+
+  /// After an edit: the card's name and photo from the saved recipe.
+  Recipe edited(RecipeDetail d) => Recipe(
+    id: id,
+    name: d.name,
+    createdAt: createdAt,
+    sourceUrl: sourceUrl,
+    missing: missing,
+    ingredientCount: ingredientCount,
+    stepCount: stepCount,
+    visibility: visibility,
+    owner: owner,
+    shareId: shareId,
+    cover: d.cover,
+  );
 }
 
 /// The credit a shared recipe shows: the post's link, or what it was made from.
@@ -63,12 +78,25 @@ class Dish {
     required this.name,
     this.category,
     this.ingredientCount = 0,
+    this.cover,
   });
 
   final String id;
   final String name;
   final String? category;
   final int ingredientCount;
+
+  /// The owner's photo id (GET /recipes/:id/cover); null = none.
+  final String? cover;
+
+  /// After an owner edit: the card's name and photo from the saved dish.
+  Dish edited(RecipeDetail d) => Dish(
+    id: id,
+    name: d.name,
+    category: category,
+    ingredientCount: ingredientCount,
+    cover: d.cover,
+  );
 }
 
 class RecipeDetail {
@@ -125,14 +153,30 @@ class RecipeDetail {
 }
 
 class RecipeAllergen {
-  const RecipeAllergen({required this.name, required this.ingredients});
+  const RecipeAllergen({
+    required this.name,
+    required this.ingredients,
+    this.optionalOnly = false,
+  });
 
   final String name;
   final List<String> ingredients;
+
+  /// Every line it comes from is optional: "only if you add it". Still shown: an allergen never goes quiet.
+  final bool optionalOnly;
 }
 
 class RecipeIngredient {
-  const RecipeIngredient({this.name, this.rawText, this.quantity, this.unit});
+  const RecipeIngredient({
+    this.name,
+    this.rawText,
+    this.quantity,
+    this.unit,
+    this.optional = false,
+  });
+
+  /// "If you like": the dish is still the dish without it (the post said so, or the owner marked it).
+  final bool optional;
 
   /// The catalogue name when matched; null = the line is shown as written.
   final String? name;
@@ -158,3 +202,13 @@ class RecipeStep {
   final int stepNo;
   final String instruction;
 }
+
+/// One recipe for "What can I cook?": [have] of [required] lines in the kitchen; [missing] = catalogue names to buy;
+/// [unknown] = lines with no catalogue link, as written (to check by eye). Empty [missing] = cook now.
+typedef PantryMatch = ({
+  Recipe recipe,
+  int have,
+  int required,
+  List<String> missing,
+  List<String> unknown,
+});

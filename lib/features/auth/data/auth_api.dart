@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/api_client.dart';
+import '../domain/passkey.dart';
 import '../domain/session.dart';
 import '../domain/usage.dart';
 
@@ -85,6 +86,47 @@ class AuthApi {
         'currentPassword': current,
         'newPassword': next,
       }, auth: true);
+
+  // Passkeys: the API's WebAuthn options go to the phone as they are, and the phone's answer comes back as it is.
+  Future<Map<String, dynamic>> passkeyLoginOptions() async =>
+      (await _post(
+            '/auth/passkeys/login/options',
+            const <String, dynamic>{},
+          ))['options']
+          as Map<String, dynamic>;
+  Future<Map<String, dynamic>> passkeyLogin(
+    Map<String, dynamic> response,
+  ) async => _post('/auth/passkeys/login/verify', {
+    'response': response,
+    'device': await device(),
+  });
+  Future<Map<String, dynamic>> passkeyRegisterOptions() async =>
+      (await _post(
+            '/auth/passkeys/register/options',
+            const <String, dynamic>{},
+            auth: true,
+          ))['options']
+          as Map<String, dynamic>;
+
+  /// Saves the new passkey under this phone's name.
+  Future<Passkey> addPasskey(Map<String, dynamic> response) async =>
+      Passkey.fromJson(
+        (await _post('/auth/passkeys/register/verify', {
+              'response': response,
+              'name': (await device())['name'],
+            }, auth: true))['passkey']
+            as Map<String, dynamic>,
+      );
+  Future<List<Passkey>> passkeys() async {
+    final res = await _dio.get<Map<String, dynamic>>('/auth/passkeys');
+    return [
+      for (final p in res.data!['passkeys'] as List)
+        Passkey.fromJson(p as Map<String, dynamic>),
+    ];
+  }
+
+  Future<void> deletePasskey(String id) =>
+      _dio.delete<void>('/auth/passkeys/$id');
 
   Future<List<Session>> sessions() async {
     final res = await _dio.get<Map<String, dynamic>>('/auth/sessions');

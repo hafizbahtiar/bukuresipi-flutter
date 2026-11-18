@@ -259,7 +259,8 @@ class _MapSearchBarState extends State<MapSearchBar> {
             child: _open
                 ? Padding(
                     key: const ValueKey('map-search-results'),
-                    padding: const EdgeInsets.only(top: 8),
+                    // Room under the card: SizeTransition clips, and would cut its shadow flat.
+                    padding: const EdgeInsets.only(top: 8, bottom: 12),
                     child: ConstrainedBox(
                       // Above the keyboard, below the bar.
                       constraints: BoxConstraints(
@@ -335,6 +336,15 @@ class _MapSearchBarState extends State<MapSearchBar> {
                   color: nb.pandan,
                   backgroundColor: nb.mist,
                 ),
+              // Nothing to show yet: rows shaped like results, so the card has its real size and corners.
+              if (waiting && rows.isEmpty)
+                for (var i = 0; i < 3; i++) ...[
+                  if (i > 0) Divider(height: 1, color: nb.line),
+                  _LoadingRow(
+                    key: ValueKey('search-loading-$i'),
+                    wide: i.isEven,
+                  ),
+                ],
               Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
@@ -434,6 +444,51 @@ class _Row extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A result still loading: the row's circle and two text lines as soft bars.
+class _LoadingRow extends StatelessWidget {
+  const _LoadingRow({super.key, required this.wide});
+
+  final bool wide;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    Widget bar(double widthFactor, double height) => FractionallySizedBox(
+      widthFactor: widthFactor,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: nb.mist,
+          borderRadius: BorderRadius.circular(height / 2),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: nb.mist, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                bar(wide ? 0.7 : 0.5, 12),
+                const SizedBox(height: 8),
+                bar(wide ? 0.45 : 0.6, 9),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

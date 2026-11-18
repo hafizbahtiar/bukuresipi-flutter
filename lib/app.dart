@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'core/theme/theme_reveal.dart';
 import 'core/network/update_gate.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
@@ -98,10 +99,10 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     try {
       final share = await shares.get(shareId);
       if (share.recipeId case final id?) return _router.go('/recipes/$id');
-      if (share.restaurantId case final restaurantId?) {
+      if (share.placeId case final placeId?) {
         await places.load();
         final place = places.places
-            .where((p) => p.restaurant.id == restaurantId)
+            .where((p) => p.restaurant.id == placeId)
             .firstOrNull;
         if (place != null) return _router.go('/places/${place.id}');
       }
@@ -124,6 +125,9 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     theme: AppTheme.light(),
     darkTheme: AppTheme.dark(),
     themeMode: context.watch<ThemeController>().mode,
+    // One rebuild per theme change, not 200 ms of the whole app blending colours: the circle (ThemeReveal) is the
+    // animation, and a blend under it would only cost frames.
+    themeAnimationDuration: Duration.zero,
     locale: context.watch<LocaleController>().locale,
     supportedLocales: LocaleController.supported,
     localizationsDelegates: const [
@@ -134,5 +138,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     ],
     routerConfig: _router,
     scaffoldMessengerKey: _messenger,
+    // Settings' theme switch spreads the new theme as a circle from the tap.
+    builder: (context, child) => ThemeReveal(child: child ?? const SizedBox()),
   );
 }

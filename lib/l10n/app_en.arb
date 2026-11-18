@@ -208,6 +208,220 @@
   "@halalSource": {},
   "halalNotCert": "This is a quote from a post, not a halal certificate. Check JAKIM for certification.",
   "@halalNotCert": {},
+  "halalCertTitle": "JAKIM halal certificate",
+  "@halalCertTitle": {},
+  "halalCertValid": "Valid until {date} · checked {checked}",
+  "@halalCertValid": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "checked": {
+        "type": "String"
+      }
+    }
+  },
+  "halalCertExpired": "Expired {date} · checked {checked}",
+  "@halalCertExpired": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "checked": {
+        "type": "String"
+      }
+    }
+  },
+  "halalCertOpen": "Check on JAKIM",
+  "@halalCertOpen": {},
+  "halalCertNote": "Listed in JAKIM's directory for this outlet only. Other branches may not be.",
+  "@halalCertNote": {},
+  "placeEditTabDetails": "Place",
+  "@placeEditTabDetails": {},
+  "branchTabDetails": "Branch",
+  "@branchTabDetails": {},
+  "jakimDraftSeeHalal": "JAKIM: outlets found. Pick one in the Halal tab.",
+  "@jakimDraftSeeHalal": {},
+  "jakimQuery": "Name to search on JAKIM",
+  "@jakimQuery": {},
+  "jakimQueryHelp": "A shop, company or outlet name (e.g. \"Pelita Samudra\", \"AEON Bukit Raja\"). JAKIM can't be searched by certificate number, address or postcode.",
+  "@jakimQueryHelp": {},
+  "jakimAiPick": "AI pick",
+  "@jakimAiPick": {},
+  "jakimSaveRow": "Save",
+  "@jakimSaveRow": {},
+  "jakimSaved": "Saved",
+  "@jakimSaved": {},
+  "jakimOutletsTag": "{count, plural, =1{JAKIM halal · 1 outlet} other{JAKIM halal · {count} outlets}}",
+  "@jakimOutletsTag": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "halalEmptyTitle": "No halal information yet",
+  "@halalEmptyTitle": {},
+  "halalEmptyText": "No post has said, and we have not found its outlet in JAKIM's directory. Look for the halal certificate at the premises.",
+  "@halalEmptyText": {},
+  "halalDisclaimer": "Bukuresipi does not certify halal. JAKIM certifies each outlet on its own and certificates change: check the certificate displayed at the premises.",
+  "@halalDisclaimer": {},
+  "jakimSearch": "Search JAKIM",
+  "@jakimSearch": {},
+  "jakimOutletsFound": "{count, plural, =1{1 outlet on JAKIM} other{{count} outlets on JAKIM}}",
+  "@jakimOutletsFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "jakimOutletsNone": "JAKIM lists no outlets under this name. Try the company name.",
+  "jakimOutletsMore": "First {count} outlets on JAKIM (more not shown: search a more exact name)",
+  "@jakimOutletsMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@jakimOutletsNone": {},
+  "jakimPairedWith": "Paired with {branch}",
+  "@jakimPairedWith": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimNearBranch": "Same postcode as {branch}",
+  "@jakimNearBranch": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimPair": "Pair with a branch",
+  "jakimPairThis": "Pair",
+  "@jakimPairThis": {},
+  "jakimPairOther": "Another branch",
+  "@jakimPairOther": {},
+  "@jakimPair": {},
+  "jakimUnpair": "Unpair",
+  "@jakimUnpair": {},
+  "jakimAddBranch": "Add as branch",
+  "@jakimAddBranch": {},
+  "jakimPairTitle": "Which branch is {premise}?",
+  "@jakimPairTitle": {
+    "placeholders": {
+      "premise": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimBranchAdded": "Branch added with its certificate. It has no pin yet: pin it in Edit branch.",
+  "@jakimBranchAdded": {},
+  "jakimBranchNone": "No JAKIM outlet matched {branch}. Pair it from Edit place > Halal, where the brand's outlets are listed.",
+  "@jakimBranchNone": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "halalEditTitle": "Halal",
+  "@halalEditTitle": {},
+  "halalEditNoCert": "No JAKIM certificate saved for this outlet.",
+  "@halalEditNoCert": {},
+  "jakimCheck": "Check JAKIM",
+  "@jakimCheck": {},
+  "halalCertRemove": "Remove",
+  "@halalCertRemove": {},
+  "halalEditSays": "Posts say halal: \"{quote}\"",
+  "@halalEditSays": {
+    "placeholders": {
+      "quote": {
+        "type": "String"
+      }
+    }
+  },
+  "halalEditSaysNot": "Posts say not halal: \"{quote}\"",
+  "@halalEditSaysNot": {
+    "placeholders": {
+      "quote": {
+        "type": "String"
+      }
+    }
+  },
+  "halalEditNoClaim": "No post has said anything about halal.",
+  "@halalEditNoClaim": {},
+  "halalEditClaimNote": "Quoted from posts, with their link. Never typed in by hand.",
+  "@halalEditClaimNote": {},
+  "jakimDraftNone": "JAKIM: no outlet of this brand found in this state.",
+  "@jakimDraftNone": {},
+  "jakimDraftDown": "JAKIM did not answer. Use Check JAKIM below later.",
+  "@jakimDraftDown": {},
+  "halalBrandTitle": "This brand has JAKIM-certified outlets",
+  "@halalBrandTitle": {},
+  "halalBrandCount": "JAKIM lists {count} premises under this name.",
+  "@halalBrandCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "halalBrandBranch": "{branch}: this outlet is not confirmed in JAKIM's directory.",
+  "@halalBrandBranch": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "halalBrandNote": "JAKIM certifies each outlet separately. Check for the certificate displayed at the premises.",
+  "@halalBrandNote": {},
+  "halalBrandOpen": "See JAKIM's list",
+  "@halalBrandOpen": {},
+  "jakimCheckBranch": "Check JAKIM: {branch}",
+  "@jakimCheckBranch": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimCheckFound": "{branch}: found on JAKIM, certificate saved.",
+  "@jakimCheckFound": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimCheckNone": "{branch}: no matching outlet in JAKIM's directory.",
+  "@jakimCheckNone": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimCheckDown": "JAKIM's site did not answer. Try again later.",
+  "@jakimCheckDown": {},
+  "jakimChooseTitle": "Is {branch} one of these JAKIM outlets?",
+  "@jakimChooseTitle": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimChooseNone": "None of these",
+  "@jakimChooseNone": {},
+  "jakimCertSaved": "JAKIM certificate saved.",
+  "@jakimCertSaved": {},
   "noteTitle": "Your note",
   "@noteTitle": {},
   "noteHint": "For example: order the ayam goreng",
@@ -238,6 +452,127 @@
   "@recipeIngredients": {},
   "recipeSteps": "Steps",
   "@recipeSteps": {},
+  "recipeDetails": "Details",
+  "@recipeDetails": {
+    "description": "Recipe editor tab: cover photo and name"
+  },
+  "placeTabHalal": "Halal",
+  "@placeTabHalal": {
+    "description": "Place page tab: what the post says about halal (a claim, never a certificate)"
+  },
+  "pickerSearch": "Search",
+  "@pickerSearch": {},
+  "pickerNone": "Nothing matches.",
+  "@pickerNone": {},
+  "pickerUseTyped": "Use “{text}”",
+  "pinResultsShow": "{count, plural, =1{Show 1 result} other{Show {count} results}}",
+  "pinResultsTitle": "{count, plural, =1{1 result} other{{count} results}} from {map}",
+  "@pickerUseTyped": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "@pinResultsShow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pinResultsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "map": {
+        "type": "String"
+      }
+    }
+  },
+  "pinHitAdded": "Added",
+  "@pinHitAdded": {},
+  "branchDetails": "Details",
+  "@branchDetails": {},
+  "placeEdit": "Edit place",
+  "@placeEdit": {},
+  "placeName": "Place name",
+  "@placeName": {},
+  "placeCuisine": "Cuisine",
+  "@placeCuisine": {},
+  "placeEditShared": "The place's name and cuisine are shared by every user. Branches are edited one by one.",
+  "@placeEditShared": {},
+  "placeNameRequired": "Enter the place's name.",
+  "@placeNameRequired": {},
+  "placeSaved": "Place updated.",
+  "@placeSaved": {},
+  "placeCategory": "Category",
+  "@placeCategory": {},
+  "placeCategoryFood": "Food",
+  "@placeCategoryFood": {},
+  "placeCategoryShop": "Shop",
+  "@placeCategoryShop": {},
+  "placeCategoryAttraction": "Attraction",
+  "@placeCategoryAttraction": {},
+  "placeCategoryStay": "Stay",
+  "@placeCategoryStay": {},
+  "placeCategoryOutdoor": "Outdoor",
+  "@placeCategoryOutdoor": {},
+  "placeCategoryOther": "Other",
+  "@placeCategoryOther": {},
+  "placeSubcategory": "Type",
+  "@placeSubcategory": {},
+  "placeSubcategoryNone": "Not set",
+  "@placeSubcategoryNone": {},
+  "placeSubRestaurant": "Restaurant",
+  "@placeSubRestaurant": {},
+  "placeSubCafe": "Café",
+  "@placeSubCafe": {},
+  "placeSubStall": "Stall",
+  "@placeSubStall": {},
+  "placeSubMamak": "Mamak",
+  "@placeSubMamak": {},
+  "placeSubKopitiam": "Kopitiam",
+  "@placeSubKopitiam": {},
+  "placeSubFoodCourt": "Food court",
+  "@placeSubFoodCourt": {},
+  "placeSubBakery": "Bakery",
+  "@placeSubBakery": {},
+  "placeSubDessert": "Dessert",
+  "@placeSubDessert": {},
+  "placeSubFastFood": "Fast food",
+  "@placeSubFastFood": {},
+  "placeSubGrocery": "Grocery",
+  "@placeSubGrocery": {},
+  "placeSubMarket": "Market",
+  "@placeSubMarket": {},
+  "placeSubMall": "Mall",
+  "@placeSubMall": {},
+  "placeSubMuseum": "Museum",
+  "@placeSubMuseum": {},
+  "placeSubThemePark": "Theme park",
+  "@placeSubThemePark": {},
+  "placeSubLandmark": "Landmark",
+  "@placeSubLandmark": {},
+  "placeSubHotel": "Hotel",
+  "@placeSubHotel": {},
+  "placeSubHomestay": "Homestay",
+  "@placeSubHomestay": {},
+  "placeSubResort": "Resort",
+  "@placeSubResort": {},
+  "placeSubPark": "Park",
+  "@placeSubPark": {},
+  "placeSubBeach": "Beach",
+  "@placeSubBeach": {},
+  "placeSubWaterfall": "Waterfall",
+  "@placeSubWaterfall": {},
+  "placeSubHiking": "Hiking",
+  "@placeSubHiking": {},
+  "recipeOthers": "Others",
+  "@recipeOthers": {
+    "description": "Recipe page tab: allergens and other notes"
+  },
   "recipeIncomplete": "Not everything was found",
   "@recipeIncomplete": {},
   "recipeMissingName": "dish name",
@@ -390,7 +725,7 @@
   "@ownerReportApplyConfirm": {},
   "ownerReportRejectConfirm": "Reject this correction? The data stays and the ticket closes.",
   "@ownerReportRejectConfirm": {},
-  "errReportDailyLimit": "You have sent too many reports today. Try again tomorrow.",
+  "errReportDailyLimit": "You have reached today's limit for this. Try again tomorrow.",
   "@errReportDailyLimit": {},
   "@ownerLoadFailed": {},
   "save": "Save",
@@ -447,16 +782,8 @@
   "@branchLongitude": {},
   "branchCoordsInvalid": "Enter a valid latitude and longitude.",
   "@branchCoordsInvalid": {},
-  "branchShared": "This branch is shared by every user.",
-  "@branchShared": {},
   "branchPersonalOnly": "Only you will see these changes.",
   "@branchPersonalOnly": {},
-  "branchScope": "Who sees this edit?",
-  "@branchScope": {},
-  "branchScopeMine": "Just me",
-  "@branchScopeMine": {},
-  "branchScopeEveryone": "Everyone",
-  "@branchScopeEveryone": {},
   "branchUpdatedMine": "Saved for you.",
   "@branchUpdatedMine": {},
   "editBranchMine": "Edit for me",
@@ -865,6 +1192,8 @@
   "@ownerRatingDeleteConfirm": {},
   "recipeAllergens": "Allergens",
   "@recipeAllergens": {},
+  "recipeAllergenInfo": "Allergens are foods that can cause a reaction in people allergic to them, such as milk, egg, peanuts, shellfish or wheat (gluten). Below are the ones found in this recipe's ingredients, and which ingredient has them.",
+  "@recipeAllergenInfo": {},
   "recipeAllergenNote": "From recognised ingredients only, by their usual recipe. Always check product labels.",
   "@recipeAllergenNote": {},
   "recipeAllergenUnchecked": "Ingredients not checked: {count}.",
@@ -1525,6 +1854,21 @@
   "@variantsTitle": {},
   "variantsHint": "Other recipes for this dish on the web. Their steps are on their page.",
   "@variantsHint": {},
+  "variantsOptionalTitle": "Often left out",
+  "@variantsOptionalTitle": {},
+  "variantsSkippedBy": "Left out by {n} of {total} variants",
+  "@variantsSkippedBy": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "variantsMarkOptional": "Mark optional",
+  "@variantsMarkOptional": {},
   "variantsNone": "No variants yet. Find variants searches the web (uses the search and AI meters).",
   "@variantsNone": {},
   "variantsFind": "Find variants",
@@ -1649,6 +1993,27 @@
   "@recipeCoverChange": {},
   "recipeCoverRemove": "Remove photo",
   "@recipeCoverRemove": {},
+  "placeCoverFailed": "Branch saved, but the cover photo didn't save. Pick it again from the draft.",
+  "@placeCoverFailed": {},
+  "jakimDraftTitle": "JAKIM halal directory: tick this outlet's row",
+  "@jakimDraftTitle": {},
+  "jakimDraftRow": "{address} · valid until {date}",
+  "@jakimDraftRow": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimDraftNote": "Ticked = saved as this branch's JAKIM certificate when you save. Pre-ticked only when the AI and Clef both say it is this outlet.",
+  "@jakimDraftNote": {},
+  "halalCertSaveFailed": "Branch saved, but the JAKIM certificate didn't save. Tick it again from the draft.",
+  "@halalCertSaveFailed": {},
+  "dishRemoveConfirm": "Delete this dish from the catalogue? Everyone loses it; copies people made stay theirs.",
+  "@dishRemoveConfirm": {},
   "recipeCoverFailed": "Recipe saved, but the photo didn't upload. Try again from Edit.",
   "@recipeCoverFailed": {},
   "navHome": "Home",
@@ -1661,6 +2026,8 @@
   "@feedRestaurants": {},
   "feedSaysHalal": "Says halal",
   "@feedSaysHalal": {},
+  "feedJakimHalal": "JAKIM halal",
+  "@feedJakimHalal": {},
   "feedCuisine": "Cuisine",
   "@feedCuisine": {},
   "feedAnyCuisine": "Any cuisine",
@@ -1689,9 +2056,39 @@
   "@avatarChange": {},
   "avatarRemove": "Remove profile picture",
   "@avatarRemove": {},
-  "feedNothing": "Nothing matches. Try another word.",
+  "avatarActionChange": "Change",
+  "@avatarActionChange": {},
+  "avatarActionRemove": "Remove",
+  "@avatarActionRemove": {},
+  "avatarRemoveConfirm": "Remove your profile picture? Your family will see your initial instead.",
+  "@avatarRemoveConfirm": {},
+  "feedEmptyTitle": "Nothing here yet",
+  "@feedEmptyTitle": {},
+  "feedEmptyBody": "Share a TikTok, Instagram, Facebook or YouTube post and Bukuresipi turns it into a recipe or a place to eat.",
+  "@feedEmptyBody": {},
+  "feedEmptyShare": "Share a post",
+  "@feedEmptyShare": {},
+  "feedEmptyMap": "Open the map",
+  "@feedEmptyMap": {},
+  "feedEmptySearchTitle": "No “{query}” yet",
+  "@feedEmptySearchTitle": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "feedEmptySearchBody": "Try another word, or check the spelling.",
+  "@feedEmptySearchBody": {},
+  "feedClearSearch": "Clear search",
+  "@feedClearSearch": {},
+  "feedEmptyFilterTitle": "Nothing with these filters",
+  "@feedEmptyFilterTitle": {},
+  "feedEmptyFilterBody": "Try fewer filters to see more.",
+  "@feedEmptyFilterBody": {},
+  "feedClearFilters": "Clear filters",
+  "@feedClearFilters": {},
   "feedSearchFor": "Search \"{query}\"",
-  "@feedNothing": {},
   "@feedSearchFor": {
     "placeholders": {
       "query": {
@@ -1709,12 +2106,32 @@
   "@feedKindRecipe": {},
   "feedKindDish": "Dish",
   "@feedKindDish": {},
+  "feedAdLabel": "Ad",
+  "@feedAdLabel": {
+    "description": "Marks an ad card on Home (AdMob policy: an ad must say it is one)."
+  },
   "coverTitle": "Cover photo",
-  "@coverTitle": {},
+  "coverChange": "Change cover",
+  "coverAdd": "Add cover",
+  "@coverAdd": {},
   "coverNone": "No cover",
-  "@coverNone": {},
-  "coverEmpty": "No post photos for this restaurant yet. Share a post of it first.",
+  "coverNoneYet": "No cover photo yet",
+  "@coverNoneYet": {},
+  "coverEmpty": "No post photos for this restaurant yet. Take or pick a photo below.",
   "@coverEmpty": {},
+  "@coverNone": {},
+  "@coverChange": {},
+  "coverAfterSave": "The AI draft's photo: it becomes the cover when you save.",
+  "@coverAfterSave": {},
+  "@coverTitle": {},
+  "coverCamera": "Take photo",
+  "@coverCamera": {},
+  "coverGallery": "From gallery",
+  "branchCoverTitle": "This branch's photo",
+  "@branchCoverTitle": {},
+  "branchCoverNote": "The outlet's own photo (its shop front). Edit place can use it as the place's cover.",
+  "@branchCoverNote": {},
+  "@coverGallery": {},
   "coverSaved": "Cover saved for everyone",
   "@coverSaved": {},
   "mapsLinkLabel": "Google Maps link",
@@ -1803,6 +2220,22 @@
   "@spendingVisits": {},
   "spendingTopPlaces": "Top places",
   "@spendingTopPlaces": {},
+  "spendingShare": "{percent}% of spending",
+  "@spendingShare": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "spendingLastVisit": "Last {date}",
+  "@spendingLastVisit": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "errDuplicateReceipt": "You already added this receipt.",
   "@errDuplicateReceipt": {},
   "errReceiptLimit": "That's 10 receipts today. Try again tomorrow.",
@@ -1823,13 +2256,17 @@
   },
   "pinSearchTitle": "Search a map",
   "@pinSearchTitle": {},
-  "pinSearchHelp": "Pick the map to ask. Use a result, check it, then save for Everyone.",
+  "pinSearchHelp": "Pick the map to ask (JAKIM: its halal-listed outlets, no pin: pin them with another map). Use a result, check it, then save for Everyone.",
   "@pinSearchHelp": {},
   "pinSearchOsm": "OpenStreetMap",
   "@pinSearchOsm": {},
   "pinSearchHere": "HERE",
   "@pinSearchHere": {},
   "pinSearchGrab": "AWS (Grab)",
+  "pinSearchJakim": "JAKIM",
+  "pinSearchNoPin": "No pin: pin it with OpenStreetMap, HERE or AWS",
+  "@pinSearchNoPin": {},
+  "@pinSearchJakim": {},
   "@pinSearchGrab": {},
   "pinSearchQuery": "Search for",
   "@pinSearchQuery": {},
@@ -1838,6 +2275,8 @@
   "pinSearchNone": "This map found nothing for this search. Try another map or other words.",
   "@pinSearchNone": {},
   "pinSearchUsed": "Pin, town and state filled from the map. Check them, then save.",
+  "pinSearchUsedNoPin": "Address, town and state filled from JAKIM. Pin it with another map, then save.",
+  "@pinSearchUsedNoPin": {},
   "@pinSearchUsed": {},
   "errSourceOff": "This map is off (no key, or its usage cap is reached). See Owner > Usage.",
   "@errSourceOff": {},
@@ -1866,9 +2305,15 @@
   "usageShares": "Links and screenshots shared today",
   "@usageShares": {},
   "usageReceipts": "Receipt photos today",
+  "usageMeals": "Meal photos today",
+  "@usageMeals": {},
   "@usageReceipts": {},
   "usageReports": "Place reports today",
   "@usageReports": {},
+  "usageRecipes": "Recipes typed or copied today",
+  "@usageRecipes": {},
+  "usageLocates": "Find location today",
+  "@usageLocates": {},
   "usageShopping": "Items on your shopping list",
   "@usageShopping": {},
   "usageMeters": "Service meters (AI, maps, email)",
@@ -2107,6 +2552,17 @@
       }
     }
   },
+  "ownerDeleting": "Deleting {done} of {total}…",
+  "@ownerDeleting": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "ownerDeletedMany": "{count} accounts deleted",
   "@ownerDeletedMany": {
     "placeholders": {
@@ -2228,17 +2684,21 @@
       }
     }
   },
-  "splitRemovePersonBody": "Their lines go back to everyone.",
+  "splitRemovePersonBody": "Their items go back to being shared by everyone.",
   "@splitRemovePersonBody": {},
   "splitRemove": "Remove",
   "@splitRemove": {},
-  "splitShared": "Shared by everyone",
+  "splitShared": "What nobody takes is shared by everyone.",
   "@splitShared": {},
-  "splitChargesEven": "Charges are split evenly.",
+  "splitTotal": "Total",
+  "@splitTotal": {},
+  "splitChargesTitle": "Tax, service and discounts",
+  "@splitChargesTitle": {},
+  "splitChargesEven": "Split evenly between everyone.",
   "@splitChargesEven": {},
   "splitShares": "Each person pays",
   "@splitShares": {},
-  "splitShare": "Share",
+  "splitShare": "Send the amounts",
   "@splitShare": {},
   "splitPaid": "Paid",
   "@splitPaid": {},
@@ -2250,6 +2710,219 @@
   "@splitStopBody": {},
   "splitCaloriesNote": "Calories follow what is assigned to Me.",
   "@splitCaloriesNote": {},
+  "splitHintStart": "Add the people you ate with. Then tap an item to say who had it.",
+  "@splitHintStart": {},
+  "splitHintAssign": "Tap an item to say who had it. Items you leave alone are shared by everyone.",
+  "@splitHintAssign": {},
+  "splitEveryone": "Everyone",
+  "@splitEveryone": {},
+  "splitPortionsHint": "Tick who had it. More than one tick = they share it equally.",
+  "@splitPortionsHint": {},
+  "splitPortionsCount": "Set how many each person had.",
+  "@splitPortionsCount": {},
+  "splitPaidCount": "{paid} of {count} paid",
+  "@splitPaidCount": {
+    "placeholders": {
+      "paid": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "splitNoItems": "This receipt has no item lines to split.",
-  "@splitNoItems": {}
+  "@splitNoItems": {},
+  "recipeAiDraft": "AI draft",
+  "@recipeAiDraft": {},
+  "recipeAiDraftNote": "Drafted from {count} web recipes. Check it, then Save.",
+  "recipeAiDraftNone": "No web recipe found for this dish.",
+  "@recipeAiDraftNone": {},
+  "recipeAiDraftOff": "Search or AI is off or at its limit. Try later.",
+  "@recipeAiDraftOff": {},
+  "@recipeAiDraftNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeAiDraftPhotos": "Tap a photo to use it as the cover",
+  "@recipeAiDraftPhotos": {},
+  "recipeAiDraftWorking": "Finding web recipes and writing a draft. This can take up to a minute.",
+  "@recipeAiDraftWorking": {},
+  "recipeAiDraftUndo": "Undo",
+  "@recipeAiDraftUndo": {},
+  "passkeysTitle": "Passkeys",
+  "@passkeysTitle": {},
+  "passkeysRowHint": "Sign in with this phone's fingerprint or screen lock",
+  "@passkeysRowHint": {},
+  "passkeysInfo": "A passkey signs you in with this phone's fingerprint, face or screen lock: no password to type. It is an extra way in; your password and Google still work.",
+  "@passkeysInfo": {},
+  "passkeysEmpty": "No passkeys yet.",
+  "@passkeysEmpty": {},
+  "passkeysUnnamed": "Passkey",
+  "@passkeysUnnamed": {},
+  "passkeysAdd": "Create a passkey",
+  "@passkeysAdd": {},
+  "passkeysAdded": "Passkey created. Next time, tap \"Sign in with a passkey\".",
+  "@passkeysAdded": {},
+  "passkeysCreated": "Created {date}",
+  "@passkeysCreated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "passkeysNeverUsed": "Not used yet",
+  "@passkeysNeverUsed": {},
+  "passkeysRemove": "Remove",
+  "@passkeysRemove": {},
+  "passkeysRemoveConfirm": "Remove {name}? It stops signing in to Bukuresipi at once. Delete it from the phone's password manager too.",
+  "@passkeysRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "passkeysNoPhone": "This phone can't create passkeys (it needs Android 9 or newer).",
+  "@passkeysNoPhone": {},
+  "passkeySignIn": "Sign in with a passkey",
+  "@passkeySignIn": {},
+  "errPasskeyUnavailable": "Passkeys aren't available right now. Sign in another way.",
+  "@errPasskeyUnavailable": {},
+  "errPasskeyLimit": "This account already has 10 passkeys. Remove one first.",
+  "@errPasskeyLimit": {},
+  "errPasskeyFailed": "The passkey didn't work. Try again, or sign in another way.",
+  "@errPasskeyFailed": {},
+  "errNoPasskey": "No Bukuresipi passkey on this phone. Sign in another way, then create one in Account > Passkeys.",
+  "@errNoPasskey": {},
+  "errPasskeyExists": "This phone already has a passkey for your account.",
+  "@errPasskeyExists": {},
+  "recipeOptional": "Optional",
+  "@recipeOptional": {},
+  "recipeOptionalHint": "The dish is fine without it. Left off the shopping list unless you ask.",
+  "@recipeOptionalHint": {},
+  "recipeAllergenOptional": "only if you add it",
+  "@recipeAllergenOptional": {},
+  "shoppingOptionalTitle": "{count, plural, =1{1 optional ingredient. Add it too?} other{{count} optional ingredients. Add them too?}}",
+  "@shoppingOptionalTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shoppingOptionalSkip": "Only what's needed",
+  "@shoppingOptionalSkip": {},
+  "shoppingOptionalAll": "Everything, optional too",
+  "@shoppingOptionalAll": {},
+  "errMealLimit": "That's 10 meal photos today. Try again tomorrow.",
+  "@errMealLimit": {},
+  "errNotFood": "No food found in that photo. Try another one.",
+  "@errNotFood": {},
+  "errAiUnavailable": "Estimates are not available right now. Try again later.",
+  "@errAiUnavailable": {},
+  "mealSnap": "Snap a meal",
+  "@mealSnap": {},
+  "mealTitle": "Your meal",
+  "@mealTitle": {},
+  "mealReading": "Looking at your plate…",
+  "@mealReading": {},
+  "mealHint": "Check the dishes and servings, then save. The photo stays on your phone.",
+  "@mealHint": {},
+  "mealAddDish": "Add a dish",
+  "@mealAddDish": {},
+  "mealDishName": "Dish",
+  "@mealDishName": {},
+  "mealServings": "{n} serving(s)",
+  "@mealServings": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "mealTotal": "Total {kcal} kcal",
+  "@mealTotal": {
+    "placeholders": {
+      "kcal": {
+        "type": "String"
+      }
+    }
+  },
+  "mealMacros": "Carbs {carbs} g · Protein {protein} g · Fat {fat} g",
+  "@mealMacros": {
+    "placeholders": {
+      "carbs": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      }
+    }
+  },
+  "mealUnknownKcal": "kcal after saving",
+  "@mealUnknownKcal": {},
+  "mealSaved": "Meal saved",
+  "@mealSaved": {},
+  "mealRow": "Meal",
+  "@mealRow": {},
+  "mealDelete": "Delete this meal?",
+  "@mealDelete": {},
+  "mealTime": "Time",
+  "@mealTime": {},
+  "pantryTitle": "What can I cook?",
+  "@pantryTitle": {},
+  "pantryHint": "Add what's in your kitchen. We list the recipes you can cook now, then those missing a few things.",
+  "@pantryHint": {},
+  "pantryPromo": "Tell us what's in your kitchen: we find the recipes you can cook with it.",
+  "@pantryPromo": {},
+  "pantryAdd": "Add an ingredient",
+  "@pantryAdd": {},
+  "pantryStaples": "Salt, sugar and cooking oil are in my kitchen",
+  "@pantryStaples": {},
+  "pantryFind": "Find recipes",
+  "@pantryFind": {},
+  "pantryCookNow": "Cook now",
+  "@pantryCookNow": {},
+  "pantryMissing": "Missing: {items}",
+  "@pantryMissing": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "pantryCheck": "Check: {items}",
+  "@pantryCheck": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "pantryNone": "No recipe fits yet. Add a few more ingredients.",
+  "@pantryNone": {},
+  "pantryAddMissing": "Add missing to shopping list",
+  "@pantryAddMissing": {},
+  "pantryAdded": "Added to your shopping list",
+  "@pantryAdded": {},
+  "ownerEditsEveryone": "Owner: every user sees what you save here",
+  "@ownerEditsEveryone": {},
+  "saveForEveryone": "Save for everyone",
+  "@saveForEveryone": {},
+  "deleteScopePlaceMine": "Only you: it leaves your book (with your ratings and reviews). The place, its branches and photos stay for every other user.",
+  "@deleteScopePlaceMine": {},
+  "deleteScopeBranch": "Every user: the branch, its pin, photo, ratings and reviews are gone for everyone. The place stays in their books.",
+  "@deleteScopeBranch": {},
+  "deleteScopeDish": "Every user: the dish leaves the catalogue. Copies people made and their shopping lines stay.",
+  "@deleteScopeDish": {},
+  "deleteScopeRecipeMine": "Only your recipe. Copies other people made stay.",
+  "@deleteScopeRecipeMine": {}
 }

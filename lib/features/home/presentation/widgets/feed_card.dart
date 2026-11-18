@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/skeleton.dart';
 
 /// One fact on a card's bottom row: an icon and a short text ("4.6 (12)", "Says halal", "8 ingredients").
 class FeedFact {
@@ -150,6 +151,65 @@ class FeedCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A [FeedCard] still loading: the same paper, photo box and text block, as shimmering shapes. Same height for the
+/// same width ([FeedCard.heightFor]), so nothing moves when the real cards arrive.
+class FeedCardSkeleton extends StatelessWidget {
+  const FeedCardSkeleton({super.key, this.wide = true});
+
+  /// Varies the line lengths, so a grid of them does not look stamped.
+  final bool wide;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: nb.paper,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: nb.line),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: Skeleton(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AspectRatio(
+                aspectRatio: 4 / 3,
+                child: SkeletonBox(height: double.infinity, radius: 0),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  child: LayoutBuilder(
+                    builder: (context, box) {
+                      final w = box.maxWidth;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonBox(width: w * 0.32, height: 8), // kind
+                          const SizedBox(height: 8),
+                          SkeletonBox(width: w * (wide ? 0.92 : 0.8)), // title
+                          const SizedBox(height: 6),
+                          SkeletonBox(width: w * (wide ? 0.6 : 0.7)),
+                          const SizedBox(height: 8),
+                          SkeletonBox(width: w * (wide ? 0.5 : 0.4), height: 9),
+                          const Spacer(),
+                          SkeletonBox(width: w * 0.38, height: 10), // facts
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

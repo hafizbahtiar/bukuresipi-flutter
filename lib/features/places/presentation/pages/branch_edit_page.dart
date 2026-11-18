@@ -1,14 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/draft_photos.dart';
+
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/router/base_page_transitions.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/ai_button.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook.dart' show NotebookTitle;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/place.dart';
-import '../pages/pin_picker_page.dart';
+import 'pin_picker_page.dart';
 import '../places_controller.dart';
+import '../widgets/cover_picker_sheet.dart';
+import '../widgets/jakim_check.dart';
 
 typedef BranchEdit = ({
   String? label,
@@ -19,10 +30,16 @@ typedef BranchEdit = ({
   double? lng,
 });
 
-/// Edit for one branch. A normal user's edit is private to them; an owner can also choose to change the shared
+/// Opens the branch edit page (the standard page transition, not the book flip); true = saved.
+Future<bool?> showBranchEdit(
+  BuildContext context, {
+  required WidgetBuilder builder,
+}) => Navigator.of(context).push<bool>(standardRoute<bool>(builder));
+
+/// Edit for one branch, as a page (back = cancel). A normal user's edit is private to them; an owner can also choose to change the shared
 /// branch. Moving a shared pin claims it as 'owner'; a text-only edit keeps the existing source.
-class BranchEditSheet extends StatefulWidget {
-  const BranchEditSheet({
+class BranchEditPage extends StatefulWidget {
+  const BranchEditPage({
     super.key,
     required this.placeId,
     required this.branch,
@@ -40,10 +57,10 @@ class BranchEditSheet extends StatefulWidget {
   final Future<BranchSuggestion> Function()? onSuggest;
 
   @override
-  State<BranchEditSheet> createState() => _BranchEditSheetState();
+  State<BranchEditPage> createState() => _BranchEditPageState();
 }
 
-class _BranchEditSheetState extends State<BranchEditSheet> {
+class _BranchEditPageState extends State<BranchEditPage> {
   late final _label = TextEditingController(text: widget.branch.label ?? '');
   late final _address = TextEditingController(
     text: widget.branch.address ?? '',
@@ -61,7 +78,8 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   late final _lngText = TextEditingController(
     text: widget.branch.lng?.toStringAsFixed(6) ?? '',
   );
-  late BranchEditScope _scope = widget.canEditShared
+  // One door per role: the owner edits for everyone, a user for themselves (no switch to get wrong).
+  late final BranchEditScope _scope = widget.canEditShared
       ? BranchEditScope.shared
       : BranchEditScope.personal;
   bool _pinChanged = false;
@@ -76,6 +94,10 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   List<PinHit>? _pinHits;
   String? _askedQuery; // the server's default words for the last map: not carried to another map
   BranchSuggestion? _suggestion;
+
+  /// A draft photo picked as the restaurant's cover: set when the branch is saved.
+  String? _photo;
+
   final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
 
@@ -187,6 +209,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
         _askedQuery = r.query;
         _pinHits = r.hits;
       });
+      if (r.hits.isNotEmpty) unawaited(_showPinHits());
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
@@ -195,14 +218,15 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
   }
 
   /// "Use" on a map's result (a pin search hit or a draft's pin): its pin, address, town and state go into the form.
+  /// No pin (a JAKIM outlet) = the text only; the owner pins it with another map.
   void _useFound(
-    double lat,
-    double lng, {
+    double? lat,
+    double? lng, {
     String? address,
     String? city,
     String? state,
   }) {
-    _setPin(lat, lng);
+    if (lat != null && lng != null) _setPin(lat, lng);
     setState(() {
       if (address case final a? when a.trim().isNotEmpty) _address.text = a;
       if (city case final c?) _city.text = c;
@@ -210,15 +234,51 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
       _aiFields.removeAll(['location', 'address', 'city', 'state']);
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).pinSearchUsed)),
+      SnackBar(
+        content: Text(
+          lat == null
+              ? AppLocalizations.of(context).pinSearchUsedNoPin
+              : AppLocalizations.of(context).pinSearchUsed,
+        ),
+      ),
     );
   }
 
   void _usePinHit(PinHit h) =>
       _useFound(h.lat, h.lng, address: h.address, city: h.city, state: h.state);
 
+  /// The last search's results in a sheet; "Use" fills the form. Closed, the form keeps a button to open it again.
+  Future<void> _showPinHits() async {
+    final hits = _pinHits;
+    if (hits == null || hits.isEmpty) return;
+    final l = AppLocalizations.of(context);
+    FocusScope.of(context).unfocus();
+    final map = switch (_pinSource) {
+      'osm' => l.pinSearchOsm,
+      'here' => l.pinSearchHere,
+      'jakim' => l.pinSearchJakim,
+      _ => l.pinSearchGrab,
+    };
+    final picked = await showBaseSheet<PinHit>(
+      context,
+      builder: (sheet) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheet).height * 0.8,
+        ),
+        child: _PinHitsSheet(
+          title: l.pinResultsTitle(hits.length, map),
+          query: _pinQuery.text,
+          hits: hits,
+          onAdd: _addBranch,
+        ),
+      ),
+    );
+    if (picked != null && mounted) _usePinHit(picked);
+  }
+
   /// Owner: the hit is another outlet of this shop: a new branch (the server names it shop + town; editable later).
-  Future<void> _addBranch(PinHit h) async {
+  /// true = added.
+  Future<bool> _addBranch(PinHit h) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -231,16 +291,12 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
         lng: h.lng,
       );
       messenger.showSnackBar(SnackBar(content: Text(l.branchAdded)));
+      return true;
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+      return false;
     }
   }
-
-  // Two actions under each hit, on one line at phone width.
-  static final _compact = ButtonStyle(
-    visualDensity: VisualDensity.compact,
-    padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
-  );
 
   Widget _pinSearch(AppLocalizations l, Notebook nb, TextTheme text) {
     final hits = _pinHits;
@@ -257,10 +313,12 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
           style: text.bodySmall?.copyWith(color: nb.inkSoft),
         ),
         const SizedBox(height: 6),
-        NotebookSegmented<String>(
-          selected: _pinSource,
+        SegmentedButton<String>(
+          showSelectedIcon: false,
+          selected: {_pinSource},
           // Picking a map asks it at once: the choice is the search.
-          onChanged: (s) {
+          onSelectionChanged: (picked) {
+            final s = picked.first;
             setState(() {
               _pinSource = s;
               _pinHits = null;
@@ -270,9 +328,10 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
             _searchPin();
           },
           segments: [
-            NotebookSegment(value: 'osm', label: l.pinSearchOsm),
-            NotebookSegment(value: 'here', label: l.pinSearchHere),
-            NotebookSegment(value: 'grab', label: l.pinSearchGrab),
+            ButtonSegment(value: 'osm', label: Text(l.pinSearchOsm)),
+            ButtonSegment(value: 'here', label: Text(l.pinSearchHere)),
+            ButtonSegment(value: 'grab', label: Text(l.pinSearchGrab)),
+            ButtonSegment(value: 'jakim', label: Text(l.pinSearchJakim)),
           ],
         ),
         const SizedBox(height: 8),
@@ -306,59 +365,14 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
               style: text.bodySmall?.copyWith(color: nb.inkSoft),
             ),
           ),
-        for (final (i, h) in (hits ?? const <PinHit>[]).indexed)
-          // The address gets the full width; the actions sit under it, so a long label never squeezes the text.
-          Container(
-            key: ValueKey('pin-hit-$i'),
-            padding: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              border: i == 0 ? null : Border(top: BorderSide(color: nb.line)),
-            ),
-            margin: const EdgeInsets.only(top: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  h.address,
-                  style: text.bodyMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  [
-                    [h.city, h.state].nonNulls.join(', '),
-                    '${h.lat.toStringAsFixed(5)}, ${h.lng.toStringAsFixed(5)}',
-                  ].where((s) => s.isNotEmpty).join(' · '),
-                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Wrap(
-                    spacing: 4,
-                    children: [
-                      TextButton.icon(
-                        key: ValueKey('pin-hit-add-$i'),
-                        style: _compact,
-                        onPressed: () => _addBranch(h),
-                        icon: const Icon(
-                          Icons.add_location_alt_outlined,
-                          size: 18,
-                        ),
-                        label: Text(l.branchAddFromHit),
-                      ),
-                      FilledButton.tonalIcon(
-                        key: ValueKey('pin-hit-use-$i'),
-                        style: _compact,
-                        onPressed: () => _usePinHit(h),
-                        icon: const Icon(Icons.check, size: 18),
-                        label: Text(l.pinCandidateUse),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        if (hits != null && hits.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: spaceS),
+            child: OutlinedButton.icon(
+              key: const ValueKey('pin-search-results'),
+              onPressed: _showPinHits,
+              icon: const Icon(Icons.list_alt_outlined, size: 18),
+              label: Text(l.pinResultsShow(hits.length)),
             ),
           ),
       ],
@@ -374,6 +388,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
       if (!mounted) return;
       setState(() {
         _suggestion = suggestion;
+        _photo = null;
         _aiFields.clear();
         if (suggestion.draft.label case final label?) {
           _label.text = label;
@@ -450,6 +465,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     final lat = _typedLat;
     final lng = _typedLng;
     final sendPin = _pinChanged && lat != null && lng != null;
+    final places = context.read<PlacesController>();
     setState(() => _saving = true);
     try {
       await widget.onSave((
@@ -460,6 +476,15 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
         lat: sendPin ? lat : null,
         lng: sendPin ? lng : null,
       ), _scope);
+      // The branch is saved: a failed photo only says so (saving again would not help the photo).
+      // The draft's photo is this outlet's own (Edit place can take it as the place's cover).
+      if (_photo case final url?) {
+        try {
+          await places.setBranchCover(widget.branch.id, url);
+        } catch (_) {
+          messenger.showSnackBar(SnackBar(content: Text(l.placeCoverFailed)));
+        }
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
@@ -486,275 +511,260 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
     final latError = _latError(l);
     final lngError = _lngError(l);
     final canSave = !_saving && latError == null && lngError == null;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    _scope == BranchEditScope.shared
-                        ? l.editBranch
-                        : l.editBranchMine,
-                    style: text.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  if (widget.canEditShared) ...[
-                    Text(
-                      l.branchScope,
-                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                    ),
-                    const SizedBox(height: 6),
-                    NotebookSegmented<BranchEditScope>(
-                      selected: _scope,
-                      onChanged: (scope) => setState(() => _scope = scope),
-                      segments: [
-                        NotebookSegment(
-                          value: BranchEditScope.personal,
-                          label: l.branchScopeMine,
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 76,
+        title: NotebookTitle(
+          _scope == BranchEditScope.shared ? l.editBranch : l.editBranchMine,
+        ),
+        bottom: _scope == BranchEditScope.shared
+            ? OwnerStrip(l.ownerEditsEveryone)
+            : null,
+        actions: [
+          if (_saving)
+            const Padding(
+              padding: EdgeInsets.all(spaceM),
+              child: SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              key: const ValueKey('branch-save'),
+              tooltip: _scope == BranchEditScope.shared
+                  ? l.saveForEveryone
+                  : l.save,
+              icon: const Icon(Icons.check),
+              onPressed: canSave ? _save : null,
+            ),
+        ],
+      ),
+      body: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        // The standard segments (as the place page): Branch, and Halal for the owner.
+        child: EditTabs(
+          sections: [
+            DetailSection(
+              id: 'branch-tab-details',
+              label: l.branchTabDetails,
+              rows: [
+                // One row, not a lazy list: every field exists at once (a draft fills fields below the fold).
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (widget.canEditShared) ...[
+                        BranchCoverField(
+                          branchId: widget.branch.id,
+                          picked: _photo,
                         ),
-                        NotebookSegment(
-                          value: BranchEditScope.shared,
-                          label: l.branchScopeEveryone,
+                        const SizedBox(height: spaceM),
+                      ] else ...[
+                        // The owner's page says it in its strip; a user's edit is theirs alone.
+                        Text(
+                          l.branchPersonalOnly,
+                          style: text.bodySmall?.copyWith(color: nb.inkSoft),
                         ),
+                        const SizedBox(height: 8),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  Text(
-                    _scope == BranchEditScope.shared
-                        ? l.branchShared
-                        : l.branchPersonalOnly,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                  const SizedBox(height: 8),
-                  if (widget.canEditShared && widget.onSuggest != null) ...[
-                    if (_suggesting)
-                      const _AiLoading()
-                    else ...[
-                      if (_suggestion case final suggestion?)
-                        _DraftBanner(
-                          suggestion: suggestion,
-                          branch: widget.branch,
-                          used: _aiFields,
-                          onPick: _pickDraft,
-                          onUsePin: (c) =>
-                              _useFound(c.lat, c.lng, address: c.address),
+                      if (widget.canEditShared && widget.onSuggest != null) ...[
+                        if (_suggesting)
+                          const _AiLoading()
+                        else ...[
+                          if (_suggestion case final suggestion?)
+                            _DraftBanner(
+                              suggestion: suggestion,
+                              branch: widget.branch,
+                              used: _aiFields,
+                              onPick: _pickDraft,
+                              photo: _photo,
+                              onPhoto: (url) => setState(() => _photo = url),
+                              onUsePin: (c) =>
+                                  _useFound(c.lat, c.lng, address: c.address),
+                            ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: AiButton(
+                              label: _suggestion == null
+                                  ? l.aiSuggest
+                                  : l.aiSuggestAgain,
+                              onPressed: _saving ? null : _suggest,
+                            ),
+                          ),
+                        ],
+                        _pinSearch(l, nb, text),
+                      ],
+                      const SizedBox(height: 16),
+                      KeyedSubtree(
+                        key: _labelAnchor,
+                        child: _field(
+                          key: const ValueKey('branch-label'),
+                          controller: _label,
+                          label: l.branchLabel,
+                          ai: _aiFields.contains('label'),
                         ),
+                      ),
+                      _field(
+                        key: const ValueKey('branch-address'),
+                        controller: _address,
+                        label: l.branchAddress,
+                        ai: _aiFields.contains('address'),
+                      ),
+                      FutureBuilder(
+                        future: _areas,
+                        builder: (context, s) =>
+                            _areaFields(l, s.data ?? const []),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l.branchLocation,
+                        style: text.labelLarge?.copyWith(color: nb.inkSoft),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _field(
+                              key: const ValueKey('branch-lat'),
+                              controller: _latText,
+                              label: l.branchLatitude,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
+                              errorText: latError,
+                              ai: _aiFields.contains('location'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _field(
+                              key: const ValueKey('branch-lng'),
+                              controller: _lngText,
+                              label: l.branchLongitude,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
+                              errorText: lngError,
+                              ai: _aiFields.contains('location'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextField(
+                        key: const ValueKey('branch-maps-link'),
+                        controller: _mapsLink,
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.go,
+                        onSubmitted: (_) => _useMapsLink(),
+                        decoration: InputDecoration(
+                          labelText: l.mapsLinkLabel,
+                          helperText: l.mapsLinkHint,
+                          helperMaxLines: 2,
+                          prefixIcon: const Icon(Icons.link, size: 20),
+                          suffixIcon: _readingLink
+                              ? const Padding(
+                                  padding: EdgeInsets.all(14),
+                                  child: SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator.adaptive(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : TextButton(
+                                  onPressed: _useMapsLink,
+                                  child: Text(l.mapsLinkUse),
+                                ),
+                        ),
+                      ),
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
-                          onPressed: _saving ? null : _suggest,
-                          icon: const Icon(Icons.auto_awesome, size: 18),
-                          label: Text(
-                            _suggestion == null
-                                ? l.aiSuggest
-                                : l.aiSuggestAgain,
-                          ),
+                          onPressed: _pickOnMap,
+                          icon: const Icon(Icons.map_outlined, size: 18),
+                          label: Text(l.setOnMap),
                         ),
                       ),
                     ],
-                    _pinSearch(l, nb, text),
-                  ],
-                  const SizedBox(height: 16),
-                  KeyedSubtree(
-                    key: _labelAnchor,
-                    child: _field(
-                      key: const ValueKey('branch-label'),
-                      controller: _label,
-                      label: l.branchLabel,
-                      ai: _aiFields.contains('label'),
-                    ),
-                  ),
-                  _field(
-                    key: const ValueKey('branch-address'),
-                    controller: _address,
-                    label: l.branchAddress,
-                    ai: _aiFields.contains('address'),
-                  ),
-                  FutureBuilder(
-                    future: _areas,
-                    builder: (context, s) => _areaFields(l, s.data ?? const []),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l.branchLocation,
-                    style: text.labelLarge?.copyWith(color: nb.inkSoft),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _field(
-                          key: const ValueKey('branch-lat'),
-                          controller: _latText,
-                          label: l.branchLatitude,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                            signed: true,
-                          ),
-                          errorText: latError,
-                          ai: _aiFields.contains('location'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _field(
-                          key: const ValueKey('branch-lng'),
-                          controller: _lngText,
-                          label: l.branchLongitude,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                            signed: true,
-                          ),
-                          errorText: lngError,
-                          ai: _aiFields.contains('location'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  TextField(
-                    key: const ValueKey('branch-maps-link'),
-                    controller: _mapsLink,
-                    keyboardType: TextInputType.url,
-                    textInputAction: TextInputAction.go,
-                    onSubmitted: (_) => _useMapsLink(),
-                    decoration: InputDecoration(
-                      labelText: l.mapsLinkLabel,
-                      helperText: l.mapsLinkHint,
-                      helperMaxLines: 2,
-                      prefixIcon: const Icon(Icons.link, size: 20),
-                      suffixIcon: _readingLink
-                          ? const Padding(
-                              padding: EdgeInsets.all(14),
-                              child: SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator.adaptive(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          : TextButton(
-                              onPressed: _useMapsLink,
-                              child: Text(l.mapsLinkUse),
-                            ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _pickOnMap,
-                      icon: const Icon(Icons.map_outlined, size: 18),
-                      label: Text(l.setOnMap),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: _saving
-                        ? null
-                        : () => Navigator.pop(context, false),
-                    child: Text(l.cancel),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: canSave ? _save : null,
-                    child: _saving
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(l.save),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            if (widget.canEditShared)
+              DetailSection(
+                id: 'branch-tab-halal',
+                label: l.halalEditTitle,
+                rows: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                    child: BranchHalalEditor(
+                      branch: widget.branch,
+                      draft: _suggestion?.jakim,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  /// State first, then a town of that state. Both filter as you type; a town not listed is kept as typed.
+  /// State first, then a town of that state, each picked from a searchable list; a town not listed is kept as
+  /// typed ("Taman Melati").
   Widget _areaFields(AppLocalizations l, List<AreaState> areas) {
     final state = areas.where((s) => s.name == _state.text).firstOrNull;
     final towns = state?.towns ?? [for (final s in areas) ...s.towns];
-    Widget menu(
+    Widget field(
       String key,
       TextEditingController controller,
       String label,
-      Iterable<String> options, {
-      bool ai = false,
-      ValueChanged<String?>? onSelected,
-    }) => Padding(
+      List<String> options,
+      String ai,
+      ValueChanged<String> onPicked,
+    ) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: DropdownMenu<String>(
+      child: PickerField(
         key: ValueKey(key),
         controller: controller,
-        expandedInsets: EdgeInsets.zero,
-        enableFilter: true,
-        // Typing filters. A listed value, or text that matches nothing (an old
-        // "Wilayah Persekutuan Kuala Lumpur"), shows the whole list to pick from.
-        filterCallback: (entries, filter) {
-          final f = filter.trim().toLowerCase();
-          final hits = [
-            for (final e in entries)
-              if (e.label.toLowerCase().contains(f)) e,
-          ];
-          return hits.isEmpty || entries.any((e) => e.label == filter.trim())
-              ? entries
-              : hits;
-        },
-        requestFocusOnTap: true,
-        menuHeight: 320,
-        label: _fieldLabel(label, ai),
-        onSelected: onSelected,
-        dropdownMenuEntries: [
-          for (final o in options) DropdownMenuEntry(value: o, label: o),
-        ],
+        label: label,
+        badge: _aiFields.contains(ai) ? const AiBadge() : null,
+        options: options,
+        allowTyped: true,
+        onPicked: onPicked,
       ),
     );
     return Column(
       children: [
-        menu(
+        field(
           'branch-state',
           _state,
           l.branchState,
-          areas.map((s) => s.name),
-          ai: _aiFields.contains('state'),
+          [for (final s in areas) s.name],
+          'state',
           // Another state: a town of the old one no longer fits.
-          onSelected: (name) => setState(() {
+          (name) => setState(() {
+            _aiFields.remove('state');
             final next = areas.where((s) => s.name == name).firstOrNull;
             if (next != null && !next.towns.contains(_city.text)) _city.clear();
           }),
         ),
-        menu(
+        field(
           'branch-city',
           _city,
           l.branchCity,
           towns,
-          ai: _aiFields.contains('city'),
+          'city',
           // A town picked before its state: the state follows.
-          onSelected: (town) => setState(() {
+          (town) => setState(() {
+            _aiFields.remove('city');
             if (state != null) return;
             final of = areas.where((s) => s.towns.contains(town)).toList();
             if (of.length == 1) _state.text = of.single.name;
@@ -794,7 +804,7 @@ class _BranchEditSheetState extends State<BranchEditSheet> {
           children: [
             Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
             const SizedBox(width: 6),
-            const _AiBadge(),
+            const AiBadge(),
           ],
         )
       : Text(label);
@@ -807,9 +817,15 @@ class _DraftBanner extends StatelessWidget {
     required this.used,
     required this.onPick,
     required this.onUsePin,
+    required this.photo,
+    required this.onPhoto,
   });
 
   final BranchSuggestion suggestion;
+
+  /// The picked cover photo (null = none) and its change.
+  final String? photo;
+  final ValueChanged<String?> onPhoto;
   final Branch branch;
 
   /// The draft fields now in the form; [onPick] takes (field, use) from each row's tick box.
@@ -898,11 +914,41 @@ class _DraftBanner extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(l.aiDraftNoInfo, style: small),
             ),
+          if (suggestion.photos.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            DraftPhotos(
+              urls: suggestion.photos,
+              picked: photo,
+              onPick: onPhoto,
+            ),
+          ],
+          // JAKIM's rows are in the Halal tab; here only what the draft got from it.
+          const SizedBox(height: 8),
+          Text(
+            switch (suggestion.jakim) {
+              null => l.jakimDraftDown,
+              (rows: [], url: _, pick: _) => l.jakimDraftNone,
+              _ => l.jakimDraftSeeHalal,
+            },
+            key: const ValueKey('jakim-draft-status'),
+            style: small,
+          ),
           for (final warning in suggestion.warnings)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text('• $warning', style: small),
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: nb.margin),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(warning, style: small)),
+                ],
+              ),
             ),
+          if (suggestion.pages.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            DraftSourceChips(sources: suggestion.pages),
+          ],
           if (suggestion.candidates.length > 1) ...[
             const SizedBox(height: 8),
             Text(
@@ -986,7 +1032,7 @@ class _DraftField extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const _AiBadge(),
+              const AiBadge(),
               if (same)
                 Flexible(
                   child: Padding(
@@ -1013,27 +1059,6 @@ class _DraftField extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AiBadge extends StatelessWidget {
-  const _AiBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final nb = Notebook.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: nb.mist,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: nb.pandanDeep.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        'AI',
-        style: nb.hand.copyWith(fontSize: 15, height: 1, color: nb.pandanDeep),
       ),
     );
   }
@@ -1086,6 +1111,195 @@ class _AiLoading extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A map's results: each hit as a card (address, town and state, the point), with its two actions:
+/// "Use" fills the form and closes the sheet; "New branch" adds it as another outlet and stays (marked Added).
+class _PinHitsSheet extends StatefulWidget {
+  const _PinHitsSheet({
+    required this.title,
+    required this.query,
+    required this.hits,
+    required this.onAdd,
+  });
+
+  final String title;
+  final String query;
+  final List<PinHit> hits;
+  final Future<bool> Function(PinHit) onAdd;
+
+  @override
+  State<_PinHitsSheet> createState() => _PinHitsSheetState();
+}
+
+class _PinHitsSheetState extends State<_PinHitsSheet> {
+  final _added = <int>{};
+  int? _adding;
+
+  Future<void> _add(int i) async {
+    setState(() => _adding = i);
+    final ok = await widget.onAdd(widget.hits[i]);
+    if (mounted) {
+      setState(() {
+        _adding = null;
+        if (ok) _added.add(i);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    const compact = Size(0, 40);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.title, style: text.titleMedium),
+              if (widget.query.isNotEmpty)
+                Text(
+                  '“${widget.query}”',
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          ),
+        ),
+        Flexible(
+          child: ListView.separated(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceM),
+            itemCount: widget.hits.length,
+            separatorBuilder: (_, _) => const SizedBox(height: spaceS),
+            itemBuilder: (context, i) {
+              final h = widget.hits[i];
+              final area = [h.city, h.state].nonNulls.join(', ');
+              final added = _added.contains(i);
+              return Container(
+                key: ValueKey('pin-hit-$i'),
+                padding: const EdgeInsets.all(spaceM - 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: nb.line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: nb.mist,
+                          child: Icon(
+                            Icons.place_outlined,
+                            size: 20,
+                            color: nb.pandanDeep,
+                          ),
+                        ),
+                        const SizedBox(width: spaceM - 4),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (h.name case final name?)
+                                Text(
+                                  name,
+                                  style: text.labelMedium?.copyWith(
+                                    color: nb.pandanDeep,
+                                  ),
+                                ),
+                              Text(
+                                h.address,
+                                style: text.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (area.isNotEmpty)
+                                Text(
+                                  area,
+                                  style: text.bodyMedium?.copyWith(
+                                    color: nb.inkSoft,
+                                  ),
+                                ),
+                              const SizedBox(height: 2),
+                              Text(
+                                h.lat == null || h.lng == null
+                                    ? l.pinSearchNoPin
+                                    : '${h.lat!.toStringAsFixed(5)}, ${h.lng!.toStringAsFixed(5)}',
+                                style: text.bodySmall?.copyWith(
+                                  color: nb.inkSoft,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: spaceS),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          key: ValueKey('pin-hit-add-$i'),
+                          style: TextButton.styleFrom(minimumSize: compact),
+                          onPressed: added || _adding != null
+                              ? null
+                              : () => _add(i),
+                          icon: _adding == i
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  added
+                                      ? Icons.check_circle_outline
+                                      : Icons.add_location_alt_outlined,
+                                  size: 18,
+                                ),
+                          label: Text(
+                            added ? l.pinHitAdded : l.branchAddFromHit,
+                          ),
+                        ),
+                        const SizedBox(width: spaceS),
+                        FilledButton.icon(
+                          key: ValueKey('pin-hit-use-$i'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: spaceM,
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(context, h),
+                          icon: const Icon(Icons.check, size: 18),
+                          label: Text(l.pinCandidateUse),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

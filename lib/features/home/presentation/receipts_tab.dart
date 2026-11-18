@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/notebook.dart';
+import '../../../core/theme/app_theme_constant.dart';
+import '../../../core/widgets/notebook.dart' show NotebookTitle, navRoom;
 import '../../../core/widgets/pill_switch.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../receipts/presentation/pages/calories_page.dart';
 import '../../receipts/presentation/pages/receipts_page.dart';
 
-/// The Receipts tab: one notebook page, like a recipe's. Its Receipts | Calories switch is pinned under the title
-/// and only what is under it changes; both sides stay loaded, so a switch is instant (and reloads that side quietly).
+/// The Receipts tab, like a recipe's page. Its Receipts | Calories switch stays under the title over
+/// two pages, swiped or picked; each side stays loaded once seen, so a switch is instant (and reloads that side quietly).
 class ReceiptsTab extends StatefulWidget {
   const ReceiptsTab({super.key});
 
@@ -19,6 +20,14 @@ class _ReceiptsTabState extends State<ReceiptsTab> {
   bool _calories = false;
   final _receipts = GlobalKey<ReceiptsSectionState>();
   final _kcal = GlobalKey<CaloriesSectionState>();
+  // Receipts | Calories as pages: swiped, or driven by the pill (it follows the swipe).
+  final _pages = PageController();
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
 
   Future<void> _refresh() async => _calories
       ? _kcal.currentState?.refresh()
@@ -27,63 +36,93 @@ class _ReceiptsTabState extends State<ReceiptsTab> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    Widget page(Widget section, Future<void> Function() refresh) => _KeepAlive(
+      child: RefreshIndicator(
+        onRefresh: refresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            section,
+            SliverToBoxAdapter(child: SizedBox(height: navRoom(context))),
+          ],
+        ),
+      ),
+    );
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
         title: NotebookTitle(_calories ? l.navCalories : l.receiptsTitle),
       ),
-      body: NotebookPage(
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: NotebookPinnedBar(
-                  height: MediaQuery.textScalerOf(context).scale(40) + 16,
-                  child: PillSwitch<bool>(
-                    key: const ValueKey('receipts-switch'),
-                    expand: true,
-                    value: _calories,
-                    onChanged: (v) {
-                      if (v == _calories) return;
-                      setState(() => _calories = v);
-                      _refresh(); // a receipt may have been added meanwhile
-                    },
-                    options: [
-                      (
-                        false,
-                        PillLabel(Icons.receipt_long_outlined, l.navReceipts),
-                        null,
-                      ),
-                      (
-                        true,
-                        PillLabel(
-                          Icons.local_fire_department_outlined,
-                          l.navCalories,
-                        ),
-                        null,
-                      ),
-                    ],
-                  ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceS),
+            child: PillSwitch<bool>(
+              key: const ValueKey('receipts-switch'),
+              expand: true,
+              value: _calories,
+              onChanged: (_) {}, // with pages, onPageChanged reports the change
+              pages: _pages,
+              options: [
+                (
+                  false,
+                  PillLabel(Icons.receipt_long_outlined, l.navReceipts),
+                  null,
                 ),
-              ),
-              SliverVisibility(
-                visible: !_calories,
-                maintainState: true,
-                sliver: ReceiptsSection(key: _receipts),
-              ),
-              SliverVisibility(
-                visible: _calories,
-                maintainState: true,
-                sliver: CaloriesSection(key: _kcal),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
+                (
+                  true,
+                  PillLabel(
+                    Icons.local_fire_department_outlined,
+                    l.navCalories,
+                  ),
+                  null,
+                ),
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: PageView(
+              controller: _pages,
+              onPageChanged: (i) {
+                setState(() => _calories = i == 1);
+                _refresh(); // a receipt may have been added meanwhile
+              },
+              children: [
+                page(
+                  ReceiptsSection(key: _receipts),
+                  () async => _receipts.currentState?.refresh(),
+                ),
+                page(
+                  CaloriesSection(key: _kcal),
+                  () async => _kcal.currentState?.refresh(),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
+
+/// Keeps a page built while the other one shows: both sides stay loaded, so a switch is instant.
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

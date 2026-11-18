@@ -24,13 +24,22 @@ abstract interface class PlacesRepository {
   Future<LocateResult> locate(String branchId);
 
   /// Owner only: merges branches that are the same shop and drops empty ones, for every user.
-  Future<({int merged, int removed})> tidyBranches(String restaurantId);
+  Future<({int merged, int removed})> tidyBranches(String placeId);
 
   /// Owner: restaurants that are one company become [into] (renamed to [name] when given).
-  Future<void> mergeRestaurants(List<String> from, String into, {String? name});
+  Future<void> mergePlaces(List<String> from, String into, {String? name});
 
   /// Owner only: removes the branch for every user.
   Future<void> deleteBranch(String branchId);
+
+  /// Owner only: the main place's name, category and cuisine, shared by every user (null cuisine = cleared).
+  Future<void> updatePlace(
+    String placeId, {
+    required String name,
+    required String category,
+    String? subcategory,
+    String? cuisine,
+  });
 
   /// Edits a branch. [scope] personal keeps it private; shared is owner-only and claims new coordinates
   /// as 'owner'. Passing [lat]/[lng] moves the pin in that scope.
@@ -51,8 +60,10 @@ abstract interface class PlacesRepository {
     String? address,
     String? city,
     String? state,
-    required double lat,
-    required double lng,
+    required double? lat,
+    required double? lng,
+    JakimRow? cert,
+    String? certUrl,
   });
 
   /// Owner only: an AI/map draft for a branch. It never saves; the owner applies it.
@@ -72,18 +83,42 @@ abstract interface class PlacesRepository {
   });
 
   /// The restaurant's chosen cover photo; null = none. [cover] is the id from the DTO (cache key).
-  Future<Uint8List?> restaurantCover(String restaurantId, String cover);
+  Future<Uint8List?> placeCover(String placeId, String cover);
+
+  /// A branch's own cover photo bytes; null = none.
+  Future<Uint8List?> branchCover(String branchId, String cover);
+
+  /// Owner only: a branch's own cover from a web photo ([url]), or none (null).
+  Future<void> setBranchCover(String branchId, String? url);
+
+  /// Owner only: a photo of their own (camera or gallery) as the branch's cover.
+  Future<void> uploadBranchCover(String branchId, String path);
 
   /// Owner only: the post thumbnails to pick a cover from, and the current pick.
   Future<({List<String> covers, String? current})> coverCandidates(
-    String restaurantId,
+    String placeId,
   );
 
   /// Owner only: one candidate's image.
-  Future<Uint8List?> coverCandidate(String restaurantId, String cover);
+  Future<Uint8List?> coverCandidate(String placeId, String cover);
 
   /// Owner only: picks a candidate as the cover for everyone; null clears it.
-  Future<void> setRestaurantCover(String restaurantId, String? cover);
+  Future<void> setRestaurantCover(String placeId, String? cover);
+
+  /// Owner only: "Check JAKIM" on one branch now. Throws ApiException.
+  Future<JakimCheck> checkHalalBranch(String branchId);
+
+  /// Owner only: the brand's JAKIM outlets across Malaysia ([q] = the owner's own words); nothing written.
+  Future<JakimOutlets> placeOutlets(String placeId, {String? q});
+
+  /// Owner only: a branch's JAKIM halal certificate from a draft row ([url] = the directory page); null clears it.
+  Future<void> setHalalCert(String branchId, JakimRow? row, String url);
+
+  /// Owner only: a photo from the AI draft's web pages as the cover (the server downloads it). Throws ApiException.
+  Future<void> setRestaurantCoverUrl(String placeId, String url);
+
+  /// Owner only: a photo of their own ([path] = the editor's JPEG) as the cover. Throws ApiException.
+  Future<void> uploadRestaurantCover(String placeId, String path);
 
   /// Community rating; the response is the branch's fresh summary.
   Future<RatingSummary> rateBranch(String branchId, int stars);

@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/pill_switch.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
 import '../widgets/calorie_chart.dart';
+import 'meal_page.dart';
 
 /// Today's calories against the target, the last 7 / 30 days as a chart with the target line, and the day's eaten
 /// lines. The Calories side of the Receipts tab: slivers under its pinned switch (ReceiptsTab). Private: the caller's own receipts.
@@ -34,7 +37,7 @@ class CaloriesSectionState extends State<CaloriesSection> {
   Future<void> _setTarget(int? current) async {
     final l = AppLocalizations.of(context);
     final field = TextEditingController(text: current?.toString() ?? '');
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       title: l.caloriesTarget,
       message: l.caloriesTargetRange,
@@ -88,6 +91,32 @@ class CaloriesSectionState extends State<CaloriesSection> {
     }
   }
 
+  /// Camera or photos, then the estimate page; a saved meal reloads the day.
+  Future<void> _snapMeal() async {
+    final l = AppLocalizations.of(context);
+    final source = await showPhotoSourceSheet(context, camera: l.mealSnap);
+    if (source == null || !mounted) return;
+    // 1600 px is plenty to tell dishes apart and keeps the upload small.
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => MealPage(path: picked.path)),
+    );
+    if (saved == true && mounted) await refresh();
+  }
+
+  /// A saved meal: change its dishes, servings or time, or delete it.
+  Future<void> _openMeal(DayMeal meal) async {
+    final changed = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => MealPage(meal: meal)));
+    if (changed == true && mounted) await refresh();
+  }
+
   /// Loads again; what is shown stays until the new data is in (FutureBuilder keeps the last data).
   Future<void> refresh() async {
     setState(() {
@@ -117,12 +146,7 @@ class CaloriesSectionState extends State<CaloriesSection> {
         }
         final data = s.data;
         if (data == null) {
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(48),
-              child: Center(child: CircularProgressIndicator.adaptive()),
-            ),
-          );
+          return const SliverToBoxAdapter(child: SkeletonRows(rows: 4));
         }
         final (today, days) = data;
         return SliverMainAxisGroup(
@@ -135,10 +159,15 @@ class CaloriesSectionState extends State<CaloriesSection> {
                 range: _range,
                 onRange: _setRange,
                 onTarget: () => _setTarget(today.target),
+                onSnap: _snapMeal,
               ),
             ),
             SliverToBoxAdapter(
-              child: _DayItems(today: today, onOpen: _open),
+              child: _DayItems(
+                today: today,
+                onOpen: _open,
+                onOpenMeal: _openMeal,
+              ),
             ),
           ],
         );
@@ -147,6 +176,8 @@ class CaloriesSectionState extends State<CaloriesSection> {
   }
 }
 
+String _g(double n) => n.round().toString();
+
 class _Header extends StatelessWidget {
   const _Header({
     required this.today,
@@ -154,6 +185,7 @@ class _Header extends StatelessWidget {
     required this.range,
     required this.onRange,
     required this.onTarget,
+    required this.onSnap,
   });
 
   final DailyCalories today;
@@ -161,6 +193,7 @@ class _Header extends StatelessWidget {
   final int range;
   final ValueChanged<int> onRange;
   final VoidCallback onTarget;
+  final VoidCallback onSnap;
 
   @override
   Widget build(BuildContext context) {
@@ -169,13 +202,29 @@ class _Header extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final target = today.target;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l.caloriesToday,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          // The target belongs to today's number: its button sits on the title's line.
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.caloriesToday,
+                  style: text.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton(
+                key: const ValueKey('kcal-target-button'),
+                onPressed: onTarget,
+                child: Text(
+                  target == null ? l.caloriesSetTarget : l.caloriesChangeTarget,
+                ),
+              ),
+            ],
           ),
           Text(
             target == null
@@ -198,6 +247,14 @@ class _Header extends StatelessWidget {
               ),
             ),
           ],
+          if (today.macros case final m?)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.mealMacros(_g(m.carbsG), _g(m.proteinG), _g(m.fatG)),
+                style: text.bodyMedium,
+              ),
+            ),
           if (today.hasEstimate || today.unknownEaten > 0)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -209,15 +266,15 @@ class _Header extends StatelessWidget {
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ),
-          TextButton(
-            key: const ValueKey('kcal-target-button'),
-            style: TextButton.styleFrom(padding: EdgeInsets.zero),
-            onPressed: onTarget,
-            child: Text(
-              target == null ? l.caloriesSetTarget : l.caloriesChangeTarget,
-            ),
+          const SizedBox(height: 12),
+          // The page's main action: the app's standard full-width button (theme: 52 dp pill).
+          FilledButton.icon(
+            key: const ValueKey('snap-meal'),
+            onPressed: onSnap,
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: Text(l.mealSnap),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
             child: PillSwitch<int>(
@@ -243,12 +300,17 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The day's saved receipts with their eaten lines; a tap opens the receipt.
+/// The day's saved receipts and meals with their eaten lines, newest first; a tap opens the receipt or the meal.
 class _DayItems extends StatelessWidget {
-  const _DayItems({required this.today, required this.onOpen});
+  const _DayItems({
+    required this.today,
+    required this.onOpen,
+    required this.onOpenMeal,
+  });
 
   final DailyCalories today;
   final ValueChanged<String> onOpen;
+  final ValueChanged<DayMeal> onOpenMeal;
 
   static String _qty(double n) =>
       n == n.roundToDouble() ? n.toInt().toString() : '$n';
@@ -259,53 +321,92 @@ class _DayItems extends StatelessWidget {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final loc = MaterialLocalizations.of(context);
+    Widget entry({
+      required Key key,
+      required VoidCallback onTap,
+      required String title,
+      required DateTime at,
+      required int kcal,
+      required List<({String name, double eaten, int? kcal})> items,
+    }) => ListTile(
+      key: key,
+      onTap: onTap,
+      trailing: Text(
+        l.caloriesKcal('$kcal'),
+        style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: text.titleMedium),
+          Text(
+            loc.formatTimeOfDay(TimeOfDay.fromDateTime(at)),
+            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          ),
+          const SizedBox(height: 4),
+          for (final i in items)
+            Text(
+              [
+                '${_qty(i.eaten)} × ${i.name}',
+                if (i.kcal != null) l.caloriesKcal('${i.kcal}'),
+              ].join(' · '),
+              style: text.bodySmall?.copyWith(color: nb.inkSoft),
+            ),
+        ],
+      ),
+    );
+    final entries = <(DateTime, Widget)>[
+      for (final r in today.receipts)
+        (
+          r.visitedAt,
+          entry(
+            key: ValueKey('calories-receipt-${r.id}'),
+            onTap: () => onOpen(r.id),
+            title: r.shop ?? l.addReceipt,
+            at: r.visitedAt,
+            kcal: r.eatenKcal,
+            items: [
+              for (final i in r.items)
+                (name: i.name, eaten: i.eaten, kcal: i.kcal),
+            ],
+          ),
+        ),
+      for (final m in today.meals)
+        (
+          m.eatenAt,
+          entry(
+            key: ValueKey('calories-meal-${m.id}'),
+            onTap: () => onOpenMeal(m),
+            title: l.mealRow,
+            at: m.eatenAt,
+            kcal: m.eatenKcal,
+            items: [
+              for (final i in m.items)
+                (name: i.name, eaten: i.eaten, kcal: i.kcal),
+            ],
+          ),
+        ),
+    ]..sort((a, b) => b.$1.compareTo(a.$1));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
           child: Text(
             l.caloriesItemsTitle,
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
-        if (today.receipts.isEmpty)
+        if (entries.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
             child: Text(
               l.caloriesNoItems,
               style: text.bodyMedium?.copyWith(color: nb.inkSoft),
             ),
           )
         else
-          for (final r in today.receipts)
-            NotebookRow(
-              key: ValueKey('calories-receipt-${r.id}'),
-              onTap: () => onOpen(r.id),
-              trailing: Text(
-                l.caloriesKcal('${r.eatenKcal}'),
-                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(r.shop ?? l.addReceipt, style: text.titleMedium),
-                  Text(
-                    loc.formatTimeOfDay(TimeOfDay.fromDateTime(r.visitedAt)),
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                  const SizedBox(height: 4),
-                  for (final i in r.items)
-                    Text(
-                      [
-                        '${_qty(i.eaten)} × ${i.name}',
-                        if (i.kcal != null) l.caloriesKcal('${i.kcal}'),
-                      ].join(' · '),
-                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                    ),
-                ],
-              ),
-            ),
+          for (final e in entries) e.$2,
       ],
     );
   }

@@ -67,6 +67,9 @@ class _PageFlipState extends State<_PageFlip> {
   void didUpdateWidget(_PageFlip old) {
     super.didUpdateWidget(old);
     _painter.paper = widget.paper;
+    // A theme or language change rebuilds the route: a covered page's snapshot still shows the old look, and the
+    // flip back would show it until the page paints live again. Take it afresh.
+    _snapshot.clear();
   }
 
   @override

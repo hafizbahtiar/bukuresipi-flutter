@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/disk_image_cache.dart';
 import '../domain/share.dart';
 import '../domain/share_repository.dart';
 
@@ -23,20 +24,21 @@ class ShareRepositoryImpl implements ShareRepository {
   static const maxImageBytes = 5 * 1024 * 1024;
 
   @override
-  Future<String> submitLink(String url, {String? caption}) => apiCall(() async {
-    final body = {
-      'url': url,
-      if (caption != null && caption.trim().isNotEmpty)
-        'caption': caption.trim().length > 4000
-            ? caption.trim().substring(0, 4000)
-            : caption.trim(),
-    };
-    return (await _dio.post<Map<String, dynamic>>(
+  Future<({String id, bool done})> submitLink(String url, {String? caption}) =>
+      apiCall(() async {
+        final body = {
+          'url': url,
+          if (caption != null && caption.trim().isNotEmpty)
+            'caption': caption.trim().length > 4000
+                ? caption.trim().substring(0, 4000)
+                : caption.trim(),
+        };
+        final j = (await _dio.post<Map<String, dynamic>>(
           '/shares',
           data: body,
-        )).data!['id']
-        as String;
-  });
+        )).data!;
+        return (id: j['id'] as String, done: j['status'] == 'done');
+      });
 
   @override
   Future<String> submitImage(String path) async {
@@ -76,6 +78,16 @@ class ShareRepositoryImpl implements ShareRepository {
   Future<void> retry(String id) =>
       apiCall(() => _dio.post<void>('/shares/$id/retry'));
 
+  @override
+  Future<void> addCaption(String id, String caption) => apiCall(
+    () => _dio.put<void>(
+      '/shares/$id/caption',
+      data: {
+        'caption': caption.length > 4000 ? caption.substring(0, 4000) : caption,
+      },
+    ),
+  );
+
   // A list scrolls rows out and back, and the detail page shows the same image: fetch each once per session.
   final _images = <String, Future<Uint8List?>>{};
   static const _imageCacheSize = 80;
@@ -89,7 +101,9 @@ class ShareRepositoryImpl implements ShareRepository {
     if (_images.length >= _imageCacheSize) {
       _images.remove(_images.keys.first);
     }
-    final f = _fetchImage(id);
+    // On disk too: a share's photo never changes, so each is downloaded once per phone, not once per launch. A share
+    // with none (404) isn't stored, so a thumbnail added later still shows.
+    final f = diskCached('share-$id', () => _fetchImage(id));
     _images[id] = f;
     f.catchError((Object _) {
       _images.remove(id); // a failed fetch is tried again next time
@@ -134,7 +148,7 @@ class ShareRepositoryImpl implements ShareRepository {
     id: j['id'] as String,
     status: j['status'] as String,
     kind: j['kind'] as String,
-    restaurantId: j['restaurantId'] as String?,
+    placeId: j['placeId'] as String?,
     recipeId: j['recipeId'] as String?,
     gaps: [...(j['gaps'] as List? ?? const []).cast<String>()],
     error: j['error'] as String?,

@@ -107,134 +107,146 @@ class AuthCover extends StatelessWidget {
       ),
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-      ),
-      child: GestureDetector(
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const Positioned.fill(child: ColoredBox(color: AppTheme.pandan)),
-            const Positioned.fill(child: CustomPaint(painter: _CoverTexture())),
-            const Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 30,
-              child: _Spine(),
-            ),
-            const Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: 9,
-              child: _PageEdge(),
-            ),
-            Scaffold(
-              backgroundColor: Colors.transparent,
-              body: SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(48, 26, 28, 24),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: 430,
-                        minHeight: bottomAligned
-                            ? max(0.0, constraints.maxHeight - 50)
-                            : 0.0,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: bottomAligned
-                            ? MainAxisAlignment.end
-                            : MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (top != null) ...[
-                            top!,
-                            const SizedBox(height: 28),
-                          ],
-                          SizedBox(
-                            height: 40,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              alignment: Alignment.center,
-                              children: [
-                                if (showBack)
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: IconButton(
-                                      tooltip: MaterialLocalizations.of(context)
-                                          .backButtonTooltip,
-                                      onPressed:
-                                          onBack ??
-                                          () => Navigator.maybePop(context),
-                                      icon: const Icon(Icons.arrow_back),
-                                      color: Notebook.light.paper,
-                                      iconSize: 20,
-                                      visualDensity: VisualDensity.compact,
-                                      padding: EdgeInsets.zero,
-                                      constraints:
-                                          const BoxConstraints.tightFor(
-                                            width: 40,
-                                            height: 40,
-                                          ),
-                                    ),
-                                  ),
-                                _KickerLabel(text: kicker.toUpperCase()),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _NameLabel(
-                            child: Theme(
-                              data: labelTheme,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+    // A page opened from its link (a website or email link the app caught) is alone on the stack: the device's
+    // back then does what the page's back arrow does (e.g. Home), instead of closing the app.
+    return PopScope(
+      canPop: onBack == null || Navigator.of(context).canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) onBack?.call();
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        child: GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const Positioned.fill(child: ColoredBox(color: AppTheme.pandan)),
+              const Positioned.fill(
+                child: CustomPaint(painter: _CoverTexture()),
+              ),
+              const Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 30,
+                child: _Spine(),
+              ),
+              const Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: 9,
+                child: _PageEdge(),
+              ),
+              Scaffold(
+                backgroundColor: Colors.transparent,
+                body: SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(48, 26, 28, 24),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 430,
+                          minHeight: bottomAligned
+                              ? max(0.0, constraints.maxHeight - 50)
+                              : 0.0,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: bottomAligned
+                              ? MainAxisAlignment.end
+                              : MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (top != null) ...[
+                              top!,
+                              const SizedBox(height: 28),
+                            ],
+                            SizedBox(
+                              height: 40,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.center,
                                 children: [
-                                  Text(
-                                    l.appName,
-                                    textAlign: TextAlign.center,
-                                    style: hand,
-                                  ),
-                                  if (subtitle != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      subtitle!,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        height: 1.35,
-                                        color: Notebook.light.inkSoft,
+                                  if (showBack)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: IconButton(
+                                        tooltip: MaterialLocalizations.of(
+                                          context,
+                                        ).backButtonTooltip,
+                                        onPressed:
+                                            onBack ??
+                                            () => Navigator.maybePop(context),
+                                        icon: const Icon(Icons.arrow_back),
+                                        color: Notebook.light.paper,
+                                        iconSize: 20,
+                                        visualDensity: VisualDensity.compact,
+                                        padding: EdgeInsets.zero,
+                                        constraints:
+                                            const BoxConstraints.tightFor(
+                                              width: 40,
+                                              height: 40,
+                                            ),
                                       ),
                                     ),
-                                  ],
-                                  const SizedBox(height: 16),
-                                  Container(
-                                    height: 1,
-                                    color: Notebook.light.rule,
-                                  ),
-                                  const SizedBox(height: 14),
-                                  ...children,
+                                  _KickerLabel(text: kicker.toUpperCase()),
                                 ],
                               ),
                             ),
-                          ),
-                          if (footer != null) ...[
-                            const SizedBox(height: 18),
-                            footer!,
+                            const SizedBox(height: 16),
+                            _NameLabel(
+                              child: Theme(
+                                data: labelTheme,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      l.appName,
+                                      textAlign: TextAlign.center,
+                                      style: hand,
+                                    ),
+                                    if (subtitle != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        subtitle!,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          height: 1.35,
+                                          color: Notebook.light.inkSoft,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      height: 1,
+                                      color: Notebook.light.rule,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    ...children,
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (footer != null) ...[
+                              const SizedBox(height: 18),
+                              footer!,
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

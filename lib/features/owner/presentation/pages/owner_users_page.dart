@@ -5,6 +5,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../../../../core/widgets/deleting_overlay.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/notebook.dart';
@@ -27,6 +28,9 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   /// Picking users for a bulk delete: the Select button or a long-press starts it.
   bool _picking = false;
   final _picked = <String>{};
+
+  /// A bulk delete running: how many are done of how many (the overlay's label).
+  ({int done, int total})? _deleting;
 
   void _stopPicking() => setState(() {
     _picking = false;
@@ -189,12 +193,20 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     );
     if (r == null || !mounted) return;
     var failed = 0;
-    for (final id in ids) {
-      try {
-        await repo.deleteUser(id, reason: r.reason, banEmail: r.banEmail);
-      } catch (_) {
-        failed++;
+    setState(() => _deleting = (done: 0, total: ids.length));
+    try {
+      for (final (n, id) in ids.indexed) {
+        try {
+          await repo.deleteUser(id, reason: r.reason, banEmail: r.banEmail);
+        } catch (_) {
+          failed++;
+        }
+        if (mounted) {
+          setState(() => _deleting = (done: n + 1, total: ids.length));
+        }
       }
+    } finally {
+      if (mounted) setState(() => _deleting = null);
     }
     messenger.showSnackBar(
       SnackBar(
@@ -236,90 +248,106 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final picking = _picking;
     return PopScope(
       // Back while picking stops picking first.
-      canPop: !picking,
+      canPop: !picking && _deleting == null,
       onPopInvokedWithResult: (popped, _) {
-        if (!popped) _stopPicking();
+        if (!popped && _deleting == null) _stopPicking();
       },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: picking
-              ? IconButton(
-                  key: const ValueKey('pick-cancel'),
-                  icon: const Icon(Icons.close),
-                  tooltip: MaterialLocalizations.of(context).cancelButtonLabel,
-                  onPressed: _stopPicking,
-                )
-              : null,
-          title: Text(picking ? l.ownerPicked(_picked.length) : l.ownerUsers),
-          actions: [
-            if (picking) ...[
-              IconButton(
-                key: const ValueKey('pick-all'),
-                icon: const Icon(Icons.select_all),
-                tooltip: l.ownerPickAll,
-                onPressed: () => setState(
-                  () => _picked.addAll([
-                    for (final u in users ?? <OwnerUser>[])
-                      if (u.role != 'owner') u.id,
-                  ]),
-                ),
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(
+              leading: picking
+                  ? IconButton(
+                      key: const ValueKey('pick-cancel'),
+                      icon: const Icon(Icons.close),
+                      tooltip: MaterialLocalizations.of(context)
+                          .cancelButtonLabel,
+                      onPressed: _stopPicking,
+                    )
+                  : null,
+              title: Text(
+                picking ? l.ownerPicked(_picked.length) : l.ownerUsers,
               ),
-              IconButton(
-                key: const ValueKey('pick-delete'),
-                icon: Icon(
-                  Icons.delete_forever_outlined,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                tooltip: l.ownerDeleteUser,
-                onPressed: _picked.isEmpty ? null : _deletePicked,
-              ),
-            ],
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(64),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: TextField(
-                controller: _search,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.search,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  hintText: l.ownerSearchEmail,
-                  prefixIcon: const Icon(Icons.search),
-                  isDense: true,
-                ),
-                onSubmitted: (_) => _load(),
-              ),
-            ),
-          ),
-        ),
-        body: LoadView(
-          loading: _loading,
-          error: _error,
-          onReload: _load,
-          child: users == null
-              ? null
-              : users.isEmpty
-              ? ListView(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(l.ownerNoUsers, textAlign: TextAlign.center),
+              actions: [
+                if (picking) ...[
+                  IconButton(
+                    key: const ValueKey('pick-all'),
+                    icon: const Icon(Icons.select_all),
+                    tooltip: l.ownerPickAll,
+                    onPressed: () => setState(
+                      () => _picked.addAll([
+                        for (final u in users ?? <OwnerUser>[])
+                          if (u.role != 'owner') u.id,
+                      ]),
                     ),
-                  ],
-                )
-              : ListView.separated(
-                  itemCount: users.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _UserTile(
-                    user: users[i],
-                    picked: picking ? _picked.contains(users[i].id) : null,
-                    onTap: () => picking ? _toggle(users[i]) : _open(users[i]),
-                    onLongPress: () => _toggle(users[i]),
+                  ),
+                  IconButton(
+                    key: const ValueKey('pick-delete'),
+                    icon: Icon(
+                      Icons.delete_forever_outlined,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    tooltip: l.ownerDeleteUser,
+                    onPressed: _picked.isEmpty ? null : _deletePicked,
+                  ),
+                ],
+              ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(64),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: TextField(
+                    controller: _search,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.search,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      hintText: l.ownerSearchEmail,
+                      prefixIcon: const Icon(Icons.search),
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _load(),
                   ),
                 ),
-        ),
+              ),
+            ),
+            body: LoadView(
+              loading: _loading,
+              error: _error,
+              onReload: _load,
+              child: users == null
+                  ? null
+                  : users.isEmpty
+                  ? ListView(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            l.ownerNoUsers,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      itemCount: users.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (_, i) => _UserTile(
+                        user: users[i],
+                        picked: picking ? _picked.contains(users[i].id) : null,
+                        onTap: () =>
+                            picking ? _toggle(users[i]) : _open(users[i]),
+                        onLongPress: () => _toggle(users[i]),
+                      ),
+                    ),
+            ),
+          ),
+          if (_deleting case (:final done, :final total))
+            DeletingOverlay(
+              key: const ValueKey('deleting'),
+              label: l.ownerDeleting(done, total),
+            ),
+        ],
       ),
     );
   }

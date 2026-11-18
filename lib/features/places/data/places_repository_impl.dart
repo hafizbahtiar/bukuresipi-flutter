@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
 import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
@@ -70,22 +71,19 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
-  Future<void> mergeRestaurants(
-    List<String> from,
-    String into, {
-    String? name,
-  }) => apiCall(
-    () => _dio.post<void>(
-      '/places/restaurants/merge',
-      data: {'from': from, 'into': into, 'name': ?name},
-    ),
-  );
+  Future<void> mergePlaces(List<String> from, String into, {String? name}) =>
+      apiCall(
+        () => _dio.post<void>(
+          '/places/restaurants/merge',
+          data: {'from': from, 'into': into, 'name': ?name},
+        ),
+      );
 
   @override
-  Future<({int merged, int removed})> tidyBranches(String restaurantId) =>
+  Future<({int merged, int removed})> tidyBranches(String placeId) =>
       apiCall(() async {
         final res = await _dio.post<Map<String, dynamic>>(
-          '/places/restaurants/$restaurantId/tidy',
+          '/places/restaurants/$placeId/tidy',
           // Clef compares the branches one by one on the server.
           options: Options(receiveTimeout: const Duration(seconds: 90)),
         );
@@ -98,6 +96,25 @@ class PlacesRepositoryImpl implements PlacesRepository {
   @override
   Future<void> deleteBranch(String branchId) =>
       apiCall(() => _dio.delete<void>('/places/branches/$branchId'));
+
+  @override
+  Future<void> updatePlace(
+    String placeId, {
+    required String name,
+    required String category,
+    String? subcategory,
+    String? cuisine,
+  }) => apiCall(
+    () => _dio.patch<void>(
+      '/places/restaurants/$placeId',
+      data: {
+        'name': name,
+        'category': category,
+        'subcategory': subcategory,
+        'cuisine': cuisine,
+      },
+    ),
+  );
 
   @override
   Future<void> updateBranch(
@@ -128,8 +145,8 @@ class PlacesRepositoryImpl implements PlacesRepository {
   Future<BranchSuggestion> suggestBranch(String branchId) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/suggest',
-      // Geocoding + the AI can take longer than the usual 30 s.
-      options: Options(receiveTimeout: const Duration(seconds: 120)),
+      // Map lookups, the web pages, JAKIM (1 s between pages), the AI draft and the photo pick: minutes at worst.
+      options: Options(receiveTimeout: const Duration(seconds: 240)),
     )).data!;
     final d = j['draft'] as Map<String, dynamic>;
     return BranchSuggestion(
@@ -158,6 +175,26 @@ class PlacesRepositoryImpl implements PlacesRepository {
             fromDraftM: (c['fromDraftM'] as num?)?.round(),
           ),
       ],
+      pages: [
+        for (final p
+            in ((j['pages'] as List?) ?? const []).cast<Map<String, dynamic>>())
+          (url: p['url'] as String, title: p['title'] as String?),
+      ],
+      photos: ((j['photos'] as List?) ?? const []).cast<String>(),
+      placeId: j['placeId'] as String?,
+      jakim: switch (j['jakim']) {
+        final Map<String, dynamic> k => (
+          url: k['url'] as String,
+          rows: [
+            for (final r
+                in ((k['rows'] as List?) ?? const [])
+                    .cast<Map<String, dynamic>>())
+              _jakimRow(r),
+          ],
+          pick: (k['pick'] as num?)?.toInt(),
+        ),
+        _ => null,
+      },
     );
   });
 
@@ -167,8 +204,10 @@ class PlacesRepositoryImpl implements PlacesRepository {
     String? address,
     String? city,
     String? state,
-    required double lat,
-    required double lng,
+    required double? lat,
+    required double? lng,
+    JakimRow? cert,
+    String? certUrl,
   }) => apiCall(
     () => _dio.post<void>(
       '/places/branches/$branchId/sibling',
@@ -178,6 +217,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
         'state': state,
         'lat': lat,
         'lng': lng,
+        if (cert != null && certUrl != null) 'cert': _certJson(cert, certUrl),
       },
     ),
   );
@@ -191,18 +231,21 @@ class PlacesRepositoryImpl implements PlacesRepository {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/search-pin',
       data: {'source': source, 'q': ?q},
+      // JAKIM: up to 5 pages, 1 a second.
+      options: Options(receiveTimeout: const Duration(seconds: 90)),
     )).data!;
     return (
       query: j['query'] as String,
       hits: [
         for (final h in (j['hits'] as List).cast<Map<String, dynamic>>())
           (
-            lat: (h['lat'] as num).toDouble(),
-            lng: (h['lng'] as num).toDouble(),
+            lat: (h['lat'] as num?)?.toDouble(),
+            lng: (h['lng'] as num?)?.toDouble(),
             address: h['address'] as String,
             city: h['city'] as String?,
             state: h['state'] as String?,
             source: h['source'] as String,
+            name: h['name'] as String?,
           ),
       ],
     );
@@ -387,22 +430,66 @@ class PlacesRepositoryImpl implements PlacesRepository {
   final _covers = <String, Future<Uint8List?>>{};
 
   @override
-  Future<Uint8List?> restaurantCover(String restaurantId, String cover) {
+  Future<Uint8List?> branchCover(String branchId, String cover) {
     if (_covers.length >= 80) _covers.remove(_covers.keys.first);
-    final key = '$restaurantId/$cover';
-    return _covers[key] ??= _bytes('/places/restaurants/$restaurantId/cover')
-      ..catchError((Object _) {
-        _covers.remove(key); // a failed fetch is tried again next time
-        return null;
+    final key = 'b/$branchId/$cover';
+    return _covers[key] ??=
+        diskCached(
+          'rcover-$cover', // the same photo as a place cover that took it
+          () => _bytes('/places/branches/$branchId/cover'),
+        )..catchError((Object _) {
+          _covers.remove(key);
+          return null;
+        });
+  }
+
+  @override
+  Future<void> setBranchCover(String branchId, String? url) => apiCall(
+    () => _dio.put<void>(
+      '/places/branches/$branchId/cover',
+      data: {'url': url},
+      // The server downloads the photo first.
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+    ),
+  );
+
+  @override
+  Future<void> uploadBranchCover(String branchId, String path) =>
+      apiCall(() async {
+        await _dio.put<void>(
+          '/places/branches/$branchId/cover/photo',
+          data: FormData.fromMap({
+            'image': await MultipartFile.fromFile(
+              path,
+              contentType: DioMediaType(
+                'image',
+                'jpeg',
+              ), // the photo editor's output
+            ),
+          }),
+        );
       });
+
+  @override
+  Future<Uint8List?> placeCover(String placeId, String cover) {
+    if (_covers.length >= 80) _covers.remove(_covers.keys.first);
+    final key = '$placeId/$cover';
+    return _covers[key] ??=
+        diskCached(
+          'rcover-$cover',
+          () => _bytes('/places/restaurants/$placeId/cover'),
+        )..catchError((Object _) {
+          _covers.remove(key); // a failed fetch is tried again next time
+          return null;
+        });
   }
 
   @override
   Future<({List<String> covers, String? current})> coverCandidates(
-    String restaurantId,
+    String placeId,
   ) => apiCall(() async {
     final j = (await _dio.get<Map<String, dynamic>>(
-      '/places/restaurants/$restaurantId/covers',
+      '/places/restaurants/$placeId/covers',
     )).data!;
     return (
       covers: (j['covers'] as List).cast<String>(),
@@ -411,17 +498,102 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
-  Future<Uint8List?> coverCandidate(String restaurantId, String cover) =>
-      _bytes('/places/restaurants/$restaurantId/covers/$cover');
+  Future<Uint8List?> coverCandidate(String placeId, String cover) =>
+      _bytes('/places/restaurants/$placeId/covers/$cover');
 
   @override
-  Future<void> setRestaurantCover(String restaurantId, String? cover) =>
+  Future<void> setRestaurantCover(String placeId, String? cover) => apiCall(
+    () => _dio.put<void>(
+      '/places/restaurants/$placeId/cover',
+      data: {'cover': cover},
+    ),
+  );
+
+  @override
+  Future<void> uploadRestaurantCover(String placeId, String path) =>
+      apiCall(() async {
+        await _dio.put<void>(
+          '/places/restaurants/$placeId/cover/photo',
+          data: FormData.fromMap({
+            'image': await MultipartFile.fromFile(
+              path,
+              contentType: DioMediaType(
+                'image',
+                'jpeg',
+              ), // the photo editor's output
+            ),
+          }),
+        );
+      });
+
+  @override
+  Future<JakimCheck> checkHalalBranch(String branchId) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/places/branches/$branchId/halal-check',
+      // JAKIM's site, a page at a time, then Clef.
+      options: Options(receiveTimeout: const Duration(seconds: 90)),
+    )).data!;
+    return (
+      status: j['status'] as String,
+      url: j['url'] as String?,
+      rows: [
+        for (final r
+            in ((j['rows'] as List?) ?? const []).cast<Map<String, dynamic>>())
+          (
+            premise: r['premise'] as String,
+            company: r['company'] as String?,
+            address: r['address'] as String,
+            expiresOn: DateTime.parse(r['expiresOn'] as String),
+          ),
+      ],
+      pick: (j['pick'] as num?)?.toInt(),
+    );
+  });
+
+  @override
+  Future<JakimOutlets> placeOutlets(String placeId, {String? q}) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/places/restaurants/$placeId/halal-outlets',
+          data: q == null ? null : {'q': q},
+          // JAKIM's site, up to 5 pages a second apart.
+          options: Options(receiveTimeout: const Duration(seconds: 90)),
+        )).data!;
+        return (
+          status: j['status'] as String,
+          url: j['url'] as String?,
+          rows: [
+            for (final r
+                in ((j['rows'] as List?) ?? const [])
+                    .cast<Map<String, dynamic>>())
+              (
+                row: _jakimRow(r),
+                branchId: r['branchId'] as String?,
+                nearBranchId: r['nearBranchId'] as String?,
+              ),
+          ],
+          more: j['more'] as bool? ?? false,
+        );
+      });
+
+  @override
+  Future<void> setHalalCert(String branchId, JakimRow? row, String url) =>
       apiCall(
         () => _dio.put<void>(
-          '/places/restaurants/$restaurantId/cover',
-          data: {'cover': cover},
+          '/places/branches/$branchId/halal-cert',
+          data: {'cert': row == null ? null : _certJson(row, url)},
         ),
       );
+
+  @override
+  Future<void> setRestaurantCoverUrl(String placeId, String url) => apiCall(
+    () => _dio.put<void>(
+      '/places/restaurants/$placeId/cover',
+      data: {'url': url},
+      // The server downloads the photo first.
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+    ),
+  );
 
   /// Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private. 404 = null.
   Future<Uint8List?> _bytes(String path) => apiCall(() async {
@@ -449,7 +621,7 @@ double? _num(Object? v) => v is num ? v.toDouble() : null;
 
 NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   branchId: j['branchId'] as String,
-  restaurantId: j['restaurantId'] as String,
+  placeId: j['placeId'] as String,
   name: j['name'] as String,
   label: j['label'] as String?,
   address: j['address'] as String?,
@@ -461,9 +633,10 @@ NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   halalQuote: j['halalQuote'] as String?,
   halalSourceUrl: j['halalSourceUrl'] as String?,
   saved: j['saved'] as bool,
-  placeId: j['placeId'] as String?,
+  savedPlaceId: j['savedPlaceId'] as String?,
   rating: ratingFromJson(j['rating']),
   cover: j['cover'] as String?,
+  halalCert: HalalCert.fromJson(j['halalCert']),
 );
 
 ReviewVotes reviewVotesFromJson(Object? json) {
@@ -528,11 +701,20 @@ Place placeFromJson(Map<String, dynamic> j) {
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
       name: r['name'] as String,
+      category: r['category'] as String,
+      subcategory: r['subcategory'] as String?,
       cuisine: r['cuisine'] as String?,
       halalClaim: r['halalClaim'] as String?,
       halalQuote: r['halalQuote'] as String?,
       halalSourceUrl: r['halalSourceUrl'] as String?,
       cover: r['cover'] as String?,
+      halalBrand: switch (r['halalBrand']) {
+        final Map<String, dynamic> b => (
+          outlets: (b['outlets'] as num).toInt(),
+          url: b['url'] as String,
+        ),
+        _ => null,
+      },
     ),
     branches: [
       for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())
@@ -547,7 +729,22 @@ Place placeFromJson(Map<String, dynamic> j) {
           pinSource: b['pinSource'] as String?,
           closed: b['closedAt'] != null,
           rating: ratingFromJson(b['rating']),
+          halalCert: HalalCert.fromJson(b['halalCert']),
+          cover: b['cover'] as String?,
         ),
     ],
   );
 }
+
+Map<String, dynamic> _certJson(JakimRow row, String url) => {
+  'premise': row.premise,
+  'expiresOn': row.expiresOn.toIso8601String().substring(0, 10),
+  'url': url,
+};
+
+JakimRow _jakimRow(Map<String, dynamic> r) => (
+  premise: r['premise'] as String,
+  company: r['company'] as String?,
+  address: r['address'] as String,
+  expiresOn: DateTime.parse(r['expiresOn'] as String),
+);

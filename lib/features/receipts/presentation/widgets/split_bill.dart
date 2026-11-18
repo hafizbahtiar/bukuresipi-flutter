@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
@@ -146,7 +148,7 @@ class _SplitBillState extends State<SplitBill> {
     final split = _split;
     if (split == null) return;
     final field = TextEditingController();
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       title: l.splitAddPerson,
       message: l.splitAddPersonBody,
@@ -176,7 +178,7 @@ class _SplitBillState extends State<SplitBill> {
     final l = AppLocalizations.of(context);
     final split = _split;
     if (split == null) return;
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       title: l.splitRemovePerson(split.people[index].name),
       message: l.splitRemovePersonBody,
@@ -220,8 +222,9 @@ class _SplitBillState extends State<SplitBill> {
       for (final p in split.portions)
         if (p.position == position) p.person: p.quantity,
     };
-    final picked = await showNotebookSheet<Map<int, double>>(
-      context,
+    final picked = await showModalBottomSheet<Map<int, double>>(
+      context: context,
+      isScrollControlled: true,
       builder: (_) => _PortionSheet(
         item: item,
         people: split.people,
@@ -241,7 +244,7 @@ class _SplitBillState extends State<SplitBill> {
 
   Future<void> _stop() async {
     final l = AppLocalizations.of(context);
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       title: l.splitStop,
       message: l.splitStopBody,
@@ -299,19 +302,17 @@ class _SplitBillState extends State<SplitBill> {
     }
   }
 
-  String _assignment(int position) {
+  /// Who has a line, one label each ("Ali", or "Ali ×2" on a line of several); nobody = empty (shared by everyone).
+  List<String> _takers(int position) {
     final split = _split!;
-    final parts = [
+    final several = (widget.receipt.items[position].quantity ?? 1) > 1;
+    return [
       for (final p in split.portions)
         if (p.position == position)
-          '${split.people[p.person].name} ${_qtyText(p.quantity)}',
+          several
+              ? '${split.people[p.person].name} ×${_qtyText(p.quantity)}'
+              : split.people[p.person].name,
     ];
-    if (parts.isNotEmpty) return parts.join(', ');
-    if (split.people.length == 1) {
-      final cap = widget.receipt.items[position].quantity ?? 1;
-      return '${split.people.first.name} ${_qtyText(cap > 0 ? cap : 1)}';
-    }
-    return AppLocalizations.of(context).splitShared;
   }
 
   @override
@@ -322,11 +323,11 @@ class _SplitBillState extends State<SplitBill> {
     final split = _split;
     if (split == null) {
       if (_error == null) {
-        return const Center(child: CircularProgressIndicator.adaptive());
+        return const SingleChildScrollView(child: SkeletonRows(rows: 4));
       }
       return Center(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 24, 24, 24),
+          padding: const EdgeInsets.fromLTRB(spaceM, 24, spaceM, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -345,147 +346,136 @@ class _SplitBillState extends State<SplitBill> {
     final figures = text.bodySmall?.copyWith(
       fontFeatures: const [FontFeature.tabularFigures()],
     );
+    // Only Me: nothing to choose yet, so the lines are not buttons and nobody is asked to pay.
+    final alone = split.people.length < 2;
+    final paid = split.people.where((p) => p.paid).length;
+    // Tax, service, rounding and discounts: what the server shares evenly (never the subtotal).
+    final chargesSen = widget.receipt.charges
+        .where((c) => c.kind != 'subtotal')
+        .fold(0, (sum, c) => sum + c.amountSen);
+    // Who still owes comes first; the paid ones sink to the bottom (each group in the order they were added).
+    final order = [
+      for (final (i, p) in split.people.indexed)
+        if (!p.paid) i,
+      for (final (i, p) in split.people.indexed)
+        if (p.paid) i,
+    ];
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        NotebookRow(
-          minHeight: 56,
-          mark: Icon(Icons.people_outline, color: nb.pandan),
-          child: Text(
-            l.splitPeople,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        SectionHeader(l.splitPeople),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: spaceM),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final (i, person) in split.people.indexed)
+                InputChip(
+                  key: ValueKey('split-person-$i'),
+                  avatar: Icon(Icons.person, size: 18, color: nb.pandan),
+                  label: Text(person.name),
+                  deleteButtonTooltipMessage: l.splitRemove,
+                  onDeleted: i == 0 ? null : () => _removePerson(i),
+                ),
+              if (split.people.length < 10)
+                ActionChip(
+                  key: const ValueKey('split-add-person'),
+                  avatar: Icon(Icons.add, size: 18, color: nb.pandanDeep),
+                  label: Text(l.splitAddPerson),
+                  onPressed: _addPerson,
+                ),
+            ],
           ),
         ),
-        for (final (i, person) in split.people.indexed)
-          NotebookRow(
-            key: ValueKey('split-person-$i'),
-            mark: i == 0
-                ? Icon(Icons.person_outline, size: 20, color: nb.inkSoft)
-                : null,
-            trailing: i == 0
-                ? null
-                : IconButton(
-                    tooltip: l.splitRemove,
-                    icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
-                    onPressed: () => _removePerson(i),
-                  ),
-            child: Text(person.name),
-          ),
-        if (split.people.length < 10)
-          NotebookRow(
-            key: const ValueKey('split-add-person'),
-            mark: Icon(Icons.add, size: 20, color: nb.pandanDeep),
-            onTap: _addPerson,
-            child: Text(
-              l.splitAddPerson,
-              style: text.bodyMedium?.copyWith(
-                color: nb.pandanDeep,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        NotebookRow(
-          minHeight: 56,
-          mark: Icon(Icons.receipt_long_outlined, size: 20, color: nb.pandan),
-          child: Text(
-            l.receiptItems,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
+        InfoCard(
+          icon: Icons.touch_app_outlined,
+          text: alone ? l.splitHintStart : l.splitHintAssign,
         ),
+        SectionHeader(l.receiptItems),
         if (widget.receipt.items.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
             child: Text(
               l.splitNoItems,
               style: text.bodyMedium?.copyWith(color: nb.inkSoft),
             ),
           )
         else
+          // In the receipt's printed order, so the two tabs read the same.
           for (final (position, item) in widget.receipt.items.indexed)
-            NotebookRow(
+            BaseTile(
               key: ValueKey('split-line-$position'),
-              onTap: () => _assign(position),
-              trailing: item.amountSen == null
-                  ? null
-                  : Text(rm(item.amountSen!), style: figures),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              dense: true,
+              leading: _Badge(
+                item.quantity == null ? null : '${_qtyText(item.quantity!)}×',
+              ),
+              title: item.name,
+              tags: alone
+                  ? const []
+                  : [
+                      for (final name in _takers(position))
+                        TileTag(name, tone: TagTone.good),
+                      if (_takers(position).isEmpty) TileTag(l.splitEveryone),
+                    ],
+              onTap: alone ? null : () => _assign(position),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    item.quantity == null
-                        ? item.name
-                        : '${_qtyText(item.quantity!)} × ${item.name}',
-                    style: text.bodyMedium,
-                  ),
-                  Text(
-                    _assignment(position),
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
+                  if (item.amountSen != null)
+                    Text(rm(item.amountSen!), style: figures),
+                  if (!alone)
+                    Icon(Icons.chevron_right, size: 20, color: nb.inkSoft),
                 ],
               ),
             ),
-        if (widget.receipt.charges.any(
-          (c) => c.kind != 'subtotal' && c.amountSen != 0,
-        ))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 10, 20, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.call_split, size: 16, color: nb.inkSoft),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l.splitChargesEven,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                ),
-              ],
-            ),
+        if (chargesSen != 0)
+          BaseTile(
+            key: const ValueKey('split-charges'),
+            dense: true,
+            style: TileStyle.filled,
+            leading: const _Badge(null, icon: Icons.call_split),
+            title: l.splitChargesTitle,
+            subtitle: l.splitChargesEven,
+            trailing: Text(rm(chargesSen), style: figures),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 20, 20, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l.splitShares,
-                  style: text.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (split.totalSen != null)
-                Text(
-                  rm(split.totalSen!),
-                  style: text.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-            ],
-          ),
-        ),
-        for (final (i, person) in split.people.indexed)
-          _ShareRow(
+        SectionHeader(l.splitShares),
+        for (final i in order)
+          _ShareTile(
             key: ValueKey('split-share-$i'),
-            person: person,
+            person: split.people[i],
             share: _shareOf(i),
-            onPaid: (paid) => _paid(i, paid),
+            onPaid: alone ? null : (paid) => _paid(i, paid),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 16, 20, 0),
-          child: Builder(
-            builder: (button) => FilledButton.icon(
-              key: const ValueKey('split-share-button'),
-              onPressed: _saving ? null : () => _share(button),
-              icon: const Icon(Icons.ios_share),
-              label: Text(l.splitShare),
+        if (split.totalSen != null)
+          BaseTile(
+            key: const ValueKey('split-total'),
+            dense: true,
+            style: TileStyle.filled,
+            leading: const _Badge(null, icon: Icons.receipt_long_outlined),
+            title: l.splitTotal,
+            subtitle: alone
+                ? null
+                : l.splitPaidCount(paid, split.people.length),
+            trailing: Text(
+              rm(split.totalSen!),
+              style: figures?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
-        ),
+        if (!alone)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, 16, spaceM, 0),
+            child: Builder(
+              builder: (button) => FilledButton.icon(
+                key: const ValueKey('split-share-button'),
+                onPressed: _saving ? null : () => _share(button),
+                icon: const Icon(Icons.ios_share),
+                label: Text(l.splitShare),
+              ),
+            ),
+          ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 0),
           child: TextButton(
             key: const ValueKey('split-stop'),
             style: TextButton.styleFrom(foregroundColor: nb.margin),
@@ -498,8 +488,33 @@ class _SplitBillState extends State<SplitBill> {
   }
 }
 
-class _ShareRow extends StatelessWidget {
-  const _ShareRow({
+/// A tile's round lead: a short text ("2×", a person's initial) or an icon.
+class _Badge extends StatelessWidget {
+  const _Badge(this.text, {this.icon = Icons.restaurant});
+
+  final String? text;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: nb.pandanDeep.withValues(alpha: 0.12),
+      child: text == null
+          ? Icon(icon, size: 18, color: nb.pandanDeep)
+          : Text(
+              text!,
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(color: nb.pandanDeep, fontWeight: FontWeight.w700),
+            ),
+    );
+  }
+}
+
+/// One person's share: their initial, name, what they had, the amount and a Paid tick (the whole tile toggles it).
+class _ShareTile extends StatelessWidget {
+  const _ShareTile({
     super.key,
     required this.person,
     required this.share,
@@ -508,40 +523,42 @@ class _ShareRow extends StatelessWidget {
 
   final SplitPerson person;
   final SplitShare? share;
-  final ValueChanged<bool> onPaid;
+
+  /// null = no paid tick (only Me on the bill).
+  final ValueChanged<bool>? onPaid;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    return NotebookRow(
-      trailing: Tooltip(
-        message: l.splitPaid,
-        child: Checkbox(
-          value: person.paid,
-          onChanged: (paid) => onPaid(paid ?? false),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final done = onPaid != null && person.paid;
+    return BaseTile(
+      dense: true,
+      muted: done,
+      leading: _Badge(person.name.characters.first.toUpperCase()),
+      title: person.name,
+      subtitle: share?.lines.join(', '),
+      tags: [if (done) TileTag(l.splitPaid, tone: TagTone.good)],
+      onTap: onPaid == null ? null : () => onPaid!(!person.paid),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text(person.name, style: text.titleSmall)),
-              Text(
-                rm(share?.amountSen ?? 0),
-                style: text.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
+          Text(
+            rm(share?.amountSen ?? 0),
+            style: text.titleSmall?.copyWith(
+              color: done ? nb.inkSoft : null,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
-          if (share != null && share!.lines.isNotEmpty)
-            Text(
-              share!.lines.join(', '),
-              style: text.bodySmall?.copyWith(color: nb.inkSoft),
+          if (onPaid != null)
+            Tooltip(
+              message: l.splitPaid,
+              child: Checkbox(
+                value: person.paid,
+                onChanged: (paid) => onPaid!(paid ?? false),
+              ),
             ),
         ],
       ),
@@ -599,8 +616,8 @@ class _PortionSheetState extends State<_PortionSheet> {
       shrinkWrap: true,
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        NotebookRow(
-          child: Column(
+        ListTile(
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -611,15 +628,21 @@ class _PortionSheetState extends State<_PortionSheet> {
                 widget.item.quantity == null
                     ? widget.item.name
                     : '${_qtyText(widget.item.quantity!)} × ${widget.item.name}',
+                style: text.bodyMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _oneServing ? l.splitPortionsHint : l.splitPortionsCount,
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ],
           ),
         ),
         for (final (i, person) in widget.people.indexed)
-          NotebookRow(
+          ListTile(
             key: ValueKey('portion-$i'),
-            mark: _oneServing
+            onTap: _oneServing ? () => _toggle(i, (_qty[i] ?? 0) <= 0) : null,
+            leading: _oneServing
                 ? Checkbox(
                     value: (_qty[i] ?? 0) > 0,
                     onChanged: (on) => _toggle(i, on ?? false),
@@ -655,18 +678,18 @@ class _PortionSheetState extends State<_PortionSheet> {
                       ),
                     ],
                   ),
-            child: Text(person.name),
+            title: Text(person.name),
           ),
         if (left)
           Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 0),
+            padding: const EdgeInsets.fromLTRB(spaceM, 4, spaceM, 0),
             child: Text(
               l.splitShared,
               style: text.bodySmall?.copyWith(color: nb.inkSoft),
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 12, 20, 0),
+          padding: const EdgeInsets.fromLTRB(spaceM, 12, spaceM, 0),
           child: FilledButton(
             key: const ValueKey('portion-done'),
             onPressed: () => Navigator.pop(context, {

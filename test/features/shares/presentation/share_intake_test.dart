@@ -17,13 +17,19 @@ class FakeShares implements ShareRepository {
   Object? error;
   Completer<void>? gate;
 
+  /// The API answered from an earlier read of the post.
+  bool reused = false;
+
   @override
-  Future<String> submitLink(String url, {String? caption}) async {
+  Future<({String id, bool done})> submitLink(
+    String url, {
+    String? caption,
+  }) async {
     if (error != null) throw error!;
     await gate?.future;
     sent.add('link:$url');
     captions.add(caption);
-    return 'share-1';
+    return (id: 'share-1', done: reused);
   }
 
   @override
@@ -45,6 +51,12 @@ class FakeShares implements ShareRepository {
   @override
   Future<void> retry(String id) async => retried.add(id);
 
+  /// (share id, caption) sent after the link.
+  final added = <(String, String)>[];
+  @override
+  Future<void> addCaption(String id, String caption) async =>
+      added.add((id, caption));
+
   @override
   Future<void> dismiss(String id) async => dismissed.add(id);
 
@@ -61,11 +73,13 @@ class FakeShares implements ShareRepository {
 
 class FakeCaptions implements CaptionReader {
   String? caption;
+  Completer<void>? gate;
   final asked = <String>[];
 
   @override
   Future<String?> read(String url) async {
     asked.add(url);
+    await gate?.future;
     return caption;
   }
 }
@@ -210,12 +224,37 @@ void main() {
     );
   });
 
-  test('a TikTok link goes out with the caption read on the phone', () async {
-    await start();
-    captions.caption = 'Resepi ayam masak merah';
+  test('a TikTok link goes out at once; the caption the phone reads follows, without holding the share up', () async {
+    final intake = await start();
+    captions
+      ..caption = 'Resepi ayam masak merah'
+      ..gate = Completer<void>(); // the WebView is still loading the post
     await share([const Incoming.text('https://vt.tiktok.com/ZS1/')]);
-    expect(captions.asked, ['https://vt.tiktok.com/ZS1/']);
-    expect(shares.captions, ['Resepi ayam masak merah']);
+    expect(shares.sent, ['link:https://vt.tiktok.com/ZS1/']);
+    expect(shares.captions, [null]);
+    expect(intake.state, isA<ShareAccepted>()); // not "Sending" for 12 s
+    expect(shares.added, isEmpty);
+    captions.gate!.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(shares.added, [('share-1', 'Resepi ayam masak merah')]);
+  });
+
+  test('Facebook and Threads links are read on the phone too (Meta refuses the server); not lookalike hosts', () async {
+    await start();
+    captions.caption = 'Ada gang Rawang sini ke. 📍 Ah Tender Fish N Chip';
+    await share([
+      const Incoming.text('https://www.facebook.com/share/r/1HVbEJjdmp/'),
+    ]);
+    await share([const Incoming.text('https://fb.watch/abc/')]);
+    await share([const Incoming.text('https://www.threads.com/@a/post/1')]);
+    expect(captions.asked, [
+      'https://www.facebook.com/share/r/1HVbEJjdmp/',
+      'https://fb.watch/abc/',
+      'https://www.threads.com/@a/post/1',
+    ]);
+    expect(shares.added, hasLength(3));
+    expect(phoneReadSite('notfacebook.com'), isNull);
+    expect(phoneReadSite('m.facebook.com'), 'facebook');
   });
 
   test(
@@ -228,10 +267,44 @@ void main() {
     },
   );
 
-  test('a caption the phone could not read still sends the link', () async {
+  test(
+    'a post the API already read (reused) is not loaded on the phone',
+    () async {
+      await start();
+      shares.reused = true;
+      captions.caption = 'Resepi ayam masak merah';
+      await share([const Incoming.text('https://www.tiktok.com/@a/video/1')]);
+      expect(captions.asked, isEmpty);
+      expect(shares.added, isEmpty);
+    },
+  );
+
+  test('captions are read one page at a time', () async {
     await start();
+    captions
+      ..caption = 'Ah Tender'
+      ..gate = Completer<void>();
     await share([const Incoming.text('https://www.tiktok.com/@a/video/1')]);
-    expect(shares.sent, ['link:https://www.tiktok.com/@a/video/1']);
-    expect(shares.captions, [null]);
+    await share([const Incoming.text('https://www.tiktok.com/@a/video/2')]);
+    await Future<void>.delayed(Duration.zero);
+    expect(shares.sent, hasLength(2)); // both links went at once
+    expect(captions.asked, [
+      'https://www.tiktok.com/@a/video/1',
+    ]); // the second page waits
+    captions.gate!.complete();
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    expect(captions.asked, hasLength(2));
+    expect(shares.added, hasLength(2));
   });
+
+  test(
+    'a caption the phone could not read: the link is sent, nothing follows',
+    () async {
+      await start();
+      await share([const Incoming.text('https://www.tiktok.com/@a/video/1')]);
+      expect(shares.sent, ['link:https://www.tiktok.com/@a/video/1']);
+      expect(shares.added, isEmpty);
+    },
+  );
 }

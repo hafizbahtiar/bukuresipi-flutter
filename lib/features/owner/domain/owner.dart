@@ -267,7 +267,7 @@ class FailedShare {
 class OwnerPlace {
   const OwnerPlace({
     required this.branchId,
-    required this.restaurantId,
+    required this.placeId,
     required this.name,
     required this.lat,
     required this.lng,
@@ -280,7 +280,7 @@ class OwnerPlace {
   });
 
   final String branchId;
-  final String restaurantId;
+  final String placeId;
   final String name;
   final String? label;
   final String? address;

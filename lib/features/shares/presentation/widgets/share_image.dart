@@ -5,7 +5,10 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/constants/image_constant.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/skeleton.dart';
+import '../../../places/domain/place.dart';
 import '../../../places/presentation/places_controller.dart';
+import '../../../recipes/domain/recipe.dart';
 import '../../../recipes/presentation/recipes_controller.dart';
 import '../../domain/share_repository.dart';
 
@@ -36,13 +39,8 @@ class ShareImage extends StatefulWidget {
 class _ShareImageState extends State<ShareImage> {
   late Future<Uint8List?> _bytes = _load();
 
-  Future<Uint8List?> _load() => switch (widget.recipeId) {
-    final recipe? => context.read<RecipesController>().cover(
-      recipe,
-      widget.shareId,
-    ),
-    null => context.read<ShareRepository>().image(widget.shareId),
-  }.catchError((Object _) => null);
+  Future<Uint8List?> _load() =>
+      loadPhoto(context, widget.shareId, recipeId: widget.recipeId);
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
@@ -83,6 +81,29 @@ class _ShareImageState extends State<ShareImage> {
   );
 }
 
+/// A share's photo, or a recipe's ([recipeId]) or restaurant's ([placeId]) cover; [id] is the share or cover id.
+/// A cover that won't load falls back to [fallbackShareId]'s photo. null = none or an error.
+Future<Uint8List?> loadPhoto(
+  BuildContext context,
+  String id, {
+  String? recipeId,
+  String? placeId,
+  String? fallbackShareId,
+}) async {
+  final shares = context.read<ShareRepository>();
+  final first = switch ((recipeId, placeId)) {
+    (final recipe?, _) => context.read<RecipesController>().cover(recipe, id),
+    (_, final place?) => context.read<PlacesController>().restaurantCover(
+      place,
+      id,
+    ),
+    _ => shares.image(id),
+  };
+  final bytes = await first.catchError((Object _) => null);
+  if (bytes != null || fallbackShareId == null) return bytes;
+  return shares.image(fallbackShareId).catchError((Object _) => null);
+}
+
 /// A share's photo as a small snapshot taped into the book: white border, a strip of tape, a slight tilt (the same for
 /// a share every time, so a list looks hand-pasted, not random). Takes no space while loading, or with no photo unless
 /// it is a recipe's ([drawing]: the cooking drawing instead).
@@ -93,26 +114,45 @@ class SharePhoto extends StatefulWidget {
     super.key,
     this.size = 52,
     this.drawing = false,
-  }) : recipeId = null;
+  }) : recipeId = null,
+       placeId = null,
+       fallbackShareId = null;
 
   /// A recipe with no photo at all (typed, or its share's photo is gone): the cooking drawing, taped in the same way.
   const SharePhoto.placeholder({super.key, this.size = 52})
     : shareId = '',
       recipeId = null,
+      placeId = null,
+      fallbackShareId = null,
       drawing = true;
 
-  /// A recipe's own cover photo ([cover] = its cover id) in place of a share's.
+  /// A recipe's own cover photo ([cover] = its cover id) in place of a share's; [fallbackShareId] if it won't load.
   const SharePhoto.cover(
     String this.recipeId,
     String cover, {
     super.key,
     this.size = 52,
+    this.fallbackShareId,
   }) : shareId = cover,
+       placeId = null,
        drawing = true;
 
-  /// The share id, or the cover id when [recipeId] is set.
+  /// A restaurant's chosen cover ([cover] = its cover id) in place of a share's; [fallbackShareId] if it won't load.
+  const SharePhoto.place(
+    String this.placeId,
+    String cover, {
+    super.key,
+    this.size = 52,
+    this.fallbackShareId,
+  }) : shareId = cover,
+       recipeId = null,
+       drawing = false;
+
+  /// The share id, or the cover id when [recipeId] or [placeId] is set.
   final String shareId;
   final String? recipeId;
+  final String? placeId;
+  final String? fallbackShareId;
   final double size;
   final bool drawing;
 
@@ -123,33 +163,59 @@ class SharePhoto extends StatefulWidget {
 class _SharePhotoState extends State<SharePhoto> {
   late Future<Uint8List?> _bytes = _load();
 
+  // The same cache as ShareFill: a row scrolled back into a list draws its photo at once, not a shimmer for a frame.
+  String get _key => '${widget.recipeId}/${widget.placeId}/${widget.shareId}';
+
   Future<Uint8List?> _load() => widget.shareId.isEmpty
       ? Future.value(null)
-      : switch (widget.recipeId) {
-          final recipe? => context.read<RecipesController>().cover(
-            recipe,
-            widget.shareId,
-          ),
-          null => context.read<ShareRepository>().image(widget.shareId),
-        }.catchError((Object _) => null);
+      : loadPhoto(
+          context,
+          widget.shareId,
+          recipeId: widget.recipeId,
+          placeId: widget.placeId,
+          fallbackShareId: widget.fallbackShareId,
+        ).then((b) {
+          // "No photo" too: a row rebuilt above the screen must have its final height in its first frame.
+          _ShareFillState._remember(_key, b);
+          return b;
+        });
 
   // A list reuses a row's state for another share (e.g. after a delete): load that share's image, not keep the old one.
   @override
   void didUpdateWidget(covariant SharePhoto old) {
     super.didUpdateWidget(old);
-    if (old.shareId != widget.shareId) _bytes = _load();
+    if (old.shareId != widget.shareId ||
+        old.recipeId != widget.recipeId ||
+        old.placeId != widget.placeId ||
+        old.fallbackShareId != widget.fallbackShareId) {
+      _bytes = _load();
+    }
   }
 
   @override
   Widget build(BuildContext context) => FutureBuilder(
     future: _bytes,
+    initialData: _ShareFillState._ready[_key],
     builder: (context, s) {
       final bytes = s.data;
-      // Nothing while loading (no flash of the drawing before a real photo), nor for a place with no photo.
+      // Loading: a shimmering square where the snapshot goes (not the drawing, which would flash before a photo).
+      final known = _ShareFillState._ready.containsKey(_key);
       if (bytes == null &&
-          (!widget.drawing || s.connectionState != ConnectionState.done)) {
-        return const SizedBox.shrink();
+          !known &&
+          s.connectionState != ConnectionState.done) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 6, left: 8),
+          child: Skeleton(
+            child: SkeletonBox(
+              width: widget.size + 6, // the snapshot's white border
+              height: widget.size + 6,
+              radius: 2,
+            ),
+          ),
+        );
       }
+      // A place with no photo: nothing.
+      if (bytes == null && !widget.drawing) return const SizedBox.shrink();
       final nb = Notebook.of(context);
       final tilt = ((widget.shareId.hashCode % 5) - 2) * 0.025;
       return Padding(
@@ -222,7 +288,32 @@ class _SharePhotoState extends State<SharePhoto> {
   );
 }
 
-/// A share's photo, a recipe's cover ([recipeId]) or a restaurant's cover ([restaurantId]), filling its box
+/// A saved place's snapshot: the restaurant's chosen cover first (as the Home feed), else its share's photo.
+SharePhoto? placePhoto(Place place, {double size = 52}) =>
+    switch ((place.restaurant.cover, place.shareId)) {
+      (final cover?, final share) => SharePhoto.place(
+        place.restaurant.id,
+        cover,
+        size: size,
+        fallbackShareId: share,
+      ),
+      (null, final share?) => SharePhoto(share, size: size),
+      _ => null,
+    };
+
+/// A recipe's snapshot: its own cover first, else its share's photo, else the cooking drawing.
+SharePhoto recipeSnapshot(Recipe recipe) =>
+    switch ((recipe.cover, recipe.shareId)) {
+      (final cover?, final share) => SharePhoto.cover(
+        recipe.id,
+        cover,
+        fallbackShareId: share,
+      ),
+      (null, final share?) => SharePhoto(share, drawing: true),
+      _ => const SharePhoto.placeholder(),
+    };
+
+/// A share's photo, a recipe's cover ([recipeId]) or a restaurant's cover ([placeId]), filling its box
 /// (BoxFit.cover). [fallback] shows while loading, when there is none, or on error. For cards (Home feed); the list
 /// rows use [SharePhoto].
 class ShareFill extends StatefulWidget {
@@ -230,42 +321,80 @@ class ShareFill extends StatefulWidget {
     super.key,
     required this.id,
     this.recipeId,
-    this.restaurantId,
+    this.placeId,
+    this.fallbackShareId,
     required this.fallback,
+    this.cacheWidth = 600,
   });
 
-  /// The share id, or the cover id when [recipeId] or [restaurantId] is set.
+  /// The share id, or the cover id when [recipeId] or [placeId] is set.
   final String id;
   final String? recipeId;
-  final String? restaurantId;
+  final String? placeId;
+
+  /// The share whose photo shows when the cover won't load.
+  final String? fallbackShareId;
   final Widget fallback;
+
+  /// Decoded at this width: a card is at most ~240 dp wide (600); a page's header photo is the screen's width.
+  final int cacheWidth;
 
   @override
   State<ShareFill> createState() => _ShareFillState();
+
+  /// Decodes [photo] at its [cacheWidth] now, when its bytes are already loaded (a card showed them). A page header
+  /// behind a hero is only built when the flight lands; decoding a screen-wide photo then blinked on first open.
+  static void warm(BuildContext context, Widget? photo) {
+    if (photo is! ShareFill) return;
+    final bytes = _ShareFillState._ready[_ShareFillState._keyOf(photo)];
+    if (bytes == null) return;
+    // The same provider Image.memory(cacheWidth:) builds, so the header finds it in the cache.
+    precacheImage(
+      ResizeImage(MemoryImage(bytes), width: photo.cacheWidth),
+      context,
+    );
+  }
 }
 
 class _ShareFillState extends State<ShareFill> {
+  /// Photos already loaded this run, so a new ShareFill or SharePhoto of one (a page's header after the card's hero
+  /// flies there, a list row scrolled back into view) draws it in its first frame instead of a shimmer.
+  /// null = loaded, and there is no photo.
+  static final _ready = <String, Uint8List?>{};
+
+  /// The most recent [_readyMax] photos (~100 KB-1 MB of compressed bytes each): a long Book scroll can't grow it.
+  static const _readyMax = 80;
+
+  static void _remember(String key, Uint8List? bytes) {
+    _ready.remove(key); // re-insert = most recently used
+    if (_ready.length >= _readyMax) _ready.remove(_ready.keys.first);
+    _ready[key] = bytes;
+  }
+
+  static String _keyOf(ShareFill f) => '${f.recipeId}/${f.placeId}/${f.id}';
+  String get _key => _keyOf(widget);
+
   late Future<Uint8List?> _bytes = _load();
 
   Future<Uint8List?> _load() =>
-      switch ((widget.recipeId, widget.restaurantId)) {
-        (final recipe?, _) => context.read<RecipesController>().cover(
-          recipe,
-          widget.id,
-        ),
-        (_, final r?) => context.read<PlacesController>().restaurantCover(
-          r,
-          widget.id,
-        ),
-        _ => context.read<ShareRepository>().image(widget.id),
-      }.catchError((Object _) => null);
+      loadPhoto(
+        context,
+        widget.id,
+        recipeId: widget.recipeId,
+        placeId: widget.placeId,
+        fallbackShareId: widget.fallbackShareId,
+      ).then((b) {
+        if (b != null) _remember(_key, b);
+        return b;
+      });
 
   @override
   void didUpdateWidget(covariant ShareFill old) {
     super.didUpdateWidget(old);
     if (old.id != widget.id ||
         old.recipeId != widget.recipeId ||
-        old.restaurantId != widget.restaurantId) {
+        old.placeId != widget.placeId ||
+        old.fallbackShareId != widget.fallbackShareId) {
       _bytes = _load();
     }
   }
@@ -273,15 +402,25 @@ class _ShareFillState extends State<ShareFill> {
   @override
   Widget build(BuildContext context) => FutureBuilder(
     future: _bytes,
+    initialData: _ready[_key],
     builder: (context, s) => switch (s.data) {
       final bytes? => Image.memory(
         bytes,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        cacheWidth: 600, // a card is at most ~240 dp wide
+        cacheWidth: widget.cacheWidth,
+        gaplessPlayback: true,
         excludeFromSemantics: true,
         errorBuilder: (_, _, _) => widget.fallback,
+      ),
+      // Still loading: a shimmer filling the box, so "loading" never looks like "no photo".
+      null when s.connectionState != ConnectionState.done => const Skeleton(
+        child: SkeletonBox(
+          width: double.infinity,
+          height: double.infinity,
+          radius: 0,
+        ),
       ),
       null => widget.fallback,
     },

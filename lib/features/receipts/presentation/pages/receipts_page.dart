@@ -3,9 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
 import '../widgets/spend_chart.dart';
@@ -91,12 +94,7 @@ class ReceiptsSectionState extends State<ReceiptsSection> {
         }
         final data = s.data;
         if (data == null) {
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(48),
-              child: Center(child: CircularProgressIndicator.adaptive()),
-            ),
-          );
+          return const SliverToBoxAdapter(child: SkeletonRows());
         }
         final (stats, first) = data;
         final receipts = [...first, ..._more];
@@ -110,12 +108,7 @@ class ReceiptsSectionState extends State<ReceiptsSection> {
             if (receipts.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    notebookGutter + 10,
-                    24,
-                    20,
-                    0,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(spaceM, 24, spaceM, 0),
                   child: Text(
                     l.receiptsEmpty,
                     style: text.bodyMedium?.copyWith(color: nb.inkSoft),
@@ -127,40 +120,40 @@ class ReceiptsSectionState extends State<ReceiptsSection> {
                 itemCount: receipts.length,
                 itemBuilder: (context, index) {
                   final r = receipts[index];
-                  return NotebookRow(
+                  return BaseTile(
                     key: ValueKey('receipt-${r.id}'),
                     onTap: () => _open(r.id),
+                    leading: BaseTile.icon(
+                      context,
+                      r.failed
+                          ? Icons.error_outline
+                          : Icons.receipt_long_outlined,
+                      color: r.failed ? nb.margin : null,
+                    ),
+                    title: r.place?.name ?? r.shop ?? l.addReceipt,
+                    subtitle: r.visitedAt == null
+                        ? null
+                        : loc.formatMediumDate(r.visitedAt!),
+                    tags: [
+                      if (r.inReview)
+                        TileTag(l.receiptToCheck, tone: TagTone.warn),
+                      if (r.reading) TileTag(l.receiptReading),
+                      if (r.failed)
+                        TileTag(
+                          (r.notRestaurant
+                                  ? l.receiptNotRestaurant
+                                  : l.receiptFailed)
+                              .split('.')
+                              .first,
+                          tone: TagTone.danger,
+                        ),
+                    ],
                     trailing: Text(
                       r.totalSen == null ? '' : rm(r.totalSen!),
                       style: text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r.place?.name ?? r.shop ?? l.addReceipt,
-                          style: text.titleMedium,
-                        ),
-                        Text(
-                          [
-                            if (r.visitedAt != null)
-                              loc.formatMediumDate(r.visitedAt!),
-                            if (r.inReview) l.receiptToCheck,
-                            if (r.reading) l.receiptReading,
-                            if (r.failed)
-                              (r.notRestaurant
-                                      ? l.receiptNotRestaurant
-                                      : l.receiptFailed)
-                                  .split('.')
-                                  .first,
-                          ].join(' · '),
-                          style: text.bodySmall?.copyWith(
-                            color: r.inReview ? nb.kunyit : nb.inkSoft,
-                          ),
-                        ),
-                      ],
                     ),
                   );
                 },
@@ -192,7 +185,7 @@ class _Spending extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -217,7 +210,7 @@ class _Spending extends StatelessWidget {
   }
 }
 
-/// The top places by spend; scrolls with the list, under the collapsing header.
+/// The top places by spend as a sideways strip of cards (most spent first), between the chart and the receipts.
 class _TopPlaces extends StatelessWidget {
   const _TopPlaces({required this.stats});
 
@@ -227,36 +220,180 @@ class _TopPlaces extends StatelessWidget {
   Widget build(BuildContext context) {
     if (stats.places.isEmpty) return const SizedBox.shrink();
     final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 4, 20, 8),
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l.spendingTopPlaces,
-            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: spaceM),
+            child: Text(
+              l.spendingTopPlaces,
+              style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
-          for (final p in stats.places.take(5))
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
+          const SizedBox(height: 8),
+          // Ten cards at most: a plain Row is fine, and IntrinsicHeight gives them one height at any text size.
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: spaceM),
+            child: IntrinsicHeight(
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
+                  for (final (i, p) in stats.places.indexed) ...[
+                    if (i > 0) const SizedBox(width: 10),
+                    _PlaceCard(
+                      key: ValueKey('top-place-${p.placeId}'),
+                      rank: i + 1,
+                      place: p,
+                      totalSen: stats.totalSen,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One top place: its cover and rank, the name, what was spent there, visits and the last one, its share of the total.
+class _PlaceCard extends StatelessWidget {
+  const _PlaceCard({
+    super.key,
+    required this.rank,
+    required this.place,
+    required this.totalSen,
+  });
+
+  static const _width = 168.0;
+
+  final int rank;
+  final SpendPlace place;
+
+  /// Everything spent in the window: the share bar's whole.
+  final int totalSen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final loc = MaterialLocalizations.of(context);
+    final share = totalSen <= 0
+        ? 0.0
+        : (place.totalSen / totalSen).clamp(0.0, 1.0);
+    final icon = Icon(Icons.storefront, size: 28, color: nb.pandanDeep);
+    return Container(
+      width: _width,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: nb.paper,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 84,
+            width: _width,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ColoredBox(
+                  color: nb.mist,
+                  child: switch (place.cover) {
+                    final cover? => ShareFill(
+                      id: cover,
+                      placeId: place.placeId,
+                      fallback: Center(child: icon),
+                      cacheWidth: 500,
+                    ),
+                    null => Center(child: icon),
+                  },
+                ),
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: nb.paper,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Text(
-                      p.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      '#$rank',
+                      style: text.labelSmall?.copyWith(
+                        color: nb.pandanDeep,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    place.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
+                  ),
+                  const Spacer(),
+                  const SizedBox(height: 6),
+                  Text(
+                    rm(place.totalSen),
+                    style: text.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                   Text(
-                    '${l.receiptVisitCount(p.visits)} · ${rm(p.totalSen)}',
+                    [
+                      l.receiptVisitCount(place.visits),
+                      if (place.lastVisitAt case final at?)
+                        l.spendingLastVisit(loc.formatShortMonthDay(at)),
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: share,
+                      minHeight: 5,
+                      color: nb.pandan,
+                      backgroundColor: nb.mist,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l.spendingShare((share * 100).round()),
+                    style: text.labelSmall?.copyWith(color: nb.inkSoft),
                   ),
                 ],
               ),
             ),
+          ),
         ],
       ),
     );

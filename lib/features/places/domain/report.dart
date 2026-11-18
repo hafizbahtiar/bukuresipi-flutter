@@ -43,24 +43,24 @@ class ReportBranch {
 /// Everything the report sheet needs: the restaurant, its branches, and the caller's saved place id (when known).
 class ReportSubject {
   const ReportSubject({
-    required this.restaurantId,
+    required this.placeId,
     required this.restaurantName,
     required this.branches,
-    this.placeId,
+    this.savedPlaceId,
     this.cuisine,
   });
 
-  final String restaurantId;
+  final String placeId;
   final String restaurantName;
   final String? cuisine;
-  final String? placeId;
+  final String? savedPlaceId;
   final List<ReportBranch> branches;
 
   factory ReportSubject.fromPlace(Place place) => ReportSubject(
-    restaurantId: place.restaurant.id,
+    placeId: place.restaurant.id,
     restaurantName: place.restaurant.name,
     cuisine: place.restaurant.cuisine,
-    placeId: place.id,
+    savedPlaceId: place.id,
     branches: [
       for (final b in place.branches)
         ReportBranch(
@@ -77,10 +77,10 @@ class ReportSubject {
   );
 
   factory ReportSubject.fromNearby(NearbyBranch branch) => ReportSubject(
-    restaurantId: branch.restaurantId,
+    placeId: branch.placeId,
     restaurantName: branch.name,
     cuisine: branch.cuisine,
-    placeId: branch.placeId,
+    savedPlaceId: branch.savedPlaceId,
     branches: [
       ReportBranch(
         id: branch.branchId,

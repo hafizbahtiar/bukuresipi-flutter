@@ -24,7 +24,15 @@ void main() {
 
   test('a link is posted as JSON and the share id comes back', () async {
     final repo = make((_) => (202, {'id': 's-1', 'status': 'pending'}));
-    expect(await repo.submitLink('https://www.tiktok.com/@a/video/1'), 's-1');
+    expect(await repo.submitLink('https://www.tiktok.com/@a/video/1'), (
+      id: 's-1',
+      done: false,
+    ));
+    final reused = make((_) => (202, {'id': 's-2', 'status': 'done'}));
+    expect(
+      (await reused.submitLink('https://www.tiktok.com/@a/video/1')).done,
+      isTrue,
+    );
     expect(adapter.requests.single.path, '/shares');
     expect(adapter.requests.single.data, {
       'url': 'https://www.tiktok.com/@a/video/1',
@@ -69,7 +77,7 @@ void main() {
           'id': 's-1',
           'status': 'done',
           'kind': 'restaurant',
-          'restaurantId': 'r-1',
+          'placeId': 'r-1',
           'gaps': <String>[],
           'error': null,
         },
@@ -77,7 +85,7 @@ void main() {
     );
     final s = await repo.get('s-1');
     expect(
-      [s.status, s.kind, s.restaurantId, s.isFinished],
+      [s.status, s.kind, s.placeId, s.isFinished],
       ['done', 'restaurant', 'r-1', true],
     );
   });
@@ -104,7 +112,7 @@ void main() {
               'id': 's-2',
               'status': 'processing',
               'kind': 'unknown',
-              'restaurantId': null,
+              'placeId': null,
               'gaps': [],
               'error': null,
               'platform': 'tiktok',
@@ -113,7 +121,7 @@ void main() {
               'id': 's-1',
               'status': 'done',
               'kind': 'other',
-              'restaurantId': null,
+              'placeId': null,
               'gaps': ['unreadable'],
               'error': null,
               'platform': 'tiktok',

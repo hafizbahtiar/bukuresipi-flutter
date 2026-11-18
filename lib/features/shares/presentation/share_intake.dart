@@ -89,11 +89,9 @@ class ShareIntake extends ChangeNotifier {
 
   static const _ownHosts = {'bukuresipi.com', 'www.bukuresipi.com'};
 
-  /// Sites whose caption the API cannot read (TikTok's oEmbed gives none): read on the phone first.
-  static bool _readOnPhone(String url) {
-    final host = Uri.tryParse(url)?.host ?? '';
-    return host == 'tiktok.com' || host.endsWith('.tiktok.com');
-  }
+  /// Sites whose caption the API cannot read (see [phoneReadSite]): read on the phone first.
+  static bool _readOnPhone(String url) =>
+      phoneReadSite(Uri.tryParse(url)?.host ?? '') != null;
 
   Future<void> start() async {
     _auth.addListener(_maybeSend);
@@ -181,15 +179,14 @@ class ShareIntake extends ChangeNotifier {
       if (item.kind == IncomingKind.image) {
         id = await _repo.submitImage(item.value!);
       } else {
-        final caption = _readOnPhone(item.value!)
-            ? await _captions.read(item.value!).catchError((_) => null)
-            : null;
-        if (_readOnPhone(item.value!)) {
-          log(
-            'share: caption read on the phone, ${caption?.length ?? 0} chars',
-          );
+        // The link goes at once; the caption the phone reads follows (the API keeps the share "reading" for it).
+        final sent = await _repo.submitLink(item.value!);
+        id = sent.id;
+        if (_readOnPhone(item.value!) && !sent.done) {
+          // One page load at a time: several shares in a row must not open several WebViews together.
+          final url = item.value!;
+          _captionQueue = _captionQueue.then((_) => _sendCaption(id, url));
         }
-        id = await _repo.submitLink(item.value!, caption: caption);
       }
       log('share: accepted, id $id');
       _set(ShareAccepted(id), show: true);
@@ -203,6 +200,22 @@ class ShareIntake extends ChangeNotifier {
         unawaited(_maybeSend());
       }
     }
+  }
+
+  Future<void> _captionQueue = Future.value();
+
+  /// Reads the post's caption on the phone (up to ~12 s) and sends it. Nothing waits on it: a failure only means the
+  /// API reads the post without it (and says "couldn't read" if it can't either).
+  Future<void> _sendCaption(String id, String url) async {
+    final caption = await _captions.read(url).catchError((_) => null);
+    log('share: caption read on the phone, ${caption?.length ?? 0} chars');
+    if (caption == null || caption.trim().isEmpty) return;
+    await _repo
+        .addCaption(id, caption.trim())
+        .catchError(
+          (Object e) =>
+              log('share: caption not sent, ${ApiException.from(e).code}'),
+        );
   }
 
   @override

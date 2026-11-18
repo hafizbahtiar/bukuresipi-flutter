@@ -66,7 +66,7 @@ class RecentShares extends ChangeNotifier {
     ];
     if (finished.isNotEmpty) {
       _fresh.addAll([
-        for (final s in finished) ?s.restaurantId,
+        for (final s in finished) ?s.placeId,
         for (final s in finished) ?s.recipeId,
       ]);
       _unfresh?.cancel();

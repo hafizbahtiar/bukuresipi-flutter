@@ -83,13 +83,38 @@ typedef DayReceipt = ({
   List<DayItem> items,
 });
 
-/// One day's calories from the user's saved receipts ([target] null = not set), with the day's eaten lines.
+/// Grams eaten; null on a day or meal = some eaten line has no number (a partial sum would read as the total).
+typedef Macros = ({double carbsG, double proteinG, double fatG});
+
+/// One dish of a snapped meal: [eaten] servings, the rest per serving (null = not known; [kcalSource] 'table' | 'ai').
+typedef MealItem = ({
+  String name,
+  double eaten,
+  int? kcal,
+  String? kcalSource,
+  double? carbsG,
+  double? proteinG,
+  double? fatG,
+});
+
+/// A snapped meal (the photo stayed on the phone: only the dishes are saved).
+typedef DayMeal = ({
+  String id,
+  DateTime eatenAt,
+  int eatenKcal,
+  Macros? macros,
+  List<MealItem> items,
+});
+
+/// One day's calories from the user's saved receipts and meals ([target] null = not set), with the day's eaten lines.
 typedef DailyCalories = ({
   int eatenKcal,
   int? target,
   bool hasEstimate,
   double unknownEaten,
+  Macros? macros,
   List<DayReceipt> receipts,
+  List<DayMeal> meals,
 });
 
 /// One Malaysia day of the calories chart ([date] = local midnight).
@@ -138,7 +163,7 @@ class ReceiptSplit {
 /// [amountSen] negative when it takes money off.
 typedef ReceiptCharge = ({String kind, String? name, int amountSen});
 
-typedef ReceiptPlace = ({String restaurantId, String? branchId, String name});
+typedef ReceiptPlace = ({String placeId, String? branchId, String name});
 
 /// The user's own visits and spend from saved receipts. [months]: 'YYYY-MM' with visits only (gaps left out).
 class ReceiptStats {
@@ -152,9 +177,20 @@ class ReceiptStats {
   final int totalSen;
   final int visits;
   final List<({String month, int visits, int totalSen})> months;
-  final List<({String restaurantId, String name, int visits, int totalSen})>
-  places;
+
+  /// Top 10 by spend, most first.
+  final List<SpendPlace> places;
 }
+
+/// One place in [ReceiptStats.places]; [cover] = the restaurant's cover id (PlacesRepository.placeCover), null = none.
+typedef SpendPlace = ({
+  String placeId,
+  String name,
+  String? cover,
+  int visits,
+  int totalSen,
+  DateTime? lastVisitAt,
+});
 
 /// "RM 41.15" from sen; "-RM 2.00" for a discount.
 String rm(int sen) {

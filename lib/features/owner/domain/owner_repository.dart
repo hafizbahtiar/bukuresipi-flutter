@@ -1,5 +1,18 @@
+import '../../recipes/domain/recipe.dart';
 import '../../recipes/domain/recipe_variant.dart';
 import 'owner.dart';
+
+/// What POST /owner/recipes/:id/draft answers. complete = false: a usage cap or a missing key; the draft is the dish
+/// as it is.
+typedef DishDraft = ({
+  String name,
+  List<String> ingredients,
+  List<String> steps,
+  List<({String url, String? title})> sources,
+  List<String> images,
+  List<String> warnings,
+  bool complete,
+});
 
 /// Owner-only API (/owner/*). Every method throws ApiException (core/network) on failure.
 abstract interface class OwnerRepository {
@@ -66,6 +79,13 @@ abstract interface class OwnerRepository {
   Future<({List<RecipeVariant> variants, bool complete})> findVariants(
     String recipeId,
   );
+
+  /// An AI draft of a catalogue dish from web recipes (metered: 1 search + 1 AI call). Nothing is saved: the edit
+  /// form shows it and the owner saves it.
+  Future<DishDraft> draftDish(String recipeId);
+
+  /// A draft photo (its URL) as a catalogue dish's cover: the server downloads and keeps it. The dish as saved.
+  Future<RecipeDetail> setDishCover(String recipeId, String url);
 
   /// Every pinned branch, for the owner's map.
   Future<List<OwnerPlace>> places();

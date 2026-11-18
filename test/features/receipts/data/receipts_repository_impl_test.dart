@@ -24,11 +24,7 @@ void main() {
     'id': 'r-1',
     'status': 'review',
     'shop': 'Port Lepak Sentul',
-    'place': {
-      'restaurantId': 'x',
-      'branchId': 'b-1',
-      'name': 'Port Lepak Sentul',
-    },
+    'place': {'placeId': 'x', 'branchId': 'b-1', 'name': 'Port Lepak Sentul'},
     'visitedAt': '2026-11-08T12:41:00Z',
     'totalSen': 4115,
     'gaps': ['totals_mismatch'],
@@ -134,7 +130,7 @@ void main() {
           ],
           'places': [
             {
-              'restaurantId': 'x',
+              'placeId': 'x',
               'name': 'Port Lepak',
               'visits': 2,
               'totalSen': 5115,

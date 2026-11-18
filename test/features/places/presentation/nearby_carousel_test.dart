@@ -1,9 +1,11 @@
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
+import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/nearby_carousel.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 
 import '../places_fixtures.dart';
 
@@ -33,7 +35,17 @@ void main() {
         NearbyCarousel(
           places: [
             nearbyBranch(name: 'Kedai Dekat', distanceM: 350),
-            nearbyBranch(branchId: 'b-2', name: 'Kedai Jauh', distanceM: 2400),
+            nearbyBranch(
+              branchId: 'b-2',
+              name: 'Kedai Jauh',
+              distanceM: 2400,
+              cert: HalalCert(
+                premise: 'KEDAI JAUH',
+                expiresOn: DateTime(2099),
+                url: 'https://www.halal.gov.my/x',
+                checkedAt: DateTime(2026, 11, 17),
+              ),
+            ),
           ],
           selectedBranchId: 'b-1',
           onTap: (p) => tapped.add(p.branchId),
@@ -47,9 +59,14 @@ void main() {
     expect(find.text('Kedai Jauh'), findsOneWidget);
     expect(find.text('2.4 km'), findsOneWidget);
     expect(find.text('Melayu'), findsNWidgets(2));
-    expect(find.textContaining('Halal ya'), findsNWidgets(2));
+    // An outlet on JAKIM shows that instead of the post's claim.
+    expect(find.text('Says halal'), findsOneWidget);
+    expect(find.text('JAKIM halal'), findsOneWidget);
     expect(find.text('Kedai Sederhana Bangsar'), findsNWidgets(2));
-    expect(find.text('Jalan Telawi'), findsNWidgets(2));
+    expect(
+      find.text('Jalan Telawi'),
+      findsNothing,
+    ); // the branch label says more
     expect(
       t.widget<ListView>(find.byType(ListView)).scrollDirection,
       Axis.horizontal,
@@ -90,13 +107,44 @@ void main() {
     await t.pumpWidget(
       app(
         NearbyCarousel(
-          places: [nearbyBranch(saved: true, placeId: 'p-1')],
+          places: [nearbyBranch(saved: true, savedPlaceId: 'p-1')],
           onTap: (_) {},
         ),
       ),
     );
-    expect(find.text('Saved'), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark), findsOneWidget);
   });
+
+  testWidgets(
+    'no overflow on a 360 dp phone at 1.3x text with long names and stars',
+    (t) async {
+      t.view.physicalSize = const Size(360, 740);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      final long = NearbyBranch(
+        branchId: 'b-long',
+        placeId: 'r-1',
+        name: 'Restoran Nasi Kandar Yang Sangat Panjang Namanya Sekali',
+        label: 'Cawangan Taman Melawati Hulu Kelang Selangor Darul Ehsan',
+        lat: 3.15,
+        lng: 101.71,
+        distanceM: 12345,
+        saved: true,
+        cuisine: 'Masakan Melayu Tradisional Pantai Timur',
+        halalClaim: 'says_halal',
+        halalQuote: 'Halal',
+        rating: const RatingSummary(average: 4.6, count: 128),
+      );
+      await t.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: app(NearbyCarousel(places: [long], onTap: (_) {})),
+        ),
+      );
+      expect(t.takeException(), isNull);
+      expect(find.text('4.6 (128)'), findsOneWidget);
+    },
+  );
 
   testWidgets('snapping to a card selects it and focuses the map', (t) async {
     final selected = <String>[];

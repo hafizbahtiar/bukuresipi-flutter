@@ -168,6 +168,24 @@ class FakeAuthRepository implements AuthRepository {
     emailChanges.add(email);
   }
 
+  final passkeyLogins = <Map<String, dynamic>>[];
+
+  /// The API refusing the phone's answer (e.g. `invalid_credentials`: a passkey removed on the server).
+  ApiException? passkeyLoginError;
+  @override
+  Future<Map<String, dynamic>> passkeyLoginOptions() async {
+    if (loginError != null) throw loginError!;
+    return {'challenge': 'c-1', 'rpId': 'bukuresipi.com'};
+  }
+
+  @override
+  Future<User> loginWithPasskey(Map<String, dynamic> response) async {
+    passkeyLogins.add(response);
+    if (passkeyLoginError != null) throw passkeyLoginError!;
+    session = true;
+    return cached = testUser;
+  }
+
   final googleTokens = <String>[];
   @override
   Future<User> loginWithGoogle(String idToken, String lang) async {

@@ -12,7 +12,9 @@ class ThemeController extends ChangeNotifier {
       ThemeMode.values.asNameMap()[_prefs.getString(_key)] ?? ThemeMode.system;
 
   Future<void> setMode(ThemeMode mode) async {
-    await _prefs.setString(_key, mode.name);
+    // The cache takes the value at once (mode reads it): switch now, the disk write finishes behind.
+    final saved = _prefs.setString(_key, mode.name);
     notifyListeners();
+    await saved;
   }
 }

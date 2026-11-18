@@ -2,25 +2,38 @@ import 'dart:async';
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/constants/image_constant.dart';
-import '../../../core/network/update_gate.dart';
-import '../../../core/widgets/system_pages.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/notebook.dart';
-import '../../../l10n/gen/app_localizations.dart';
-import '../../places/domain/nearby_branch.dart';
-import '../../places/domain/rating.dart';
-import '../../shares/presentation/widgets/share_image.dart';
-import 'widgets/feed_card.dart';
-import '../../places/presentation/location.dart';
-import '../../places/presentation/places_controller.dart';
-import '../../places/presentation/widgets/nearby_sheet.dart';
-import '../../recipes/domain/recipe.dart';
-import '../../recipes/presentation/recipes_controller.dart';
+import '../../../../core/ads/ads.dart';
+import '../../../../core/constants/image_constant.dart';
+import '../../../../core/network/update_gate.dart';
+import '../../../../core/widgets/system_pages.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/cover_app_bar.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook.dart';
+import '../../../../l10n/gen/app_localizations.dart';
+import '../../../places/domain/nearby_branch.dart';
+import '../../../places/domain/rating.dart';
+import '../../../shares/presentation/widgets/share_image.dart';
+import '../../../recipes/presentation/pages/pantry_page.dart';
+import '../add_sheet.dart';
+import '../../../auth/presentation/auth_controller.dart';
+import '../widgets/feed_ad.dart';
+import '../widgets/feed_card.dart';
+import '../widgets/feed_empty.dart';
+import '../../../places/presentation/location.dart';
+import '../../../places/presentation/pages/place_detail_page.dart'
+    show PlacePhotoFlight, placePhotoTag;
+import '../../../places/presentation/places_controller.dart';
+import '../../../places/presentation/widgets/nearby_sheet.dart';
+import '../../../recipes/domain/recipe.dart';
+import '../../../recipes/presentation/pages/recipe_detail_page.dart';
+import '../../../recipes/presentation/recipes_controller.dart';
 
 enum FeedKind { all, recipes, restaurants }
 
@@ -37,7 +50,10 @@ Future<({double lat, double lng})?> _phone() async {
 /// "Near me" tag and its distance. One search box with suggestions; filters for kind, "says halal" and cuisine.
 /// Restaurants are filtered on the phone (the nearby list is at most 100), recipes on the server.
 class FeedPage extends StatefulWidget {
-  const FeedPage({super.key, this.locate = _phone});
+  const FeedPage({super.key, this.locate = _phone, this.toTop});
+
+  /// Changes when Home's tab is tapped again: back to the top.
+  final ValueListenable<int>? toTop;
 
   final Locate locate;
 
@@ -48,6 +64,7 @@ class FeedPage extends StatefulWidget {
 class _FeedPageState extends State<FeedPage> {
   static const _nearbyKm = 5.0; // as the map
   static const _every = 4; // a restaurant in every 4th slot
+  static const _gap = spaceS; // between cards, both ways
 
   final _search = SearchController();
   final _scroll = ScrollController();
@@ -55,6 +72,9 @@ class _FeedPageState extends State<FeedPage> {
   FeedKind _kind = FeedKind.all;
   bool _halal = false;
   String? _cuisine;
+
+  /// Ad slots whose ad did not load: left out until a refresh.
+  final _deadAds = <int>{};
 
   bool? _located; // null = asking
   List<NearbyBranch> _nearby = const [];
@@ -69,26 +89,89 @@ class _FeedPageState extends State<FeedPage> {
   bool _failed = false;
   int _generation = 0;
 
+  /// After a restart (refresh, new search) the cards on screen are the old ones: they stay until the new first
+  /// page replaces them, so a refresh never blanks the grid.
+  bool _stale = false;
+
+  /// The nearby request is out: restaurants are coming, so "nothing here" would be early.
+  bool _nearbyBusy = false;
+
+  late final _edited = context.read<RecipesController>().edited;
+  late final _removed = context.read<RecipesController>().removed;
+  late final _placesChanged = context.read<PlacesController>().changes;
+
   @override
   void initState() {
     super.initState();
+    widget.toTop?.addListener(_toTop);
+    Ads.ready.addListener(_adsReady);
+    _edited.addListener(_patch);
+    _removed.addListener(_drop);
+    // A place edited, pinned, saved or rated anywhere: the restaurant cards fetch theirs again (kept on screen meanwhile).
+    _placesChanged.addListener(_loadNearby);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  /// A recipe or dish edited from its page: its card takes the new name and photo, in place (no reload, no jump).
+  void _patch() {
+    final d = _edited.value;
+    if (d == null || !mounted) return;
+    setState(() {
+      _community = [for (final r in _community) r.id == d.id ? r.edited(d) : r];
+      _dishes = [for (final x in _dishes) x.id == d.id ? x.edited(d) : x];
+    });
+  }
+
+  void _drop() {
+    final id = _removed.value;
+    if (id == null || !mounted) return;
+    setState(() {
+      _community = [
+        for (final r in _community)
+          if (r.id != id) r,
+      ];
+      _dishes = [
+        for (final x in _dishes)
+          if (x.id != id) x,
+      ];
+    });
   }
 
   @override
   void dispose() {
+    Ads.ready.removeListener(_adsReady);
+    _edited.removeListener(_patch);
+    _removed.removeListener(_drop);
+    _placesChanged.removeListener(_loadNearby);
     _search.dispose();
+    widget.toTop?.removeListener(_toTop);
     _scroll.dispose();
     super.dispose();
   }
 
-  Future<void> _refresh() => Future.wait([_loadNearby(), _restart()]);
+  void _adsReady() => setState(() {});
+
+  void _toTop() {
+    if (!_scroll.hasClients) return;
+    if (MediaQuery.disableAnimationsOf(context)) return _scroll.jumpTo(0);
+    _scroll.animateTo(
+      0,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _refresh() {
+    setState(_deadAds.clear);
+    return Future.wait([_loadNearby(), _restart()]);
+  }
 
   Future<void> _loadNearby() async {
     final here = await widget.locate();
     if (!mounted) return;
     setState(() => _located = here != null);
     if (here == null) return;
+    setState(() => _nearbyBusy = true);
     try {
       final rows = await context.read<PlacesController>().nearby(
         here.lat,
@@ -104,6 +187,8 @@ class _FeedPageState extends State<FeedPage> {
       }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _nearbyBusy = false);
     }
   }
 
@@ -111,8 +196,7 @@ class _FeedPageState extends State<FeedPage> {
   Future<void> _restart() {
     _generation++;
     setState(() {
-      _community = const [];
-      _dishes = const [];
+      _stale = true;
       _cursor = null;
       _inDishes = false;
       _done = false;
@@ -134,7 +218,9 @@ class _FeedPageState extends State<FeedPage> {
         final page = await recipes.community(query: q, cursor: _cursor);
         if (generation != _generation || !mounted) return;
         setState(() {
-          _community = [..._community, ...page.recipes];
+          if (_stale) _dishes = const [];
+          _community = [if (!_stale) ..._community, ...page.recipes];
+          _stale = false;
           _cursor = page.next;
           _inDishes = page.next == null;
         });
@@ -148,7 +234,12 @@ class _FeedPageState extends State<FeedPage> {
         });
       }
     } catch (_) {
-      if (generation == _generation && mounted) setState(() => _failed = true);
+      if (generation == _generation && mounted) {
+        setState(() {
+          _failed = true;
+          _stale = false; // the old cards stay; the failure note says why they did not change
+        });
+      }
       return;
     } finally {
       if (generation == _generation && mounted) setState(() => _busy = false);
@@ -177,19 +268,22 @@ class _FeedPageState extends State<FeedPage> {
     return [
       for (final p in _nearby)
         if ((q.isEmpty || _matches(p, q)) &&
-            (!_halal || p.halalClaim == 'says_halal') &&
+            (!_halal || p.halalClaim == 'says_halal' || p.jakimHalal) &&
             (_cuisine == null || p.cuisine?.trim() == _cuisine))
           p,
     ];
   }
 
   void _open(NearbyBranch place) {
-    if (place.saved && place.placeId != null) {
-      context.push('/places/${place.placeId}');
+    if (place.saved && place.savedPlaceId != null) {
+      context.push(
+        '/places/${place.savedPlaceId}',
+        extra: place.cover == null ? null : const PlacePhotoFlight(),
+      );
       return;
     }
     final places = context.read<PlacesController>();
-    showNotebookSheet<void>(
+    showBaseSheet<void>(
       context,
       builder: (_) => NearbySheet(
         place: place,
@@ -265,6 +359,62 @@ class _FeedPageState extends State<FeedPage> {
     return tiles;
   }
 
+  bool get _filtered => _kind != FeedKind.all || _halal || _cuisine != null;
+
+  /// Nothing to show: why, and the one thing to do about it. A search that found nothing, filters that hide
+  /// everything, or (nothing at all yet) how the feed fills up.
+  Widget _empty(BuildContext context, AppLocalizations l) {
+    if (_query.isNotEmpty) {
+      return FeedEmpty(
+        key: const ValueKey('feed-empty-search'),
+        icon: Icons.search_off_rounded,
+        title: l.feedEmptySearchTitle(_query),
+        body: l.feedEmptySearchBody,
+        primary: (
+          Icons.close_rounded,
+          l.feedClearSearch,
+          () {
+            _search.clear();
+            _submit('');
+          },
+        ),
+      );
+    }
+    if (_filtered) {
+      return FeedEmpty(
+        key: const ValueKey('feed-empty-filters'),
+        icon: Icons.filter_alt_off_outlined,
+        title: l.feedEmptyFilterTitle,
+        body: l.feedEmptyFilterBody,
+        primary: (
+          Icons.filter_alt_off_outlined,
+          l.feedClearFilters,
+          () => setState(() {
+            _kind = FeedKind.all;
+            _halal = false;
+            _cuisine = null;
+          }),
+        ),
+      );
+    }
+    return FeedEmpty(
+      key: const ValueKey('feed-empty'),
+      drawing: ImageConstant.recipePlaceholder,
+      title: l.feedEmptyTitle,
+      body: l.feedEmptyBody,
+      primary: (
+        Icons.ios_share_rounded,
+        l.feedEmptyShare,
+        () => showAddSheet(context),
+      ),
+      secondary: (
+        Icons.map_outlined,
+        l.feedEmptyMap,
+        () => context.push('/map'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -272,7 +422,7 @@ class _FeedPageState extends State<FeedPage> {
     final width = MediaQuery.sizeOf(context).width;
     final columns = _columns(width);
     final cardHeight = FeedCard.heightFor(
-      (width - 32 - 12 * (columns - 1)) / columns,
+      (width - 32 - _gap * (columns - 1)) / columns,
       MediaQuery.textScalerOf(context),
     );
     final cuisines = {
@@ -281,6 +431,12 @@ class _FeedPageState extends State<FeedPage> {
     }.toList()..sort();
     final showRestaurants = _kind != FeedKind.recipes;
     final showRecipes = _kind != FeedKind.restaurants;
+
+    // One flight per place: two branches of a saved place near you would share its photo's Hero tag (an assert).
+    final flies = <String, String>{
+      for (final p in _nearby.reversed) // nearest last: it wins
+        if (p.saved && p.savedPlaceId != null) p.savedPlaceId!: p.branchId,
+    };
 
     Widget place(NearbyBranch p) => FeedCard(
       key: ValueKey('feed-place-${p.branchId}'),
@@ -295,19 +451,30 @@ class _FeedPageState extends State<FeedPage> {
             '${average.toStringAsFixed(1)} ($count)',
             strong: true,
           ),
+        // This outlet in JAKIM's directory, not expired: the only "certified" we show (places/jakim.ts).
+        if (p.jakimHalal)
+          FeedFact(Icons.verified_outlined, l.feedJakimHalal, strong: true)
         // A quoted claim from the post, never "certified": the words stay "Says halal".
-        if (p.halalClaim == 'says_halal')
+        else if (p.halalClaim == 'says_halal')
           FeedFact(Icons.format_quote_rounded, l.feedSaysHalal, strong: true),
       ],
       tag: '${l.feedNearMe} · ${distanceText(p.distanceM)}',
       tagIcon: Icons.near_me,
       icon: Icons.storefront_outlined,
       photo: switch (p.cover) {
-        final cover? => (ph) => ShareFill(
-          id: cover,
-          restaurantId: p.restaurantId,
-          fallback: ph,
-        ),
+        final cover? => (ph) {
+          final photo = ShareFill(id: cover, placeId: p.placeId, fallback: ph);
+          // A saved place opens its page: the photo flies into the header there. Not saved = a sheet, no flight.
+          return switch (p.savedPlaceId) {
+            final id? when p.saved && flies[id] == p.branchId => Hero(
+              tag: placePhotoTag(id),
+              createRectTween: CoverAppBar.flight,
+              flightShuttleBuilder: CoverAppBar.cardShuttle,
+              child: photo,
+            ),
+            _ => photo,
+          };
+        },
         null => null,
       },
       onTap: () => _open(p),
@@ -329,16 +496,11 @@ class _FeedPageState extends State<FeedPage> {
       ],
       icon: Icons.menu_book_outlined,
       drawing: ImageConstant.recipePlaceholder,
-      photo: switch ((r.cover, r.shareId)) {
-        (final cover?, _) => (ph) => ShareFill(
-          id: cover,
-          recipeId: r.id,
-          fallback: ph,
-        ),
-        (null, final id?) => (ph) => ShareFill(id: id, fallback: ph),
-        _ => null,
-      },
-      onTap: () => context.push('/recipes/${r.id}'),
+      photo: _heroPhoto(r.id, cover: r.cover, shareId: r.shareId),
+      onTap: () => context.push(
+        '/recipes/${r.id}',
+        extra: RecipePreview(name: r.name, cover: r.cover, shareId: r.shareId),
+      ),
     );
     Widget dish(Dish d) => FeedCard(
       key: ValueKey('feed-dish-${d.id}'),
@@ -354,7 +516,11 @@ class _FeedPageState extends State<FeedPage> {
       ],
       icon: Icons.restaurant_menu,
       drawing: ImageConstant.recipePlaceholder,
-      onTap: () => context.push('/recipes/${d.id}'),
+      photo: _heroPhoto(d.id, cover: d.cover),
+      onTap: () => context.push(
+        '/recipes/${d.id}',
+        extra: RecipePreview(name: d.name, cover: d.cover),
+      ),
     );
 
     final restaurants = showRestaurants ? _restaurants : const <NearbyBranch>[];
@@ -373,7 +539,28 @@ class _FeedPageState extends State<FeedPage> {
     if (_done || !showRecipes) {
       cards.addAll(restaurants.skip(next).map(place));
     }
-    final loading = (_busy && showRecipes) || _located == null;
+    // Ads among the cards. Not for the owner in release (their use is not ad traffic); debug builds show the owner
+    // the test ads, so the card can be checked.
+    final ads =
+        Ads.ready.value &&
+        !(kReleaseMode &&
+            (context.read<AuthController?>()?.user?.isOwner ?? false));
+    final shown = ads
+        ? withAds<Widget>(
+            cards,
+            (slot) => FeedAd(
+              key: ValueKey('feed-ad-$slot'),
+              onFailed: () => setState(() => _deadAds.add(slot)),
+            ),
+            skip: _deadAds,
+          )
+        : cards;
+    // Still coming: a recipe page out, or more pages to fetch while the grid is empty (they chain on their own),
+    // restaurants being asked for, or location not answered yet. Until then, no empty state.
+    final loading =
+        (showRecipes && (_busy || (cards.isEmpty && !_done && !_failed))) ||
+        (showRestaurants && _nearbyBusy) ||
+        _located == null;
 
     Widget note(String label, {VoidCallback? onTap, IconData? icon}) =>
         SliverToBoxAdapter(
@@ -510,6 +697,18 @@ class _FeedPageState extends State<FeedPage> {
                   ),
                 ),
               ),
+              // "What can I cook?" says what it is, not just a kitchen icon: a card above the recipes.
+              if (showRecipes)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: _PantryCard(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const PantryPage()),
+                      ),
+                    ),
+                  ),
+                ),
               if (_failed)
                 note(
                   l.recipesLoadFailed2,
@@ -522,30 +721,107 @@ class _FeedPageState extends State<FeedPage> {
                   onTap: _loadNearby,
                   icon: Icons.location_off_outlined,
                 ),
-              if (cards.isEmpty && !loading && !_failed) note(l.feedNothing),
+              if (cards.isEmpty && !loading && !_failed)
+                SliverToBoxAdapter(child: _empty(context, l)),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 // A fixed height for the card's width, so every row lines up whatever the text.
                 sliver: SliverGrid(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
+                    mainAxisSpacing: _gap,
+                    crossAxisSpacing: _gap,
                     mainAxisExtent: cardHeight,
                   ),
-                  delegate: SliverChildListDelegate(cards),
+                  // First load: cards' shapes in their place; more pages: the spinner below.
+                  delegate: SliverChildListDelegate(
+                    cards.isEmpty && loading && !_failed
+                        ? [
+                            for (var i = 0; i < columns * 3; i++)
+                              FeedCardSkeleton(
+                                key: ValueKey('feed-skeleton-$i'),
+                                wide: (i ~/ columns + i).isEven,
+                              ),
+                          ]
+                        : shown,
+                  ),
                 ),
               ),
               SliverToBoxAdapter(
-                child: loading
-                    ? const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(
-                          child: CircularProgressIndicator.adaptive(),
-                        ),
-                      )
-                    : const SizedBox(height: 24),
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: navRoom(context) - 24),
+                  child: loading && cards.isNotEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(
+                            child: CircularProgressIndicator.adaptive(),
+                          ),
+                        )
+                      : const SizedBox(height: 24),
+                ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Home's way into "What can I cook?": the kitchen icon, the name, one line on what it does, a chevron.
+class _PantryCard extends StatelessWidget {
+  const _PantryCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Material(
+      key: const ValueKey('feed-pantry'),
+      color: nb.paper,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: nb.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: nb.mist,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.kitchen_outlined, color: nb.pandanDeep),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.pantryTitle,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l.pantryPromo,
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: nb.inkSoft),
             ],
           ),
         ),
@@ -556,3 +832,23 @@ class _FeedPageState extends State<FeedPage> {
 
 /// Columns for a width: 2 on a phone, one more per ~220 dp after that.
 int _columns(double width) => math.max(2, (width - 32) ~/ 220);
+
+/// A recipe card's photo, tagged to fly into its page's header (CoverAppBar); null = no photo (the drawing shows).
+Widget Function(Widget)? _heroPhoto(
+  String id, {
+  String? cover,
+  String? shareId,
+}) {
+  if (cover == null && shareId == null) return null;
+  return (placeholder) => Hero(
+    tag: recipePhotoTag(id),
+    createRectTween: CoverAppBar.flight,
+    flightShuttleBuilder: CoverAppBar.cardShuttle,
+    child: recipePhoto(
+      id,
+      cover: cover,
+      shareId: shareId,
+      fallback: placeholder,
+    )!,
+  );
+}

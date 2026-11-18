@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -12,12 +14,12 @@ import '../../domain/nearby_branch.dart';
 import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
-import 'branch_edit_sheet.dart';
+import '../pages/branch_edit_page.dart';
 import 'halal_status.dart';
 import 'notebook_rating.dart';
 import 'place_report_sheet.dart';
 
-/// A nearby branch on a notebook sheet: where it is, how far, the post's halal claim, and Save.
+/// A nearby branch on a sheet: where it is, how far, the post's halal claim, and Save.
 class NearbySheet extends StatefulWidget {
   const NearbySheet({
     super.key,
@@ -39,7 +41,7 @@ class NearbySheet extends StatefulWidget {
 class _NearbySheetState extends State<NearbySheet> {
   bool _saving = false;
 
-  Future<void> _report() => showNotebookSheet<void>(
+  Future<void> _report() => showBaseSheet<void>(
     context,
     builder: (_) => PlaceReportSheet(
       subject: ReportSubject.fromNearby(widget.place),
@@ -52,10 +54,10 @@ class _NearbySheetState extends State<NearbySheet> {
     final places = context.read<PlacesController>();
     final navigator = Navigator.of(context);
     final p = widget.place;
-    final saved = await showNotebookSheet<bool>(
+    final saved = await showBranchEdit(
       context,
-      builder: (_) => BranchEditSheet(
-        placeId: p.placeId ?? '',
+      builder: (_) => BranchEditPage(
+        placeId: p.savedPlaceId ?? '',
         branch: Branch(
           id: p.branchId,
           label: p.label,
@@ -117,12 +119,7 @@ class _NearbySheetState extends State<NearbySheet> {
             shrinkWrap: true,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 10,
-                  0,
-                  20,
-                  8,
-                ),
+                padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceXs),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -139,13 +136,9 @@ class _NearbySheetState extends State<NearbySheet> {
                   ],
                 ),
               ),
-              NotebookRow(
-                mark: Icon(
-                  Icons.place_outlined,
-                  size: 20,
-                  color: nb.pandanDeep,
-                ),
-                child: Column(
+              ListTile(
+                leading: Icon(Icons.place_outlined, color: nb.pandanDeep),
+                title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (final line in where)
@@ -171,22 +164,55 @@ class _NearbySheetState extends State<NearbySheet> {
                   ],
                 ),
               ),
-              NotebookRow(
-                mark: Icon(
-                  Icons.star_outline_rounded,
-                  size: 20,
-                  color: nb.kunyit,
-                ),
-                child: RatingLine(
+              ListTile(
+                leading: Icon(Icons.star_outline_rounded, color: nb.kunyit),
+                title: RatingLine(
                   rating: p.rating,
                   onTap: () => context.push('/branches/${p.branchId}/reviews'),
                 ),
               ),
+              // JAKIM's directory lists this outlet: its own block, apart from what posts say.
+              if (p.halalCert case final cert?) ...[
+                SectionHeader(l.halalCertTitle),
+                ListTile(
+                  key: const ValueKey('nearby-jakim'),
+                  leading: Icon(
+                    Icons.verified_outlined,
+                    color: cert.expiredAt(DateTime.now())
+                        ? nb.margin
+                        : nb.pandanDeep,
+                  ),
+                  title: Text(cert.premise),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (cert.expiredAt(DateTime.now())
+                            ? l.halalCertExpired
+                            : l.halalCertValid)(
+                          _day(context, cert.expiresOn),
+                          _day(context, cert.checkedAt),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () =>
+                            openLink(context, cert.url, failed: l.openFailed),
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: Text(l.halalCertOpen),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (p.halalClaim != null && p.halalQuote != null) ...[
-                NotebookHeading(l.halalTitle),
-                NotebookRow(
-                  mark: Icon(Icons.info_outline, size: 18, color: nb.kunyit),
-                  child: Column(
+                SectionHeader(l.halalTitle),
+                ListTile(
+                  leading: Icon(Icons.info_outline, color: nb.kunyit),
+                  title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -220,7 +246,7 @@ class _NearbySheetState extends State<NearbySheet> {
         Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.only(right: 20),
+            padding: const EdgeInsets.only(right: spaceS),
             // Wraps on a narrow phone or with large text instead of running off the edge.
             child: Wrap(
               alignment: WrapAlignment.end,
@@ -240,7 +266,7 @@ class _NearbySheetState extends State<NearbySheet> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 0),
           child: FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
             onPressed: _saving ? null : _save,
@@ -256,3 +282,6 @@ class _NearbySheetState extends State<NearbySheet> {
     );
   }
 }
+
+String _day(BuildContext context, DateTime d) =>
+    DateFormat.yMMMd(Localizations.localeOf(context).toString()).format(d);

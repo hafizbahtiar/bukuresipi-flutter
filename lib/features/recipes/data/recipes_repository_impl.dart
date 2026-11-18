@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/log.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
 import '../domain/recipe_variant.dart';
 import '../domain/recipe.dart';
@@ -57,17 +58,20 @@ class RecipesRepositoryImpl implements RecipesRepository {
     // shortcut: FIFO, not LRU; fine for one book of recipes.
     if (_covers.length >= 80) _covers.remove(_covers.keys.first);
     return _covers['$id/$cover'] ??=
-        apiCall(() async {
-          // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
-          final res = await _dio.get<List<int>>(
-            '/recipes/$id/cover',
-            options: Options(
-              responseType: ResponseType.bytes,
-              validateStatus: (s) => s == 200 || s == 404,
-            ),
-          );
-          return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
-        })..catchError((Object _) {
+        diskCached(
+          'cover-$cover',
+          () => apiCall(() async {
+            // Through Dio, not Image.network: the request needs the token (and its refresh); R2 is private.
+            final res = await _dio.get<List<int>>(
+              '/recipes/$id/cover',
+              options: Options(
+                responseType: ResponseType.bytes,
+                validateStatus: (s) => s == 200 || s == 404,
+              ),
+            );
+            return res.statusCode == 200 ? Uint8List.fromList(res.data!) : null;
+          }),
+        )..catchError((Object _) {
           _covers.remove(
             '$id/$cover',
           ); // a failed fetch is tried again next time
@@ -149,6 +153,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
             name: d['name'] as String,
             category: d['category'] as String?,
             ingredientCount: (d['ingredientCount'] as num?)?.toInt() ?? 0,
+            cover: d['cover'] as String?,
           ),
       ],
       next: data['next'] as String?,
@@ -202,6 +207,27 @@ class RecipesRepositoryImpl implements RecipesRepository {
       apiCall(() => _dio.delete<void>('/recipes/$id'));
 
   @override
+  Future<List<PantryMatch>> fromPantry(
+    List<String> ingredients, {
+    bool staples = true,
+  }) => apiCall(() async {
+    final data = (await _dio.post<Map<String, dynamic>>(
+      '/recipes/from-pantry',
+      data: {'ingredients': ingredients, 'staples': staples},
+    )).data!;
+    return [
+      for (final m in (data['items'] as List).cast<Map<String, dynamic>>())
+        (
+          recipe: recipeFromJson(m['recipe'] as Map<String, dynamic>),
+          have: m['have'] as int,
+          required: m['required'] as int,
+          missing: (m['missing'] as List).cast<String>(),
+          unknown: (m['unknown'] as List).cast<String>(),
+        ),
+    ];
+  });
+
+  @override
   Future<List<String>> searchIngredients(String query) => apiCall(() async {
     final data = (await _dio.get<Map<String, dynamic>>(
       '/recipes/ingredients',
@@ -212,6 +238,19 @@ class RecipesRepositoryImpl implements RecipesRepository {
           in (data['ingredients'] as List).cast<Map<String, dynamic>>())
         i['name'] as String,
     ];
+  });
+
+  @override
+  Future<RecipeDetail> setIngredientOptional(
+    String id,
+    int index,
+    bool optional,
+  ) => apiCall(() async {
+    final data = (await _dio.put<Map<String, dynamic>>(
+      '/recipes/$id/ingredients/$index',
+      data: {'optional': optional},
+    )).data!;
+    return recipeDetailFromJson(data);
   });
 
   @override
@@ -229,10 +268,15 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) => apiCall(() async {
     final data = (await _dio.post<Map<String, dynamic>>(
       '/recipes',
-      data: {'name': name, 'ingredients': ingredients, 'steps': steps},
+      data: {
+        'name': name,
+        'ingredients': _lines(ingredients, optional),
+        'steps': steps,
+      },
     )).data!;
     return recipeDetailFromJson(data);
   });
@@ -243,14 +287,25 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) => apiCall(() async {
     final data = (await _dio.patch<Map<String, dynamic>>(
       '/recipes/$id',
-      data: {'name': name, 'ingredients': ingredients, 'steps': steps},
+      data: {
+        'name': name,
+        'ingredients': _lines(ingredients, optional),
+        'steps': steps,
+      },
     )).data!;
     return recipeDetailFromJson(data);
   });
 }
+
+/// A line as text, or { text, optional } when the editor's switch is sent for it.
+List<Object> _lines(List<String> lines, Map<int, bool> optional) => [
+  for (final (i, text) in lines.indexed)
+    if (optional[i] case final on?) {'text': text, 'optional': on} else text,
+];
 
 List<String> _missing(Object? v) => [
   ...((v as List?) ?? const []).cast<String>(),
@@ -300,6 +355,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
         rawText: i['rawText'] as String?,
         quantity: i['quantity'] as String?,
         unit: i['unit'] as String?,
+        optional: i['optional'] == true,
       ),
   ],
   steps: [
@@ -316,6 +372,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
       RecipeAllergen(
         name: a['name'] as String,
         ingredients: (a['ingredients'] as List).cast<String>(),
+        optionalOnly: a['optionalOnly'] == true,
       ),
   ],
   uncheckedIngredients: (j['uncheckedIngredients'] as num?)?.toInt() ?? 0,

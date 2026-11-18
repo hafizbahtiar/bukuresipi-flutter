@@ -6,16 +6,24 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
+import '../../../../core/widgets/draft_photos.dart';
+import '../../../../core/widgets/skeleton.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook.dart' show NotebookTitle;
+import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/photo_editor_page.dart';
+import '../../../../core/widgets/pill_switch.dart';
+import '../../../../core/widgets/ai_button.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../owner/domain/owner_repository.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
 
-/// Edits a recipe: its name, then one row per ingredient (amount, unit, ingredient) and per step. Drag to reorder;
+/// Edits a recipe: its name, then one row per ingredient (amount, unit, ingredient, Optional) and per step. Drag to reorder;
 /// Enter starts the next row and moves the cursor there; a pasted list splits into rows. The API still takes one line
 /// per ingredient ("2 cawan tepung gandum"): the rows are joined back and the server reads amount and unit from it.
 /// A row left as it was is sent exactly as stored, so its catalogue link stays. Pops the saved recipe.
@@ -119,21 +127,36 @@ String completeLine(String line, String name) {
 
 const _maxRows = 100; // the API's limit per section
 
-/// One ingredient row: amount, unit, ingredient. [original] = the stored line it was loaded from.
+/// One ingredient row: amount, unit, ingredient, optional. [original] = the stored line it was loaded from.
 class _Ingredient {
-  _Ingredient({String amount = '', this.unit, String name = '', this.original})
-    : amount = TextEditingController(text: amount),
-      name = TextEditingController(text: name);
+  _Ingredient({
+    String amount = '',
+    this.unit,
+    String name = '',
+    this.original,
+    this.optional = false,
+  }) : amount = TextEditingController(text: amount),
+       name = TextEditingController(text: name);
 
-  factory _Ingredient.fromLine(String line, {bool stored = false}) {
+  factory _Ingredient.fromLine(
+    String line, {
+    bool stored = false,
+    bool optional = false,
+  }) {
     final s = splitLine(line);
     return _Ingredient(
       amount: s.amount,
       unit: s.unit,
       name: s.name,
       original: stored ? line : null,
+      optional: optional,
     );
   }
+
+  /// "The dish is fine without it". Sent with the line when on, or when the user switched it (off wins over the
+  /// line's own words, e.g. "jika suka"); otherwise the server reads the words as before.
+  bool optional;
+  bool optionalSwitched = false;
 
   final TextEditingController amount;
   String? unit;
@@ -196,7 +219,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   late final List<_Ingredient> _ingredients = switch (widget.recipe) {
     final r? when r.ingredients.isNotEmpty => [
       for (final i in r.ingredients)
-        _Ingredient.fromLine(i.rawText ?? i.label, stored: true),
+        _Ingredient.fromLine(
+          i.rawText ?? i.label,
+          stored: true,
+          optional: i.optional,
+        ),
     ],
     _ => [_Ingredient()],
   };
@@ -217,6 +244,34 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   bool _coverRemoved = false;
   String? get _shownCover => _coverRemoved ? null : widget.recipe?.cover;
 
+  /// A catalogue dish (the app owner edits it): the AI draft too.
+  bool get _catalogue =>
+      widget.recipe?.sourceType == RecipeSourceType.catalogue;
+  bool _drafting = false;
+
+  /// The last AI draft's pages and notes, shown under the name until the page closes.
+  DishDraft? _draft;
+
+  /// The draft photo picked as the cover; set by the server after Save.
+  String? _photo;
+
+  /// The form as it was before the draft, for Undo: the old rows themselves (kept alive until the page closes).
+  ({String name, List<_Ingredient> ingredients, List<_Step> steps})?
+  _beforeDraft;
+
+  final _scroll = ScrollController();
+
+  /// The tab: Details (cover, name, AI draft) | Ingredients | Steps, as on the recipe page.
+  _EditTab _tab = _EditTab.details;
+  final _pages = PageController();
+
+  /// Shows [tab] at once (no slide): a field on it can be focused in the next frame.
+  void _goTo(_EditTab tab) {
+    if (_tab == tab) return;
+    setState(() => _tab = tab);
+    if (_pages.hasClients) _pages.jumpToPage(tab.index);
+  }
+
   // Catalogue suggestions under the ingredient being typed (GET /recipes/ingredients), so the line gets linked.
   _Ingredient? _suggestFor;
   List<String> _suggestions = const [];
@@ -232,6 +287,8 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _scroll.dispose();
+    _pages.dispose();
     _name.dispose();
     for (final r in [..._ingredients, ..._gone.whereType<_Ingredient>()]) {
       r.dispose();
@@ -244,11 +301,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
 
   String _snapshot() => [
     _name.text.trim(),
-    for (final r in _ingredients) r.line,
+    for (final r in _ingredients) '${r.line} ${r.optional}',
     '|',
     for (final s in _steps) s.text.text.trim(),
     '|',
-    '$_coverPath $_coverRemoved',
+    '$_coverPath $_coverRemoved $_photo',
   ].join('\n');
 
   bool get _dirty => _snapshot() != _initial;
@@ -385,6 +442,220 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     _gone.add(step);
   });
 
+  // ----- AI draft (owner, catalogue)
+
+  /// Fills the form from web recipes; nothing is saved until Save (and leaving asks, as for any edit).
+  Future<void> _aiDraft() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final owner = context.read<OwnerRepository>();
+    setState(() => _drafting = true);
+    _goTo(_EditTab.details);
+    // The placeholder card is at the top of the form: bring it into view.
+    if (_scroll.hasClients) {
+      unawaited(
+        _scroll.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+    try {
+      final d = await owner.draftDish(widget.recipe!.id);
+      if (!mounted) return;
+      if (d.sources.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              d.complete ? l.recipeAiDraftNone : l.recipeAiDraftOff,
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _draft = d;
+        _photo = null;
+        // A second draft keeps the first Undo: back to the form before any draft.
+        _beforeDraft ??= (
+          name: _name.text,
+          ingredients: [..._ingredients],
+          steps: [..._steps],
+        );
+        _name.text = d.name;
+        _gone.addAll([..._ingredients, ..._steps]);
+        _suggestions = const [];
+        _ingredients
+          ..clear()
+          ..addAll([for (final i in d.ingredients) _Ingredient.fromLine(i)]);
+        if (_ingredients.isEmpty) _ingredients.add(_Ingredient());
+        _steps
+          ..clear()
+          ..addAll([for (final s in d.steps) _Step(s)]);
+        if (_steps.isEmpty) _steps.add(_Step());
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _drafting = false);
+    }
+  }
+
+  /// Undo the draft: the form as it was before it, the picked draft photo dropped.
+  void _undoDraft() {
+    final before = _beforeDraft;
+    if (before == null) return;
+    setState(() {
+      _gone.addAll([..._ingredients, ..._steps]);
+      for (final r in [...before.ingredients, ...before.steps]) {
+        _gone.remove(r); // live again: disposed with the page, once
+      }
+      _ingredients
+        ..clear()
+        ..addAll(before.ingredients);
+      _steps
+        ..clear()
+        ..addAll(before.steps);
+      _name.text = before.name;
+      _suggestions = const [];
+      _draft = null;
+      _photo = null;
+      _beforeDraft = null;
+    });
+  }
+
+  /// While the draft is being written: the card it will fill, as shimmering shapes.
+  Widget _draftLoading(AppLocalizations l) {
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    return Container(
+      key: const ValueKey('recipe-draft-loading'),
+      margin: const EdgeInsets.only(top: 8, bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: nb.pandanDeep),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.recipeAiDraftWorking,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Skeleton(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      const Expanded(
+                        child: AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: SkeletonBox(radius: 10),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const SkeletonBox(width: 220),
+                const SizedBox(height: 8),
+                const SkeletonBox(width: 160),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _draftNote(AppLocalizations l, DishDraft d) {
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final small = text.bodySmall?.copyWith(color: nb.inkSoft);
+    return Container(
+      key: const ValueKey('recipe-draft-note'),
+      margin: const EdgeInsets.only(top: 8, bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: nb.mist,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // What happened, and the way back.
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: nb.pandanDeep),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.recipeAiDraftNote(d.sources.length),
+                  style: text.bodyMedium,
+                ),
+              ),
+              TextButton.icon(
+                key: const ValueKey('recipe-draft-undo'),
+                onPressed: _saving ? null : _undoDraft,
+                icon: const Icon(Icons.undo, size: 18),
+                label: Text(l.recipeAiDraftUndo),
+              ),
+            ],
+          ),
+          // The one choice to make: the photo.
+          if (d.images.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            DraftPhotos(
+              urls: d.images,
+              picked: _photo,
+              // One cover: a draft photo replaces a photo of your own picked on this visit.
+              onPick: (url) => setState(() {
+                _photo = url;
+                if (url != null) _coverPath = null;
+              }),
+            ),
+          ],
+          // What to check before saving.
+          for (final w in d.warnings)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(w, style: small)),
+                ],
+              ),
+            ),
+          // Where it came from: tap to read the page.
+          const SizedBox(height: 8),
+          DraftSourceChips(sources: d.sources),
+        ],
+      ),
+    );
+  }
+
   // ----- save / leave
 
   Future<void> _save() async {
@@ -403,18 +674,29 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
         r.nameMissing = nameless.contains(r);
       }
     });
-    if (name.isEmpty) return;
-    if (nameless.isNotEmpty) return nameless.first.nameFocus.requestFocus();
+    // A problem on another tab: go there, or the error is never seen.
+    if (name.isEmpty) return _goTo(_EditTab.details);
+    if (nameless.isNotEmpty) {
+      _goTo(_EditTab.ingredients);
+      return _focusLater(nameless.first.nameFocus);
+    }
     FocusScope.of(context).unfocus();
     setState(() => _saving = true);
-    final ingredients = [
+    final rows = [
       for (final r in _ingredients)
-        if (!r.isEmpty) r.sent,
+        if (!r.isEmpty) r,
     ];
+    final ingredients = [for (final r in rows) r.sent];
+    final optional = {
+      for (final (i, r) in rows.indexed)
+        if (r.optional || r.optionalSwitched) i: r.optional,
+    };
     final steps = [
       for (final s in _steps)
         if (s.text.text.trim().isNotEmpty) s.text.text.trim(),
     ];
+    // Read before the first wait: the page may be gone after it.
+    final owner = _photo == null ? null : context.read<OwnerRepository>();
     try {
       final recipes = context.read<RecipesController>();
       final saved = switch (widget.recipe) {
@@ -423,24 +705,32 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           name: name,
           ingredients: ingredients,
           steps: steps,
+          optional: optional,
         ),
         null => await recipes.create(
           name: name,
           ingredients: ingredients,
           steps: steps,
+          optional: optional,
         ),
       };
       var done = saved;
       try {
-        if (_coverPath case final path?) {
+        if (_photo case final url?) {
+          done = await owner!.setDishCover(saved.id, url);
+        } else if (_coverPath case final path?) {
           done = await recipes.setCover(saved.id, path);
         } else if (_coverRemoved && widget.recipe?.cover != null) {
           await recipes.removeCover(saved.id);
+          done = await recipes.detail(
+            saved.id,
+          ); // the edit's answer still names the old photo
         }
       } catch (_) {
         // The recipe is saved: leave the page (saving again would add a second new recipe), say the photo failed.
         messenger.showSnackBar(SnackBar(content: Text(l.recipeCoverFailed)));
       }
+      recipes.edited.value = done;
       navigator.pop(done);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
@@ -454,11 +744,17 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       context,
       ratios: [('4:3', 4 / 3), ('1:1', 1), (l.photoFree, null)],
     );
-    if (path != null && mounted) setState(() => _coverPath = path);
+    // One cover: a photo of your own replaces a picked draft photo.
+    if (path != null && mounted) {
+      setState(() {
+        _coverPath = path;
+        _photo = null;
+      });
+    }
   }
 
   Widget _coverField(AppLocalizations l) {
-    final has = _coverPath != null || _shownCover != null;
+    final has = _coverPath != null || _photo != null || _shownCover != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -474,6 +770,23 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                 width: double.infinity,
                 fit: BoxFit.cover,
                 cacheWidth: 1200,
+              ),
+            ),
+          )
+        else if (_photo case final url?)
+          // A draft photo picked: shown here as the cover it will be.
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                url,
+                key: const ValueKey('cover-draft-photo'),
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                cacheWidth: 1200,
+                errorBuilder: (_, _, _) => const SizedBox(height: 200),
               ),
             ),
           )
@@ -495,6 +808,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                     ? null
                     : () => setState(() {
                         _coverPath = null;
+                        _photo = null;
                         _coverRemoved = widget.recipe?.cover != null;
                       }),
                 icon: const Icon(Icons.hide_image_outlined),
@@ -509,7 +823,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   Future<void> _leave() async {
     final l = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
-    final sure = await showNotebookDialog(
+    final sure = await showBaseDialog(
       context,
       message: l.recipeEditDiscard,
       tone: DialogTone.danger,
@@ -519,15 +833,6 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   }
 
   // ----- build
-
-  Widget _heading(String title) => Padding(
-    padding: const EdgeInsets.only(top: 20, bottom: 4),
-    child: Text(
-      title,
-      style: Theme.of(context).textTheme.titleSmall
-          ?.copyWith(fontWeight: FontWeight.w700),
-    ),
-  );
 
   Widget _addButton(String label, VoidCallback? onPressed) => Align(
     alignment: Alignment.centerLeft,
@@ -621,6 +926,22 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                       ),
                     ],
                   ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Tooltip(
+                      message: l.recipeOptionalHint,
+                      child: FilterChip(
+                        key: ValueKey('ingredient-optional-$i'),
+                        label: Text(l.recipeOptional),
+                        selected: r.optional,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (on) => setState(() {
+                          r.optional = on;
+                          r.optionalSwitched = true;
+                        }),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -645,55 +966,61 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   Widget _stepRow(int i, _Step s) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
-    return Row(
+    // Air under each step: a long one wraps to several lines and would run into the next.
+    return Padding(
       key: ObjectKey(s),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ReorderableDragStartListener(
-          index: i,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.drag_indicator, color: nb.inkSoft),
-                SizedBox(
-                  width: 22,
-                  child: Text(
-                    '${i + 1}',
-                    textAlign: TextAlign.center,
-                    style: nb.hand.copyWith(fontSize: 20, color: nb.inkSoft),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ReorderableDragStartListener(
+            index: i,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.drag_indicator, color: nb.inkSoft),
+                  const SizedBox(width: spaceXs),
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: nb.mist,
+                    foregroundColor: nb.pandanDeep,
+                    child: Text(
+                      '${i + 1}',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: TextField(
-            key: ValueKey('step-$i'),
-            controller: s.text,
-            focusNode: s.focus,
-            maxLines: null,
-            maxLength: 2000,
-            keyboardType: TextInputType.text,
-            textInputAction: TextInputAction.next,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              hintText: l.recipeEditStepHint,
-              counterText: '',
+          Expanded(
+            child: TextField(
+              key: ValueKey('step-$i'),
+              controller: s.text,
+              focusNode: s.focus,
+              maxLines: null,
+              maxLength: 2000,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: l.recipeEditStepHint,
+                counterText: '',
+              ),
+              onChanged: (v) =>
+                  v.contains('\n') ? _pastedSteps(s, v) : setState(() {}),
+              onSubmitted: (_) => _nextStep(s),
             ),
-            onChanged: (v) =>
-                v.contains('\n') ? _pastedSteps(s, v) : setState(() {}),
-            onSubmitted: (_) => _nextStep(s),
           ),
-        ),
-        IconButton(
-          tooltip: l.remove,
-          icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
-          onPressed: () => _removeStep(s),
-        ),
-      ],
+          IconButton(
+            tooltip: l.remove,
+            icon: Icon(Icons.close, size: 20, color: nb.inkSoft),
+            onPressed: () => _removeStep(s),
+          ),
+        ],
+      ),
     );
   }
 
@@ -712,6 +1039,15 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
             widget.recipe == null ? l.recipeNew : l.recipeEdit,
           ),
           actions: [
+            if (_catalogue &&
+                (context.read<AuthController?>()?.user?.isOwner ?? false))
+              AiButton.icon(
+                key: const ValueKey('recipe-ai-draft'),
+                tooltip: l.recipeAiDraft,
+                // The card in the form shows it working too.
+                busy: _drafting,
+                onPressed: _saving ? null : _aiDraft,
+              ),
             if (_saving)
               const Padding(
                 padding: EdgeInsets.all(16),
@@ -721,67 +1057,146 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                 ),
               )
             else
-              TextButton(onPressed: _save, child: Text(l.save)),
+              IconButton(
+                key: const ValueKey('recipe-save'),
+                tooltip: l.save,
+                icon: const Icon(Icons.check),
+                onPressed: _save,
+              ),
           ],
         ),
-        body: NotebookPage(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 12, 32),
-            children: [
-              _coverField(l),
-              TextField(
-                controller: _name,
-                maxLength: 200,
-                textCapitalization: TextCapitalization.sentences,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: l.recipeEditName,
-                  errorText: _nameMissing ? l.recipeEditNameRequired : null,
-                ),
-                onChanged: (v) => setState(
-                  () => _nameMissing = _nameMissing && v.trim().isEmpty,
-                ),
-                onSubmitted: (_) => _ingredients.isEmpty
-                    ? _addIngredient()
-                    : _ingredients.first.nameFocus.requestFocus(),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                spaceM,
+                spaceS,
+                spaceM,
+                spaceS,
               ),
-              _heading(l.recipeIngredients),
-              ReorderableListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: false,
-                onReorderItem: (from, to) => setState(
-                  () => _ingredients.insert(to, _ingredients.removeAt(from)),
-                ),
-                children: [
-                  for (final (i, r) in _ingredients.indexed)
-                    _ingredientRow(i, r),
+              child: PillSwitch(
+                expand: true,
+                value: _tab,
+                onChanged: (v) => setState(() => _tab = v),
+                pages: _pages,
+                options: [
+                  for (final tab in _EditTab.values)
+                    (
+                      tab,
+                      Text(
+                        switch (tab) {
+                          _EditTab.details => l.recipeDetails,
+                          _EditTab.ingredients =>
+                            '${l.recipeIngredients} (${_ingredients.where((r) => !r.isEmpty).length})',
+                          _EditTab.steps =>
+                            '${l.recipeSteps} (${_steps.where((s) => s.text.text.trim().isNotEmpty).length})',
+                        },
+                        key: ValueKey('recipe-edit-tab-${tab.name}'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      null,
+                    ),
                 ],
               ),
-              _addButton(
-                l.recipeEditAddIngredient,
-                _ingredients.length < _maxRows ? () => _addIngredient() : null,
+            ),
+            Expanded(
+              child: PageView(
+                controller: _pages,
+                onPageChanged: (i) => setState(() => _tab = _EditTab.values[i]),
+                children: [
+                  _tabList(_EditTab.details, controller: _scroll, [
+                    // First: the button that starts it is at the top, and so is what it gives.
+                    if (_drafting)
+                      _draftLoading(l)
+                    else if (_draft case final d?)
+                      _draftNote(l, d),
+                    _coverField(l),
+                    TextField(
+                      controller: _name,
+                      maxLength: 200,
+                      textCapitalization: TextCapitalization.sentences,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: l.recipeEditName,
+                        errorText: _nameMissing
+                            ? l.recipeEditNameRequired
+                            : null,
+                      ),
+                      onChanged: (v) => setState(
+                        () => _nameMissing = _nameMissing && v.trim().isEmpty,
+                      ),
+                      onSubmitted: (_) {
+                        _goTo(_EditTab.ingredients);
+                        _ingredients.isEmpty
+                            ? _addIngredient()
+                            : _focusLater(_ingredients.first.nameFocus);
+                      },
+                    ),
+                  ]),
+                  _tabList(_EditTab.ingredients, [
+                    ReorderableListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      onReorderItem: (from, to) => setState(
+                        () => _ingredients.insert(
+                          to,
+                          _ingredients.removeAt(from),
+                        ),
+                      ),
+                      children: [
+                        for (final (i, r) in _ingredients.indexed)
+                          _ingredientRow(i, r),
+                      ],
+                    ),
+                    _addButton(
+                      l.recipeEditAddIngredient,
+                      _ingredients.length < _maxRows
+                          ? () => _addIngredient()
+                          : null,
+                    ),
+                  ]),
+                  _tabList(_EditTab.steps, [
+                    ReorderableListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      onReorderItem: (from, to) => setState(
+                        () => _steps.insert(to, _steps.removeAt(from)),
+                      ),
+                      children: [
+                        for (final (i, s) in _steps.indexed) _stepRow(i, s),
+                      ],
+                    ),
+                    _addButton(
+                      l.recipeEditAddStep,
+                      _steps.length < _maxRows ? () => _addStep() : null,
+                    ),
+                  ]),
+                ],
               ),
-              _heading(l.recipeSteps),
-              ReorderableListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: false,
-                onReorderItem: (from, to) =>
-                    setState(() => _steps.insert(to, _steps.removeAt(from))),
-                children: [for (final (i, s) in _steps.indexed) _stepRow(i, s)],
-              ),
-              _addButton(
-                l.recipeEditAddStep,
-                _steps.length < _maxRows ? () => _addStep() : null,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  /// One tab's scrolling form; each keeps its place when swiped away and back.
+  Widget _tabList(
+    _EditTab tab,
+    List<Widget> children, {
+    ScrollController? controller,
+  }) => ListView(
+    key: PageStorageKey('recipe-edit-${tab.name}'),
+    controller: controller,
+    padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceS, spaceL),
+    children: children,
+  );
 }
+
+enum _EditTab { details, ingredients, steps }
 
 /// The unit beside an amount: a field that opens a sheet of [recipeUnits] (plus a stored spelling such as "sb"), or none.
 class _UnitPicker extends StatelessWidget {
@@ -793,7 +1208,7 @@ class _UnitPicker extends StatelessWidget {
   Future<void> _pick(BuildContext context) async {
     final l = AppLocalizations.of(context);
     FocusScope.of(context).unfocus();
-    final chosen = await showNotebookPicker<String>(
+    final chosen = await showBasePicker<String>(
       context,
       title: l.recipeEditUnit,
       options: [

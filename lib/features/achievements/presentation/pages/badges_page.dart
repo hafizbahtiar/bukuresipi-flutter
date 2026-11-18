@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/notebook.dart' show NotebookTitle;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../data/achievements_api.dart';
@@ -48,73 +50,71 @@ class _BadgesPageState extends State<BadgesPage> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: Text(l.badgesTitle)),
-      body: NotebookPage(
-        child: FutureBuilder(
-          future: _badges,
-          builder: (context, s) {
-            if (s.hasError) {
-              return Center(child: Text(errorText(l, s.error!)));
-            }
-            final list = s.data;
-            if (list == null) {
-              return const Center(child: CircularProgressIndicator.adaptive());
-            }
-            final earned = list.fold(0, (n, a) => n + a.tier);
-            final total = list.length * AchievementTier.values.length;
-            return RefreshIndicator(
-              onRefresh: () async {
-                final next = _load();
-                setState(() {
-                  _badges = next;
-                });
-                await next;
-              },
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  notebookGutter + 4,
-                  8,
-                  16,
-                  24,
-                ),
-                children: [
-                  Text(
-                    l.badgesEarned(earned, total),
-                    key: const ValueKey('badges-earned'),
-                    style: text.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    l.badgesHelp,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.78,
-                    children: [
-                      for (final a in list)
-                        _BadgeCard(
-                          key: ValueKey('badge-${a.category.name}'),
-                          badge: a,
-                          onTap: () => showNotebookSheet<void>(
-                            context,
-                            builder: (_) => _TiersSheet(badge: a),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
+      appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.badgesTitle)),
+      body: FutureBuilder(
+        future: _badges,
+        builder: (context, s) {
+          if (s.hasError) {
+            return Center(child: Text(errorText(l, s.error!)));
+          }
+          final list = s.data;
+          if (list == null) {
+            return const Center(child: CircularProgressIndicator.adaptive());
+          }
+          final earned = list.fold(0, (n, a) => n + a.tier);
+          final total = list.length * AchievementTier.values.length;
+          return RefreshIndicator(
+            onRefresh: () async {
+              final next = _load();
+              setState(() {
+                _badges = next;
+              });
+              await next;
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                spaceM,
+                spaceS,
+                spaceM,
+                spaceL,
               ),
-            );
-          },
-        ),
+              children: [
+                Text(
+                  l.badgesEarned(earned, total),
+                  key: const ValueKey('badges-earned'),
+                  style: text.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l.badgesHelp,
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                ),
+                const SizedBox(height: 16),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.78,
+                  children: [
+                    for (final a in list)
+                      _BadgeCard(
+                        key: ValueKey('badge-${a.category.name}'),
+                        badge: a,
+                        onTap: () => showBaseSheet<void>(
+                          context,
+                          builder: (_) => _TiersSheet(badge: a),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -159,12 +159,8 @@ class _BadgeCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final a = badge;
     final name = categoryName(l, a.category);
-    return Material(
-      color: nb.paper,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: nb.line),
-      ),
+    return Card(
+      margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -296,7 +292,7 @@ class _TiersSheet extends StatelessWidget {
 Future<void> showNewBadges(
   BuildContext context,
   List<Achievement> fresh,
-) => showNotebookSheet<void>(
+) => showBaseSheet<void>(
   context,
   builder: (sheet) {
     final l = AppLocalizations.of(sheet);

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../data/passkey_auth.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user.dart';
 
@@ -122,6 +123,21 @@ class AuthController extends ChangeNotifier {
 
   Future<void> loginWithGoogle(String idToken, String lang) async =>
       _set(AuthStatus.signedIn, await _repo.loginWithGoogle(idToken, lang));
+
+  /// The phone shows its passkey sheet for the API's challenge. false = the user closed it.
+  Future<bool> loginWithPasskey(PasskeyAuth passkeys) async {
+    final response = await passkeys.get(await _repo.passkeyLoginOptions());
+    if (response == null) return false;
+    try {
+      _set(AuthStatus.signedIn, await _repo.loginWithPasskey(response));
+    } on ApiException catch (e) {
+      // The API answers a refused passkey (e.g. removed in Account > Passkeys, still on the phone) like a bad
+      // password; "wrong email or password" makes no sense when nothing was typed.
+      if (e.code != 'invalid_credentials') rethrow;
+      throw ApiException('invalid_passkey', status: e.status);
+    }
+    return true;
+  }
 
   Future<void> linkGoogle(String idToken) async =>
       _set(AuthStatus.signedIn, await _repo.linkGoogle(idToken));

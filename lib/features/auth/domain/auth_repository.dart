@@ -36,6 +36,10 @@ abstract interface class AuthRepository {
   /// Signs in (or up) with a Google ID token; the API links or creates the account.
   Future<User> loginWithGoogle(String idToken, String lang);
 
+  /// Sign in with a passkey: the API's challenge for the phone, then the phone's signed answer.
+  Future<Map<String, dynamic>> passkeyLoginOptions();
+  Future<User> loginWithPasskey(Map<String, dynamic> response);
+
   /// Account > Google. Unlink needs a password (409 password_required otherwise).
   Future<User> linkGoogle(String idToken);
   Future<User> unlinkGoogle();

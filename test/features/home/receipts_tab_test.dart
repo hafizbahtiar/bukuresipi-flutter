@@ -18,7 +18,9 @@ void main() {
         target: 2000,
         hasEstimate: false,
         unknownEaten: 0,
+        macros: null,
         receipts: const [],
+        meals: const [],
       );
     await t.pumpWidget(
       Provider<ReceiptsRepository>.value(
@@ -93,4 +95,48 @@ void main() {
       expect(repo.statCalls, greaterThan(calls));
     },
   );
+
+  testWidgets('swiping the page sideways turns Receipts to Calories and back', (
+    t,
+  ) async {
+    final repo = FakeReceipts()
+      ..today = (
+        eatenKcal: 900,
+        target: 2000,
+        hasEstimate: false,
+        unknownEaten: 0,
+        macros: null,
+        receipts: const [],
+        meals: const [],
+      );
+    await t.pumpWidget(
+      Provider<ReceiptsRepository>.value(
+        value: repo,
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en'), Locale('ms')],
+          home: ReceiptsTab(),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.fling(
+      find.byKey(const ValueKey('spend-chart')),
+      const Offset(-300, 0),
+      1000,
+    );
+    await t.pumpAndSettle();
+    expect(find.text('900 / 2000 kcal'), findsOneWidget);
+    expect(find.byKey(const ValueKey('spend-chart')), findsNothing);
+
+    await t.fling(find.text('900 / 2000 kcal'), const Offset(300, 0), 1000);
+    await t.pumpAndSettle();
+    expect(find.text('Receipts and spending'), findsOneWidget);
+    expect(find.byKey(const ValueKey('spend-chart')), findsOneWidget);
+  });
 }

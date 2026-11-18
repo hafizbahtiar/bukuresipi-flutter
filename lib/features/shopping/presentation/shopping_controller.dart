@@ -159,8 +159,16 @@ class ShoppingController extends ChangeNotifier {
   }
 
   /// How many lines were added (0 = all already on the list). [family] = to the family list.
-  Future<int> addRecipe(String recipeId, {bool family = false}) async {
-    final added = await _repo.addRecipe(recipeId, family: family);
+  Future<int> addRecipe(
+    String recipeId, {
+    bool family = false,
+    bool skipOptional = false,
+  }) async {
+    final added = await _repo.addRecipe(
+      recipeId,
+      family: family,
+      skipOptional: skipOptional,
+    );
     lastRecipeList = family;
     if (family == _family) await load();
     return added.length;

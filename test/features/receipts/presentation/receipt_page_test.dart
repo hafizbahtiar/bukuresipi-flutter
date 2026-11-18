@@ -293,6 +293,19 @@ void main() {
     expect(repo.eaten.single.eaten, 2);
   });
 
+  testWidgets('a part-eaten line of 3: its checkbox ticks all 3', (t) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(status: 'saved', items: [line(3, eaten: 1)]),
+      ];
+    await pump(t, repo);
+    await t.ensureVisible(find.byKey(const ValueKey('eaten-0')));
+    expect(t.widget<Checkbox>(find.byType(Checkbox)).value, isNull);
+    await t.tap(find.byType(Checkbox));
+    await t.pump();
+    expect(repo.eaten.single.eaten, 3);
+  });
+
   testWidgets('counting calories polls until the server is done', (t) async {
     final repo = FakeReceipts()
       ..answers = [
@@ -395,7 +408,7 @@ void main() {
       expect(find.text('RM 22.75'), findsOneWidget);
 
       final shareButton = find.byKey(const ValueKey('split-share-button'));
-      await t.scrollUntilVisible(shareButton, 200);
+      await t.scrollUntilVisible(shareButton, 200, scrollable: _vertical);
       await t.pumpAndSettle();
       await t.tap(shareButton);
       await t.pumpAndSettle();
@@ -422,7 +435,7 @@ void main() {
       of: find.byKey(const ValueKey('split-share-1')),
       matching: find.byType(Checkbox),
     );
-    await t.scrollUntilVisible(paid, 200);
+    await t.scrollUntilVisible(paid, 200, scrollable: _vertical);
     await t.pumpAndSettle();
     await t.tap(paid);
     await t.pumpAndSettle();
@@ -443,7 +456,11 @@ void main() {
     await pump(t, repo);
     await t.tap(find.text('Split bill'));
     await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.byKey(const ValueKey('split-stop')), 200);
+    await t.scrollUntilVisible(
+      find.byKey(const ValueKey('split-stop')),
+      200,
+      scrollable: _vertical,
+    );
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('split-stop')));
     await t.pumpAndSettle();
@@ -466,3 +483,10 @@ void main() {
     );
   });
 }
+
+/// The page's up-down list: Receipt | Split bill are pages of a sideways PageView, itself a Scrollable.
+final _vertical = find
+    .byWidgetPredicate(
+      (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+    )
+    .first;

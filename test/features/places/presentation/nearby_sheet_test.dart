@@ -72,8 +72,7 @@ void main() {
 
     expect(find.text('Only you will see these changes.'), findsOneWidget);
     await t.enterText(find.byKey(const ValueKey('branch-label')), 'My Branch');
-    // The nearby sheet's Save is still in the tree underneath the edit sheet.
-    final save = find.widgetWithText(FilledButton, 'Save').last;
+    final save = find.byKey(const ValueKey('branch-save'));
     await t.ensureVisible(save);
     await t.tap(save);
     await t.pumpAndSettle();

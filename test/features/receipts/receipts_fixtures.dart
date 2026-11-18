@@ -8,7 +8,7 @@ Receipt receipt({
   String id = 'r-1',
   String status = 'review',
   ReceiptPlace? place = (
-    restaurantId: 'x',
+    placeId: 'x',
     branchId: 'b-1',
     name: 'Port Lepak Sentul',
   ),
@@ -147,11 +147,42 @@ class FakeReceipts implements ReceiptsRepository {
     target: null,
     hasEstimate: false,
     unknownEaten: 0,
+    macros: null,
     receipts: const [],
+    meals: const [],
   );
 
   @override
   Future<DailyCalories> calories() async => today;
+
+  List<MealItem> estimate = const [];
+  Object? estimateError;
+  final estimated = <String>[];
+  final savedMeals = <List<MealItem>>[];
+  final removedMeals = <String>[];
+
+  @override
+  Future<List<MealItem>> estimateMeal(String path) async {
+    estimated.add(path);
+    if (estimateError != null) throw estimateError!;
+    return estimate;
+  }
+
+  @override
+  Future<void> saveMeal(DateTime eatenAt, List<MealItem> items) async =>
+      savedMeals.add(items);
+
+  @override
+  Future<void> removeMeal(String id) async => removedMeals.add(id);
+
+  final replacedMeals = <(String, DateTime, List<MealItem>)>[];
+
+  @override
+  Future<void> replaceMeal(
+    String id,
+    DateTime eatenAt,
+    List<MealItem> items,
+  ) async => replacedMeals.add((id, eatenAt, items));
 
   CalorieDays calorieDaysAnswer = const CalorieDays(days: [], target: null);
   final calorieDayRanges = <int>[];

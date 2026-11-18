@@ -122,7 +122,7 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
     final picked = await Navigator.of(context).push<LatLng>(
       MaterialPageRoute(
         builder: (_) => PinPickerPage(
-          placeId: widget.subject.placeId ?? '',
+          placeId: widget.subject.savedPlaceId ?? '',
           branchId: branch.id,
           initial: branch.lat != null && branch.lng != null
               ? LatLng(branch.lat!, branch.lng!)
@@ -185,7 +185,7 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
       await widget.onSubmit(
         ReportDraft(
           target: _restaurant ? ReportTarget.restaurant : ReportTarget.branch,
-          targetId: _restaurant ? widget.subject.restaurantId : _branchId,
+          targetId: _restaurant ? widget.subject.placeId : _branchId,
           field: _field,
           lat: location ? _picked?.latitude : null,
           lng: location ? _picked?.longitude : null,

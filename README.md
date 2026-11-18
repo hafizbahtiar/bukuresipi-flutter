@@ -92,6 +92,23 @@ Found a problem? Tell us. Thanks for testing!
 No use-case classes and no DI container: a repository method is the use case, Provider is the container. Local
 database (drift) is not added yet; add it with the first offline feature.
 
+## Shared widgets (use these, don't copy them)
+
+- Photos: `features/shares/presentation/widgets/share_image.dart`. `loadPhoto` (cover, else the share's photo),
+  `ShareFill` (a photo filling a box, with a shimmer while it loads; `ShareFill.warm` decodes ahead of a hero),
+  `SharePhoto` (the taped snapshot; `.cover` / `.place`), `placePhoto(place)`, `recipeSnapshot(recipe)`.
+- Sheets: `showBaseSheet` (`core/widgets/base.dart`): floating by default (anchored mask reveal), `floating: false` =
+  full width. `showActionSheet`, `showPhotoSourceSheet` (camera or photos) build on it.
+- Photo viewer: `showPhotoDialog(bytes, heroTag:, actions:)` (`core/widgets/photo_sheet.dart`) with `PhotoHero` around
+  the thumbnail; `actions` = buttons along the bottom (the profile picture's Change / Remove).
+- Hero flights: `heroFlight()` / `heroPace()` (`core/widgets/hero_motion.dart`): every photo flight goes straight and
+  eased; pass the same one to both Heroes.
+
+## Motion
+
+How the app moves and why (the floating sheet's anchored mask reveal, hero flights and the first-open decode, the
+nav bar's spring): [`docs/motion.md`](docs/motion.md).
+
 ## Icon and splash
 
 Source: `assets/brand/` (from the website logo, `bukuresipi-astro/public/favicon.svg`): `icon.png` (iOS + legacy

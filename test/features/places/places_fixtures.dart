@@ -16,6 +16,8 @@ const placeJson = {
   'restaurant': {
     'id': 'r-1',
     'name': 'Nasi Kandar Pelita',
+    'category': 'food',
+    'subcategory': null,
     'cuisine': null,
     'halalClaim': 'says_halal',
     'halalQuote': 'Halal ya',
@@ -40,6 +42,12 @@ const placeJson = {
       'lat': 3.1579,
       'lng': 101.7123,
       'pinSource': 'user',
+      'halalCert': {
+        'premise': 'NASI KANDAR PELITA - JALAN AMPANG',
+        'expiresOn': '2026-11-30',
+        'url': 'https://www.halal.gov.my/index.php?cari=pelita',
+        'checkedAt': 1794873600000,
+      },
     },
   ],
 };
@@ -51,6 +59,8 @@ Place place({
   String? halal = 'says_halal',
   String? sourceUrl,
   RatingSummary? rating,
+  HalalCert? cert,
+  ({int outlets, String url})? brand,
 }) => Place(
   id: id,
   sourceUrl: sourceUrl,
@@ -65,6 +75,7 @@ Place place({
     halalSourceUrl: halal == null
         ? null
         : 'https://www.tiktok.com/@makan/video/1',
+    halalBrand: brand,
   ),
   branches: [
     Branch(
@@ -74,13 +85,14 @@ Place place({
       lng: lat == null ? null : 101.7,
       pinSource: lat == null ? null : 'osm',
       rating: rating ?? const RatingSummary(),
+      halalCert: cert,
     ),
   ],
 );
 
 const nearbyBranchJson = {
   'branchId': 'b-1',
-  'restaurantId': 'r-1',
+  'placeId': 'r-1',
   'name': 'Kedai Sederhana',
   'label': 'Kedai Sederhana Bangsar',
   'address': 'Jalan Telawi',
@@ -92,7 +104,7 @@ const nearbyBranchJson = {
   'halalQuote': 'Halal ya',
   'halalSourceUrl': 'https://www.tiktok.com/@makan/video/1',
   'saved': false,
-  'placeId': null,
+  'savedPlaceId': null,
 };
 
 NearbyBranch nearbyBranch({
@@ -102,11 +114,13 @@ NearbyBranch nearbyBranch({
   double lng = 101.71,
   int distanceM = 2400,
   bool saved = false,
-  String? placeId,
+  String? savedPlaceId,
+  String? cover,
   RatingSummary? rating,
+  HalalCert? cert,
 }) => NearbyBranch(
   branchId: branchId,
-  restaurantId: 'r-1',
+  placeId: 'r-1',
   name: name,
   label: 'Kedai Sederhana Bangsar',
   address: 'Jalan Telawi',
@@ -118,8 +132,10 @@ NearbyBranch nearbyBranch({
   halalQuote: 'Halal ya',
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',
   saved: saved,
-  placeId: placeId,
+  savedPlaceId: savedPlaceId,
+  cover: cover,
   rating: rating ?? const RatingSummary(),
+  halalCert: cert,
 );
 
 class FakePlaces implements PlacesRepository {
@@ -169,23 +185,80 @@ class FakePlaces implements PlacesRepository {
   final coverPicks = <String?>[];
 
   @override
-  Future<Uint8List?> restaurantCover(String restaurantId, String cover) async =>
-      null;
+  Future<Uint8List?> placeCover(String placeId, String cover) async => null;
+
+  @override
+  Future<Uint8List?> branchCover(String branchId, String cover) async => null;
+
+  /// Branch cover calls: (branch, url, `file:PATH` for an upload, or null).
+  final branchCovers = <(String, String?)>[];
+
+  @override
+  Future<void> setBranchCover(String branchId, String? url) async =>
+      branchCovers.add((branchId, url));
+
+  @override
+  Future<void> uploadBranchCover(String branchId, String path) async =>
+      branchCovers.add((branchId, 'file:$path'));
 
   @override
   Future<({List<String> covers, String? current})> coverCandidates(
-    String restaurantId,
+    String placeId,
   ) async => (covers: coverIds, current: currentCover);
 
   @override
-  Future<Uint8List?> coverCandidate(String restaurantId, String cover) async =>
-      null;
+  Future<Uint8List?> coverCandidate(String placeId, String cover) async => null;
 
   @override
-  Future<void> setRestaurantCover(String restaurantId, String? cover) async {
+  Future<void> setRestaurantCover(String placeId, String? cover) async {
     coverPicks.add(cover);
     currentCover = cover;
   }
+
+  /// [uploadRestaurantCover] calls: (restaurant, file path).
+  final coverUploads = <(String, String)>[];
+
+  @override
+  Future<void> uploadRestaurantCover(String placeId, String path) async =>
+      coverUploads.add((placeId, path));
+
+  /// What "Check JAKIM" answers, and the branches / places it was asked for.
+  JakimCheck halalCheck = (
+    status: 'none',
+    url: null,
+    rows: const [],
+    pick: null,
+  );
+  JakimOutlets outlets = (status: 'ok', url: null, rows: const [], more: false);
+
+  /// `branch:ID` per branch check, `place:ID` (or `place:ID:q`) per outlet list.
+  final halalChecks = <String>[];
+
+  @override
+  Future<JakimCheck> checkHalalBranch(String branchId) async {
+    halalChecks.add('branch:$branchId');
+    return halalCheck;
+  }
+
+  @override
+  Future<JakimOutlets> placeOutlets(String placeId, {String? q}) async {
+    halalChecks.add(q == null ? 'place:$placeId' : 'place:$placeId:$q');
+    return outlets;
+  }
+
+  /// [setHalalCert] calls: (branch, JAKIM outlet or null, directory url).
+  final halalCerts = <(String, String?, String)>[];
+
+  @override
+  Future<void> setHalalCert(String branchId, JakimRow? row, String url) async =>
+      halalCerts.add((branchId, row?.premise, url));
+
+  /// [setRestaurantCoverUrl] calls: (restaurant, photo url).
+  final coverUrls = <(String, String)>[];
+
+  @override
+  Future<void> setRestaurantCoverUrl(String placeId, String url) async =>
+      coverUrls.add((placeId, url));
 
   @override
   Future<Place> savePoi(String poiId) async {
@@ -260,15 +333,15 @@ class FakePlaces implements PlacesRepository {
   final merges = <(List<String>, String, String?)>[];
 
   @override
-  Future<void> mergeRestaurants(
+  Future<void> mergePlaces(
     List<String> from,
     String into, {
     String? name,
   }) async => merges.add((from, into, name));
 
   @override
-  Future<({int merged, int removed})> tidyBranches(String restaurantId) async {
-    tidied.add(restaurantId);
+  Future<({int merged, int removed})> tidyBranches(String placeId) async {
+    tidied.add(placeId);
     return (merged: 1, removed: 1);
   }
 
@@ -287,6 +360,19 @@ class FakePlaces implements PlacesRepository {
   @override
   Future<void> deleteBranch(String branchId) async =>
       deletedBranches.add(branchId);
+
+  /// [updatePlace] calls: (restaurant, name, category, subcategory, cuisine).
+  final restaurantUpdates = <(String, String, String, String?, String?)>[];
+
+  @override
+  Future<void> updatePlace(
+    String placeId, {
+    required String name,
+    required String category,
+    String? subcategory,
+    String? cuisine,
+  }) async =>
+      restaurantUpdates.add((placeId, name, category, subcategory, cuisine));
 
   @override
   Future<void> updateBranch(
@@ -319,8 +405,8 @@ class FakePlaces implements PlacesRepository {
     return suggestion;
   }
 
-  /// [addSiblingBranch] calls: (branch, address, lat).
-  final siblings = <(String, String?, double)>[];
+  /// [addSiblingBranch] calls: (branch, address, lat, JAKIM premise).
+  final siblings = <(String, String?, double?, String?)>[];
 
   @override
   Future<void> addSiblingBranch(
@@ -328,9 +414,11 @@ class FakePlaces implements PlacesRepository {
     String? address,
     String? city,
     String? state,
-    required double lat,
-    required double lng,
-  }) async => siblings.add((branchId, address, lat));
+    required double? lat,
+    required double? lng,
+    JakimRow? cert,
+    String? certUrl,
+  }) async => siblings.add((branchId, address, lat, cert?.premise));
 
   /// What [searchPin] answers; [pinSearches] records (branch, source, q).
   List<PinHit> pinHits = const [];

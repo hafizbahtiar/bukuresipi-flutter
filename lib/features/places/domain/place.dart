@@ -31,6 +31,10 @@ class BranchSuggestion {
     this.summary,
     this.warnings = const [],
     this.candidates = const [],
+    this.pages = const [],
+    this.photos = const [],
+    this.placeId,
+    this.jakim,
   });
 
   final BranchDraft draft;
@@ -42,7 +46,48 @@ class BranchSuggestion {
 
   /// Every pin found (current, the draft's, HERE, GrabMaps), to compare before saving.
   final List<PinCandidate> candidates;
+
+  /// The web pages read about the shop, to open and check.
+  final List<({String url, String? title})> pages;
+
+  /// Up to 3 photos from those pages: one may become the restaurant's cover.
+  final List<String> photos;
+
+  /// The branch's restaurant (that cover's target).
+  final String? placeId;
+
+  /// JAKIM's halal directory rows for the brand in the branch's state; [pick] = the row the AI named and Clef
+  /// confirmed as this outlet (null = none); [url] = the directory page. null = JAKIM did not answer.
+  final ({String url, List<JakimRow> rows, int? pick})? jakim;
 }
+
+/// The owner's "Check JAKIM" on one branch: [status] found (saved) | none | unavailable; [rows] to choose from.
+typedef JakimCheck = ({
+  String status,
+  String? url,
+  List<JakimRow> rows,
+  int? pick,
+});
+
+/// Edit place > Halal: one of the brand's JAKIM outlets, with the branch holding its certificate ([branchId]) and
+/// a branch at the same postcode ([nearBranchId]).
+typedef JakimOutlet = ({JakimRow row, String? branchId, String? nearBranchId});
+
+/// The brand's JAKIM outlets: [status] ok | unavailable; [url] = the directory page; [more] = past 100 rows (in part).
+typedef JakimOutlets = ({
+  String status,
+  String? url,
+  List<JakimOutlet> rows,
+  bool more,
+});
+
+/// One outlet in JAKIM's halal directory (a draft's `jakim` row).
+typedef JakimRow = ({
+  String premise,
+  String? company,
+  String address,
+  DateTime expiresOn,
+});
 
 /// One pin a source gave for a branch. [source]: 'current', 'draft:<source>', 'here', 'grab'.
 /// [fromDraftM] = metres from the draft's pin; null when the draft has none.
@@ -64,13 +109,15 @@ typedef MapsPin = ({double lat, double lng, String? name});
 /// A state and its official towns (the server's postcode list), for the branch form's dropdowns.
 typedef AreaState = ({String name, List<String> towns});
 
+/// [source] 'jakim' = a JAKIM halal-listed outlet: [name] as JAKIM lists it, no pin (another source pins it).
 typedef PinHit = ({
-  double lat,
-  double lng,
+  double? lat,
+  double? lng,
   String address,
   String? city,
   String? state,
   String source,
+  String? name,
 });
 
 /// A restaurant on the user's map. [restaurant] and its [branches] are shared by all users; [note] is the user's own.
@@ -157,15 +204,28 @@ class PlaceRestaurant {
   const PlaceRestaurant({
     required this.id,
     required this.name,
+    this.category = 'food',
+    this.subcategory,
     this.cuisine,
     this.halalClaim,
     this.halalQuote,
     this.halalSourceUrl,
     this.cover,
+    this.halalBrand,
   });
 
   final String id;
   final String name;
+
+  /// JAKIM lists [outlets] premises under this name across Malaysia ([url] = that list). Each premises is certified
+  /// on its own: a branch without its own `halalCert` is NOT confirmed. null = none or not checked.
+  final ({int outlets, String url})? halalBrand;
+
+  /// One of [categories] (broad); places saved before categories existed are 'food'.
+  final String category;
+
+  /// One of [categories]\[category] (specific), or null = not set.
+  final String? subcategory;
   final String? cuisine;
   final String? halalClaim;
   final String? halalQuote;
@@ -173,6 +233,53 @@ class PlaceRestaurant {
 
   /// The owner's chosen photo (PlacesRepository.restaurantCover); changes when another is picked. null = none.
   final String? cover;
+
+  /// The server's lists (PLACE_SUBCATEGORIES): each category and its subcategories.
+  static const categories = <String, List<String>>{
+    'food': [
+      'restaurant', 'cafe', 'stall', 'mamak', 'kopitiam', //
+      'food_court', 'bakery', 'dessert', 'fast_food',
+    ],
+    'shop': ['grocery', 'market', 'mall'],
+    'attraction': ['museum', 'theme_park', 'landmark'],
+    'stay': ['hotel', 'homestay', 'resort'],
+    'outdoor': ['park', 'beach', 'waterfall', 'hiking'],
+    'other': [],
+  };
+
+  /// Cuisine and halal only mean something for food.
+  bool get isFood => category == 'food';
+}
+
+/// A branch's row in JAKIM's halal directory (halal.gov.my), found by the server's monthly check.
+/// [premise] = JAKIM's outlet name as printed; [url] = the directory's own page for it.
+class HalalCert {
+  const HalalCert({
+    required this.premise,
+    required this.expiresOn,
+    required this.url,
+    required this.checkedAt,
+  });
+
+  final String premise;
+  final DateTime expiresOn;
+  final String url;
+  final DateTime checkedAt;
+
+  /// Past its expiry day (the certificate is valid through that day).
+  bool expiredAt(DateTime now) =>
+      now.isAfter(expiresOn.add(const Duration(days: 1)));
+
+  static HalalCert? fromJson(Object? j) => j is Map<String, dynamic>
+      ? HalalCert(
+          premise: j['premise'] as String,
+          expiresOn: DateTime.parse(j['expiresOn'] as String),
+          url: j['url'] as String,
+          checkedAt: DateTime.fromMillisecondsSinceEpoch(
+            (j['checkedAt'] as num).toInt(),
+          ),
+        )
+      : null;
 }
 
 class Branch {
@@ -187,6 +294,8 @@ class Branch {
     this.pinSource,
     this.closed = false,
     this.rating = const RatingSummary(),
+    this.halalCert,
+    this.cover,
   });
 
   final String id;
@@ -206,6 +315,12 @@ class Branch {
   /// Community stars for this canonical branch; `canRate` is decided by the server.
   final RatingSummary rating;
 
+  /// JAKIM's halal certificate for this outlet; null = not found, never "not halal".
+  final HalalCert? halalCert;
+
+  /// This outlet's own cover id (the owner's photo of it); null = none: the place's shows.
+  final String? cover;
+
   Branch copyWith({RatingSummary? rating}) => Branch(
     id: id,
     label: label,
@@ -217,6 +332,7 @@ class Branch {
     pinSource: pinSource,
     closed: closed,
     rating: rating ?? this.rating,
+    halalCert: halalCert,
   );
 
   /// Set by hand in the app: shown, but not verified yet.

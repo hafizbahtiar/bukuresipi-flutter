@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'core/ads/ads.dart';
 import 'core/env/env.dart';
 import 'core/network/api_client.dart';
 import 'core/network/update_gate.dart';
@@ -18,6 +19,7 @@ import 'core/settings/theme_controller.dart';
 import 'core/storage/token_store.dart';
 import 'features/auth/data/auth_api.dart';
 import 'features/auth/data/google_auth.dart';
+import 'features/auth/data/passkey_auth.dart';
 import 'features/auth/data/auth_repository_impl.dart';
 import 'features/auth/domain/auth_repository.dart';
 import 'features/auth/presentation/auth_controller.dart';
@@ -125,6 +127,11 @@ Future<void> main() async {
   final GoogleAuth? google = Platform.isAndroid && googleId.isNotEmpty
       ? PluginGoogleAuth(googleId)
       : null;
+  // Android 9+ (iOS needs Associated Domains first). The API may still have passkeys off: the button then says so.
+  final PasskeyAuth? passkeys =
+      Platform.isAndroid && await ChannelPasskeyAuth.available()
+      ? ChannelPasskeyAuth()
+      : null;
   auth.addListener(() {
     if (auth.status == AuthStatus.signedOut) {
       google?.signOut().catchError(
@@ -133,10 +140,13 @@ Future<void> main() async {
     }
   });
 
+  // Home ads: consent, then the SDK, after the first frame (the consent form needs the app on screen).
+  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(Ads.start()));
   runApp(
     MultiProvider(
       providers: [
         Provider<GoogleAuth?>.value(value: google),
+        Provider<PasskeyAuth?>.value(value: passkeys),
         if (push != null)
           ChangeNotifierProvider<PushController>.value(value: push),
         Provider<ApiClient>.value(value: api),

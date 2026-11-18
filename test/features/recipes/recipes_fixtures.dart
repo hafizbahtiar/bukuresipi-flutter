@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
@@ -63,14 +65,16 @@ RecipeDetail recipeDetail({
   RecipeSourceType sourceType = RecipeSourceType.link,
   String sourceUrl = 'https://www.tiktok.com/@makan/video/1',
   String? cover,
+  String id = 'r-1',
+  String name = 'Nasi Lemak Ayam',
 }) => RecipeDetail(
   cover: cover,
   sourceType: sourceType,
   canEdit: canEdit,
   visibility: visibility,
   owner: owner,
-  id: 'r-1',
-  name: 'Nasi Lemak Ayam',
+  id: id,
+  name: name,
   createdAt: DateTime.utc(2026, 11, 2),
   sourceUrl: sourceUrl,
   missing: missing,
@@ -91,6 +95,18 @@ RecipeDetail recipeDetail({
 );
 
 class FakeRecipes implements RecipesRepository {
+  List<PantryMatch> pantryAnswer = const [];
+  final pantryAsked = <(List<String>, bool)>[];
+
+  @override
+  Future<List<PantryMatch>> fromPantry(
+    List<String> ingredients, {
+    bool staples = true,
+  }) async {
+    pantryAsked.add((ingredients, staples));
+    return pantryAnswer;
+  }
+
   final covers = <(String, String)>[];
   final coversRemoved = <String>[];
 
@@ -118,6 +134,10 @@ class FakeRecipes implements RecipesRepository {
 
   List<Recipe> family = [];
   List<Recipe> communityList = [];
+
+  /// While set and not completed, community / dishes answers wait for it (a slow network).
+  Completer<void>? communityGate;
+  Completer<void>? dishesGate;
   List<Dish> dishList = [];
   final copied = <String>[];
   final visibilities = <(String, RecipeVisibility)>[];
@@ -134,32 +154,38 @@ class FakeRecipes implements RecipesRepository {
     String? query,
     String? cursor,
     int? limit,
-  }) async => (
-    recipes: communityList
-        .where(
-          (r) =>
-              query == null ||
-              r.name.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList(),
-    next: null,
-  );
+  }) async {
+    await communityGate?.future;
+    return (
+      recipes: communityList
+          .where(
+            (r) =>
+                query == null ||
+                r.name.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList(),
+      next: null,
+    );
+  }
 
   @override
   Future<({List<Dish> dishes, String? next})> dishes({
     String? query,
     String? cursor,
     int? limit,
-  }) async => (
-    dishes: dishList
-        .where(
-          (d) =>
-              query == null ||
-              d.name.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList(),
-    next: null,
-  );
+  }) async {
+    await dishesGate?.future;
+    return (
+      dishes: dishList
+          .where(
+            (d) =>
+                query == null ||
+                d.name.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList(),
+      next: null,
+    );
+  }
 
   @override
   Future<RecipeDetail> copy(String id) async {
@@ -181,8 +207,12 @@ class FakeRecipes implements RecipesRepository {
   Future<void> report(String id, String reason, {String? note}) async =>
       reports.add((id, reason));
 
+  /// While set and not completed, the recipe detail waits for it (the page still loading).
+  Completer<void>? detailGate;
+
   @override
   Future<RecipeDetail> get(String id) async {
+    await detailGate?.future;
     if (detailError != null) throw detailError!;
     return detailResult!;
   }
@@ -209,7 +239,21 @@ class FakeRecipes implements RecipesRepository {
     return detailResult!;
   }
 
+  final optionalSet = <(String, int, bool)>[];
+  @override
+  Future<RecipeDetail> setIngredientOptional(
+    String id,
+    int index,
+    bool optional,
+  ) async {
+    optionalSet.add((id, index, optional));
+    return detailResult!;
+  }
+
   final edited = <(String, String, List<String>, List<String>)>[];
+
+  /// The optional switches sent with each create/edit, in order.
+  final optionals = <Map<int, bool>>[];
 
   final created = <(String, List<String>, List<String>)>[];
 
@@ -218,8 +262,10 @@ class FakeRecipes implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) async {
     created.add((name, ingredients, steps));
+    optionals.add(optional);
     return detailResult!;
   }
 
@@ -229,8 +275,10 @@ class FakeRecipes implements RecipesRepository {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
+    Map<int, bool> optional = const {},
   }) async {
     edited.add((id, name, ingredients, steps));
+    optionals.add(optional);
     return detailResult!;
   }
 }
