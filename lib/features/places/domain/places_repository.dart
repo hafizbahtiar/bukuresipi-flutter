@@ -76,6 +76,9 @@ abstract interface class PlacesRepository {
   Future<MapsPin> pinFromMapsLink(String url);
 
   /// Owner: [source] 'osm' | 'here' | 'grab'; [q] null = the shop name + area. Throws `source_off` (no key, meter off).
+  /// Owner: each map's default words for the search box (source -> words); nothing is asked outside.
+  Future<Map<String, String>> pinQueries(String branchId);
+
   Future<({String query, List<PinHit> hits})> searchPin(
     String branchId,
     String source, {

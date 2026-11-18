@@ -612,6 +612,52 @@ void main() {
     expect(find.byKey(const ValueKey('book-filters')), findsNothing);
   });
 
+  testWidgets(
+    'Edit branch: tabs swipe; the search box starts with each map\'s own words, typed words stay',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      repo = FakePlaces()
+        ..places = [place(id: 'a')]
+        ..pinDefaults = {
+          'osm': 'Nasi Kandar Pelita, Ampang',
+          'here': 'Nasi Kandar Pelita, Ampang',
+          'grab': 'Nasi Kandar Pelita',
+          'jakim': 'nasi kandar pelita',
+        };
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await branchMenu(t);
+      await t.tap(find.text('Edit branch'));
+      await t.pumpAndSettle();
+      // Swipe left from Branch: Find.
+      Future<void> swipe() => t.flingFrom(
+        t.getCenter(find.byType(PageView)),
+        const Offset(-600, 0),
+        1500,
+      );
+      await swipe();
+      await t.pumpAndSettle();
+      String box() => t
+          .widget<TextField>(find.byKey(const ValueKey('pin-search-query')))
+          .controller!
+          .text;
+      expect(box(), 'Nasi Kandar Pelita, Ampang'); // HERE, the first map
+      await tapKey(t, 'pin-source-grab');
+      expect(box(), 'Nasi Kandar Pelita');
+      await t.enterText(
+        find.byKey(const ValueKey('pin-search-query')),
+        'Pelita Ampang Point',
+      );
+      await tapKey(t, 'pin-source-osm');
+      expect(box(), 'Pelita Ampang Point'); // the owner's words stay
+      expect(repo.pinSearches, isEmpty); // nothing asked yet
+      // Swipe on: Halal.
+      await swipe();
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('branch-halal-check')), findsOneWidget);
+    },
+  );
+
   testWidgets('no claim, no halal section', (t) async {
     repo = FakePlaces()..places = [place(id: 'a', halal: null)];
     await pump(t, const PlaceDetailPage(id: 'a'));

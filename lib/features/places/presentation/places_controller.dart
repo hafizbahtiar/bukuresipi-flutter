@@ -226,6 +226,9 @@ class PlacesController extends ChangeNotifier {
   /// A pasted Google Maps link -> its pin, for the edit form. Throws ApiException.
   Future<MapsPin> pinFromMapsLink(String url) => _repo.pinFromMapsLink(url);
 
+  Future<Map<String, String>> pinQueries(String branchId) =>
+      _repo.pinQueries(branchId);
+
   Future<({String query, List<PinHit> hits})> searchPin(
     String branchId,
     String source, {

@@ -223,6 +223,16 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
+  Future<Map<String, String>> pinQueries(String branchId) => apiCall(
+    () async =>
+        ((await _dio.get<Map<String, dynamic>>(
+                  '/places/branches/$branchId/search-pin',
+                )).data!['queries']
+                as Map<String, dynamic>)
+            .cast<String, String>(),
+  );
+
+  @override
   Future<({String query, List<PinHit> hits})> searchPin(
     String branchId,
     String source, {
