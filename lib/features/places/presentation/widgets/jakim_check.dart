@@ -226,12 +226,42 @@ class _PlaceHalalEditorState extends State<PlaceHalalEditor> {
   late final _query = TextEditingController(text: widget.restaurant.name);
   bool _busy = false;
   JakimOutlets? _list;
+  PlaceCompanies? _companies;
+  bool _companiesBusy = false;
+
+  Future<void> _loadCompanies({bool refresh = false}) async {
+    final l = AppLocalizations.of(context);
+    final places = context.read<PlacesController>();
+    setState(() => _companiesBusy = true);
+    try {
+      final r = await places.placeCompanies(
+        widget.restaurant.id,
+        refresh: refresh,
+      );
+      if (!mounted) return;
+      setState(() => _companies = r);
+      if (refresh) {
+        _snack(context, switch (r.status) {
+          'ok' when r.left > 0 => l.companiesLeft(r.left),
+          'ok' => l.companyUpdated,
+          'unavailable' => l.jakimCheckDown,
+          _ => l.companyNone,
+        });
+      }
+    } catch (e) {
+      if (mounted) _snack(context, errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _companiesBusy = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _search();
+      if (!mounted) return;
+      _search();
+      unawaited(_loadCompanies());
     });
   }
 
@@ -272,7 +302,10 @@ class _PlaceHalalEditorState extends State<PlaceHalalEditor> {
 
   // Pair, unpair, add: the book reloads, and the list's marks follow it (no new JAKIM search).
   Future<void> _pairWith(JakimOutlet o, String url, String branchId) =>
-      _run((places) => places.setHalalCert(branchId, o.row, url));
+      _run((places) async {
+        await places.setHalalCert(branchId, o.row, url);
+        if (mounted) unawaited(_loadCompanies());
+      });
 
   Future<void> _pair(JakimOutlet o, String url, List<Branch> branches) async {
     final l = AppLocalizations.of(context);
@@ -294,8 +327,10 @@ class _PlaceHalalEditorState extends State<PlaceHalalEditor> {
     await _pairWith(o, url, b.id);
   }
 
-  Future<void> _unpair(String branchId) =>
-      _run((places) => places.setHalalCert(branchId, null, ''));
+  Future<void> _unpair(String branchId) => _run((places) async {
+    await places.setHalalCert(branchId, null, '');
+    if (mounted) unawaited(_loadCompanies());
+  });
 
   Future<void> _add(JakimOutlet o, String url, Branch any) =>
       _run((places) async {
@@ -309,6 +344,7 @@ class _PlaceHalalEditorState extends State<PlaceHalalEditor> {
         );
         if (mounted) {
           _snack(context, AppLocalizations.of(context).jakimBranchAdded);
+          unawaited(_loadCompanies());
         }
       });
 
@@ -339,7 +375,7 @@ class _PlaceHalalEditorState extends State<PlaceHalalEditor> {
             .firstOrNull ??
         '-';
     final list = _list;
-    return _HalalBox(
+    final box = _HalalBox(
       key: const ValueKey('place-halal'),
       busy: _busy,
       children: [
@@ -495,6 +531,17 @@ class _PlaceHalalEditorState extends State<PlaceHalalEditor> {
               label: Text(l.halalBrandOpen),
             ),
         ],
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _PlaceCompaniesCard(
+          list: _companies,
+          busy: _companiesBusy,
+          onRefresh: () => _loadCompanies(refresh: true),
+        ),
+        box,
       ],
     );
   }
@@ -712,15 +759,6 @@ class _CompanyCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
     final c = info?.company;
-    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
-    final hq = c == null
-        ? null
-        : [
-            c.address,
-            // JAKIM's address usually ends with the state already.
-            if (c.state != null && c.address?.endsWith(c.state!) != true)
-              c.state,
-          ].nonNulls.join(', ');
     return _HalalBox(
       key: const ValueKey('branch-company'),
       busy: busy,
@@ -739,42 +777,9 @@ class _CompanyCard extends StatelessWidget {
         ),
         Text(l.companyOwnerOnly, style: soft),
         const SizedBox(height: spaceS),
-        if (c != null) ...[
-          Text(
-            c.name,
-            key: const ValueKey('company-name'),
-            style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          _InfoRow(id: 'company-hq', label: l.companyHq, value: hq),
-          _InfoRow(id: 'company-phone', label: l.companyPhone, value: c.phone),
-          _InfoRow(id: 'company-fax', label: l.companyFax, value: c.fax),
-          _InfoRow(id: 'company-email', label: l.companyEmail, value: c.email),
-          _InfoRow(
-            id: 'company-website',
-            label: l.companyWebsite,
-            value: c.website,
-            onTap: () => openLink(
-              context,
-              c.website!.startsWith('http')
-                  ? c.website!
-                  : 'https://${c.website}',
-              failed: l.openFailed,
-            ),
-          ),
-          _InfoRow(
-            id: 'company-reference',
-            label: l.companyReference,
-            value: c.reference,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            c.readAt == null
-                ? l.companyNotRead
-                : l.companyReadAt(day.format(c.readAt!.toLocal())),
-            key: const ValueKey('company-read-at'),
-            style: soft,
-          ),
-        ] else if (info != null)
+        if (c != null)
+          _CompanyDetails(company: c)
+        else if (info != null)
           Text(l.companyNone, style: text.bodyMedium),
         const SizedBox(height: spaceS),
         OutlinedButton.icon(
@@ -783,6 +788,148 @@ class _CompanyCard extends StatelessWidget {
           icon: const Icon(Icons.refresh, size: 18),
           label: Text(l.companyRefresh),
         ),
+      ],
+    );
+  }
+}
+
+/// A JAKIM company: name, head office, contacts, reference, and when its page was read.
+class _CompanyDetails extends StatelessWidget {
+  const _CompanyDetails({required this.company});
+
+  final HalalCompany company;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final c = company;
+    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    final hq = [
+      c.address,
+      // JAKIM's address usually ends with the state already.
+      if (c.state != null && c.address?.endsWith(c.state!) != true) c.state,
+    ].nonNulls.join(', ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          c.name,
+          key: const ValueKey('company-name'),
+          style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        _InfoRow(id: 'company-hq', label: l.companyHq, value: hq),
+        _InfoRow(id: 'company-phone', label: l.companyPhone, value: c.phone),
+        _InfoRow(id: 'company-fax', label: l.companyFax, value: c.fax),
+        _InfoRow(id: 'company-email', label: l.companyEmail, value: c.email),
+        _InfoRow(
+          id: 'company-website',
+          label: l.companyWebsite,
+          value: c.website,
+          onTap: () => openLink(
+            context,
+            c.website!.startsWith('http') ? c.website! : 'https://${c.website}',
+            failed: l.openFailed,
+          ),
+        ),
+        _InfoRow(
+          id: 'company-reference',
+          label: l.companyReference,
+          value: c.reference,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          c.readAt == null
+              ? l.companyNotRead
+              : l.companyReadAt(day.format(c.readAt!.toLocal())),
+          key: const ValueKey('company-read-at'),
+          style: text.bodySmall?.copyWith(color: nb.inkSoft),
+        ),
+      ],
+    );
+  }
+}
+
+/// Owner, Edit place > Halal: the companies behind the place's certified outlets, each with its outlets, the
+/// outlets with no company yet, and one "Get company info again" for them all.
+class _PlaceCompaniesCard extends StatelessWidget {
+  const _PlaceCompaniesCard({
+    required this.list,
+    required this.busy,
+    required this.onRefresh,
+  });
+
+  final PlaceCompanies? list;
+  final bool busy;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
+    final branches = list?.branches ?? const [];
+    String name(({String branchId, String? label, BranchCompany info}) b) =>
+        b.label ?? b.info.premise ?? '-';
+    // One entry per company, in the order its first outlet comes.
+    final byCompany = <String, (HalalCompany, List<String>)>{};
+    for (final b in branches) {
+      final c = b.info.company;
+      if (c != null) (byCompany[c.code] ??= (c, [])).$2.add(name(b));
+    }
+    final unlinked = [
+      for (final b in branches)
+        if (b.info.company == null) name(b),
+    ];
+    return _HalalBox(
+      key: const ValueKey('place-companies'),
+      busy: busy,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.business_outlined, size: 20, color: nb.pandanDeep),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l.companiesTitle,
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        Text(l.companiesHelp, style: soft),
+        const SizedBox(height: spaceS),
+        if (list != null && branches.isEmpty)
+          Text(l.companiesNone, style: text.bodyMedium),
+        for (final (i, (c, outlets)) in byCompany.values.indexed) ...[
+          if (i > 0) Divider(height: spaceL, color: nb.line),
+          _CompanyDetails(company: c),
+          const SizedBox(height: 4),
+          Text(
+            l.companiesOutlets(outlets.join(', ')),
+            key: ValueKey('place-company-outlets-${c.code}'),
+            style: text.bodyMedium,
+          ),
+        ],
+        if (unlinked.isNotEmpty) ...[
+          const SizedBox(height: spaceS),
+          Text(
+            l.companiesUnlinked(unlinked.join(', ')),
+            key: const ValueKey('place-companies-unlinked'),
+            style: soft,
+          ),
+        ],
+        if (byCompany.isNotEmpty) ...[
+          const SizedBox(height: spaceS),
+          OutlinedButton.icon(
+            key: const ValueKey('place-companies-refresh'),
+            onPressed: busy ? null : onRefresh,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(l.companyRefresh),
+          ),
+        ],
       ],
     );
   }

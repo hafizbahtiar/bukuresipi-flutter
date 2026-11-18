@@ -1144,5 +1144,11 @@
   "certStatusExpired": "Tamat tempoh",
   "certLinked": "Dipautkan",
   "certSourceOwner": "Dipadankan oleh anda",
-  "certSourceAuto": "Dipadankan oleh semakan JAKIM"
+  "certSourceAuto": "Dipadankan oleh semakan JAKIM",
+  "companiesTitle": "Syarikat (dari JAKIM)",
+  "companiesHelp": "Syarikat di sebalik cawangan bersijil tempat ini. Pemilik sahaja.",
+  "companiesOutlets": "Cawangan: {names}",
+  "companiesUnlinked": "Bersijil, tiada syarikat lagi (buka tab Halal cawangan): {names}",
+  "companiesNone": "Belum ada cawangan tempat ini yang bersijil halal JAKIM.",
+  "companiesLeft": "{count} lagi syarikat belum dibaca: tekan sekali lagi."
 }

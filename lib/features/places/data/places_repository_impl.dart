@@ -544,6 +544,37 @@ class PlacesRepositoryImpl implements PlacesRepository {
       });
 
   @override
+  Future<PlaceCompanies> placeCompanies(
+    String placeId, {
+    bool refresh = false,
+  }) => apiCall(() async {
+    final path = '/places/restaurants/$placeId/halal-companies';
+    final j =
+        (refresh
+                ? await _dio.post<Map<String, dynamic>>(
+                    path,
+                    // Up to 5 JAKIM pages, 1 a second.
+                    options: Options(
+                      receiveTimeout: const Duration(seconds: 90),
+                    ),
+                  )
+                : await _dio.get<Map<String, dynamic>>(path))
+            .data!;
+    return (
+      status: j['status'] as String?,
+      left: (j['left'] as num?)?.toInt() ?? 0,
+      branches: [
+        for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())
+          (
+            branchId: b['branchId'] as String,
+            label: b['label'] as String?,
+            info: BranchCompany.fromJson(b),
+          ),
+      ],
+    );
+  });
+
+  @override
   Future<BranchCompany> branchCompany(
     String branchId, {
     bool refresh = false,

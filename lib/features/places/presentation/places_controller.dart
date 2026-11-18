@@ -374,6 +374,11 @@ class PlacesController extends ChangeNotifier {
   }
 
   /// Owner only: the company behind a branch's certificate ([refresh]: read again now). Throws ApiException.
+  Future<PlaceCompanies> placeCompanies(
+    String placeId, {
+    bool refresh = false,
+  }) => _repo.placeCompanies(placeId, refresh: refresh);
+
   Future<BranchCompany> branchCompany(
     String branchId, {
     bool refresh = false,

@@ -658,6 +658,81 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Edit place > Halal: the companies behind its certified outlets, and Get company info again for them all',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      const kopi = HalalCompany(code: 'COMP-1', name: 'KOPITIAM SDN BHD');
+      repo = FakePlaces()
+        ..places = [place(id: 'a')]
+        ..placeCompaniesList = (
+          status: null,
+          left: 0,
+          branches: const [
+            (
+              branchId: 'b-1',
+              label: 'Pelita Ampang',
+              info: BranchCompany(premise: 'P1', company: kopi),
+            ),
+            (
+              branchId: 'b-2',
+              label: 'Pelita Bangsar',
+              info: BranchCompany(premise: 'P2', company: kopi),
+            ),
+            (
+              branchId: 'b-3',
+              label: 'Pelita Cheras',
+              info: BranchCompany(premise: 'P3'),
+            ),
+          ],
+        )
+        ..placeCompaniesRefreshed = (
+          status: 'ok',
+          left: 2,
+          branches: const [
+            (
+              branchId: 'b-1',
+              label: 'Pelita Ampang',
+              info: BranchCompany(
+                premise: 'P1',
+                company: HalalCompany(
+                  code: 'COMP-1',
+                  name: 'KOPITIAM SDN BHD',
+                  phone: '60321620000',
+                ),
+              ),
+            ),
+          ],
+        );
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await tapKey(t, 'more-menu');
+      await t.tap(find.text('Edit place'));
+      await t.pumpAndSettle();
+      expect(repo.companyCalls, isEmpty); // asked only when Halal opens
+      await tapKey(t, 'place-edit-tab-halal');
+      expect(repo.companyCalls, ['get:r-a']);
+      // One company, both its outlets under it; the outlet with no company listed apart.
+      expect(find.text('KOPITIAM SDN BHD'), findsOneWidget);
+      expect(
+        find.text('Outlets: Pelita Ampang, Pelita Bangsar'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('no company yet'), findsOneWidget);
+      expect(find.textContaining('Pelita Cheras'), findsOneWidget);
+      final go = find.byKey(const ValueKey('place-companies-refresh'));
+      await t.ensureVisible(go);
+      await t.tap(go);
+      await t.pumpAndSettle();
+      expect(repo.companyCalls.last, 'refresh:r-a');
+      expect(find.text('60321620000'), findsOneWidget);
+      expect(
+        find.text('2 more companies not read yet: press again.'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('no claim, no halal section', (t) async {
     repo = FakePlaces()..places = [place(id: 'a', halal: null)];
     await pump(t, const PlaceDetailPage(id: 'a'));
