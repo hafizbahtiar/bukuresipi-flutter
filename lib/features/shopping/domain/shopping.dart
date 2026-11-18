@@ -5,6 +5,7 @@ class ShoppingItem {
     required this.text,
     required this.done,
     this.ingredient,
+    this.category,
     this.recipes = const [],
     this.products = const [],
   });
@@ -15,6 +16,9 @@ class ShoppingItem {
 
   /// The catalogue ingredient (for "see all products"); null for a typed or unrecognised line.
   final String? ingredient;
+
+  /// The ingredient's catalogue section (Sayur, Protein...): the list is grouped by it. null = "Other".
+  final String? category;
 
   /// The recipes the line came from: several when the same ingredient was added up; empty for a typed item.
   final List<({String id, String name})> recipes;

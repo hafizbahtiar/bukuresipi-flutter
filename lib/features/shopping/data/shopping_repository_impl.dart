@@ -45,6 +45,7 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
     String recipeId, {
     bool family = false,
     bool skipOptional = false,
+    List<String> have = const [],
   }) => apiCall(
     () => _items(
       _dio.post<Map<String, dynamic>>(
@@ -53,6 +54,12 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
           'recipeId': recipeId,
           'list': _list(family),
           if (skipOptional) 'skipOptional': true,
+          // The API takes 50 names of 1-60 characters; a longer one would refuse the whole request.
+          if (have.isNotEmpty)
+            'have': [
+              for (final h in have.map((h) => h.trim()))
+                if (h.isNotEmpty && h.length <= 60) h,
+            ].take(50).toList(),
         },
       ),
     ),
@@ -114,6 +121,7 @@ ShoppingItem shoppingItemFromJson(Map<String, dynamic> j) {
     text: j['text'] as String,
     done: j['done'] as bool,
     ingredient: j['ingredient'] as String?,
+    category: j['category'] as String?,
     recipes: [
       for (final r
           in (j['recipes'] as List? ?? const []).cast<Map<String, dynamic>>())

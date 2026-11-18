@@ -1210,6 +1210,10 @@
   "@shoppingAdd": {},
   "shoppingAddHint": "Add an item",
   "@shoppingAddHint": {},
+  "shoppingOther": "Other",
+  "@shoppingOther": {
+    "description": "Shopping list section for lines with no catalogue section"
+  },
   "shoppingEmpty": "Nothing to buy. Add a recipe's ingredients from its page, or type an item above.",
   "@shoppingEmpty": {},
   "shoppingLoadFailed": "Could not load the list. Tap to try again.",
@@ -1387,6 +1391,14 @@
   "@bookMine": {},
   "bookFamily": "Family",
   "@bookFamily": {},
+  "bookBeen": "Been there",
+  "@bookBeen": {
+    "description": "Book filter: places with a confirmed receipt of mine"
+  },
+  "bookToTry": "Want to try",
+  "@bookToTry": {
+    "description": "Book filter: saved places with no confirmed receipt yet"
+  },
   "bookNoMatch": "Nothing matches.",
   "@bookNoMatch": {},
   "placeSavedBy": "Saved by {names}",
@@ -2819,6 +2831,12 @@
   "@shoppingOptionalSkip": {},
   "shoppingOptionalAll": "Everything, optional too",
   "@shoppingOptionalAll": {},
+  "shoppingHaveTitle": "Leave out what's in my kitchen?",
+  "@shoppingHaveTitle": {"description": "Asked when adding a recipe to shopping while the What can I cook list has items"},
+  "shoppingHaveSkip": "Yes, only what I don't have",
+  "@shoppingHaveSkip": {},
+  "shoppingHaveAll": "No, add everything",
+  "@shoppingHaveAll": {},
   "errMealLimit": "That's 10 meal photos today. Try again tomorrow.",
   "@errMealLimit": {},
   "errNotFood": "No food found in that photo. Try another one.",

@@ -227,19 +227,25 @@ class _ShoppingPageState extends State<ShoppingPage> {
                   mark: Icon(Icons.shopping_basket_outlined, color: nb.inkSoft),
                   child: Text(l.shoppingEmpty),
                 ),
-              for (final item in items)
-                _Appear(
-                  key: ValueKey(shopping.keyOf(item)),
-                  visible: !_leaving.contains(shopping.keyOf(item)),
-                  child: _ItemRow(
-                    item: item,
-                    saving: shopping.isLocal(item),
-                    onToggle: () => _toggle(item),
-                    onDelete: () => _leave([
-                      shopping.keyOf(item),
-                    ], () => shopping.remove(item.id)),
+              for (final (header, item) in shoppingSections(items))
+                if (item == null)
+                  _SectionHeader(
+                    key: ValueKey('section-$header'),
+                    text: header!.isEmpty ? l.shoppingOther : header,
+                  )
+                else
+                  _Appear(
+                    key: ValueKey(shopping.keyOf(item)),
+                    visible: !_leaving.contains(shopping.keyOf(item)),
+                    child: _ItemRow(
+                      item: item,
+                      saving: shopping.isLocal(item),
+                      onToggle: () => _toggle(item),
+                      onDelete: () => _leave([
+                        shopping.keyOf(item),
+                      ], () => shopping.remove(item.id)),
+                    ),
                   ),
-                ),
             ],
           ),
         ),
@@ -438,5 +444,40 @@ Future<void> _showProducts(BuildContext context, String ingredient) {
         ),
       );
     },
+  );
+}
+
+/// To-buy lines grouped by catalogue section (A-Z, "Other" last; the catalogue's own "Lain" joins it), each group
+/// after its header (`(header, null)`; '' = Other); bought lines last, unheaded. One section only: no headers.
+List<(String?, ShoppingItem?)> shoppingSections(List<ShoppingItem> items) {
+  final groups = <String, List<ShoppingItem>>{};
+  for (final i in items.where((i) => !i.done)) {
+    final c = i.category;
+    (groups[c == null || c == 'Lain' ? '' : c] ??= []).add(i);
+  }
+  final names = groups.keys.toList()
+    ..sort((a, b) => a.isEmpty ? 1 : (b.isEmpty ? -1 : a.compareTo(b)));
+  return [
+    for (final n in names) ...[
+      if (names.length > 1) (n, null) as (String?, ShoppingItem?),
+      for (final i in groups[n]!) (null, i),
+    ],
+    for (final i in items.where((i) => i.done)) (null, i),
+  ];
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 14, 12, 2),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.labelLarge
+          ?.copyWith(color: Notebook.of(context).pandanDeep),
+    ),
   );
 }

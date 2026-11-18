@@ -316,6 +316,9 @@ class PlacesController extends ChangeNotifier {
     bool submit = false,
   }) => _repo.search(query, lat, lng, submit: submit);
 
+  /// Throws ApiException.
+  Future<List<String>> recentSearches() => _repo.recentSearches();
+
   /// Saves a search result not in the app yet, then reloads the saved places for the map.
   Future<Place> savePoi(String poiId) async {
     final place = await _repo.savePoi(poiId);

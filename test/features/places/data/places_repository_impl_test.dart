@@ -91,6 +91,8 @@ void main() {
     );
     expect(saved.restaurant.name, 'Nasi Kandar Pelita');
     expect(saved.branchId, 'b-2');
+    expect(saved.visited, isFalse); // no "visited" key (older API): not visited
+    expect(placeFromJson({...placeJson, 'visited': true}).visited, isTrue);
     expect(saved.branches[0].halalCert, isNull);
     final cert = saved.branches[1].halalCert!;
     expect(
