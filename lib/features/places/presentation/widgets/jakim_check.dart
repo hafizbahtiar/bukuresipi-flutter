@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -33,8 +35,31 @@ class BranchHalalEditor extends StatefulWidget {
 class _BranchHalalEditorState extends State<BranchHalalEditor> {
   bool _busy = false;
 
-  /// Bumped after a check, save or remove: the company card reads again.
-  int _revision = 0;
+  /// What the certificate says (premise address, brand, company): read when one is linked, again after a change.
+  BranchCompany? _company;
+  bool _companyBusy = false;
+
+  Future<void> _loadCompany({bool refresh = false}) async {
+    final l = AppLocalizations.of(context);
+    final places = context.read<PlacesController>();
+    setState(() => _companyBusy = true);
+    try {
+      final r = await places.branchCompany(widget.branch.id, refresh: refresh);
+      if (!mounted) return;
+      setState(() => _company = r);
+      if (refresh) {
+        _snack(context, switch (r.status) {
+          'ok' => l.companyUpdated,
+          'unavailable' => l.jakimCheckDown,
+          _ => l.companyNone,
+        });
+      }
+    } catch (e) {
+      if (mounted) _snack(context, errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _companyBusy = false);
+    }
+  }
 
   /// The last check (or the AI draft's rows): null = not asked yet.
   JakimCheck? _result;
@@ -43,6 +68,11 @@ class _BranchHalalEditorState extends State<BranchHalalEditor> {
   void initState() {
     super.initState();
     _fromDraft();
+    if (widget.branch.halalCert != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_loadCompany());
+      });
+    }
   }
 
   @override
@@ -63,7 +93,7 @@ class _BranchHalalEditorState extends State<BranchHalalEditor> {
     setState(() => _busy = true);
     try {
       await work(places);
-      if (mounted) setState(() => _revision++);
+      if (mounted) unawaited(_loadCompany());
     } catch (e) {
       if (mounted) _snack(context, errorText(l, e));
     } finally {
@@ -106,39 +136,10 @@ class _BranchHalalEditorState extends State<BranchHalalEditor> {
       key: const ValueKey('branch-halal'),
       busy: _busy,
       children: [
-        if (cert == null)
-          Text(l.halalEditNoCert, style: text.bodyMedium)
-        else ...[
-          Text(
-            cert.premise,
-            style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          Text(
-            (cert.expiredAt(DateTime.now())
-                ? l.halalCertExpired
-                : l.halalCertValid)(
-              day.format(cert.expiresOn),
-              day.format(cert.checkedAt),
-            ),
-            style: soft,
-          ),
-          Wrap(
-            spacing: spaceS,
-            children: [
-              TextButton(
-                onPressed: () =>
-                    openLink(context, cert.url, failed: l.openFailed),
-                child: Text(l.halalCertOpen),
-              ),
-              TextButton(
-                key: const ValueKey('branch-halal-remove'),
-                onPressed: _busy ? null : _remove,
-                child: Text(l.halalCertRemove),
-              ),
-            ],
-          ),
+        if (cert == null) ...[
+          Text(l.halalEditNoCert, style: text.bodyMedium),
+          const SizedBox(height: spaceS),
         ],
-        const SizedBox(height: spaceS),
         FilledButton.tonalIcon(
           key: const ValueKey('branch-halal-check'),
           onPressed: _busy ? null : _check,
@@ -190,14 +191,18 @@ class _BranchHalalEditorState extends State<BranchHalalEditor> {
         ],
       ],
     );
+    final info = _company;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (cert != null)
+          _CertCard(cert: cert, info: info, busy: _busy, onRemove: _remove),
         box,
         if (cert != null)
-          _CompanyBox(
-            key: ValueKey('branch-company-$_revision'),
-            branchId: widget.branch.id,
+          _CompanyCard(
+            info: info,
+            busy: _companyBusy,
+            onRefresh: () => _loadCompany(refresh: true),
           ),
       ],
     );
@@ -520,50 +525,185 @@ class _HalalBox extends StatelessWidget {
   }
 }
 
-/// Owner only: the company behind this branch's certificate (from JAKIM's directory row and its company page), and
-/// "Get company info again" (the page read now; a hand-paired certificate is checked first).
-class _CompanyBox extends StatefulWidget {
-  const _CompanyBox({super.key, required this.branchId});
+/// The linked certificate as JAKIM lists it: valid or expired at a glance, then its rows, how it was linked, and
+/// the two actions (JAKIM's page, remove).
+class _CertCard extends StatelessWidget {
+  const _CertCard({
+    required this.cert,
+    required this.info,
+    required this.busy,
+    required this.onRemove,
+  });
 
-  final String branchId;
+  final HalalCert cert;
+  final BranchCompany? info;
+  final bool busy;
+  final VoidCallback onRemove;
 
   @override
-  State<_CompanyBox> createState() => _CompanyBoxState();
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    final expired = cert.expiredAt(DateTime.now());
+    final tone = expired ? nb.margin : nb.pandan;
+    // The same premise only: a read from before a re-pair is not shown as this certificate's.
+    final same = info?.premise == cert.premise ? info : null;
+    return _HalalBox(
+      key: const ValueKey('branch-cert'),
+      busy: false,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.verified_outlined, size: 20, color: nb.pandanDeep),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l.halalCertTitle,
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+            Container(
+              key: const ValueKey('branch-cert-status'),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: tone.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: tone.withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                expired ? l.certStatusExpired : l.certStatusValid,
+                style: text.labelMedium?.copyWith(
+                  color: tone,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: spaceS),
+        _InfoRow(
+          id: 'cert-premise',
+          label: l.certPremise,
+          value: cert.premise,
+          strong: true,
+        ),
+        _InfoRow(
+          id: 'cert-address',
+          label: l.companyPremiseAddress,
+          value: same?.premiseAddress,
+        ),
+        _InfoRow(id: 'cert-brand', label: l.companyBrand, value: same?.brand),
+        _InfoRow(
+          id: 'cert-valid',
+          label: l.certValidUntil,
+          value: day.format(cert.expiresOn),
+        ),
+        _InfoRow(
+          id: 'cert-checked',
+          label: l.certChecked,
+          value: day.format(cert.checkedAt.toLocal()),
+        ),
+        if (same != null)
+          _InfoRow(
+            id: 'cert-source',
+            label: l.certLinked,
+            value: same.source == 'owner'
+                ? l.certSourceOwner
+                : l.certSourceAuto,
+          ),
+        const SizedBox(height: spaceS),
+        Wrap(
+          spacing: spaceS,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () =>
+                  openLink(context, cert.url, failed: l.openFailed),
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: Text(l.halalCertOpen),
+            ),
+            TextButton(
+              key: const ValueKey('branch-halal-remove'),
+              onPressed: busy ? null : onRemove,
+              child: Text(l.halalCertRemove),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
-class _CompanyBoxState extends State<_CompanyBox> {
-  BranchCompany? _info;
-  bool _busy = true;
+/// Label on the left, value on the right; no value = no row.
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.id,
+    required this.label,
+    required this.value,
+    this.strong = false,
+    this.onTap,
+  });
+
+  final String id, label;
+  final String? value;
+  final bool strong;
+  final VoidCallback? onTap;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _load(refresh: false);
-    });
+  Widget build(BuildContext context) {
+    final v = value;
+    if (v == null || v.isEmpty) return const SizedBox.shrink();
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final style = strong
+        ? text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
+        : text.bodyMedium;
+    return Padding(
+      key: ValueKey(id),
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 112,
+            child: Text(
+              label,
+              style: text.bodySmall?.copyWith(color: nb.inkSoft),
+            ),
+          ),
+          Expanded(
+            child: onTap == null
+                ? SelectableText(v, style: style)
+                : InkWell(
+                    onTap: onTap,
+                    child: Text(
+                      v,
+                      style: style?.copyWith(
+                        color: nb.pandanDeep,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
   }
+}
 
-  Future<void> _load({required bool refresh}) async {
-    final l = AppLocalizations.of(context);
-    final places = context.read<PlacesController>();
-    setState(() => _busy = true);
-    try {
-      final r = await places.branchCompany(widget.branchId, refresh: refresh);
-      if (!mounted) return;
-      setState(() => _info = r);
-      if (refresh) {
-        _snack(context, switch (r.status) {
-          'ok' => l.companyUpdated,
-          'unavailable' => l.jakimCheckDown,
-          _ => l.companyNone,
-        });
-      }
-    } catch (e) {
-      if (mounted) _snack(context, errorText(l, e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
+/// Owner only: the company behind the certificate (JAKIM's company page), and "Get company info again" (read now; a
+/// hand-paired certificate is checked first).
+class _CompanyCard extends StatelessWidget {
+  const _CompanyCard({
+    required this.info,
+    required this.busy,
+    required this.onRefresh,
+  });
+
+  final BranchCompany? info;
+  final bool busy;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -571,41 +711,8 @@ class _CompanyBoxState extends State<_CompanyBox> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
-    final info = _info;
     final c = info?.company;
     final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
-    // Label on the left, value on the right; a missing value leaves no row.
-    Widget row(
-      String key,
-      String label,
-      String? value, {
-      VoidCallback? onTap,
-    }) => value == null || value.isEmpty
-        ? const SizedBox.shrink()
-        : Padding(
-            key: ValueKey('company-$key'),
-            padding: const EdgeInsets.only(top: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(width: 112, child: Text(label, style: soft)),
-                Expanded(
-                  child: onTap == null
-                      ? SelectableText(value, style: text.bodyMedium)
-                      : InkWell(
-                          onTap: onTap,
-                          child: Text(
-                            value,
-                            style: text.bodyMedium?.copyWith(
-                              color: nb.pandanDeep,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                ),
-              ],
-            ),
-          );
     final hq = c == null
         ? null
         : [
@@ -616,33 +723,36 @@ class _CompanyBoxState extends State<_CompanyBox> {
           ].nonNulls.join(', ');
     return _HalalBox(
       key: const ValueKey('branch-company'),
-      busy: _busy,
+      busy: busy,
       children: [
-        Text(
-          l.companyTitle,
-          style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        Row(
+          children: [
+            Icon(Icons.business_outlined, size: 20, color: nb.pandanDeep),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l.companyTitle,
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
         ),
         Text(l.companyOwnerOnly, style: soft),
         const SizedBox(height: spaceS),
-        if (c != null)
+        if (c != null) ...[
           Text(
             c.name,
             key: const ValueKey('company-name'),
             style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-          )
-        else if (info != null)
-          Text(l.companyNone, style: text.bodyMedium),
-        row('brand', l.companyBrand, info?.brand),
-        row('premise-address', l.companyPremiseAddress, info?.premiseAddress),
-        if (c != null) ...[
-          row('hq', l.companyHq, hq),
-          row('phone', l.companyPhone, c.phone),
-          row('fax', l.companyFax, c.fax),
-          row('email', l.companyEmail, c.email),
-          row(
-            'website',
-            l.companyWebsite,
-            c.website,
+          ),
+          _InfoRow(id: 'company-hq', label: l.companyHq, value: hq),
+          _InfoRow(id: 'company-phone', label: l.companyPhone, value: c.phone),
+          _InfoRow(id: 'company-fax', label: l.companyFax, value: c.fax),
+          _InfoRow(id: 'company-email', label: l.companyEmail, value: c.email),
+          _InfoRow(
+            id: 'company-website',
+            label: l.companyWebsite,
+            value: c.website,
             onTap: () => openLink(
               context,
               c.website!.startsWith('http')
@@ -651,7 +761,11 @@ class _CompanyBoxState extends State<_CompanyBox> {
               failed: l.openFailed,
             ),
           ),
-          row('reference', l.companyReference, c.reference),
+          _InfoRow(
+            id: 'company-reference',
+            label: l.companyReference,
+            value: c.reference,
+          ),
           const SizedBox(height: 6),
           Text(
             c.readAt == null
@@ -660,11 +774,12 @@ class _CompanyBoxState extends State<_CompanyBox> {
             key: const ValueKey('company-read-at'),
             style: soft,
           ),
-        ],
+        ] else if (info != null)
+          Text(l.companyNone, style: text.bodyMedium),
         const SizedBox(height: spaceS),
         OutlinedButton.icon(
           key: const ValueKey('branch-company-refresh'),
-          onPressed: _busy ? null : () => _load(refresh: true),
+          onPressed: busy ? null : onRefresh,
           icon: const Icon(Icons.refresh, size: 18),
           label: Text(l.companyRefresh),
         ),

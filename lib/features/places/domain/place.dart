@@ -70,6 +70,7 @@ class BranchCompany {
     this.premiseAddress,
     this.company,
     this.status,
+    this.source,
   });
 
   factory BranchCompany.fromJson(Map<String, dynamic> j) {
@@ -79,6 +80,7 @@ class BranchCompany {
       brand: j['brand'] as String?,
       premiseAddress: j['premiseAddress'] as String?,
       status: j['status'] as String?,
+      source: j['source'] as String?,
       company: c == null
           ? null
           : HalalCompany(
@@ -98,7 +100,8 @@ class BranchCompany {
     );
   }
 
-  final String? premise, brand, premiseAddress, status;
+  /// [source] owner = paired by hand; null = matched by the JAKIM check.
+  final String? premise, brand, premiseAddress, status, source;
   final HalalCompany? company;
 }
 
