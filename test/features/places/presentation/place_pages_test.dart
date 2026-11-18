@@ -540,6 +540,23 @@ void main() {
         find.text('149 Jalan Ampang, 50450, Kuala Lumpur'),
         findsOneWidget,
       );
+      // The certificate card: status at a glance, then JAKIM's rows and how it was linked.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('branch-cert-status')),
+          matching: find.text('Valid'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('cert-brand')),
+          matching: find.text('Pelita'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Apr 15, 2028'), findsOneWidget);
+      expect(find.text('Matched by the JAKIM check'), findsOneWidget);
 
       await tapKey(t, 'branch-company-refresh');
       expect(repo.companyCalls, ['get:b-1', 'refresh:b-1']);

@@ -3018,7 +3018,13 @@
   "companyReference": "JAKIM reference",
   "@companyReference": {},
   "companyReadAt": "Read from JAKIM on {date}",
-  "@companyReadAt": {"placeholders": {"date": {"type": "String"}}},
+  "@companyReadAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "companyNotRead": "Company page not read yet.",
   "@companyNotRead": {},
   "companyRefresh": "Get company info again",
@@ -3026,5 +3032,21 @@
   "companyNone": "No company linked yet. Get company info checks JAKIM for it.",
   "@companyNone": {},
   "companyUpdated": "Company info updated.",
-  "@companyUpdated": {}
+  "@companyUpdated": {},
+  "certPremise": "Premise",
+  "@certPremise": {},
+  "certValidUntil": "Valid until",
+  "@certValidUntil": {},
+  "certChecked": "Last checked",
+  "@certChecked": {},
+  "certStatusValid": "Valid",
+  "@certStatusValid": {},
+  "certStatusExpired": "Expired",
+  "@certStatusExpired": {},
+  "certLinked": "Linked",
+  "@certLinked": {},
+  "certSourceOwner": "Paired by you",
+  "@certSourceOwner": {},
+  "certSourceAuto": "Matched by the JAKIM check",
+  "@certSourceAuto": {}
 }

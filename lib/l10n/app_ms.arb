@@ -1136,5 +1136,13 @@
   "companyNotRead": "Halaman syarikat belum dibaca.",
   "companyRefresh": "Dapatkan maklumat syarikat semula",
   "companyNone": "Belum ada syarikat dipautkan. Dapatkan maklumat syarikat akan menyemaknya di JAKIM.",
-  "companyUpdated": "Maklumat syarikat dikemas kini."
+  "companyUpdated": "Maklumat syarikat dikemas kini.",
+  "certPremise": "Premis",
+  "certValidUntil": "Sah hingga",
+  "certChecked": "Semakan terakhir",
+  "certStatusValid": "Sah",
+  "certStatusExpired": "Tamat tempoh",
+  "certLinked": "Dipautkan",
+  "certSourceOwner": "Dipadankan oleh anda",
+  "certSourceAuto": "Dipadankan oleh semakan JAKIM"
 }
