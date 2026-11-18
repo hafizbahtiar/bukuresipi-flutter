@@ -360,7 +360,7 @@
   "@halalEditClaimNote": {},
   "jakimDraftNone": "JAKIM: no outlet of this brand found in this state.",
   "@jakimDraftNone": {},
-  "jakimDraftDown": "JAKIM did not answer. Use Check JAKIM below later.",
+  "jakimDraftDown": "JAKIM did not answer. Try Check JAKIM in the Halal tab later.",
   "@jakimDraftDown": {},
   "halalBrandTitle": "This brand has JAKIM-certified outlets",
   "@halalBrandTitle": {},
@@ -812,7 +812,7 @@
   "@aiDraftNoInfo": {},
   "aiDraftNoFields": "No field suggestions.",
   "@aiDraftNoFields": {},
-  "aiDraftApplied": "Filled into the fields below — untick any you don't want, then review before saving.",
+  "aiDraftApplied": "Already filled into the Branch tab. Untick any you don't want.",
   "@aiDraftApplied": {},
   "aiDraftSame": "unchanged",
   "@aiDraftSame": {},
@@ -2274,7 +2274,7 @@
   "@pinSearchOsm": {},
   "pinSearchHere": "HERE",
   "@pinSearchHere": {},
-  "pinSearchGrab": "AWS (Grab)",
+  "pinSearchGrab": "GrabMaps",
   "pinSearchJakim": "JAKIM",
   "pinSearchNoPin": "No pin: pin it with OpenStreetMap, HERE or AWS",
   "@pinSearchNoPin": {},
@@ -2832,7 +2832,9 @@
   "shoppingOptionalAll": "Everything, optional too",
   "@shoppingOptionalAll": {},
   "shoppingHaveTitle": "Leave out what's in my kitchen?",
-  "@shoppingHaveTitle": {"description": "Asked when adding a recipe to shopping while the What can I cook list has items"},
+  "@shoppingHaveTitle": {
+    "description": "Asked when adding a recipe to shopping while the What can I cook list has items"
+  },
   "shoppingHaveSkip": "Yes, only what I don't have",
   "@shoppingHaveSkip": {},
   "shoppingHaveAll": "No, add everything",
@@ -2942,5 +2944,57 @@
   "deleteScopeDish": "Every user: the dish leaves the catalogue. Copies people made and their shopping lines stay.",
   "@deleteScopeDish": {},
   "deleteScopeRecipeMine": "Only your recipe. Copies other people made stay.",
-  "@deleteScopeRecipeMine": {}
+  "@deleteScopeRecipeMine": {},
+  "branchTabFind": "Find",
+  "@branchTabFind": {
+    "description": "Owner's Edit branch tab: AI draft and map search"
+  },
+  "aiDraftCardHelp": "Reads the maps and the web, then drafts the name, address and pin. Nothing is saved until you save the branch.",
+  "@aiDraftCardHelp": {},
+  "aiDraftWarningsTitle": "Check before saving",
+  "@aiDraftWarningsTitle": {},
+  "aiDraftFieldsTitle": "Suggested changes",
+  "@aiDraftFieldsTitle": {},
+  "aiDraftPhotosTitle": "Photos found",
+  "@aiDraftPhotosTitle": {},
+  "aiDraftPagesTitle": "Pages read",
+  "@aiDraftPagesTitle": {},
+  "pinCandidateFromDraft": "{metres} m from the draft",
+  "@pinCandidateFromDraft": {
+    "placeholders": {
+      "metres": {
+        "type": "int"
+      }
+    }
+  },
+  "pinSourceOsmHint": "Free. Places and addresses from OpenStreetMap.",
+  "@pinSourceOsmHint": {},
+  "pinSourceHereHint": "HERE Maps. Each search counts against the monthly quota.",
+  "@pinSourceHereHint": {},
+  "pinSourceGrabHint": "GrabMaps on AWS. Each search counts against the monthly quota.",
+  "@pinSourceGrabHint": {},
+  "pinSourceJakimHint": "JAKIM's halal list for this brand in the branch's state. No pins: pin one with another map.",
+  "@pinSourceJakimHint": {},
+  "pinFromSource": "Pin from {source}",
+  "@pinFromSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "pinNotSaved": "New pin, not saved yet",
+  "@pinNotSaved": {},
+  "branchPinNone": "No pin yet",
+  "@branchPinNone": {},
+  "sourceCurrentPin": "Current pin",
+  "@sourceCurrentPin": {},
+  "sourceAiDraft": "AI draft",
+  "@sourceAiDraft": {},
+  "sourceWeb": "Web pages",
+  "@sourceWeb": {},
+  "sourceOwner": "Owner",
+  "@sourceOwner": {},
+  "sourceHandPins": "Users' pins",
+  "@sourceHandPins": {}
 }
