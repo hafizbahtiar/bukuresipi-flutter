@@ -29,7 +29,7 @@ import '../../recipes/recipes_fixtures.dart';
 /// Space between the map picker and the search box below it.
 double spacing(WidgetTester t) =>
     t.getTopLeft(find.byKey(const ValueKey('pin-search-query'))).dy -
-    t.getBottomLeft(find.text('AWS (Grab)')).dy;
+    t.getBottomLeft(find.byKey(const ValueKey('pin-source-grab'))).dy;
 
 /// Opens the first branch's actions: its ⋮ button, or a long press on the tile.
 Future<void> branchMenu(WidgetTester t, {bool longPress = false}) async {
@@ -944,6 +944,7 @@ void main() {
     await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
 
+    await tapKey(t, 'branch-tab-find');
     final suggest = find.text('Suggest with AI');
     await t.ensureVisible(suggest);
     await t.tap(suggest);
@@ -951,10 +952,10 @@ void main() {
 
     expect(repo.suggested, ['b-1']);
     expect(find.text('AI draft — review before saving'), findsOneWidget);
-    expect(find.text('Source: nominatim'), findsOneWidget);
+    expect(find.text('Source: OpenStreetMap'), findsOneWidget);
     expect(
       find.text(
-        "Filled into the fields below — untick any you don't want, then review before saving.",
+        "Already filled into the Branch tab. Untick any you don't want.",
       ),
       findsOneWidget,
     );
@@ -966,8 +967,11 @@ void main() {
     await t.ensureVisible(address);
     await t.tap(address);
     await t.pumpAndSettle();
-    String text(String key) =>
-        t.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    // The form is on the Branch tab (kept, offstage, while Find shows).
+    String text(String key) => t
+        .widget<TextField>(find.byKey(ValueKey(key), skipOffstage: false))
+        .controller!
+        .text;
     expect(text('branch-address'), '');
     await t.tap(address);
     await t.pumpAndSettle();
@@ -977,14 +981,18 @@ void main() {
     expect(find.text('AI'), findsWidgets);
     expect(
       t
-          .widget<TextField>(find.byKey(const ValueKey('branch-label')))
+          .widget<TextField>(
+            find.byKey(const ValueKey('branch-label'), skipOffstage: false),
+          )
           .controller!
           .text,
       'AI Label',
     );
     expect(
       t
-          .widget<TextField>(find.byKey(const ValueKey('branch-lat')))
+          .widget<TextField>(
+            find.byKey(const ValueKey('branch-lat'), skipOffstage: false),
+          )
           .controller!
           .text,
       '2.991234',
@@ -1024,6 +1032,7 @@ void main() {
       await branchMenu(t);
       await t.tap(find.text('Edit branch'));
       await t.pumpAndSettle();
+      await tapKey(t, 'branch-tab-find');
       final suggest = find.text('Suggest with AI');
       await t.ensureVisible(suggest);
       await t.tap(suggest);
@@ -1080,12 +1089,13 @@ void main() {
       await branchMenu(t);
       await t.tap(find.text('Edit branch'));
       await t.pumpAndSettle();
+      await tapKey(t, 'branch-tab-find');
       final suggest = find.text('Suggest with AI');
       await t.ensureVisible(suggest);
       await t.tap(suggest);
       await t.pumpAndSettle();
 
-      // The Branch tab only says where they are.
+      // The Find tab only says where they are.
       expect(
         find.text('JAKIM: outlets found. Pick one in the Halal tab.'),
         findsOneWidget,
@@ -1196,6 +1206,7 @@ void main() {
     await branchMenu(t);
     await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
+    await tapKey(t, 'branch-tab-find');
     final suggest = find.text('Suggest with AI');
     await t.ensureVisible(suggest);
     await t.tap(suggest);
@@ -1205,7 +1216,9 @@ void main() {
     expect(find.textContaining('545 m'), findsOneWidget);
     // The draft always says what JAKIM gave, here nothing (no answer).
     expect(
-      find.text('JAKIM did not answer. Use Check JAKIM below later.'),
+      find.text(
+        'JAKIM did not answer. Try Check JAKIM in the Halal tab later.',
+      ),
       findsOneWidget,
     );
     final use = find.descendant(
@@ -1217,7 +1230,9 @@ void main() {
     await t.pumpAndSettle();
     expect(
       t
-          .widget<TextField>(find.byKey(const ValueKey('branch-lat')))
+          .widget<TextField>(
+            find.byKey(const ValueKey('branch-lat'), skipOffstage: false),
+          )
           .controller!
           .text,
       '3.205000',
@@ -1251,41 +1266,64 @@ void main() {
     await branchMenu(t);
     await t.tap(find.text('Edit branch'));
     await t.pumpAndSettle();
-    // Picking a map searches it at once.
-    final osm = find.text('OpenStreetMap');
-    await t.ensureVisible(osm);
-    await t.tap(osm);
-    await t.pumpAndSettle();
+    await tapKey(t, 'branch-tab-find');
+    Future<void> search(String source) async {
+      await t.ensureVisible(find.byKey(ValueKey('pin-source-$source')));
+      await tapKey(t, 'pin-source-$source');
+      final go = find.byKey(const ValueKey('pin-search-go'));
+      await t.ensureVisible(go);
+      await t.tap(go);
+      await t.pumpAndSettle();
+    }
+
+    // Picking a map asks nothing (HERE and GrabMaps are metered): it says what the map is, Search asks it.
+    await tapKey(t, 'pin-source-here');
+    expect(repo.pinSearches, isEmpty);
+    expect(find.textContaining('monthly quota'), findsOneWidget);
+    await search('osm');
     expect(repo.pinSearches.last.$2, 'osm');
-    // Results open in a sheet; closed, the form keeps a button to show them again.
+    // Results show in the tab, each with Use and New branch.
     expect(find.text('2 results from OpenStreetMap'), findsOneWidget);
-    await closeMenu(t);
-    expect(find.text('Show 2 results'), findsOneWidget);
     // JAKIM: the halal-listed outlets, each named as JAKIM lists it.
-    await t.tap(find.text('JAKIM'));
-    await t.pumpAndSettle();
+    await search('jakim');
     expect(repo.pinSearches.last.$2, 'jakim');
     expect(find.text('FLOW SMOKE & BREW - BANGI GATEWAY'), findsOneWidget);
     expect(find.textContaining('No pin: pin it with'), findsOneWidget);
-    await closeMenu(t);
-    await t.tap(find.text('AWS (Grab)'));
-    await t.pumpAndSettle();
+    await search('grab');
     expect(repo.pinSearches.last.$2, 'grab');
     // The first map's default words are not sent to the next: each map gets its own.
     expect(repo.pinSearches.last.$3, isNull);
     expect(spacing(t), greaterThanOrEqualTo(8));
-    final use = find.descendant(
-      of: find.byKey(const ValueKey('pin-hit-0')),
-      matching: find.text('Use'),
+
+    // Another outlet in the results: added as a new branch, the form untouched.
+    final add = find.byKey(const ValueKey('pin-hit-add-0'));
+    await t.ensureVisible(add);
+    await t.tap(add);
+    await t.pumpAndSettle();
+    expect(repo.siblings, [
+      ('b-1', 'P&C Kitchen, Jalan Ampang, Kuala Lumpur', 3.1591, null),
+    ]);
+    expect(
+      find.text('Branch added. Edit its name on the map if needed.'),
+      findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('pin-hit-0')),
+        matching: find.text('Added'),
+      ),
+      findsOneWidget,
+    );
+
+    final use = find.byKey(const ValueKey('pin-hit-use-0'));
     await t.ensureVisible(use);
     await t.tap(use);
     await t.pumpAndSettle();
     String field(String key) => t
         .widget<TextField>(
           find.descendant(
-            of: find.byKey(ValueKey(key)),
-            matching: find.byType(TextField),
+            of: find.byKey(ValueKey(key), skipOffstage: false),
+            matching: find.byType(TextField, skipOffstage: false),
             matchRoot: true,
           ),
         )
@@ -1299,24 +1337,9 @@ void main() {
       field('pin-search-query'),
       'Shop, Kuala Lumpur',
     ); // what was asked, to change and search again
-
-    // Another outlet in the results: added as a new branch, the form untouched.
-    await t.tap(find.byKey(const ValueKey('pin-search-results')));
-    await t.pumpAndSettle();
-    final add = find.byKey(const ValueKey('pin-hit-add-0'));
-    await t.ensureVisible(add);
-    await t.tap(add);
-    await t.pumpAndSettle();
-    expect(repo.siblings, [
-      ('b-1', 'P&C Kitchen, Jalan Ampang, Kuala Lumpur', 3.1591, null),
-    ]);
-    // Shown once the previous message ("Use") has gone: snack bars queue.
-    await t.pump(const Duration(seconds: 5));
-    await t.pumpAndSettle();
-    expect(
-      find.text('Branch added. Edit its name on the map if needed.'),
-      findsOneWidget,
-    );
+    // Back on the Branch tab, the location says the pin is new.
+    await tapKey(t, 'branch-tab-details');
+    expect(find.text('New pin, not saved yet'), findsOneWidget);
   });
 
   testWidgets('a pinned place has a Map item that opens the map on its pin', (

@@ -92,13 +92,14 @@ class _BranchEditPageState extends State<BranchEditPage> {
   String _pinSource = 'here';
   bool _searchingPin = false;
   List<PinHit>? _pinHits;
+  final _added = <int>{}; // hits added as new branches (this search)
+  int? _adding;
   String? _askedQuery; // the server's default words for the last map: not carried to another map
   BranchSuggestion? _suggestion;
 
   /// A draft photo picked as the restaurant's cover: set when the branch is saved.
   String? _photo;
 
-  final _labelAnchor = GlobalKey();
   final _aiFields = <String>{};
 
   @override
@@ -208,8 +209,8 @@ class _BranchEditPageState extends State<BranchEditPage> {
         _pinQuery.text = r.query;
         _askedQuery = r.query;
         _pinHits = r.hits;
+        _added.clear();
       });
-      if (r.hits.isNotEmpty) unawaited(_showPinHits());
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
@@ -247,40 +248,12 @@ class _BranchEditPageState extends State<BranchEditPage> {
   void _usePinHit(PinHit h) =>
       _useFound(h.lat, h.lng, address: h.address, city: h.city, state: h.state);
 
-  /// The last search's results in a sheet; "Use" fills the form. Closed, the form keeps a button to open it again.
-  Future<void> _showPinHits() async {
-    final hits = _pinHits;
-    if (hits == null || hits.isEmpty) return;
-    final l = AppLocalizations.of(context);
-    FocusScope.of(context).unfocus();
-    final map = switch (_pinSource) {
-      'osm' => l.pinSearchOsm,
-      'here' => l.pinSearchHere,
-      'jakim' => l.pinSearchJakim,
-      _ => l.pinSearchGrab,
-    };
-    final picked = await showBaseSheet<PinHit>(
-      context,
-      builder: (sheet) => ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(sheet).height * 0.8,
-        ),
-        child: _PinHitsSheet(
-          title: l.pinResultsTitle(hits.length, map),
-          query: _pinQuery.text,
-          hits: hits,
-          onAdd: _addBranch,
-        ),
-      ),
-    );
-    if (picked != null && mounted) _usePinHit(picked);
-  }
-
   /// Owner: the hit is another outlet of this shop: a new branch (the server names it shop + town; editable later).
-  /// true = added.
-  Future<bool> _addBranch(PinHit h) async {
+  Future<void> _addBranch(int i) async {
+    final h = _pinHits![i];
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    setState(() => _adding = i);
     try {
       await context.read<PlacesController>().addSiblingBranch(
         widget.branch.id,
@@ -290,51 +263,72 @@ class _BranchEditPageState extends State<BranchEditPage> {
         lat: h.lat,
         lng: h.lng,
       );
+      if (mounted) setState(() => _added.add(i));
       messenger.showSnackBar(SnackBar(content: Text(l.branchAdded)));
-      return true;
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-      return false;
+    } finally {
+      if (mounted) setState(() => _adding = null);
     }
   }
 
+  /// Another map picked: nothing is asked yet (HERE and GrabMaps are metered); the owner presses Search.
+  void _pickSource(String s) => setState(() {
+    _pinSource = s;
+    _pinHits = null;
+    // Each map has its own best default (GrabMaps: the name alone); words the owner typed stay.
+    if (_pinQuery.text == _askedQuery) _pinQuery.clear();
+  });
+
   Widget _pinSearch(AppLocalizations l, Notebook nb, TextTheme text) {
     final hits = _pinHits;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final small = text.bodySmall?.copyWith(color: nb.inkSoft);
+    return _Card(
+      key: const ValueKey('pin-search-card'),
+      icon: Icons.travel_explore,
+      title: l.pinSearchTitle,
       children: [
-        const SizedBox(height: 8),
-        Text(
-          l.pinSearchTitle,
-          style: text.labelLarge?.copyWith(color: nb.inkSoft),
-        ),
-        Text(
-          l.pinSearchHelp,
-          style: text.bodySmall?.copyWith(color: nb.inkSoft),
-        ),
-        const SizedBox(height: 6),
-        SegmentedButton<String>(
-          showSelectedIcon: false,
-          selected: {_pinSource},
-          // Picking a map asks it at once: the choice is the search.
-          onSelectionChanged: (picked) {
-            final s = picked.first;
-            setState(() {
-              _pinSource = s;
-              _pinHits = null;
-              // Each map has its own best default (GrabMaps: the name alone); words the owner typed stay.
-              if (_pinQuery.text == _askedQuery) _pinQuery.clear();
-            });
-            _searchPin();
-          },
-          segments: [
-            ButtonSegment(value: 'osm', label: Text(l.pinSearchOsm)),
-            ButtonSegment(value: 'here', label: Text(l.pinSearchHere)),
-            ButtonSegment(value: 'grab', label: Text(l.pinSearchGrab)),
-            ButtonSegment(value: 'jakim', label: Text(l.pinSearchJakim)),
+        Wrap(
+          spacing: spaceS,
+          runSpacing: spaceS,
+          children: [
+            for (final s in const ['osm', 'here', 'grab', 'jakim'])
+              ChoiceChip(
+                key: ValueKey('pin-source-$s'),
+                label: Text(_mapName(l, s)),
+                selected: _pinSource == s,
+                showCheckmark: false,
+                onSelected: _searchingPin ? null : (_) => _pickSource(s),
+              ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: spaceS),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              _pinSource == 'here' || _pinSource == 'grab'
+                  ? Icons.toll_outlined
+                  : Icons.info_outline,
+              size: 16,
+              color: nb.inkSoft,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                switch (_pinSource) {
+                  'osm' => l.pinSourceOsmHint,
+                  'here' => l.pinSourceHereHint,
+                  'jakim' => l.pinSourceJakimHint,
+                  _ => l.pinSourceGrabHint,
+                },
+                key: const ValueKey('pin-source-hint'),
+                style: small,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: spaceM),
         TextField(
           key: const ValueKey('pin-search-query'),
           controller: _pinQuery,
@@ -342,39 +336,51 @@ class _BranchEditPageState extends State<BranchEditPage> {
           onSubmitted: (_) => _searchPin(),
           decoration: InputDecoration(
             labelText: l.pinSearchQuery,
-            suffixIcon: _searchingPin
-                ? const Padding(
-                    padding: EdgeInsets.all(14),
-                    child: SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                    ),
+            prefixIcon: const Icon(Icons.search, size: 20),
+          ),
+        ),
+        const SizedBox(height: spaceS),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            key: const ValueKey('pin-search-go'),
+            onPressed: _searchingPin ? null : _searchPin,
+            icon: _searchingPin
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : TextButton(
-                    key: const ValueKey('pin-search-go'),
-                    onPressed: _searchPin,
-                    child: Text(l.pinSearchButton),
-                  ),
+                : const Icon(Icons.search, size: 18),
+            label: Text(l.pinSearchButton),
           ),
         ),
         if (hits != null && hits.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              l.pinSearchNone,
-              style: text.bodySmall?.copyWith(color: nb.inkSoft),
-            ),
-          ),
-        if (hits != null && hits.isNotEmpty)
-          Padding(
             padding: const EdgeInsets.only(top: spaceS),
-            child: OutlinedButton.icon(
-              key: const ValueKey('pin-search-results'),
-              onPressed: _showPinHits,
-              icon: const Icon(Icons.list_alt_outlined, size: 18),
-              label: Text(l.pinResultsShow(hits.length)),
-            ),
+            child: Text(l.pinSearchNone, style: small),
           ),
+        if (hits != null && hits.isNotEmpty) ...[
+          const Divider(height: spaceL),
+          Text(
+            l.pinResultsTitle(hits.length, _mapName(l, _pinSource)),
+            key: const ValueKey('pin-results-title'),
+            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: spaceS),
+          for (final (i, h) in hits.indexed) ...[
+            if (i > 0) const SizedBox(height: spaceS),
+            _HitCard(
+              key: ValueKey('pin-hit-$i'),
+              index: i,
+              hit: h,
+              added: _added.contains(i),
+              adding: _adding == i,
+              busy: _adding != null,
+              onUse: () => _usePinHit(h),
+              onAdd: () => _addBranch(i),
+            ),
+          ],
+        ],
       ],
     );
   }
@@ -416,16 +422,6 @@ class _BranchEditPageState extends State<BranchEditPage> {
           _lngText.text = lng.toStringAsFixed(6);
           _aiFields.add('location');
         }
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final anchor = _labelAnchor.currentContext;
-        if (anchor == null || !mounted) return;
-        Scrollable.ensureVisible(
-          anchor,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          alignment: 0.08,
-        );
       });
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
@@ -511,6 +507,14 @@ class _BranchEditPageState extends State<BranchEditPage> {
     final latError = _latError(l);
     final lngError = _lngError(l);
     final canSave = !_saving && latError == null && lngError == null;
+    final owner = widget.canEditShared;
+    Widget tab(List<Widget> children) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: spaceM),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
@@ -542,7 +546,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
       ),
       body: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        // The standard segments (as the place page): Branch, and Halal for the owner.
+        // The owner: Branch (the form), Find (AI draft, map search), Halal. A user: the form alone.
         child: EditTabs(
           sections: [
             DetailSection(
@@ -550,170 +554,200 @@ class _BranchEditPageState extends State<BranchEditPage> {
               label: l.branchTabDetails,
               rows: [
                 // One row, not a lazy list: every field exists at once (a draft fills fields below the fold).
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: spaceM),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (widget.canEditShared) ...[
-                        BranchCoverField(
-                          branchId: widget.branch.id,
-                          picked: _photo,
-                        ),
-                        const SizedBox(height: spaceM),
-                      ] else ...[
-                        // The owner's page says it in its strip; a user's edit is theirs alone.
-                        Text(
-                          l.branchPersonalOnly,
-                          style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      if (widget.canEditShared && widget.onSuggest != null) ...[
-                        if (_suggesting)
-                          const _AiLoading()
-                        else ...[
-                          if (_suggestion case final suggestion?)
-                            _DraftBanner(
-                              suggestion: suggestion,
-                              branch: widget.branch,
-                              used: _aiFields,
-                              onPick: _pickDraft,
-                              photo: _photo,
-                              onPhoto: (url) => setState(() => _photo = url),
-                              onUsePin: (c) =>
-                                  _useFound(c.lat, c.lng, address: c.address),
-                            ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: AiButton(
-                              label: _suggestion == null
-                                  ? l.aiSuggest
-                                  : l.aiSuggestAgain,
-                              onPressed: _saving ? null : _suggest,
-                            ),
-                          ),
-                        ],
-                        _pinSearch(l, nb, text),
-                      ],
-                      const SizedBox(height: 16),
-                      KeyedSubtree(
-                        key: _labelAnchor,
-                        child: _field(
-                          key: const ValueKey('branch-label'),
-                          controller: _label,
-                          label: l.branchLabel,
-                          ai: _aiFields.contains('label'),
-                        ),
-                      ),
-                      _field(
-                        key: const ValueKey('branch-address'),
-                        controller: _address,
-                        label: l.branchAddress,
-                        ai: _aiFields.contains('address'),
-                      ),
-                      FutureBuilder(
-                        future: _areas,
-                        builder: (context, s) =>
-                            _areaFields(l, s.data ?? const []),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l.branchLocation,
-                        style: text.labelLarge?.copyWith(color: nb.inkSoft),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _field(
-                              key: const ValueKey('branch-lat'),
-                              controller: _latText,
-                              label: l.branchLatitude,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                    signed: true,
-                                  ),
-                              errorText: latError,
-                              ai: _aiFields.contains('location'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _field(
-                              key: const ValueKey('branch-lng'),
-                              controller: _lngText,
-                              label: l.branchLongitude,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                    signed: true,
-                                  ),
-                              errorText: lngError,
-                              ai: _aiFields.contains('location'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      TextField(
-                        key: const ValueKey('branch-maps-link'),
-                        controller: _mapsLink,
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.go,
-                        onSubmitted: (_) => _useMapsLink(),
-                        decoration: InputDecoration(
-                          labelText: l.mapsLinkLabel,
-                          helperText: l.mapsLinkHint,
-                          helperMaxLines: 2,
-                          prefixIcon: const Icon(Icons.link, size: 20),
-                          suffixIcon: _readingLink
-                              ? const Padding(
-                                  padding: EdgeInsets.all(14),
-                                  child: SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator.adaptive(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                )
-                              : TextButton(
-                                  onPressed: _useMapsLink,
-                                  child: Text(l.mapsLinkUse),
-                                ),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: _pickOnMap,
-                          icon: const Icon(Icons.map_outlined, size: 18),
-                          label: Text(l.setOnMap),
-                        ),
-                      ),
-                    ],
+                tab([
+                  if (owner) ...[
+                    BranchCoverField(
+                      branchId: widget.branch.id,
+                      picked: _photo,
+                    ),
+                    const SizedBox(height: spaceM),
+                  ] else ...[
+                    // The owner's page says it in its strip; a user's edit is theirs alone.
+                    Text(
+                      l.branchPersonalOnly,
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                    const SizedBox(height: spaceS),
+                  ],
+                  const SizedBox(height: spaceS),
+                  _field(
+                    key: const ValueKey('branch-label'),
+                    controller: _label,
+                    label: l.branchLabel,
+                    ai: _aiFields.contains('label'),
                   ),
-                ),
+                  _field(
+                    key: const ValueKey('branch-address'),
+                    controller: _address,
+                    label: l.branchAddress,
+                    ai: _aiFields.contains('address'),
+                  ),
+                  FutureBuilder(
+                    future: _areas,
+                    builder: (context, s) => _areaFields(l, s.data ?? const []),
+                  ),
+                  const SizedBox(height: spaceS),
+                  _location(l, nb, text, latError, lngError),
+                ]),
               ],
             ),
-            if (widget.canEditShared)
+            if (owner && widget.onSuggest != null)
+              DetailSection(
+                id: 'branch-tab-find',
+                label: l.branchTabFind,
+                rows: [
+                  tab([
+                    _aiCard(l, nb, text),
+                    const SizedBox(height: spaceM),
+                    _pinSearch(l, nb, text),
+                  ]),
+                ],
+              ),
+            if (owner)
               DetailSection(
                 id: 'branch-tab-halal',
                 label: l.halalEditTitle,
                 rows: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: spaceM),
-                    child: BranchHalalEditor(
+                  tab([
+                    BranchHalalEditor(
                       branch: widget.branch,
                       draft: _suggestion?.jakim,
                     ),
-                  ),
+                  ]),
                 ],
               ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Where the pin is now and where it came from, the coordinates, and the two ways to set them here.
+  Widget _location(
+    AppLocalizations l,
+    Notebook nb,
+    TextTheme text,
+    String? latError,
+    String? lngError,
+  ) {
+    final b = widget.branch;
+    final status = _pinChanged
+        ? l.pinNotSaved
+        : !b.hasPin
+        ? l.branchPinNone
+        : b.pinSource == null
+        ? null
+        : l.pinFromSource(sourceName(l, b.pinSource!));
+    return _Card(
+      key: const ValueKey('branch-location'),
+      icon: Icons.place_outlined,
+      title: l.branchLocation,
+      subtitle: status,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _field(
+                key: const ValueKey('branch-lat'),
+                controller: _latText,
+                label: l.branchLatitude,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
+                errorText: latError,
+                ai: _aiFields.contains('location'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _field(
+                key: const ValueKey('branch-lng'),
+                controller: _lngText,
+                label: l.branchLongitude,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
+                errorText: lngError,
+                ai: _aiFields.contains('location'),
+              ),
+            ),
+          ],
+        ),
+        TextField(
+          key: const ValueKey('branch-maps-link'),
+          controller: _mapsLink,
+          keyboardType: TextInputType.url,
+          textInputAction: TextInputAction.go,
+          onSubmitted: (_) => _useMapsLink(),
+          decoration: InputDecoration(
+            labelText: l.mapsLinkLabel,
+            helperText: l.mapsLinkHint,
+            helperMaxLines: 2,
+            prefixIcon: const Icon(Icons.link, size: 20),
+            suffixIcon: _readingLink
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    ),
+                  )
+                : TextButton(
+                    onPressed: _useMapsLink,
+                    child: Text(l.mapsLinkUse),
+                  ),
+          ),
+        ),
+        const SizedBox(height: spaceS),
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            onPressed: _pickOnMap,
+            icon: const Icon(Icons.map_outlined, size: 18),
+            label: Text(l.setOnMap),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// The AI draft: what it does, the button; while it runs a progress line; then the draft to review.
+  Widget _aiCard(AppLocalizations l, Notebook nb, TextTheme text) {
+    final suggestion = _suggestion;
+    return _Card(
+      key: const ValueKey('ai-draft-card'),
+      icon: Icons.auto_awesome,
+      title: suggestion == null
+          ? l.sourceAiDraft
+          : suggestion.aiUsed
+          ? l.aiDraftTitle
+          : l.aiDraftFromMap,
+      subtitle: suggestion == null && !_suggesting ? l.aiDraftCardHelp : null,
+      children: [
+        if (_suggesting)
+          const _AiLoading()
+        else if (suggestion != null)
+          _DraftBanner(
+            suggestion: suggestion,
+            branch: widget.branch,
+            used: _aiFields,
+            onPick: _pickDraft,
+            photo: _photo,
+            onPhoto: (url) => setState(() => _photo = url),
+            onUsePin: (c) => _useFound(c.lat, c.lng, address: c.address),
+          ),
+        if (!_suggesting)
+          Align(
+            alignment: Alignment.centerRight,
+            child: AiButton(
+              label: suggestion == null ? l.aiSuggest : l.aiSuggestAgain,
+              onPressed: _saving ? null : _suggest,
+            ),
+          ),
+      ],
     );
   }
 
@@ -810,6 +844,27 @@ class _BranchEditPageState extends State<BranchEditPage> {
       : Text(label);
 }
 
+/// A provider or pin source as the owner reads it ("HERE", "OpenStreetMap"), not its code.
+String sourceName(AppLocalizations l, String code) => switch (code) {
+  'osm' || 'nominatim' || 'photon' || 'nominatim_reverse' => l.pinSearchOsm,
+  'here' => l.pinSearchHere,
+  'grab' => l.pinSearchGrab,
+  'jakim' => l.pinSearchJakim,
+  'overture' => 'Overture Maps',
+  'web' => l.sourceWeb,
+  'owner' => l.sourceOwner,
+  'user' => l.sourceHandPins,
+  'current' => l.sourceCurrentPin,
+  'chain' || 'draft' => l.sourceAiDraft,
+  _ when code.startsWith('draft:') =>
+    '${l.sourceAiDraft} · ${sourceName(l, code.substring(6))}',
+  _ => code,
+};
+
+String _mapName(AppLocalizations l, String s) => sourceName(l, s);
+
+/// The AI draft, to review: what to check first, the fields it changed (each kept or dropped), the pins it found,
+/// photos, JAKIM, and where it read.
 class _DraftBanner extends StatelessWidget {
   const _DraftBanner({
     required this.suggestion,
@@ -833,16 +888,13 @@ class _DraftBanner extends StatelessWidget {
   final void Function(String field, bool use) onPick;
   final ValueChanged<PinCandidate> onUsePin;
 
-  String? _coords(double? lat, double? lng) => lat == null || lng == null
-      ? null
-      : '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}';
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final small = text.bodySmall?.copyWith(color: nb.inkSoft);
+    final heading = text.labelLarge?.copyWith(fontWeight: FontWeight.w700);
     final draft = suggestion.draft;
     final rows = <(String, String, String?, String?)>[
       ('label', l.branchLabel, branch.label, draft.label),
@@ -856,44 +908,51 @@ class _DraftBanner extends StatelessWidget {
         _coords(draft.lat, draft.lng),
       ),
     ].where((row) => row.$4 != null && row.$4!.trim().isNotEmpty).toList();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: nb.mist,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: nb.line),
-      ),
+    Widget section(String title, List<Widget> children) => Padding(
+      padding: const EdgeInsets.only(top: spaceM),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 16, color: nb.pandanDeep),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  suggestion.aiUsed ? l.aiDraftTitle : l.aiDraftFromMap,
-                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          Text(title, style: heading),
+          ...children,
+        ],
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (suggestion.summary case final summary? when summary.isNotEmpty)
+          Text(summary, style: text.bodyMedium),
+        if (suggestion.warnings.isNotEmpty)
+          Container(
+            key: const ValueKey('draft-warnings'),
+            margin: const EdgeInsets.only(top: spaceM),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: nb.kunyit.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: nb.kunyit),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, size: 18, color: nb.ink),
+                    const SizedBox(width: 6),
+                    Text(l.aiDraftWarningsTitle, style: heading),
+                  ],
                 ),
-              ),
-            ],
+                for (final w in suggestion.warnings)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text('• $w', style: text.bodySmall),
+                  ),
+              ],
+            ),
           ),
-          if (suggestion.sources.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                l.aiDraftSources(suggestion.sources.join(', ')),
-                style: small,
-              ),
-            ),
-          if (suggestion.summary case final summary? when summary.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(summary, style: small),
-            ),
+        section(l.aiDraftFieldsTitle, [
           if (rows.isNotEmpty) ...[
-            const SizedBox(height: 4),
             Text(l.aiDraftApplied, style: small),
             for (final row in rows)
               _DraftField(
@@ -905,77 +964,118 @@ class _DraftBanner extends StatelessWidget {
                 onUse: (v) => onPick(row.$1, v),
               ),
           ] else
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(l.aiDraftNoFields, style: small),
-            ),
-          if (!suggestion.changed)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(l.aiDraftNoInfo, style: small),
-            ),
-          if (suggestion.photos.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            Text(l.aiDraftNoFields, style: small),
+          if (!suggestion.changed) Text(l.aiDraftNoInfo, style: small),
+        ]),
+        if (suggestion.candidates.length > 1)
+          section(l.pinCandidatesTitle, [
+            for (final c in suggestion.candidates)
+              _PinRow(
+                key: ValueKey('pin-${c.source}'),
+                pin: c,
+                onUse: onUsePin,
+              ),
+          ]),
+        if (suggestion.photos.isNotEmpty)
+          section(l.aiDraftPhotosTitle, [
+            const SizedBox(height: spaceS),
             DraftPhotos(
               urls: suggestion.photos,
               picked: photo,
               onPick: onPhoto,
             ),
-          ],
-          // JAKIM's rows are in the Halal tab; here only what the draft got from it.
-          const SizedBox(height: 8),
-          Text(
-            switch (suggestion.jakim) {
-              null => l.jakimDraftDown,
-              (rows: [], url: _, pick: _) => l.jakimDraftNone,
-              _ => l.jakimDraftSeeHalal,
-            },
-            key: const ValueKey('jakim-draft-status'),
-            style: small,
+          ]),
+        // JAKIM's rows are in the Halal tab; here only what the draft got from it.
+        Padding(
+          padding: const EdgeInsets.only(top: spaceM),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.verified_outlined, size: 16, color: nb.pandanDeep),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  switch (suggestion.jakim) {
+                    null => l.jakimDraftDown,
+                    (rows: [], url: _, pick: _) => l.jakimDraftNone,
+                    _ => l.jakimDraftSeeHalal,
+                  },
+                  key: const ValueKey('jakim-draft-status'),
+                  style: small,
+                ),
+              ),
+            ],
           ),
-          for (final warning in suggestion.warnings)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, size: 16, color: nb.margin),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text(warning, style: small)),
-                ],
+        ),
+        if (suggestion.sources.isNotEmpty || suggestion.pages.isNotEmpty)
+          section(l.aiDraftPagesTitle, [
+            if (suggestion.sources.isNotEmpty)
+              Text(
+                l.aiDraftSources(
+                  {for (final s in suggestion.sources) sourceName(l, s)}
+                      .join(', '),
+                ),
+                style: small,
               ),
-            ),
-          if (suggestion.pages.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            DraftSourceChips(sources: suggestion.pages),
-          ],
-          if (suggestion.candidates.length > 1) ...[
-            const SizedBox(height: 8),
-            Text(
-              l.pinCandidatesTitle,
-              style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            for (final c in suggestion.candidates)
-              Row(
-                key: ValueKey('pin-${c.source}'),
-                children: [
-                  Expanded(
-                    child: Text(
-                      [
-                        c.source,
-                        _coords(c.lat, c.lng),
-                        if (c.fromDraftM case final m? when m > 0) '$m m',
-                      ].join(' · '),
-                      style: small,
-                    ),
+            if (suggestion.pages.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              DraftSourceChips(sources: suggestion.pages),
+            ],
+          ]),
+        const SizedBox(height: spaceS),
+      ],
+    );
+  }
+}
+
+String? _coords(double? lat, double? lng) => lat == null || lng == null
+    ? null
+    : '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}';
+
+/// One pin the draft found: whose, where, how far from the draft's, and Use.
+class _PinRow extends StatelessWidget {
+  const _PinRow({super.key, required this.pin, required this.onUse});
+
+  final PinCandidate pin;
+  final ValueChanged<PinCandidate> onUse;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final m = pin.fromDraftM;
+    return Padding(
+      padding: const EdgeInsets.only(top: spaceS),
+      child: Row(
+        children: [
+          Icon(Icons.location_on_outlined, size: 20, color: nb.pandanDeep),
+          const SizedBox(width: spaceS),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sourceName(l, pin.source),
+                  style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  [
+                    _coords(pin.lat, pin.lng)!,
+                    if (m != null && m > 0) l.pinCandidateFromDraft(m),
+                  ].join(' · '),
+                  style: text.bodySmall?.copyWith(
+                    color: nb.inkSoft,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
-                  TextButton(
-                    onPressed: () => onUsePin(c),
-                    child: Text(l.pinCandidateUse),
-                  ),
-                ],
-              ),
-          ],
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => onUse(pin),
+            child: Text(l.pinCandidateUse),
+          ),
         ],
       ),
     );
@@ -1072,12 +1172,56 @@ class _AiLoading extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l.aiSuggestBusy,
+          style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            minHeight: 3,
+            color: nb.pandanDeep,
+            backgroundColor: nb.line,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          l.aiSuggestDetail,
+          style: text.bodySmall?.copyWith(color: nb.inkSoft),
+        ),
+      ],
+    );
+  }
+}
+
+/// A titled card on the owner's tabs: an icon in a tinted circle, the title, an optional line under it, the body.
+class _Card extends StatelessWidget {
+  const _Card({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.children,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(spaceM),
       decoration: BoxDecoration(
-        color: nb.mist,
-        borderRadius: BorderRadius.circular(8),
+        color: nb.paper,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: nb.line),
       ),
       child: Column(
@@ -1085,69 +1229,58 @@ class _AiLoading extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.auto_awesome, size: 18, color: nb.pandanDeep),
-              const SizedBox(width: 8),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: nb.mist,
+                child: Icon(icon, size: 18, color: nb.pandanDeep),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  l.aiSuggestBusy,
-                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle case final s?)
+                      Text(
+                        s,
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              minHeight: 3,
-              color: nb.pandanDeep,
-              backgroundColor: nb.line,
-            ),
-          ),
-          const SizedBox(height: 7),
-          Text(
-            l.aiSuggestDetail,
-            style: text.bodySmall?.copyWith(color: nb.inkSoft),
-          ),
+          const SizedBox(height: spaceM),
+          ...children,
         ],
       ),
     );
   }
 }
 
-/// A map's results: each hit as a card (address, town and state, the point), with its two actions:
-/// "Use" fills the form and closes the sheet; "New branch" adds it as another outlet and stays (marked Added).
-class _PinHitsSheet extends StatefulWidget {
-  const _PinHitsSheet({
-    required this.title,
-    required this.query,
-    required this.hits,
+/// One map result: name, address, town and state, the point; "Use" fills the form, "New branch" adds it as
+/// another outlet (then marked Added).
+class _HitCard extends StatelessWidget {
+  const _HitCard({
+    super.key,
+    required this.index,
+    required this.hit,
+    required this.added,
+    required this.adding,
+    required this.busy,
+    required this.onUse,
     required this.onAdd,
   });
 
-  final String title;
-  final String query;
-  final List<PinHit> hits;
-  final Future<bool> Function(PinHit) onAdd;
-
-  @override
-  State<_PinHitsSheet> createState() => _PinHitsSheetState();
-}
-
-class _PinHitsSheetState extends State<_PinHitsSheet> {
-  final _added = <int>{};
-  int? _adding;
-
-  Future<void> _add(int i) async {
-    setState(() => _adding = i);
-    final ok = await widget.onAdd(widget.hits[i]);
-    if (mounted) {
-      setState(() {
-        _adding = null;
-        if (ok) _added.add(i);
-      });
-    }
-  }
+  final int index;
+  final PinHit hit;
+  final bool added, adding, busy;
+  final VoidCallback onUse, onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -1155,151 +1288,75 @@ class _PinHitsSheetState extends State<_PinHitsSheet> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     const compact = Size(0, 40);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final h = hit;
+    final area = [h.city, h.state].nonNulls.join(', ');
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: nb.mist.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: nb.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (h.name case final name?)
+            Text(name, style: text.labelMedium?.copyWith(color: nb.pandanDeep)),
+          Text(
+            h.address,
+            style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (area.isNotEmpty)
+            Text(area, style: text.bodyMedium?.copyWith(color: nb.inkSoft)),
+          const SizedBox(height: 2),
+          Text(
+            h.lat == null || h.lng == null
+                ? l.pinSearchNoPin
+                : '${h.lat!.toStringAsFixed(5)}, ${h.lng!.toStringAsFixed(5)}',
+            style: text.bodySmall?.copyWith(
+              color: nb.inkSoft,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: spaceS),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: spaceS,
+            runSpacing: spaceS,
             children: [
-              Text(widget.title, style: text.titleMedium),
-              if (widget.query.isNotEmpty)
-                Text(
-                  '“${widget.query}”',
-                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              TextButton.icon(
+                key: ValueKey('pin-hit-add-$index'),
+                style: TextButton.styleFrom(minimumSize: compact),
+                onPressed: added || busy ? null : onAdd,
+                icon: adding
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        added
+                            ? Icons.check_circle_outline
+                            : Icons.add_location_alt_outlined,
+                        size: 18,
+                      ),
+                label: Text(added ? l.pinHitAdded : l.branchAddFromHit),
+              ),
+              FilledButton.icon(
+                key: ValueKey('pin-hit-use-$index'),
+                style: FilledButton.styleFrom(
+                  minimumSize: compact,
+                  padding: const EdgeInsets.symmetric(horizontal: spaceM),
                 ),
+                onPressed: onUse,
+                icon: const Icon(Icons.check, size: 18),
+                label: Text(l.pinCandidateUse),
+              ),
             ],
           ),
-        ),
-        Flexible(
-          child: ListView.separated(
-            shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceM),
-            itemCount: widget.hits.length,
-            separatorBuilder: (_, _) => const SizedBox(height: spaceS),
-            itemBuilder: (context, i) {
-              final h = widget.hits[i];
-              final area = [h.city, h.state].nonNulls.join(', ');
-              final added = _added.contains(i);
-              return Container(
-                key: ValueKey('pin-hit-$i'),
-                padding: const EdgeInsets.all(spaceM - 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: nb.line),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: nb.mist,
-                          child: Icon(
-                            Icons.place_outlined,
-                            size: 20,
-                            color: nb.pandanDeep,
-                          ),
-                        ),
-                        const SizedBox(width: spaceM - 4),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (h.name case final name?)
-                                Text(
-                                  name,
-                                  style: text.labelMedium?.copyWith(
-                                    color: nb.pandanDeep,
-                                  ),
-                                ),
-                              Text(
-                                h.address,
-                                style: text.bodyLarge?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (area.isNotEmpty)
-                                Text(
-                                  area,
-                                  style: text.bodyMedium?.copyWith(
-                                    color: nb.inkSoft,
-                                  ),
-                                ),
-                              const SizedBox(height: 2),
-                              Text(
-                                h.lat == null || h.lng == null
-                                    ? l.pinSearchNoPin
-                                    : '${h.lat!.toStringAsFixed(5)}, ${h.lng!.toStringAsFixed(5)}',
-                                style: text.bodySmall?.copyWith(
-                                  color: nb.inkSoft,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: spaceS),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          key: ValueKey('pin-hit-add-$i'),
-                          style: TextButton.styleFrom(minimumSize: compact),
-                          onPressed: added || _adding != null
-                              ? null
-                              : () => _add(i),
-                          icon: _adding == i
-                              ? const SizedBox.square(
-                                  dimension: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Icon(
-                                  added
-                                      ? Icons.check_circle_outline
-                                      : Icons.add_location_alt_outlined,
-                                  size: 18,
-                                ),
-                          label: Text(
-                            added ? l.pinHitAdded : l.branchAddFromHit,
-                          ),
-                        ),
-                        const SizedBox(width: spaceS),
-                        FilledButton.icon(
-                          key: ValueKey('pin-hit-use-$i'),
-                          style: FilledButton.styleFrom(
-                            minimumSize: compact,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: spaceM,
-                            ),
-                          ),
-                          onPressed: () => Navigator.pop(context, h),
-                          icon: const Icon(Icons.check, size: 18),
-                          label: Text(l.pinCandidateUse),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
