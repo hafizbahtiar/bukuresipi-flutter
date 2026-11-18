@@ -1,4 +1,5 @@
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
+import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
@@ -176,6 +177,57 @@ void main() {
       expect(repo.savedBranches, ['b-1']);
       expect(find.text('Saved to your book.'), findsOneWidget);
       expect(find.text('Kedai Sederhana'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'the owner: Save and Directions, then Owner tools with the shared edit; no Report',
+    (t) async {
+      final controller = PlacesController(FakePlaces());
+      final auth = AuthController(
+        FakeAuthRepository()
+          ..session = true
+          ..meResult = const User(
+            id: 'u-1',
+            email: 'o@example.com',
+            name: null,
+            role: 'owner',
+            lang: 'en',
+            emailVerified: true,
+          ),
+      );
+      await auth.restore();
+      await t.pumpWidget(
+        app(
+          providers: [
+            ChangeNotifierProvider.value(value: controller),
+            ChangeNotifierProvider.value(value: auth),
+          ],
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showNotebookSheet<void>(
+                    context,
+                    builder: (_) =>
+                        NearbySheet(place: nearbyBranch(), onSave: () async {}),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.tap(find.text('open'));
+      await t.pumpAndSettle();
+      expect(find.text('Report'), findsNothing);
+      expect(find.byKey(const ValueKey('nearby-directions')), findsOneWidget);
+      expect(find.text('Owner tools'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('nearby-owner-edit')));
+      await t.pumpAndSettle();
+      // The owner's edit is the shared one.
+      expect(find.text('Only you will see these changes.'), findsNothing);
     },
   );
 }

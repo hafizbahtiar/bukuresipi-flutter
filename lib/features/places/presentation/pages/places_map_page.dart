@@ -1347,7 +1347,10 @@ class _PinSheet extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
+    final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
     final b = branch;
+    // Owner: where the pin came from, and the shared edit under Owner tools (a user's pencil edits their own copy).
+    final owner = context.watch<AuthController>().user?.isOwner ?? false;
     return ListView(
       shrinkWrap: true,
       children: [
@@ -1372,11 +1375,13 @@ class _PinSheet extends StatelessWidget {
         if (b != null)
           ListTile(
             leading: PinMark(pinned: b.hasPin),
-            trailing: IconButton(
-              tooltip: l.editBranch,
-              icon: Icon(Icons.edit_outlined, color: nb.inkSoft),
-              onPressed: () => _edit(context, b),
-            ),
+            trailing: owner
+                ? null
+                : IconButton(
+                    tooltip: l.editBranch,
+                    icon: Icon(Icons.edit_outlined, color: nb.inkSoft),
+                    onPressed: () => _edit(context, b),
+                  ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1389,16 +1394,18 @@ class _PinSheet extends StatelessWidget {
                     b.where!,
                     style: text.bodySmall?.copyWith(color: nb.inkSoft),
                   ),
-                if (b.pinnedByUser)
+                if (owner)
                   Text(
-                    l.pinnedByUser,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                if (b.pinnedByOwner)
-                  Text(
-                    l.pinnedByOwner,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
+                    b.pinSource == null
+                        ? l.branchPinNone
+                        : l.ownerPlacePinSource(sourceName(l, b.pinSource!)),
+                    key: const ValueKey('pin-sheet-source'),
+                    style: soft,
+                  )
+                else if (b.pinnedByUser)
+                  Text(l.pinnedByUser, style: soft)
+                else if (b.pinnedByOwner)
+                  Text(l.pinnedByOwner, style: soft),
                 Consumer<PlacesController>(
                   builder: (context, places, _) {
                     final live =
@@ -1454,6 +1461,15 @@ class _PinSheet extends StatelessWidget {
             ],
           ),
         ),
+        if (owner && b != null) ...[
+          SectionHeader(l.ownerTools),
+          ListTile(
+            key: const ValueKey('pin-sheet-owner-edit'),
+            leading: const Icon(Icons.edit_outlined),
+            title: Text(l.editBranch),
+            onTap: () => _edit(context, b),
+          ),
+        ],
       ],
     );
   }
@@ -1562,18 +1578,26 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
       for (final line in [place.address, place.city, place.state])
         if (line != null && line.isNotEmpty) line,
     ].join(', ');
+    final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
     return ListView(
       shrinkWrap: true,
       children: [
+        // As a saved pin's sheet: the place, then its branch and where; then the facts, Directions, the tools.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceXs),
+          child: Text(
+            place.name,
+            style: text.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              height: 1.15,
+            ),
+          ),
+        ),
         ListTile(
           leading: MapMarkDot(MapMark.forSource(place.pinSource)),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                place.name,
-                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
               if (place.label != null && place.label != place.name)
                 Text(
                   place.label!,
@@ -1584,16 +1608,34 @@ class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
                   where,
                   style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                 ),
+              Text(
+                [
+                  l.ownerPlaceSavers(place.savers),
+                  place.pinSource == null
+                      ? l.branchPinNone
+                      : l.ownerPlacePinSource(sourceName(l, place.pinSource!)),
+                ].join(' · '),
+                key: const ValueKey('owner-sheet-facts'),
+                style: soft,
+              ),
             ],
           ),
         ),
-        ListTile(
-          leading: Icon(Icons.bookmark_border, color: nb.inkSoft),
-          title: Text(l.ownerPlaceSavers(place.savers)),
-        ),
-        ListTile(
-          leading: Icon(Icons.place_outlined, color: nb.inkSoft),
-          title: Text(l.ownerPlacePinSource(place.pinSource ?? '-')),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 46),
+              shape: const StadiumBorder(),
+            ),
+            onPressed: () => openLink(
+              context,
+              mapsSearchUrl(place.lat, place.lng),
+              failed: l.openFailed,
+            ),
+            icon: const Icon(Icons.directions),
+            label: Text(l.directions),
+          ),
         ),
         SectionHeader(l.ownerTools),
         ListTile(

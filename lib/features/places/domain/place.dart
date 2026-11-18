@@ -418,12 +418,7 @@ class Branch {
   bool get pinnedByOwner => pinSource == 'owner';
 
   /// Google Maps search by coordinates (opens the Maps app when installed). null = no pin.
-  String? get mapsUrl => hasPin
-      ? Uri.https('www.google.com', '/maps/search/', {
-          'api': '1',
-          'query': '$lat,$lng',
-        }).toString()
-      : null;
+  String? get mapsUrl => hasPin ? mapsSearchUrl(lat!, lng!) : null;
 
   bool get hasPin => lat != null && lng != null;
 
@@ -437,3 +432,10 @@ class Branch {
     return parts.isEmpty ? null : parts.join(', ');
   }
 }
+
+/// Google Maps search by coordinates (opens the Maps app when installed).
+String mapsSearchUrl(double lat, double lng) => Uri.https(
+  'www.google.com',
+  '/maps/search/',
+  {'api': '1', 'query': '$lat,$lng'},
+).toString();
