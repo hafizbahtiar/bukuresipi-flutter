@@ -112,6 +112,9 @@ abstract interface class PlacesRepository {
   Future<JakimCheck> checkHalalBranch(String branchId);
 
   /// Owner: the company behind the branch's certificate; [refresh] = read JAKIM's company page again now.
+  /// Owner: every certified branch of a place with its company; [refresh] = read the companies again now.
+  Future<PlaceCompanies> placeCompanies(String placeId, {bool refresh = false});
+
   Future<BranchCompany> branchCompany(String branchId, {bool refresh = false});
 
   /// Owner only: the brand's JAKIM outlets across Malaysia ([q] = the owner's own words); nothing written.

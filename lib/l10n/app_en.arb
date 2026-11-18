@@ -3048,5 +3048,17 @@
   "certSourceOwner": "Paired by you",
   "@certSourceOwner": {},
   "certSourceAuto": "Matched by the JAKIM check",
-  "@certSourceAuto": {}
+  "@certSourceAuto": {},
+  "companiesTitle": "Companies (from JAKIM)",
+  "@companiesTitle": {},
+  "companiesHelp": "The companies behind this place's certified outlets. Owner only.",
+  "@companiesHelp": {},
+  "companiesOutlets": "Outlets: {names}",
+  "@companiesOutlets": {"placeholders": {"names": {"type": "String"}}},
+  "companiesUnlinked": "Certified, no company yet (open the branch's Halal tab): {names}",
+  "@companiesUnlinked": {"placeholders": {"names": {"type": "String"}}},
+  "companiesNone": "No outlet of this place has a JAKIM certificate yet.",
+  "@companiesNone": {},
+  "companiesLeft": "{count} more companies not read yet: press again.",
+  "@companiesLeft": {"placeholders": {"count": {"type": "int"}}}
 }
