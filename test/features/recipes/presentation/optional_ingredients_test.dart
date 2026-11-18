@@ -5,6 +5,7 @@ import 'package:bukuresipi_flutter/features/shopping/presentation/shopping_contr
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../shopping/shopping_fixtures.dart';
 import '../recipes_fixtures.dart';
@@ -22,6 +23,7 @@ const _lines = [
 void main() {
   late FakeRecipes repo;
   late FakeShopping shop;
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
   Future<void> pump(WidgetTester t, RecipeDetail detail) async {
     repo = FakeRecipes()..detailResult = detail;
@@ -108,4 +110,30 @@ void main() {
     await t.pumpAndSettle();
     expect(shop.skippedOptional, [false]);
   });
+
+  testWidgets(
+    'a kitchen list on the phone: Add to list asks, and sends it only on yes',
+    (t) async {
+      SharedPreferences.setMockInitialValues({
+        'pantry.ingredients': ['Beras putih', 'Garam'],
+      });
+      await pump(t, recipeDetail());
+      Future<void> add(String answer) async {
+        await t.tap(find.byKey(const ValueKey('more-menu')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Add to list'));
+        await t.pumpAndSettle();
+        expect(find.text("Leave out what's in my kitchen?"), findsOneWidget);
+        await t.tap(find.text(answer));
+        await t.pumpAndSettle();
+      }
+
+      await add("Yes, only what I don't have");
+      await add('No, add everything');
+      expect(shop.haves, [
+        ['Beras putih', 'Garam'],
+        <String>[],
+      ]);
+    },
+  );
 }

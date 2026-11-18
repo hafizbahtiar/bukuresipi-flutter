@@ -1187,6 +1187,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                   child: MapSearchBar(
                     places: places.pinned,
                     search: _searchNear,
+                    recent: _places.recentSearches,
                     onPicked: _picked,
                     reserveBottom: showNearby
                         ? NearbyCarousel.heightOf(context) + 24

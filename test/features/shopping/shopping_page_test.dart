@@ -154,4 +154,51 @@ void main() {
       expect(shopping.items, isEmpty);
     },
   );
+
+  test(
+    'sections: to-buy lines by section A-Z, Other last, bought lines after',
+    () {
+      ShoppingItem i(String id, String? c, {bool done = false}) =>
+          ShoppingItem(id: id, text: id, done: done, category: c);
+      final rows = shoppingSections([
+        i('bayam', 'Sayur'),
+        i('typed', null),
+        i('ayam', 'Protein'),
+        i('gula', 'Lain'),
+        i('sawi', 'Sayur'),
+        i('old', 'Sayur', done: true),
+      ]);
+      expect(
+        [for (final (h, it) in rows) it?.id ?? '# $h'],
+        [
+          '# Protein',
+          'ayam',
+          '# Sayur',
+          'bayam',
+          'sawi',
+          '# ',
+          'typed',
+          'gula',
+          'old',
+        ],
+      );
+      // One section: no headers.
+      expect(
+        shoppingSections([i('a', 'Sayur'), i('b', 'Sayur')]).map((r) => r.$1),
+        [null, null],
+      );
+    },
+  );
+
+  testWidgets('the list shows section headers, "Other" for unlinked lines', (
+    t,
+  ) async {
+    repo.items = const [
+      ShoppingItem(id: 'a', text: 'Bayam', done: false, category: 'Sayur'),
+      ShoppingItem(id: 'b', text: 'Lilin', done: false),
+    ];
+    await pump(t);
+    expect(find.text('Sayur'), findsOneWidget);
+    expect(find.text('Other'), findsOneWidget);
+  });
 }

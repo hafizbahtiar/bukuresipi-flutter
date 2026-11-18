@@ -160,6 +160,9 @@ abstract interface class PlacesRepository {
     bool submit = false,
   });
 
+  /// The caller's last searches (pressed Search), newest first, at most 8.
+  Future<List<String>> recentSearches();
+
   /// Saves a search result that is not in the app yet (it becomes a restaurant).
   Future<Place> savePoi(String poiId);
 

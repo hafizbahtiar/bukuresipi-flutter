@@ -180,6 +180,10 @@ class FakePlaces implements PlacesRepository {
     return searchHits;
   }
 
+  List<String> recent = const [];
+  @override
+  Future<List<String>> recentSearches() async => recent;
+
   List<String> coverIds = const [];
   String? currentCover;
   final coverPicks = <String?>[];

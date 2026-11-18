@@ -179,4 +179,48 @@ void main() {
       expect(find.text('FamilyMart'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'an empty, focused box lists the last searches; a tap searches it again',
+    (t) async {
+      final asked = <(String, bool)>[];
+      var recentCalls = 0;
+      await t.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [Notebook.light]),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: MapSearchBar(
+              places: const [],
+              search: (q, {required submit}) async {
+                asked.add((q, submit));
+                return const <PlaceHit>[];
+              },
+              recent: () async {
+                recentCalls++;
+                return const ['nasi lemak', 'roti canai'];
+              },
+              onPicked: (_) {},
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.text('nasi lemak'),
+        findsNothing,
+      ); // not focused: nothing asked
+      await t.tap(find.byType(TextField));
+      await t.pumpAndSettle();
+      expect(recentCalls, 1);
+      expect(find.text('roti canai'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('search-recent-1')));
+      await t.pumpAndSettle();
+      expect(asked, [('roti canai', true)]);
+      // That Search added one: the next focus asks again.
+      await t.tap(find.byKey(const ValueKey('map-search-clear')));
+      await t.tap(find.byType(TextField));
+      await t.pumpAndSettle();
+      expect(recentCalls, 2);
+    },
+  );
 }

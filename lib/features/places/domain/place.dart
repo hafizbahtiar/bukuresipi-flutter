@@ -132,6 +132,7 @@ class Place {
     required this.branches,
     this.sourceUrl,
     this.shareId,
+    this.visited = false,
     this.mine = true,
     this.private = false,
     this.savedBy = const [],
@@ -166,6 +167,9 @@ class Place {
 
   /// The share behind this place: its screenshot or post thumbnail (ShareRepository.image).
   final String? shareId;
+
+  /// The caller has a confirmed receipt here (Book: "Been there"; none = "Want to try"). Their own receipts only.
+  final bool visited;
   final PlaceRestaurant restaurant;
   final List<Branch> branches;
 
@@ -195,6 +199,7 @@ class Place {
     branches: branches ?? this.branches,
     sourceUrl: sourceUrl,
     shareId: shareId,
+    visited: visited,
   );
 }
 

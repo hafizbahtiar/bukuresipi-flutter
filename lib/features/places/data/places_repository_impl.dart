@@ -396,6 +396,13 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<List<String>> recentSearches() => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/places/search/recent'))
+        .data!;
+    return (data['items'] as List).cast<String>();
+  });
+
+  @override
   Future<List<PlaceHit>> search(
     String query,
     double lat,
@@ -698,6 +705,7 @@ Place placeFromJson(Map<String, dynamic> j) {
     branchId: j['branchId'] as String?,
     sourceUrl: j['sourceUrl'] as String?,
     shareId: j['shareId'] as String?,
+    visited: j['visited'] as bool? ?? false, // older API: none visited
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
       name: r['name'] as String,
