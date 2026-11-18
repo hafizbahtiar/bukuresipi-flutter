@@ -544,34 +544,18 @@ class PlacesRepositoryImpl implements PlacesRepository {
       });
 
   @override
-  Future<PlaceCompanies> placeCompanies(
-    String placeId, {
-    bool refresh = false,
-  }) => apiCall(() async {
-    final path = '/places/restaurants/$placeId/halal-companies';
-    final j =
-        (refresh
-                ? await _dio.post<Map<String, dynamic>>(
-                    path,
-                    // Up to 5 JAKIM pages, 1 a second.
-                    options: Options(
-                      receiveTimeout: const Duration(seconds: 90),
-                    ),
-                  )
-                : await _dio.get<Map<String, dynamic>>(path))
-            .data!;
-    return (
-      status: j['status'] as String?,
-      left: (j['left'] as num?)?.toInt() ?? 0,
-      branches: [
-        for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())
-          (
-            branchId: b['branchId'] as String,
-            label: b['label'] as String?,
-            info: BranchCompany.fromJson(b),
-          ),
-      ],
-    );
+  Future<PlaceCompanies> placeCompanies(String placeId) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/places/restaurants/$placeId/halal-companies',
+    )).data!;
+    return [
+      for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())
+        (
+          branchId: b['branchId'] as String,
+          label: b['label'] as String?,
+          info: BranchCompany.fromJson(b),
+        ),
+    ];
   });
 
   @override
@@ -591,28 +575,31 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
-  Future<JakimCheck> checkHalalBranch(String branchId) => apiCall(() async {
-    final j = (await _dio.post<Map<String, dynamic>>(
-      '/places/branches/$branchId/halal-check',
-      // JAKIM's site, a page at a time, then Clef.
-      options: Options(receiveTimeout: const Duration(seconds: 90)),
-    )).data!;
-    return (
-      status: j['status'] as String,
-      url: j['url'] as String?,
-      rows: [
-        for (final r
-            in ((j['rows'] as List?) ?? const []).cast<Map<String, dynamic>>())
-          (
-            premise: r['premise'] as String,
-            company: r['company'] as String?,
-            address: r['address'] as String,
-            expiresOn: DateTime.parse(r['expiresOn'] as String),
-          ),
-      ],
-      pick: (j['pick'] as num?)?.toInt(),
-    );
-  });
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q}) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/places/branches/$branchId/halal-check',
+          data: q == null ? null : {'q': q},
+          // JAKIM's site, a page at a time, then Clef.
+          options: Options(receiveTimeout: const Duration(seconds: 90)),
+        )).data!;
+        return (
+          status: j['status'] as String,
+          url: j['url'] as String?,
+          rows: [
+            for (final r
+                in ((j['rows'] as List?) ?? const [])
+                    .cast<Map<String, dynamic>>())
+              (
+                premise: r['premise'] as String,
+                company: r['company'] as String?,
+                address: r['address'] as String,
+                expiresOn: DateTime.parse(r['expiresOn'] as String),
+              ),
+          ],
+          pick: (j['pick'] as num?)?.toInt(),
+        );
+      });
 
   @override
   Future<JakimOutlets> placeOutlets(String placeId, {String? q}) =>

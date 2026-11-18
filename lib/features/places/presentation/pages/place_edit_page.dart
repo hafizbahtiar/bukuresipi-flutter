@@ -254,6 +254,17 @@ class _PlaceEditPageState extends State<PlaceEditPage> {
                 ),
               ],
             ),
+          if (_food)
+            DetailSection(
+              id: 'place-edit-tab-company',
+              label: l.companyTab,
+              rows: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                  child: PlaceCompanyPanel(placeId: widget.restaurant.id),
+                ),
+              ],
+            ),
         ],
       ),
     );

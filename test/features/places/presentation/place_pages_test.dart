@@ -454,8 +454,10 @@ void main() {
           'https://www.halal.gov.my/x',
         ),
       ]);
-      // The second is not one of ours yet: added as a branch with its certificate.
-      await tapKey(t, 'jakim-add-1');
+      // The second is not one of ours yet: its ⋮ sheet adds it as a branch with its certificate.
+      await tapKey(t, 'jakim-more-1');
+      await t.tap(find.text('Add as branch'));
+      await t.pumpAndSettle();
       // Pair and add follow the book: no new JAKIM search.
       expect(repo.halalChecks, ['place:r-a']);
       expect(repo.siblings, [
@@ -478,24 +480,34 @@ void main() {
       expect(repo.halalChecks, contains('place:r-a:Pelita Sdn Bhd'));
       await t.pageBack();
       await t.pumpAndSettle();
-      // Edit branch > Halal: one button; not found = pair it from Edit place.
+      // Edit branch > Halal: Check JAKIM, or the owner's own words.
       await tapKey(t, 'place-tab-branches');
       await branchMenu(t);
       await t.tap(find.text('Edit branch'));
       await t.pumpAndSettle();
       await tapKey(t, 'branch-tab-halal');
-      expect(find.byKey(const ValueKey('branch-halal-query')), findsNothing);
+      String box() => t
+          .widget<TextField>(find.byKey(const ValueKey('branch-halal-query')))
+          .controller!
+          .text;
+      expect(box(), isEmpty); // no certificate: never our own name
       await tapKey(t, 'branch-halal-check');
       expect(repo.halalChecks.last, 'branch:b-1');
       expect(
-        find.textContaining('Pair it from Edit place > Halal'),
+        find.textContaining("no matching outlet in JAKIM's directory"),
         findsOneWidget,
       );
+      await t.enterText(
+        find.byKey(const ValueKey('branch-halal-query')),
+        'Pelita Ampang',
+      );
+      await tapKey(t, 'branch-halal-search');
+      expect(repo.halalChecks.last, 'branch:b-1:Pelita Ampang');
     },
   );
 
   testWidgets(
-    'Edit branch > Halal: the company behind the certificate, and Get company info again',
+    'Edit branch: the certificate on Halal (search starts with its premise), its company on Company',
     (t) async {
       await t.binding.setSurfaceSize(const Size(800, 2400));
       addTearDown(() => t.binding.setSurfaceSize(null));
@@ -534,8 +546,13 @@ void main() {
       await t.pumpAndSettle();
       await tapKey(t, 'branch-tab-halal');
       expect(repo.companyCalls, ['get:b-1']);
-      expect(find.text('PELITA SDN BHD'), findsOneWidget);
-      expect(find.text('Company page not read yet.'), findsOneWidget);
+      expect(
+        t
+            .widget<TextField>(find.byKey(const ValueKey('branch-halal-query')))
+            .controller!
+            .text,
+        'NASI KANDAR PELITA - JALAN AMPANG', // JAKIM's own premise, not our name
+      );
       expect(
         find.text('149 Jalan Ampang, 50450, Kuala Lumpur'),
         findsOneWidget,
@@ -558,8 +575,11 @@ void main() {
       expect(find.text('Apr 15, 2028'), findsOneWidget);
       expect(find.text('Matched by the JAKIM check'), findsOneWidget);
 
+      await tapKey(t, 'branch-tab-company');
+      expect(find.text('PELITA SDN BHD'), findsOneWidget);
+      expect(find.text('Company page not read yet.'), findsOneWidget);
       await tapKey(t, 'branch-company-refresh');
-      expect(repo.companyCalls, ['get:b-1', 'refresh:b-1']);
+      expect(repo.companyCalls.last, 'refresh:b-1');
       expect(find.text('60321620000'), findsOneWidget);
       expect(find.text('www.pelita.com.my'), findsOneWidget);
       expect(find.text('Read from JAKIM on Nov 19, 2026'), findsOneWidget);
@@ -567,16 +587,23 @@ void main() {
     },
   );
 
-  testWidgets('a branch with no certificate shows no company card', (t) async {
-    repo = FakePlaces()..places = [place(id: 'a')];
-    await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
-    await branchMenu(t);
-    await t.tap(find.text('Edit branch'));
-    await t.pumpAndSettle();
-    await tapKey(t, 'branch-tab-halal');
-    expect(find.byKey(const ValueKey('branch-company')), findsNothing);
-    expect(repo.companyCalls, isEmpty);
-  });
+  testWidgets(
+    'a branch with no certificate: Company says to link one first, asks nothing',
+    (t) async {
+      repo = FakePlaces()..places = [place(id: 'a')];
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await branchMenu(t);
+      await t.tap(find.text('Edit branch'));
+      await t.pumpAndSettle();
+      await tapKey(t, 'branch-tab-company');
+      expect(find.textContaining('Link a JAKIM certificate'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('branch-company-refresh')),
+        findsNothing,
+      );
+      expect(repo.companyCalls, isEmpty);
+    },
+  );
 
   testWidgets(
     'Book: one filter row; Been there / Want to try with counts, tap again for all',
@@ -659,77 +686,56 @@ void main() {
   );
 
   testWidgets(
-    'Edit place > Halal: the companies behind its certified outlets, and Get company info again for them all',
+    'Edit place > Company: each certified branch with its company; Get all again reads each branch on its own',
     (t) async {
       await t.binding.setSurfaceSize(const Size(800, 2400));
       addTearDown(() => t.binding.setSurfaceSize(null));
       const kopi = HalalCompany(code: 'COMP-1', name: 'KOPITIAM SDN BHD');
       repo = FakePlaces()
         ..places = [place(id: 'a')]
-        ..placeCompaniesList = (
-          status: null,
-          left: 0,
-          branches: const [
-            (
-              branchId: 'b-1',
-              label: 'Pelita Ampang',
-              info: BranchCompany(premise: 'P1', company: kopi),
-            ),
-            (
-              branchId: 'b-2',
-              label: 'Pelita Bangsar',
-              info: BranchCompany(premise: 'P2', company: kopi),
-            ),
-            (
-              branchId: 'b-3',
-              label: 'Pelita Cheras',
-              info: BranchCompany(premise: 'P3'),
-            ),
-          ],
-        )
-        ..placeCompaniesRefreshed = (
+        ..placeCompaniesList = const [
+          (
+            branchId: 'b-1',
+            label: 'Pelita Ampang',
+            info: BranchCompany(premise: 'P1', company: kopi),
+          ),
+          (
+            branchId: 'b-3',
+            label: 'Pelita Cheras',
+            info: BranchCompany(premise: 'P3'),
+          ),
+        ]
+        ..refreshed = const BranchCompany(
           status: 'ok',
-          left: 2,
-          branches: const [
-            (
-              branchId: 'b-1',
-              label: 'Pelita Ampang',
-              info: BranchCompany(
-                premise: 'P1',
-                company: HalalCompany(
-                  code: 'COMP-1',
-                  name: 'KOPITIAM SDN BHD',
-                  phone: '60321620000',
-                ),
-              ),
-            ),
-          ],
+          premise: 'P3',
+          company: HalalCompany(
+            code: 'COMP-1',
+            name: 'KOPITIAM SDN BHD',
+            phone: '60321620000',
+          ),
         );
       await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
       await tapKey(t, 'more-menu');
       await t.tap(find.text('Edit place'));
       await t.pumpAndSettle();
-      expect(repo.companyCalls, isEmpty); // asked only when Halal opens
-      await tapKey(t, 'place-edit-tab-halal');
-      expect(repo.companyCalls, ['get:r-a']);
-      // One company, both its outlets under it; the outlet with no company listed apart.
+      expect(repo.companyCalls, isEmpty); // asked only when Company opens
+      await tapKey(t, 'place-edit-tab-company');
+      expect(repo.companyCalls, ['list:r-a']);
+      // Each branch on its own: its company, or none yet.
       expect(find.text('KOPITIAM SDN BHD'), findsOneWidget);
-      expect(
-        find.text('Outlets: Pelita Ampang, Pelita Bangsar'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('no company yet'), findsOneWidget);
       expect(find.textContaining('Pelita Cheras'), findsOneWidget);
+      expect(find.textContaining('No company yet'), findsOneWidget);
       final go = find.byKey(const ValueKey('place-companies-refresh'));
       await t.ensureVisible(go);
       await t.tap(go);
       await t.pumpAndSettle();
-      expect(repo.companyCalls.last, 'refresh:r-a');
-      expect(find.text('60321620000'), findsOneWidget);
-      expect(
-        find.text('2 more companies not read yet: press again.'),
-        findsOneWidget,
-      );
+      // One refresh per branch, in turn: never one branch's read applied to the others.
+      expect(repo.companyCalls.skip(1), ['refresh:b-1', 'refresh:b-3']);
+      expect(find.text('60321620000'), findsNWidgets(2));
+      expect(find.text('Updated'), findsNWidgets(2));
+      // One branch alone.
+      await tapKey(t, 'place-company-refresh-b-3');
+      expect(repo.companyCalls.last, 'refresh:b-3');
     },
   );
 
@@ -1340,7 +1346,13 @@ void main() {
         findsOneWidget,
       );
       await tapKey(t, 'branch-tab-halal');
-      expect(find.text('NASI KANDAR PELITA - JALAN AMPANG'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('jakim-row-0')),
+          matching: find.text('NASI KANDAR PELITA - JALAN AMPANG'),
+        ),
+        findsOneWidget,
+      );
       expect(find.textContaining('valid until Nov 30, 2026'), findsOneWidget);
       expect(
         find.descendant(

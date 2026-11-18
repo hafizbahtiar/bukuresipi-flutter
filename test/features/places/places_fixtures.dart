@@ -246,24 +246,13 @@ class FakePlaces implements PlacesRepository {
   /// `get:ID` / `refresh:ID` per company call.
   final companyCalls = <String>[];
 
-  /// What [placeCompanies] answers; a refresh answers [placeCompaniesRefreshed] (null = the same list, status none).
-  PlaceCompanies placeCompaniesList = (
-    status: null,
-    left: 0,
-    branches: const [],
-  );
-  PlaceCompanies? placeCompaniesRefreshed;
+  /// What [placeCompanies] answers.
+  PlaceCompanies placeCompaniesList = const [];
 
   @override
-  Future<PlaceCompanies> placeCompanies(
-    String placeId, {
-    bool refresh = false,
-  }) async {
-    companyCalls.add('${refresh ? 'refresh' : 'get'}:$placeId');
-    if (!refresh) return placeCompaniesList;
-    return placeCompaniesList =
-        placeCompaniesRefreshed ??
-        (status: 'none', left: 0, branches: placeCompaniesList.branches);
+  Future<PlaceCompanies> placeCompanies(String placeId) async {
+    companyCalls.add('list:$placeId');
+    return placeCompaniesList;
   }
 
   @override
@@ -276,8 +265,8 @@ class FakePlaces implements PlacesRepository {
   }
 
   @override
-  Future<JakimCheck> checkHalalBranch(String branchId) async {
-    halalChecks.add('branch:$branchId');
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q}) async {
+    halalChecks.add(q == null ? 'branch:$branchId' : 'branch:$branchId:$q');
     return halalCheck;
   }
 

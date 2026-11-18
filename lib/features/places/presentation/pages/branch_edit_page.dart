@@ -20,6 +20,7 @@ import 'pin_picker_page.dart';
 import '../places_controller.dart';
 import '../widgets/cover_picker_sheet.dart';
 import '../widgets/jakim_check.dart';
+import '../widgets/owner_panel.dart';
 
 typedef BranchEdit = ({
   String? label,
@@ -311,7 +312,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
   Widget _pinSearch(AppLocalizations l, Notebook nb, TextTheme text) {
     final hits = _pinHits;
     final small = text.bodySmall?.copyWith(color: nb.inkSoft);
-    return _Card(
+    return OwnerPanel(
       key: const ValueKey('pin-search-card'),
       icon: Icons.travel_explore,
       title: l.pinSearchTitle,
@@ -370,16 +371,13 @@ class _BranchEditPageState extends State<BranchEditPage> {
         const SizedBox(height: spaceS),
         Align(
           alignment: Alignment.centerRight,
-          child: FilledButton.tonalIcon(
+          child: BusyButton(
             key: const ValueKey('pin-search-go'),
-            onPressed: _searchingPin ? null : _searchPin,
-            icon: _searchingPin
-                ? const SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.search, size: 18),
-            label: Text(l.pinSearchButton),
+            icon: Icons.search,
+            label: l.pinSearchButton,
+            busyLabel: l.ownerSearching,
+            busy: _searchingPin,
+            onPressed: _searchPin,
           ),
         ),
         if (hits != null && hits.isEmpty)
@@ -644,6 +642,14 @@ class _BranchEditPageState extends State<BranchEditPage> {
                   ]),
                 ],
               ),
+            if (owner)
+              DetailSection(
+                id: 'branch-tab-company',
+                label: l.companyTab,
+                rows: [
+                  tab([BranchCompanyPanel(branch: widget.branch)]),
+                ],
+              ),
           ],
         ),
       ),
@@ -666,7 +672,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
         : b.pinSource == null
         ? null
         : l.pinFromSource(sourceName(l, b.pinSource!));
-    return _Card(
+    return OwnerPanel(
       key: const ValueKey('branch-location'),
       icon: Icons.place_outlined,
       title: l.branchLocation,
@@ -745,7 +751,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
   /// The AI draft: what it does, the button; while it runs a progress line; then the draft to review.
   Widget _aiCard(AppLocalizations l, Notebook nb, TextTheme text) {
     final suggestion = _suggestion;
-    return _Card(
+    return OwnerPanel(
       key: const ValueKey('ai-draft-card'),
       icon: Icons.auto_awesome,
       title: suggestion == null
@@ -1226,71 +1232,6 @@ class _AiLoading extends StatelessWidget {
   }
 }
 
-/// A titled card on the owner's tabs: an icon in a tinted circle, the title, an optional line under it, the body.
-class _Card extends StatelessWidget {
-  const _Card({
-    super.key,
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    required this.children,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(spaceM),
-      decoration: BoxDecoration(
-        color: nb.paper,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: nb.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: nb.mist,
-                child: Icon(icon, size: 18, color: nb.pandanDeep),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: text.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (subtitle case final s?)
-                      Text(
-                        s,
-                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: spaceM),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
 /// One map result: name, address, town and state, the point; "Use" fills the form, "New branch" adds it as
 /// another outlet (then marked Added).
 class _HitCard extends StatelessWidget {
@@ -1349,10 +1290,7 @@ class _HitCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: spaceS),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: spaceS,
-            runSpacing: spaceS,
+          PanelActions(
             children: [
               TextButton.icon(
                 key: ValueKey('pin-hit-add-$index'),

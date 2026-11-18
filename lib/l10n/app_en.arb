@@ -305,7 +305,7 @@
   "jakimPair": "Pair with a branch",
   "jakimPairThis": "Pair",
   "@jakimPairThis": {},
-  "jakimPairOther": "Another branch",
+  "jakimPairOther": "Pair with another branch",
   "@jakimPairOther": {},
   "@jakimPair": {},
   "jakimUnpair": "Unpair",
@@ -3051,14 +3051,80 @@
   "@certSourceAuto": {},
   "companiesTitle": "Companies (from JAKIM)",
   "@companiesTitle": {},
-  "companiesHelp": "The companies behind this place's certified outlets. Owner only.",
+  "companiesHelp": "Each certified outlet and the company behind it. Owner only.",
   "@companiesHelp": {},
-  "companiesOutlets": "Outlets: {names}",
-  "@companiesOutlets": {"placeholders": {"names": {"type": "String"}}},
-  "companiesUnlinked": "Certified, no company yet (open the branch's Halal tab): {names}",
-  "@companiesUnlinked": {"placeholders": {"names": {"type": "String"}}},
   "companiesNone": "No outlet of this place has a JAKIM certificate yet.",
   "@companiesNone": {},
-  "companiesLeft": "{count} more companies not read yet: press again.",
-  "@companiesLeft": {"placeholders": {"count": {"type": "int"}}}
+  "ownerLoading": "Loading…",
+  "@ownerLoading": {},
+  "jakimChecking": "Checking JAKIM…",
+  "@jakimChecking": {},
+  "jakimSearching": "Searching JAKIM…",
+  "@jakimSearching": {},
+  "companyReading": "Reading JAKIM…",
+  "@companyReading": {},
+  "companiesReadingN": "Reading {done} of {total}…",
+  "@companiesReadingN": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "certStatusNone": "None",
+  "@certStatusNone": {},
+  "halalFindTitle": "Find on JAKIM",
+  "@halalFindTitle": {},
+  "halalFindHelp": "Check JAKIM looks for this outlet by the place's name and postcode, and saves a match. Or search JAKIM's directory yourself and pick a row.",
+  "@halalFindHelp": {},
+  "jakimListed": "{count, plural, =0{JAKIM lists nothing for \"{q}\" in this state.} =1{1 row on JAKIM for \"{q}\". Use the one that is this outlet.} other{{count} rows on JAKIM for \"{q}\". Use the one that is this outlet.}}",
+  "@jakimListed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "q": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimUseRow": "Use",
+  "@jakimUseRow": {},
+  "jakimLinked": "Linked",
+  "@jakimLinked": {},
+  "companyTab": "Company",
+  "@companyTab": {},
+  "companyNeedsCert": "Link a JAKIM certificate in the Halal tab first: the company comes from it.",
+  "@companyNeedsCert": {},
+  "halalPostsTitle": "What posts say",
+  "@halalPostsTitle": {},
+  "halalOutletsTitle": "Brand outlets on JAKIM",
+  "@halalOutletsTitle": {},
+  "halalOutletsHelp": "Every outlet JAKIM lists under this name across Malaysia. Pair one with a branch, or add it as a new branch.",
+  "@halalOutletsHelp": {},
+  "companiesRefreshAll": "Get all again",
+  "@companiesRefreshAll": {},
+  "companyRefreshOne": "Get again",
+  "@companyRefreshOne": {},
+  "companiesNoneYet": "No company yet: Get again checks JAKIM for it.",
+  "@companiesNoneYet": {},
+  "companyRowUpdated": "Updated",
+  "@companyRowUpdated": {},
+  "jakimDownShort": "JAKIM did not answer",
+  "@jakimDownShort": {},
+  "companiesDone": "{count, plural, =1{1 branch read again.} other{{count} branches read again.}}",
+  "@companiesDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerSaving": "Saving…",
+  "@ownerSaving": {},
+  "ownerSearching": "Searching…",
+  "@ownerSearching": {}
 }
