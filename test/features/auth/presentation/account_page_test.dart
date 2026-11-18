@@ -104,7 +104,7 @@ void main() {
   ) async {
     await pump(t, const SettingsPage());
     expect(find.text('Appearance'), findsOneWidget);
-    expect(theme.mode, ThemeMode.system);
+    expect(theme.mode, ThemeMode.light); // nothing chosen yet: light
     await t.tap(find.byTooltip('Dark'));
     await t.pump();
     expect(theme.mode, ThemeMode.dark);
