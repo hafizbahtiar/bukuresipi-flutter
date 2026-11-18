@@ -95,7 +95,8 @@ class _PlacesListPageState extends State<PlacesListPage> {
     final q = _search.text.trim().toLowerCase();
     bool hit(String? s) => q.isEmpty || (s?.toLowerCase().contains(q) ?? false);
     // Shown once a receipt has marked a place: before that every place would be "Want to try".
-    final anyVisited = places.places.any((p) => p.visited);
+    final beenCount = places.places.where((p) => p.visited).length;
+    final anyVisited = beenCount > 0;
     final visit = anyVisited ? _visit : VisitFilter.all;
     final searching =
         q.isNotEmpty || filter != BookFilter.all || visit != VisitFilter.all;
@@ -145,29 +146,45 @@ class _PlacesListPageState extends State<PlacesListPage> {
           ),
         ),
       ),
-      if (inFamily)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
-          child: NotebookSegmented<BookFilter>(
-            selected: filter,
-            onChanged: (f) => setState(() => _filter = f),
-            segments: [
-              NotebookSegment(value: BookFilter.all, label: l.bookAll),
-              NotebookSegment(value: BookFilter.mine, label: l.bookMine),
-              NotebookSegment(value: BookFilter.family, label: l.bookFamily),
-            ],
-          ),
-        ),
-      if (anyVisited)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
-          child: NotebookSegmented<VisitFilter>(
-            selected: visit,
-            onChanged: (f) => setState(() => _visit = f),
-            segments: [
-              NotebookSegment(value: VisitFilter.all, label: l.bookAll),
-              NotebookSegment(value: VisitFilter.been, label: l.bookBeen),
-              NotebookSegment(value: VisitFilter.toTry, label: l.bookToTry),
+      // One row of filters, as Home's: whose (in a family), then Been there / Want to try (tap again = off).
+      if (inFamily || anyVisited)
+        SingleChildScrollView(
+          key: const ValueKey('book-filters'),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 8),
+          child: Row(
+            spacing: 8,
+            children: [
+              if (inFamily)
+                for (final (f, label) in [
+                  (BookFilter.all, l.bookAll),
+                  (BookFilter.mine, l.bookMine),
+                  (BookFilter.family, l.bookFamily),
+                ])
+                  ChoiceChip(
+                    key: ValueKey('book-filter-${f.name}'),
+                    label: Text(label),
+                    selected: filter == f,
+                    onSelected: (_) => setState(() => _filter = f),
+                  ),
+              if (inFamily && anyVisited)
+                SizedBox(height: 24, child: VerticalDivider(color: nb.line)),
+              if (anyVisited)
+                for (final (v, label, n) in [
+                  (VisitFilter.been, l.bookBeen, beenCount),
+                  (
+                    VisitFilter.toTry,
+                    l.bookToTry,
+                    places.places.length - beenCount,
+                  ),
+                ])
+                  FilterChip(
+                    key: ValueKey('book-visit-${v.name}'),
+                    label: Text('$label · $n'),
+                    selected: visit == v,
+                    onSelected: (on) =>
+                        setState(() => _visit = on ? v : VisitFilter.all),
+                  ),
             ],
           ),
         ),

@@ -561,6 +561,40 @@ void main() {
     expect(repo.companyCalls, isEmpty);
   });
 
+  testWidgets(
+    'Book: one filter row; Been there / Want to try with counts, tap again for all',
+    (t) async {
+      repo = FakePlaces()
+        ..places = [
+          place(id: 'a', name: 'Kedai Satu', visited: true),
+          place(id: 'b', name: 'Kedai Dua'),
+          place(id: 'c', name: 'Kedai Tiga'),
+        ];
+      await pump(t, const PlacesListPage());
+      expect(
+        find.byKey(const ValueKey('book-filter-mine')),
+        findsNothing,
+      ); // not in a family
+      expect(find.text('Been there · 1'), findsOneWidget);
+      expect(find.text('Want to try · 2'), findsOneWidget);
+      await tapKey(t, 'book-visit-toTry');
+      expect(find.text('Kedai Satu'), findsNothing);
+      expect(find.text('Kedai Dua'), findsOneWidget);
+      await tapKey(t, 'book-visit-been');
+      expect(find.text('Kedai Satu'), findsOneWidget);
+      expect(find.text('Kedai Dua'), findsNothing);
+      await tapKey(t, 'book-visit-been'); // off again: everything
+      expect(find.text('Kedai Dua'), findsOneWidget);
+      expect(find.text('Kedai Satu'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Book: no receipts and no family, no filter row', (t) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlacesListPage());
+    expect(find.byKey(const ValueKey('book-filters')), findsNothing);
+  });
+
   testWidgets('no claim, no halal section', (t) async {
     repo = FakePlaces()..places = [place(id: 'a', halal: null)];
     await pump(t, const PlaceDetailPage(id: 'a'));

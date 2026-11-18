@@ -61,8 +61,10 @@ Place place({
   RatingSummary? rating,
   HalalCert? cert,
   ({int outlets, String url})? brand,
+  bool visited = false,
 }) => Place(
   id: id,
+  visited: visited,
   sourceUrl: sourceUrl,
   note: null,
   createdAt: DateTime.utc(2026, 11, 2),
