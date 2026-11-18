@@ -965,11 +965,10 @@ class _EditTabsState extends State<EditTabs> {
               for (final s in sections)
                 (
                   s.id,
-                  Text(
-                    s.label,
-                    key: ValueKey(s.id),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // A small phone with four tabs: the label shrinks a little rather than losing its end.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(s.label, key: ValueKey(s.id), maxLines: 1),
                   ),
                   null,
                 ),
@@ -1092,11 +1091,10 @@ class _DetailTabsState extends State<DetailTabs> {
             for (final s in sections)
               (
                 s.id,
-                Text(
-                  s.label,
-                  key: ValueKey(s.id),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                // A small phone with four tabs: the label shrinks a little rather than losing its end ("Comp…").
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(s.label, key: ValueKey(s.id), maxLines: 1),
                 ),
                 null,
               ),

@@ -374,24 +374,28 @@ class PlacesController extends ChangeNotifier {
   }
 
   /// Owner only: the company behind a branch's certificate ([refresh]: read again now). Throws ApiException.
-  Future<PlaceCompanies> placeCompanies(
-    String placeId, {
-    bool refresh = false,
-  }) => _repo.placeCompanies(placeId, refresh: refresh);
+  Future<PlaceCompanies> placeCompanies(String placeId) =>
+      _repo.placeCompanies(placeId);
 
+  /// [reload] false: the caller refreshes several branches and calls [reloadBook] once at the end.
   Future<BranchCompany> branchCompany(
     String branchId, {
     bool refresh = false,
+    bool reload = true,
   }) async {
     final r = await _repo.branchCompany(branchId, refresh: refresh);
-    if (refresh) await _reload(); // a refresh may have checked JAKIM (the certificate's expiry)
+    // A refresh may have checked JAKIM (the certificate's expiry).
+    if (refresh && reload) await _reload();
     return r;
   }
 
+  /// The book again (after several [branchCompany] refreshes with reload off).
+  Future<void> reloadBook() => _reload();
+
   /// Owner only: "Check JAKIM" on one branch; the book reloads (a found certificate shows). Throws ApiException.
-  Future<JakimCheck> checkHalalBranch(String branchId) async {
-    final r = await _repo.checkHalalBranch(branchId);
-    await _reload();
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q}) async {
+    final r = await _repo.checkHalalBranch(branchId, q: q);
+    if (q == null) await _reload(); // a search by words stores nothing
     return r;
   }
 

@@ -109,11 +109,12 @@ abstract interface class PlacesRepository {
   Future<void> setRestaurantCover(String placeId, String? cover);
 
   /// Owner only: "Check JAKIM" on one branch now. Throws ApiException.
-  Future<JakimCheck> checkHalalBranch(String branchId);
+  /// [q] = the owner's own words: rows listed (status `listed`), nothing stored.
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q});
 
   /// Owner: the company behind the branch's certificate; [refresh] = read JAKIM's company page again now.
-  /// Owner: every certified branch of a place with its company; [refresh] = read the companies again now.
-  Future<PlaceCompanies> placeCompanies(String placeId, {bool refresh = false});
+  /// Owner: every certified branch of a place with its company.
+  Future<PlaceCompanies> placeCompanies(String placeId);
 
   Future<BranchCompany> branchCompany(String branchId, {bool refresh = false});
 

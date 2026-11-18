@@ -63,12 +63,9 @@ class BranchSuggestion {
 
 /// Owner, Edit branch > Halal: the company behind the branch's JAKIM certificate. [status] only after a refresh:
 /// ok | unavailable (JAKIM down, the stored info kept) | none (no certificate or company).
-/// Owner, Edit place > Halal: each certified branch with its company. [status]/[left] only after a refresh.
-typedef PlaceCompanies = ({
-  String? status,
-  int left,
-  List<({String branchId, String? label, BranchCompany info})> branches,
-});
+/// Owner, Edit place > Company: each certified branch with its company (each refreshed with its branch's call).
+typedef PlaceCompanies =
+    List<({String branchId, String? label, BranchCompany info})>;
 
 class BranchCompany {
   const BranchCompany({
