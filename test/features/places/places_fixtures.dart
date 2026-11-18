@@ -441,6 +441,12 @@ class FakePlaces implements PlacesRepository {
     String? certUrl,
   }) async => siblings.add((branchId, address, lat, cert?.premise));
 
+  /// What [pinQueries] answers (none by default: the box starts empty).
+  Map<String, String> pinDefaults = const {};
+
+  @override
+  Future<Map<String, String>> pinQueries(String branchId) async => pinDefaults;
+
   /// What [searchPin] answers; [pinSearches] records (branch, source, q).
   List<PinHit> pinHits = const [];
   final pinSearches = <(String, String, String?)>[];

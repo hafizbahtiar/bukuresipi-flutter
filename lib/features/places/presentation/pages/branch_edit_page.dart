@@ -95,6 +95,9 @@ class _BranchEditPageState extends State<BranchEditPage> {
   final _added = <int>{}; // hits added as new branches (this search)
   int? _adding;
   String? _askedQuery; // the server's default words for the last map: not carried to another map
+
+  /// Each map's default words (from the API), so the box is never empty to start with.
+  Map<String, String> _pinDefaults = const {};
   BranchSuggestion? _suggestion;
 
   /// A draft photo picked as the restaurant's cover: set when the branch is saved.
@@ -107,6 +110,31 @@ class _BranchEditPageState extends State<BranchEditPage> {
     super.initState();
     _latText.addListener(_coordsChanged);
     _lngText.addListener(_coordsChanged);
+    if (widget.onSuggest != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadPinDefaults());
+    }
+  }
+
+  /// A convenience: on failure the box just starts empty (the search still uses the same defaults).
+  Future<void> _loadPinDefaults() async {
+    try {
+      final d = await context.read<PlacesController>().pinQueries(
+        widget.branch.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _pinDefaults = d;
+        _fillPinQuery();
+      });
+    } catch (_) {}
+  }
+
+  /// The chosen map's default words, unless the owner typed their own.
+  void _fillPinQuery() {
+    if (_pinQuery.text.isNotEmpty && _pinQuery.text != _askedQuery) return;
+    final d = _pinDefaults[_pinSource];
+    _pinQuery.text = d ?? '';
+    _askedQuery = d;
   }
 
   @override
@@ -277,7 +305,7 @@ class _BranchEditPageState extends State<BranchEditPage> {
     _pinSource = s;
     _pinHits = null;
     // Each map has its own best default (GrabMaps: the name alone); words the owner typed stay.
-    if (_pinQuery.text == _askedQuery) _pinQuery.clear();
+    _fillPinQuery();
   });
 
   Widget _pinSearch(AppLocalizations l, Notebook nb, TextTheme text) {

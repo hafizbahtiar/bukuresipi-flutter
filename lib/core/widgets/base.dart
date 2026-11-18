@@ -909,9 +909,11 @@ class DetailSection {
   final List<Widget> rows;
 }
 
-/// An edit page's body in its detail page's segments (the same pill, the same [DetailSection]s), each section one
-/// plain scroll view kept alive while another shows: fields keep what was typed, and a field scrolled into view
-/// (Scrollable.ensureVisible) lands right, which DetailTabs' nested scroll does not do. One section = no pill.
+/// An edit page's body in its detail page's segments (the same pill, the same [DetailSection]s): one page per section,
+/// swiped or picked on the pill, each a plain scroll view kept alive once shown, so fields keep what was typed and a
+/// field scrolled into view (Scrollable.ensureVisible) lands right, which DetailTabs' nested scroll does not do. A
+/// section is built the first time it comes into view (its work, e.g. a search, waits until then). One section = no
+/// pill.
 class EditTabs extends StatefulWidget {
   const EditTabs({super.key, required this.sections});
 
@@ -922,16 +924,18 @@ class EditTabs extends StatefulWidget {
 }
 
 class _EditTabsState extends State<EditTabs> {
+  final _pages = PageController();
   String? _selected;
 
-  /// Tabs opened so far: a tab is built the first time it is shown (its work, e.g. a search, waits until then),
-  /// then kept, so typed text survives a switch.
-  final _seen = <String>{};
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final sections = widget.sections;
-    final selected = sections.indexWhere((s) => s.id == _selected);
     Widget body(DetailSection s) => SingleChildScrollView(
       padding: EdgeInsets.only(
         // Under the pill: with the pill's own fixed gap, 16 before a tab's first row (rows bring no top padding).
@@ -944,8 +948,9 @@ class _EditTabsState extends State<EditTabs> {
       ),
     );
     if (sections.length < 2) return body(sections.first);
-    final index = selected < 0 ? 0 : selected;
-    _seen.add(sections[index].id);
+    final selected = sections.any((s) => s.id == _selected)
+        ? _selected!
+        : sections.first.id;
     return Column(
       children: [
         Padding(
@@ -953,8 +958,9 @@ class _EditTabsState extends State<EditTabs> {
           padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceS),
           child: PillSwitch<String>(
             expand: true,
-            value: sections[index].id,
+            value: selected,
             onChanged: (v) => setState(() => _selected = v),
+            pages: _pages,
             options: [
               for (final s in sections)
                 (
@@ -971,19 +977,36 @@ class _EditTabsState extends State<EditTabs> {
           ),
         ),
         Expanded(
-          child: IndexedStack(
-            index: index,
-            children: [
-              for (final s in sections)
-                if (s.id == sections[index].id || _seen.contains(s.id))
-                  body(s)
-                else
-                  const SizedBox.shrink(),
-            ],
+          child: PageView(
+            controller: _pages,
+            onPageChanged: (i) => setState(() => _selected = sections[i].id),
+            children: [for (final s in sections) _KeepAlive(child: body(s))],
           ),
         ),
       ],
     );
+  }
+}
+
+/// Keeps a swiped-away page (its fields, its scroll) instead of building it again.
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 
