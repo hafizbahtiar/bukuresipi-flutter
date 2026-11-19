@@ -3044,6 +3044,20 @@
   },
   "companyNotRead": "Company page not read yet.",
   "@companyNotRead": {},
+  "companySame": "Same company as…",
+  "@companySame": {},
+  "companySameTitle": "Pick the company",
+  "@companySameTitle": {},
+  "companySameNone": "No other branch of this place has a company yet.",
+  "@companySameNone": {},
+  "companySameDone": "Company taken from {branch}. JAKIM's own row for this outlet replaces it when found.",
+  "@companySameDone": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
   "companyRefresh": "Get company info again",
   "@companyRefresh": {},
   "companyNone": "No company linked yet. Get company info checks JAKIM for it.",

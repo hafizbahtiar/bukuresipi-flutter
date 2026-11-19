@@ -472,7 +472,10 @@ class BranchCompanyPanel extends StatefulWidget {
 
 class _BranchCompanyPanelState extends State<BranchCompanyPanel> {
   BranchCompany? _info;
-  bool _refreshing = false;
+  bool _refreshing = false, _copying = false;
+
+  /// "Same company as…" was used: the branch it came from (said under the company).
+  String? _copiedFrom;
 
   /// The answer of the last "Get company info again" (ok | unavailable | none).
   String? _status;
@@ -490,12 +493,59 @@ class _BranchCompanyPanelState extends State<BranchCompanyPanel> {
         setState(() {
           _info = r;
           _status = refresh ? r.status : null;
+          _copiedFrom = null;
         });
       }
     } catch (e) {
       if (mounted) _snack(context, errorText(l, e));
     } finally {
       if (mounted && refresh) setState(() => _refreshing = false);
+    }
+  }
+
+  /// "Same company as…": the place's other branches with a company; the owner picks one (never automatic: a
+  /// franchise outlet is often another company).
+  Future<void> _copy() async {
+    final l = AppLocalizations.of(context);
+    final places = context.read<PlacesController>();
+    setState(() => _copying = true);
+    try {
+      // One row per company (branches of one company share it): the first branch names where it comes from.
+      final from = <String, _Row>{
+        for (final b in (await places.placeCompanies(_info!.placeId!)).reversed)
+          if (b.branchId != widget.branch.id && b.info.company != null)
+            b.info.company!.code: b,
+      }.values.toList().reversed.toList();
+      if (!mounted) return;
+      if (from.isEmpty) {
+        _snack(context, l.companySameNone);
+        return;
+      }
+      setState(() => _copying = false);
+      final pick = await showBasePicker<_Row>(
+        context,
+        title: l.companySameTitle,
+        options: from,
+        selected: null,
+        // The company is what is picked; its branch under it.
+        label: (b) =>
+            '${b.info.company!.name}\n${b.label ?? b.info.premise ?? '-'}',
+        search: from.length > 8,
+      );
+      if (pick == null || !mounted) return;
+      setState(() => _copying = true);
+      final r = await places.copyBranchCompany(widget.branch.id, pick.branchId);
+      if (mounted) {
+        setState(() {
+          _info = r;
+          _status = null;
+          _copiedFrom = pick.label ?? pick.info.premise ?? '-';
+        });
+      }
+    } catch (e) {
+      if (mounted) _snack(context, errorText(l, e));
+    } finally {
+      if (mounted) setState(() => _copying = false);
     }
   }
 
@@ -508,6 +558,7 @@ class _BranchCompanyPanelState extends State<BranchCompanyPanel> {
       _readFor = cert.premise;
       _info = null;
       _status = null;
+      _copiedFrom = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) unawaited(_load());
       });
@@ -548,18 +599,38 @@ class _BranchCompanyPanelState extends State<BranchCompanyPanel> {
               },
             ),
           ],
-          const SizedBox(height: spaceM),
-          Align(
-            alignment: Alignment.centerRight,
-            child: BusyButton(
-              key: const ValueKey('branch-company-refresh'),
-              kind: BusyButtonKind.outlined,
-              icon: Icons.refresh,
-              label: l.companyRefresh,
-              busyLabel: l.companyReading,
-              busy: _refreshing,
-              onPressed: () => _load(refresh: true),
+          if (_copiedFrom case final from?) ...[
+            const SizedBox(height: spaceM),
+            PanelNotice(
+              key: const ValueKey('branch-company-copied'),
+              text: l.companySameDone(from),
+              tone: PanelTone.success,
             ),
+          ],
+          const SizedBox(height: spaceM),
+          PanelActions(
+            children: [
+              if (c == null && _info?.placeId != null && !_refreshing)
+                BusyButton(
+                  key: const ValueKey('branch-company-same'),
+                  kind: BusyButtonKind.outlined,
+                  icon: Icons.business_outlined,
+                  label: l.companySame,
+                  busyLabel: l.ownerLoading,
+                  busy: _copying,
+                  onPressed: _copy,
+                ),
+              if (!_copying)
+                BusyButton(
+                  key: const ValueKey('branch-company-refresh'),
+                  kind: BusyButtonKind.outlined,
+                  icon: Icons.refresh,
+                  label: l.companyRefresh,
+                  busyLabel: l.companyReading,
+                  busy: _refreshing,
+                  onPressed: () => _load(refresh: true),
+                ),
+            ],
           ),
         ],
       ],

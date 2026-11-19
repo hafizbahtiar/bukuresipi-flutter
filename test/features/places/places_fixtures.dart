@@ -256,6 +256,15 @@ class FakePlaces implements PlacesRepository {
   }
 
   @override
+  Future<BranchCompany> copyBranchCompany(String branchId, String from) async {
+    companyCalls.add('copy:$branchId:$from');
+    return company = copied;
+  }
+
+  /// What [copyBranchCompany] answers.
+  BranchCompany copied = const BranchCompany();
+
+  @override
   Future<BranchCompany> branchCompany(
     String branchId, {
     bool refresh = false,
