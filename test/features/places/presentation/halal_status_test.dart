@@ -22,7 +22,7 @@ void main() {
             GlobalWidgetsLocalizations.delegate,
           ],
           supportedLocales: const [Locale('en'), Locale('ms')],
-          home: Scaffold(body: HalalStatus(claim: claim)),
+          home: Scaffold(body: HalalBadge(HalalKind.ofClaim(claim))),
         ),
       );
       expect(find.text(text), findsOneWidget);

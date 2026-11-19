@@ -210,24 +210,26 @@
   "@halalNotCert": {},
   "halalCertTitle": "JAKIM halal certificate",
   "@halalCertTitle": {},
-  "halalCertValid": "Valid until {date} · checked {checked}",
-  "@halalCertValid": {
+  "halalCertUntil": "Valid until {date}",
+  "@halalCertUntil": {
     "placeholders": {
       "date": {
-        "type": "String"
-      },
-      "checked": {
         "type": "String"
       }
     }
   },
-  "halalCertExpired": "Expired {date} · checked {checked}",
-  "@halalCertExpired": {
+  "halalCertExpiredOn": "Expired {date}",
+  "@halalCertExpiredOn": {
     "placeholders": {
       "date": {
         "type": "String"
-      },
-      "checked": {
+      }
+    }
+  },
+  "halalCertChecked": "Checked {date}",
+  "@halalCertChecked": {
+    "placeholders": {
+      "date": {
         "type": "String"
       }
     }
@@ -3105,6 +3107,14 @@
   "@halalOutletsTitle": {},
   "halalOutletsHelp": "Every outlet JAKIM lists under this name across Malaysia. Pair one with a branch, or add it as a new branch.",
   "@halalOutletsHelp": {},
+  "companiesGetMissing": "Get missing ({count})",
+  "@companiesGetMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "companiesRefreshAll": "Get all again",
   "@companiesRefreshAll": {},
   "companyRefreshOne": "Get again",
