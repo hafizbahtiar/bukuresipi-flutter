@@ -223,6 +223,16 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
+  Future<Map<String, String>> pinQueries(String branchId) => apiCall(
+    () async =>
+        ((await _dio.get<Map<String, dynamic>>(
+                  '/places/branches/$branchId/search-pin',
+                )).data!['queries']
+                as Map<String, dynamic>)
+            .cast<String, String>(),
+  );
+
+  @override
   Future<({String query, List<PinHit> hits})> searchPin(
     String branchId,
     String source, {
@@ -396,6 +406,13 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<List<String>> recentSearches() => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/places/search/recent'))
+        .data!;
+    return (data['items'] as List).cast<String>();
+  });
+
+  @override
   Future<List<PlaceHit>> search(
     String query,
     double lat,
@@ -527,28 +544,73 @@ class PlacesRepositoryImpl implements PlacesRepository {
       });
 
   @override
-  Future<JakimCheck> checkHalalBranch(String branchId) => apiCall(() async {
-    final j = (await _dio.post<Map<String, dynamic>>(
-      '/places/branches/$branchId/halal-check',
-      // JAKIM's site, a page at a time, then Clef.
-      options: Options(receiveTimeout: const Duration(seconds: 90)),
+  Future<PlaceCompanies> placeCompanies(String placeId) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/places/restaurants/$placeId/halal-companies',
     )).data!;
-    return (
-      status: j['status'] as String,
-      url: j['url'] as String?,
-      rows: [
-        for (final r
-            in ((j['rows'] as List?) ?? const []).cast<Map<String, dynamic>>())
-          (
-            premise: r['premise'] as String,
-            company: r['company'] as String?,
-            address: r['address'] as String,
-            expiresOn: DateTime.parse(r['expiresOn'] as String),
-          ),
-      ],
-      pick: (j['pick'] as num?)?.toInt(),
-    );
+    return [
+      for (final b in (j['branches'] as List).cast<Map<String, dynamic>>())
+        (
+          branchId: b['branchId'] as String,
+          label: b['label'] as String?,
+          info: BranchCompany.fromJson(b),
+        ),
+    ];
   });
+
+  @override
+  Future<BranchCompany> branchCompany(
+    String branchId, {
+    bool refresh = false,
+  }) => apiCall(() async {
+    final path = '/places/branches/$branchId/halal-company';
+    final res = refresh
+        ? await _dio.post<Map<String, dynamic>>(
+            path,
+            // JAKIM's site, maybe a "Check JAKIM" first (a page at a time).
+            options: Options(receiveTimeout: const Duration(seconds: 90)),
+          )
+        : await _dio.get<Map<String, dynamic>>(path);
+    return BranchCompany.fromJson(res.data!);
+  });
+
+  @override
+  Future<BranchCompany> copyBranchCompany(String branchId, String from) =>
+      apiCall(
+        () async => BranchCompany.fromJson(
+          (await _dio.put<Map<String, dynamic>>(
+            '/places/branches/$branchId/halal-company',
+            data: {'from': from},
+          )).data!,
+        ),
+      );
+
+  @override
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q}) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/places/branches/$branchId/halal-check',
+          data: q == null ? null : {'q': q},
+          // JAKIM's site, a page at a time, then Clef.
+          options: Options(receiveTimeout: const Duration(seconds: 90)),
+        )).data!;
+        return (
+          status: j['status'] as String,
+          url: j['url'] as String?,
+          rows: [
+            for (final r
+                in ((j['rows'] as List?) ?? const [])
+                    .cast<Map<String, dynamic>>())
+              (
+                premise: r['premise'] as String,
+                company: r['company'] as String?,
+                address: r['address'] as String,
+                expiresOn: DateTime.parse(r['expiresOn'] as String),
+              ),
+          ],
+          pick: (j['pick'] as num?)?.toInt(),
+        );
+      });
 
   @override
   Future<JakimOutlets> placeOutlets(String placeId, {String? q}) =>
@@ -698,6 +760,7 @@ Place placeFromJson(Map<String, dynamic> j) {
     branchId: j['branchId'] as String?,
     sourceUrl: j['sourceUrl'] as String?,
     shareId: j['shareId'] as String?,
+    visited: j['visited'] as bool? ?? false, // older API: none visited
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
       name: r['name'] as String,

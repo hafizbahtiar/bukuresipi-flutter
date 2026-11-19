@@ -347,14 +347,17 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                   spacing: spaceXs + 2,
                   children: [
                     if (validCerts > 0)
-                      HalalStatus.jakim(
-                        l.jakimOutletsTag(validCerts),
+                      HalalBadge(
+                        HalalKind.jakim,
+                        label: l.jakimOutletsTag(validCerts),
                         key: const ValueKey('place-jakim-tag'),
                       ),
                     // "No halal claim" beside a JAKIM tag would only confuse.
                     if (r.halalQuote != null || validCerts == 0)
-                      HalalStatus(
-                        claim: r.halalQuote == null ? null : r.halalClaim,
+                      HalalBadge(
+                        HalalKind.ofClaim(
+                          r.halalQuote == null ? null : r.halalClaim,
+                        ),
                       ),
                   ],
                 ),
@@ -420,7 +423,13 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 rows: [
                   if (certified.isNotEmpty) ...[
                     SectionHeader(l.halalCertTitle),
-                    for (final b in certified) HalalCertRow(branch: b),
+                    for (final b in certified)
+                      HalalCertRow(
+                        key: ValueKey('halal-cert-${b.id}'),
+                        title: b.label ?? b.where ?? b.halalCert!.premise,
+                        cert: b.halalCert!,
+                        note: b == certified.last,
+                      ),
                   ],
                   if (r.halalBrand case final brand?
                       when brandOnly.isNotEmpty) ...[
@@ -433,7 +442,11 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                   ],
                   if (halal) ...[
                     SectionHeader(l.halalTitle),
-                    _HalalQuote(restaurant: r),
+                    HalalQuoteRow(
+                      claim: r.halalClaim,
+                      quote: r.halalQuote!,
+                      sourceUrl: r.halalSourceUrl,
+                    ),
                   ],
                   if (!halal && certified.isEmpty && brandOnly.isEmpty)
                     ListTile(
@@ -559,54 +572,6 @@ class _BranchRow extends StatelessWidget {
             onTap: () => deleteBranch(context, branch),
           ),
       ],
-    );
-  }
-}
-
-/// What a post said, quoted like a clipping, with its link. Never a badge: it is a claim, not a certification.
-class _HalalQuote extends StatelessWidget {
-  const _HalalQuote({required this.restaurant});
-
-  final PlaceRestaurant restaurant;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: spaceM),
-      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: nb.kunyit, width: 4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '“${restaurant.halalQuote}”',
-            style: text.bodyLarge?.copyWith(fontStyle: FontStyle.italic),
-          ),
-          if (restaurant.halalSourceUrl != null)
-            TextButton.icon(
-              onPressed: () => openLink(
-                context,
-                restaurant.halalSourceUrl!,
-                failed: l.openFailed,
-              ),
-              icon: const Icon(Icons.open_in_new, size: 16),
-              label: Text(l.halalSource),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-              ),
-            ),
-          Text(
-            l.halalNotCert,
-            style: text.bodySmall?.copyWith(color: nb.inkSoft),
-          ),
-        ],
-      ),
     );
   }
 }

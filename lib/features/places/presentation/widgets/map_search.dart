@@ -36,12 +36,16 @@ class MapSearchBar extends StatefulWidget {
     required this.places,
     required this.search,
     required this.onPicked,
+    this.recent,
     this.reserveBottom = 0,
   });
 
   final List<Place> places;
   final PlaceSearch search;
   final ValueChanged<Object> onPicked;
+
+  /// The user's last searches (server), shown while the box is empty and focused; a tap searches it again.
+  final Future<List<String>> Function()? recent;
 
   /// Space the results leave free above the keyboard (the page's nearby cards).
   final double reserveBottom;
@@ -59,6 +63,22 @@ class _MapSearchBarState extends State<MapSearchBar> {
   String _query = '';
   bool _submitted = false;
 
+  /// Last searches; asked on the first focus and again after a Search (which adds one). A failure shows none.
+  List<String> _recent = const [];
+  bool _recentFresh = false;
+
+  Future<void> _loadRecent() async {
+    final recent = widget.recent;
+    if (recent == null || _recentFresh) return;
+    _recentFresh = true;
+    try {
+      final r = await recent();
+      if (mounted) setState(() => _recent = r);
+    } catch (_) {
+      _recentFresh = false; // tried again on the next focus
+    }
+  }
+
   // One request per query and kind, kept while the bar lives.
   final _asked = <(String, bool), Future<List<PlaceHit>>>{};
 
@@ -72,7 +92,10 @@ class _MapSearchBarState extends State<MapSearchBar> {
         _submitted = false;
       });
     });
-    _focus.addListener(() => setState(() {}));
+    _focus.addListener(() {
+      if (_focus.hasFocus) _loadRecent();
+      setState(() {});
+    });
   }
 
   @override
@@ -84,7 +107,9 @@ class _MapSearchBarState extends State<MapSearchBar> {
 
   static const _morph = Duration(milliseconds: 260);
 
-  bool get _open => _query.isNotEmpty && (_focus.hasFocus || _submitted);
+  bool get _open => _query.isNotEmpty
+      ? _focus.hasFocus || _submitted
+      : _focus.hasFocus && _recent.isNotEmpty;
 
   Future<List<PlaceHit>> _ask(String q, bool submit) => _asked[(q, submit)] ??=
       // Typing: wait for a pause, and drop the request if the query moved on.
@@ -185,8 +210,10 @@ class _MapSearchBarState extends State<MapSearchBar> {
                                 isDense: true,
                                 contentPadding: EdgeInsets.zero,
                               ),
-                              onSubmitted: (_) =>
-                                  setState(() => _submitted = true),
+                              onSubmitted: (_) => setState(() {
+                                _submitted = true;
+                                _recentFresh = false;
+                              }),
                             ),
                           ),
                         ),
@@ -283,8 +310,43 @@ class _MapSearchBarState extends State<MapSearchBar> {
     );
   }
 
+  /// A last search tapped: searched again, as if typed and submitted.
+  void _again(String q) {
+    _text.text = q;
+    _text.selection = TextSelection.collapsed(offset: q.length);
+    _focus.unfocus();
+    setState(() {
+      _submitted = true;
+      _recentFresh = false; // a Search: the server logs it again
+    });
+  }
+
   Widget _results(BuildContext context, AppLocalizations l, Notebook nb) {
     final q = _query;
+    if (q.isEmpty) {
+      return Material(
+        color: nb.paper,
+        elevation: 4,
+        shadowColor: nb.ink.withValues(alpha: 0.3),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: nb.line),
+        ),
+        child: ListView.separated(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          itemCount: _recent.length,
+          separatorBuilder: (_, _) => Divider(height: 1, color: nb.line),
+          itemBuilder: (_, i) => _Row(
+            key: ValueKey('search-recent-$i'),
+            icon: Icons.history,
+            title: _recent[i],
+            onTap: () => _again(_recent[i]),
+          ),
+        ),
+      );
+    }
     final submit = _submitted;
     final mine = searchPins(widget.places, q);
     final myBranches = {for (final (_, b) in mine) b.id};

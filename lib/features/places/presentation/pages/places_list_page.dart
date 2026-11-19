@@ -27,6 +27,9 @@ import 'place_detail_page.dart' show PlacePhotoFlight, placePhotoTag;
 
 enum BookFilter { all, mine, family }
 
+/// Been there (a confirmed receipt) / Want to try (none yet). Places only: recipes are hidden while it is set.
+enum VisitFilter { all, been, toTry }
+
 /// The Book tab: a notebook page, one saved place per line, newest first. In a family it also holds the members'
 /// places (All · Mine · Family); the search box filters places and recipes by name on the phone (the book is small).
 class PlacesListPage extends StatefulWidget {
@@ -39,6 +42,7 @@ class PlacesListPage extends StatefulWidget {
 class _PlacesListPageState extends State<PlacesListPage> {
   final _search = TextEditingController();
   BookFilter _filter = BookFilter.all;
+  VisitFilter _visit = VisitFilter.all;
 
   /// Owner's Merge: the restaurants picked (null = not merging). Recipes can't be picked.
   Set<String>? _merging;
@@ -90,7 +94,12 @@ class _PlacesListPageState extends State<PlacesListPage> {
     final filter = inFamily ? _filter : BookFilter.all;
     final q = _search.text.trim().toLowerCase();
     bool hit(String? s) => q.isEmpty || (s?.toLowerCase().contains(q) ?? false);
-    final searching = q.isNotEmpty || filter != BookFilter.all;
+    // Shown once a receipt has marked a place: before that every place would be "Want to try".
+    final beenCount = places.places.where((p) => p.visited).length;
+    final anyVisited = beenCount > 0;
+    final visit = anyVisited ? _visit : VisitFilter.all;
+    final searching =
+        q.isNotEmpty || filter != BookFilter.all || visit != VisitFilter.all;
     final merging = _merging;
     final isOwner = context.watch<AuthController?>()?.user?.isOwner ?? false;
     final list = [
@@ -102,6 +111,11 @@ class _PlacesListPageState extends State<PlacesListPage> {
               BookFilter.all => true,
               BookFilter.mine => p.mine,
               BookFilter.family => p.savedByOthers.isNotEmpty,
+            } &&
+            switch (visit) {
+              VisitFilter.all => true,
+              VisitFilter.been => p.visited,
+              VisitFilter.toTry => !p.visited,
             })
           p,
     ];
@@ -110,7 +124,7 @@ class _PlacesListPageState extends State<PlacesListPage> {
           in filter == BookFilter.family
               ? recipes.familyRecipes
               : recipes.recipes)
-        if (hit(r.name)) r,
+        if (visit == VisitFilter.all && hit(r.name)) r,
     ];
     final tools = [
       NotebookRow(
@@ -132,16 +146,45 @@ class _PlacesListPageState extends State<PlacesListPage> {
           ),
         ),
       ),
-      if (inFamily)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 4),
-          child: NotebookSegmented<BookFilter>(
-            selected: filter,
-            onChanged: (f) => setState(() => _filter = f),
-            segments: [
-              NotebookSegment(value: BookFilter.all, label: l.bookAll),
-              NotebookSegment(value: BookFilter.mine, label: l.bookMine),
-              NotebookSegment(value: BookFilter.family, label: l.bookFamily),
+      // One row of filters, as Home's: whose (in a family), then Been there / Want to try (tap again = off).
+      if (inFamily || anyVisited)
+        SingleChildScrollView(
+          key: const ValueKey('book-filters'),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 4, 4, 12, 8),
+          child: Row(
+            spacing: 8,
+            children: [
+              if (inFamily)
+                for (final (f, label) in [
+                  (BookFilter.all, l.bookAll),
+                  (BookFilter.mine, l.bookMine),
+                  (BookFilter.family, l.bookFamily),
+                ])
+                  ChoiceChip(
+                    key: ValueKey('book-filter-${f.name}'),
+                    label: Text(label),
+                    selected: filter == f,
+                    onSelected: (_) => setState(() => _filter = f),
+                  ),
+              if (inFamily && anyVisited)
+                SizedBox(height: 24, child: VerticalDivider(color: nb.line)),
+              if (anyVisited)
+                for (final (v, label, n) in [
+                  (VisitFilter.been, l.bookBeen, beenCount),
+                  (
+                    VisitFilter.toTry,
+                    l.bookToTry,
+                    places.places.length - beenCount,
+                  ),
+                ])
+                  FilterChip(
+                    key: ValueKey('book-visit-${v.name}'),
+                    label: Text('$label · $n'),
+                    selected: visit == v,
+                    onSelected: (on) =>
+                        setState(() => _visit = on ? v : VisitFilter.all),
+                  ),
             ],
           ),
         ),

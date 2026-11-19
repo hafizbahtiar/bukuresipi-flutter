@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
@@ -107,6 +106,8 @@ class _NearbySheetState extends State<NearbySheet> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final p = widget.place;
+    // Owner: a shared edit (an owner tool, at the bottom), and no Report (it would only reach them).
+    final owner = context.watch<AuthController?>()?.user?.isOwner ?? false;
     final where = [
       p.label,
       p.address,
@@ -130,8 +131,10 @@ class _NearbySheetState extends State<NearbySheet> {
                         height: 1.15,
                       ),
                     ),
-                    HalalStatus(
-                      claim: p.halalQuote == null ? null : p.halalClaim,
+                    HalalBadge(
+                      HalalKind.ofClaim(
+                        p.halalQuote == null ? null : p.halalClaim,
+                      ),
                     ),
                   ],
                 ),
@@ -174,114 +177,94 @@ class _NearbySheetState extends State<NearbySheet> {
               // JAKIM's directory lists this outlet: its own block, apart from what posts say.
               if (p.halalCert case final cert?) ...[
                 SectionHeader(l.halalCertTitle),
-                ListTile(
+                HalalCertRow(
                   key: const ValueKey('nearby-jakim'),
-                  leading: Icon(
-                    Icons.verified_outlined,
-                    color: cert.expiredAt(DateTime.now())
-                        ? nb.margin
-                        : nb.pandanDeep,
-                  ),
-                  title: Text(cert.premise),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        (cert.expiredAt(DateTime.now())
-                            ? l.halalCertExpired
-                            : l.halalCertValid)(
-                          _day(context, cert.expiresOn),
-                          _day(context, cert.checkedAt),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () =>
-                            openLink(context, cert.url, failed: l.openFailed),
-                        icon: const Icon(Icons.open_in_new, size: 16),
-                        label: Text(l.halalCertOpen),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ],
-                  ),
+                  title: p.label ?? p.name,
+                  cert: cert,
                 ),
               ],
               if (p.halalClaim != null && p.halalQuote != null) ...[
                 SectionHeader(l.halalTitle),
-                ListTile(
-                  leading: Icon(Icons.info_outline, color: nb.kunyit),
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '“${p.halalQuote}”',
-                        style: text.bodyLarge?.copyWith(
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      if (p.halalSourceUrl case final url?)
-                        TextButton.icon(
-                          onPressed: () =>
-                              openLink(context, url, failed: l.openFailed),
-                          icon: const Icon(Icons.open_in_new, size: 16),
-                          label: Text(l.halalSource),
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      Text(
-                        l.halalNotCert,
-                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                      ),
-                    ],
-                  ),
+                HalalQuoteRow(
+                  claim: p.halalClaim,
+                  quote: p.halalQuote!,
+                  sourceUrl: p.halalSourceUrl,
                 ),
               ],
             ],
           ),
         ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: const EdgeInsets.only(right: spaceS),
-            // Wraps on a narrow phone or with large text instead of running off the edge.
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: _edit,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: Text(l.editBranch),
-                ),
-                TextButton.icon(
-                  onPressed: _report,
-                  icon: const Icon(Icons.flag_outlined, size: 18),
-                  label: Text(l.report),
-                ),
-              ],
+        if (!owner)
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: spaceS),
+              // Wraps on a narrow phone or with large text instead of running off the edge.
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: _edit,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: Text(l.editBranch),
+                  ),
+                  TextButton.icon(
+                    onPressed: _report,
+                    icon: const Icon(Icons.flag_outlined, size: 18),
+                    label: Text(l.report),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 0),
-          child: FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                  )
-                : Text(l.save),
+          padding: EdgeInsets.fromLTRB(spaceM, owner ? spaceS : 0, spaceM, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
+                  onPressed: _saving ? null : _save,
+                  child: _saving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(l.save),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const ValueKey('nearby-directions'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: () => openLink(
+                    context,
+                    mapsSearchUrl(p.lat, p.lng),
+                    failed: l.openFailed,
+                  ),
+                  icon: const Icon(Icons.directions),
+                  label: Text(l.directions),
+                ),
+              ),
+            ],
           ),
         ),
+        if (owner) ...[
+          SectionHeader(l.ownerTools),
+          ListTile(
+            key: const ValueKey('nearby-owner-edit'),
+            leading: const Icon(Icons.edit_outlined),
+            title: Text(l.editBranch),
+            onTap: _edit,
+          ),
+        ],
       ],
     );
   }
 }
-
-String _day(BuildContext context, DateTime d) =>
-    DateFormat.yMMMd(Localizations.localeOf(context).toString()).format(d);

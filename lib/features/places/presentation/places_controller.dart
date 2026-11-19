@@ -226,6 +226,9 @@ class PlacesController extends ChangeNotifier {
   /// A pasted Google Maps link -> its pin, for the edit form. Throws ApiException.
   Future<MapsPin> pinFromMapsLink(String url) => _repo.pinFromMapsLink(url);
 
+  Future<Map<String, String>> pinQueries(String branchId) =>
+      _repo.pinQueries(branchId);
+
   Future<({String query, List<PinHit> hits})> searchPin(
     String branchId,
     String source, {
@@ -316,6 +319,9 @@ class PlacesController extends ChangeNotifier {
     bool submit = false,
   }) => _repo.search(query, lat, lng, submit: submit);
 
+  /// Throws ApiException.
+  Future<List<String>> recentSearches() => _repo.recentSearches();
+
   /// Saves a search result not in the app yet, then reloads the saved places for the map.
   Future<Place> savePoi(String poiId) async {
     final place = await _repo.savePoi(poiId);
@@ -367,10 +373,33 @@ class PlacesController extends ChangeNotifier {
     await _reload();
   }
 
+  /// Owner only: the company behind a branch's certificate ([refresh]: read again now). Throws ApiException.
+  Future<PlaceCompanies> placeCompanies(String placeId) =>
+      _repo.placeCompanies(placeId);
+
+  /// [reload] false: the caller refreshes several branches and calls [reloadBook] once at the end.
+  Future<BranchCompany> branchCompany(
+    String branchId, {
+    bool refresh = false,
+    bool reload = true,
+  }) async {
+    final r = await _repo.branchCompany(branchId, refresh: refresh);
+    // A refresh may have checked JAKIM (the certificate's expiry).
+    if (refresh && reload) await _reload();
+    return r;
+  }
+
+  /// Owner only: "Same company as…" (nothing in the book changes). Throws ApiException.
+  Future<BranchCompany> copyBranchCompany(String branchId, String from) =>
+      _repo.copyBranchCompany(branchId, from);
+
+  /// The book again (after several [branchCompany] refreshes with reload off).
+  Future<void> reloadBook() => _reload();
+
   /// Owner only: "Check JAKIM" on one branch; the book reloads (a found certificate shows). Throws ApiException.
-  Future<JakimCheck> checkHalalBranch(String branchId) async {
-    final r = await _repo.checkHalalBranch(branchId);
-    await _reload();
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q}) async {
+    final r = await _repo.checkHalalBranch(branchId, q: q);
+    if (q == null) await _reload(); // a search by words stores nothing
     return r;
   }
 

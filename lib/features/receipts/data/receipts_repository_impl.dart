@@ -261,20 +261,23 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
   );
 
   @override
-  Future<({List<Receipt> items, String? next})> list({String? cursor}) =>
-      apiCall(() async {
-        final j = (await _dio.get<Map<String, dynamic>>(
-          '/receipts',
-          queryParameters: {'cursor': ?cursor},
-        )).data!;
-        return (
-          items: [
-            for (final r in (j['items'] as List).cast<Map<String, dynamic>>())
-              _receipt(r),
-          ],
-          next: j['next'] as String?,
-        );
-      });
+  Future<({List<Receipt> items, String? next})> list({
+    String? cursor,
+    String? place,
+    int? limit,
+  }) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/receipts',
+      queryParameters: {'cursor': ?cursor, 'place': ?place, 'limit': ?limit},
+    )).data!;
+    return (
+      items: [
+        for (final r in (j['items'] as List).cast<Map<String, dynamic>>())
+          _receipt(r),
+      ],
+      next: j['next'] as String?,
+    );
+  });
 
   @override
   Future<Receipt> confirm(

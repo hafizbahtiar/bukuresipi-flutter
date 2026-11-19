@@ -27,7 +27,9 @@ Order = build order. Bottom navigation: Book, Map; Account is the person icon in
    "halal"), the user's note (`PATCH`), remove (`DELETE`), directions (Google Maps): **done**.
 5. **Map** (Map tab): a pin per branch with lat/lng; branches without coordinates are listed from a card at the
    bottom: **done**. `maplibre_gl` + OpenFreeMap vector tiles (free, no key, no request cap; OSM's own tile servers
-   do not allow app traffic).
+   do not allow app traffic). Next: one always-there place sheet (peek / half / full) instead of the carousel and
+   the modal sheets, and a tap on the base map's own OSM shops: plan in `bukuresipi-hono/IDEA.md`, "Map: one place
+   sheet".
 6. **Recipe** `/recipes/:id`: ingredients, steps, source link. API: **missing** (recipe feature not built).
 7. **Account**: done.
 

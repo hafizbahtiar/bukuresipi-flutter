@@ -210,24 +210,26 @@
   "@halalNotCert": {},
   "halalCertTitle": "JAKIM halal certificate",
   "@halalCertTitle": {},
-  "halalCertValid": "Valid until {date} · checked {checked}",
-  "@halalCertValid": {
+  "halalCertUntil": "Valid until {date}",
+  "@halalCertUntil": {
     "placeholders": {
       "date": {
-        "type": "String"
-      },
-      "checked": {
         "type": "String"
       }
     }
   },
-  "halalCertExpired": "Expired {date} · checked {checked}",
-  "@halalCertExpired": {
+  "halalCertExpiredOn": "Expired {date}",
+  "@halalCertExpiredOn": {
     "placeholders": {
       "date": {
         "type": "String"
-      },
-      "checked": {
+      }
+    }
+  },
+  "halalCertChecked": "Checked {date}",
+  "@halalCertChecked": {
+    "placeholders": {
+      "date": {
         "type": "String"
       }
     }
@@ -305,7 +307,7 @@
   "jakimPair": "Pair with a branch",
   "jakimPairThis": "Pair",
   "@jakimPairThis": {},
-  "jakimPairOther": "Another branch",
+  "jakimPairOther": "Pair with another branch",
   "@jakimPairOther": {},
   "@jakimPair": {},
   "jakimUnpair": "Unpair",
@@ -360,7 +362,7 @@
   "@halalEditClaimNote": {},
   "jakimDraftNone": "JAKIM: no outlet of this brand found in this state.",
   "@jakimDraftNone": {},
-  "jakimDraftDown": "JAKIM did not answer. Use Check JAKIM below later.",
+  "jakimDraftDown": "JAKIM did not answer. Try Check JAKIM in the Halal tab later.",
   "@jakimDraftDown": {},
   "halalBrandTitle": "This brand has JAKIM-certified outlets",
   "@halalBrandTitle": {},
@@ -812,7 +814,7 @@
   "@aiDraftNoInfo": {},
   "aiDraftNoFields": "No field suggestions.",
   "@aiDraftNoFields": {},
-  "aiDraftApplied": "Filled into the fields below — untick any you don't want, then review before saving.",
+  "aiDraftApplied": "Already filled into the Branch tab. Untick any you don't want.",
   "@aiDraftApplied": {},
   "aiDraftSame": "unchanged",
   "@aiDraftSame": {},
@@ -1210,6 +1212,10 @@
   "@shoppingAdd": {},
   "shoppingAddHint": "Add an item",
   "@shoppingAddHint": {},
+  "shoppingOther": "Other",
+  "@shoppingOther": {
+    "description": "Shopping list section for lines with no catalogue section"
+  },
   "shoppingEmpty": "Nothing to buy. Add a recipe's ingredients from its page, or type an item above.",
   "@shoppingEmpty": {},
   "shoppingLoadFailed": "Could not load the list. Tap to try again.",
@@ -1387,6 +1393,14 @@
   "@bookMine": {},
   "bookFamily": "Family",
   "@bookFamily": {},
+  "bookBeen": "Been there",
+  "@bookBeen": {
+    "description": "Book filter: places with a confirmed receipt of mine"
+  },
+  "bookToTry": "Want to try",
+  "@bookToTry": {
+    "description": "Book filter: saved places with no confirmed receipt yet"
+  },
   "bookNoMatch": "Nothing matches.",
   "@bookNoMatch": {},
   "placeSavedBy": "Saved by {names}",
@@ -2218,6 +2232,21 @@
   "@spendingSpent": {},
   "spendingVisits": "Visits",
   "@spendingVisits": {},
+  "spendingAverage": "Average",
+  "@spendingAverage": {},
+  "spendingFirstLast": "First {first} · last {last}",
+  "@spendingFirstLast": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "placeVisitsOpen": "Open place",
+  "@placeVisitsOpen": {},
   "spendingTopPlaces": "Top places",
   "@spendingTopPlaces": {},
   "spendingShare": "{percent}% of spending",
@@ -2262,7 +2291,7 @@
   "@pinSearchOsm": {},
   "pinSearchHere": "HERE",
   "@pinSearchHere": {},
-  "pinSearchGrab": "AWS (Grab)",
+  "pinSearchGrab": "GrabMaps",
   "pinSearchJakim": "JAKIM",
   "pinSearchNoPin": "No pin: pin it with OpenStreetMap, HERE or AWS",
   "@pinSearchNoPin": {},
@@ -2819,6 +2848,14 @@
   "@shoppingOptionalSkip": {},
   "shoppingOptionalAll": "Everything, optional too",
   "@shoppingOptionalAll": {},
+  "shoppingHaveTitle": "Leave out what's in my kitchen?",
+  "@shoppingHaveTitle": {
+    "description": "Asked when adding a recipe to shopping while the What can I cook list has items"
+  },
+  "shoppingHaveSkip": "Yes, only what I don't have",
+  "@shoppingHaveSkip": {},
+  "shoppingHaveAll": "No, add everything",
+  "@shoppingHaveAll": {},
   "errMealLimit": "That's 10 meal photos today. Try again tomorrow.",
   "@errMealLimit": {},
   "errNotFood": "No food found in that photo. Try another one.",
@@ -2924,5 +2961,209 @@
   "deleteScopeDish": "Every user: the dish leaves the catalogue. Copies people made and their shopping lines stay.",
   "@deleteScopeDish": {},
   "deleteScopeRecipeMine": "Only your recipe. Copies other people made stay.",
-  "@deleteScopeRecipeMine": {}
+  "@deleteScopeRecipeMine": {},
+  "branchTabFind": "Find",
+  "@branchTabFind": {
+    "description": "Owner's Edit branch tab: AI draft and map search"
+  },
+  "aiDraftCardHelp": "Reads the maps and the web, then drafts the name, address and pin. Nothing is saved until you save the branch.",
+  "@aiDraftCardHelp": {},
+  "aiDraftWarningsTitle": "Check before saving",
+  "@aiDraftWarningsTitle": {},
+  "aiDraftFieldsTitle": "Suggested changes",
+  "@aiDraftFieldsTitle": {},
+  "aiDraftPhotosTitle": "Photos found",
+  "@aiDraftPhotosTitle": {},
+  "aiDraftPagesTitle": "Pages read",
+  "@aiDraftPagesTitle": {},
+  "pinCandidateFromDraft": "{metres} m from the draft",
+  "@pinCandidateFromDraft": {
+    "placeholders": {
+      "metres": {
+        "type": "int"
+      }
+    }
+  },
+  "pinSourceOsmHint": "Free. Places and addresses from OpenStreetMap.",
+  "@pinSourceOsmHint": {},
+  "pinSourceHereHint": "HERE Maps. Each search counts against the monthly quota.",
+  "@pinSourceHereHint": {},
+  "pinSourceGrabHint": "GrabMaps on AWS. Each search counts against the monthly quota.",
+  "@pinSourceGrabHint": {},
+  "pinSourceJakimHint": "JAKIM's halal list for this brand in the branch's state. No pins: pin one with another map.",
+  "@pinSourceJakimHint": {},
+  "pinFromSource": "Pin from {source}",
+  "@pinFromSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "pinNotSaved": "New pin, not saved yet",
+  "@pinNotSaved": {},
+  "branchPinNone": "No pin yet",
+  "@branchPinNone": {},
+  "sourceCurrentPin": "Current pin",
+  "@sourceCurrentPin": {},
+  "sourceAiDraft": "AI draft",
+  "@sourceAiDraft": {},
+  "sourceWeb": "Web pages",
+  "@sourceWeb": {},
+  "sourceOwner": "Owner",
+  "@sourceOwner": {},
+  "sourceHandPins": "Users' pins",
+  "@sourceHandPins": {},
+  "companyTitle": "Company (from JAKIM)",
+  "@companyTitle": {},
+  "companyOwnerOnly": "Owner only. Users never see this.",
+  "@companyOwnerOnly": {},
+  "companyBrand": "Brand",
+  "@companyBrand": {},
+  "companyPremiseAddress": "Premise address",
+  "@companyPremiseAddress": {},
+  "companyHq": "Head office",
+  "@companyHq": {},
+  "companyPhone": "Phone",
+  "@companyPhone": {},
+  "companyFax": "Fax",
+  "@companyFax": {},
+  "companyEmail": "Email",
+  "@companyEmail": {},
+  "companyWebsite": "Website",
+  "@companyWebsite": {},
+  "companyReference": "JAKIM reference",
+  "@companyReference": {},
+  "companyReadAt": "Read from JAKIM on {date}",
+  "@companyReadAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "companyNotRead": "Company page not read yet.",
+  "@companyNotRead": {},
+  "companySame": "Same company as…",
+  "@companySame": {},
+  "companySameTitle": "Pick the company",
+  "@companySameTitle": {},
+  "companySameNone": "No other branch of this place has a company yet.",
+  "@companySameNone": {},
+  "companySameDone": "Company taken from {branch}. JAKIM's own row for this outlet replaces it when found.",
+  "@companySameDone": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "companyRefresh": "Get company info again",
+  "@companyRefresh": {},
+  "companyNone": "No company linked yet. Get company info checks JAKIM for it.",
+  "@companyNone": {},
+  "companyUpdated": "Company info updated.",
+  "@companyUpdated": {},
+  "certPremise": "Premise",
+  "@certPremise": {},
+  "certValidUntil": "Valid until",
+  "@certValidUntil": {},
+  "certChecked": "Last checked",
+  "@certChecked": {},
+  "certStatusValid": "Valid",
+  "@certStatusValid": {},
+  "certStatusExpired": "Expired",
+  "@certStatusExpired": {},
+  "certLinked": "Linked",
+  "@certLinked": {},
+  "certSourceOwner": "Paired by you",
+  "@certSourceOwner": {},
+  "certSourceAuto": "Matched by the JAKIM check",
+  "@certSourceAuto": {},
+  "companiesTitle": "Companies (from JAKIM)",
+  "@companiesTitle": {},
+  "companiesHelp": "Each certified outlet and the company behind it. Owner only.",
+  "@companiesHelp": {},
+  "companiesNone": "No outlet of this place has a JAKIM certificate yet.",
+  "@companiesNone": {},
+  "ownerLoading": "Loading…",
+  "@ownerLoading": {},
+  "jakimChecking": "Checking JAKIM…",
+  "@jakimChecking": {},
+  "jakimSearching": "Searching JAKIM…",
+  "@jakimSearching": {},
+  "companyReading": "Reading JAKIM…",
+  "@companyReading": {},
+  "companiesReadingN": "Reading {done} of {total}…",
+  "@companiesReadingN": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "certStatusNone": "None",
+  "@certStatusNone": {},
+  "halalFindTitle": "Find on JAKIM",
+  "@halalFindTitle": {},
+  "halalFindHelp": "Check JAKIM looks for this outlet by the place's name and postcode, and saves a match. Or search JAKIM's directory yourself and pick a row.",
+  "@halalFindHelp": {},
+  "jakimListed": "{count, plural, =0{JAKIM lists nothing for \"{q}\" in this state.} =1{1 row on JAKIM for \"{q}\". Use the one that is this outlet.} other{{count} rows on JAKIM for \"{q}\". Use the one that is this outlet.}}",
+  "@jakimListed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "q": {
+        "type": "String"
+      }
+    }
+  },
+  "jakimUseRow": "Use",
+  "@jakimUseRow": {},
+  "jakimLinked": "Linked",
+  "@jakimLinked": {},
+  "companyTab": "Company",
+  "@companyTab": {},
+  "companyNeedsCert": "Link a JAKIM certificate in the Halal tab first: the company comes from it.",
+  "@companyNeedsCert": {},
+  "halalPostsTitle": "What posts say",
+  "@halalPostsTitle": {},
+  "halalOutletsTitle": "Brand outlets on JAKIM",
+  "@halalOutletsTitle": {},
+  "halalOutletsHelp": "Every outlet JAKIM lists under this name across Malaysia. Pair one with a branch, or add it as a new branch.",
+  "@halalOutletsHelp": {},
+  "companiesGetMissing": "Get missing ({count})",
+  "@companiesGetMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "companiesRefreshAll": "Get all again",
+  "@companiesRefreshAll": {},
+  "companyRefreshOne": "Get again",
+  "@companyRefreshOne": {},
+  "companiesNoneYet": "No company yet: Get again checks JAKIM for it.",
+  "@companiesNoneYet": {},
+  "companyRowUpdated": "Updated",
+  "@companyRowUpdated": {},
+  "jakimDownShort": "JAKIM did not answer",
+  "@jakimDownShort": {},
+  "companiesDone": "{count, plural, =1{1 branch read again.} other{{count} branches read again.}}",
+  "@companiesDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerSaving": "Saving…",
+  "@ownerSaving": {},
+  "ownerSearching": "Searching…",
+  "@ownerSearching": {}
 }

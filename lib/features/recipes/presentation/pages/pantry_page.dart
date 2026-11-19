@@ -25,6 +25,16 @@ class PantryPage extends StatefulWidget {
 }
 
 const _key = 'pantry.ingredients';
+
+/// What the user said they have (What can I cook?), kept on this phone; empty when nothing or the store fails.
+Future<List<String>> pantryIngredients() async {
+  try {
+    return (await SharedPreferences.getInstance()).getStringList(_key) ?? [];
+  } catch (_) {
+    return [];
+  }
+}
+
 const _staplesKey = 'pantry.staples';
 
 class _PantryPageState extends State<PantryPage> {

@@ -13,6 +13,7 @@ Receipt receipt({
     name: 'Port Lepak Sentul',
   ),
   int? totalSen = 4115,
+  DateTime? visitedAt,
   List<String> gaps = const [],
   List<ReceiptItem> items = const [],
   List<ReceiptCharge> charges = const [],
@@ -26,7 +27,7 @@ Receipt receipt({
   status: status,
   shop: 'Port Lepak Sentul',
   place: place,
-  visitedAt: DateTime(2026, 11, 8, 20, 41),
+  visitedAt: visitedAt ?? DateTime(2026, 11, 8, 20, 41),
   totalSen: totalSen,
   gaps: gaps,
   items: items,
@@ -69,7 +70,21 @@ class FakeReceipts implements ReceiptsRepository {
       answers[(gets++).clamp(0, answers.length - 1)];
 
   @override
-  Future<({List<Receipt> items, String? next})> list({String? cursor}) async {
+  Future<({List<Receipt> items, String? next})> list({
+    String? cursor,
+    String? place,
+    int? limit,
+  }) async {
+    if (place != null) {
+      listedPlaces.add(place);
+      return (
+        items: [
+          for (final r in items)
+            if (r.place?.placeId == place && r.status == 'saved') r,
+        ],
+        next: null,
+      );
+    }
     // pageSize set = paged like the API: the cursor is the index to start at.
     final size = pageSize;
     if (size == null) return (items: items, next: null);
@@ -82,6 +97,9 @@ class FakeReceipts implements ReceiptsRepository {
   }
 
   int? pageSize;
+
+  /// Places asked with `?place=`.
+  final listedPlaces = <String>[];
 
   @override
   Future<Receipt> confirm(

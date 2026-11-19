@@ -23,6 +23,7 @@ import '../../../shopping/presentation/shopping_controller.dart';
 import '../recipes_controller.dart';
 import '../widgets/ingredient_picker.dart';
 import '../widgets/recipe_variants.dart';
+import 'pantry_page.dart' show pantryIngredients;
 import 'recipe_edit_page.dart';
 
 /// One imported recipe, standard (base) style: what the post said, with the pieces it did not give marked.
@@ -233,11 +234,27 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       if (skip == null) return;
       skipOptional = skip;
     }
+    // What can I cook? list on this phone: asked only when it has something.
+    var have = await pantryIngredients();
+    if (have.isNotEmpty) {
+      if (!mounted) return;
+      final skip = await showBasePicker<bool>(
+        context,
+        title: l.shoppingHaveTitle,
+        search: false,
+        options: const [true, false],
+        selected: null,
+        label: (skip) => skip ? l.shoppingHaveSkip : l.shoppingHaveAll,
+      );
+      if (skip == null) return;
+      if (!skip) have = const [];
+    }
     try {
       final added = await shopping.addRecipe(
         recipe.id,
         family: family,
         skipOptional: skipOptional,
+        have: have,
       );
       _snack(added == 0 ? l.shoppingAlreadyAdded : l.shoppingAdded(added));
     } catch (e) {

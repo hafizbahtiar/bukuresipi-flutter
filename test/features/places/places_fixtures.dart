@@ -61,8 +61,10 @@ Place place({
   RatingSummary? rating,
   HalalCert? cert,
   ({int outlets, String url})? brand,
+  bool visited = false,
 }) => Place(
   id: id,
+  visited: visited,
   sourceUrl: sourceUrl,
   note: null,
   createdAt: DateTime.utc(2026, 11, 2),
@@ -180,6 +182,10 @@ class FakePlaces implements PlacesRepository {
     return searchHits;
   }
 
+  List<String> recent = const [];
+  @override
+  Future<List<String>> recentSearches() async => recent;
+
   List<String> coverIds = const [];
   String? currentCover;
   final coverPicks = <String?>[];
@@ -234,9 +240,42 @@ class FakePlaces implements PlacesRepository {
   /// `branch:ID` per branch check, `place:ID` (or `place:ID:q`) per outlet list.
   final halalChecks = <String>[];
 
+  BranchCompany company = const BranchCompany();
+  BranchCompany refreshed = const BranchCompany(status: 'none');
+
+  /// `get:ID` / `refresh:ID` per company call.
+  final companyCalls = <String>[];
+
+  /// What [placeCompanies] answers.
+  PlaceCompanies placeCompaniesList = const [];
+
   @override
-  Future<JakimCheck> checkHalalBranch(String branchId) async {
-    halalChecks.add('branch:$branchId');
+  Future<PlaceCompanies> placeCompanies(String placeId) async {
+    companyCalls.add('list:$placeId');
+    return placeCompaniesList;
+  }
+
+  @override
+  Future<BranchCompany> copyBranchCompany(String branchId, String from) async {
+    companyCalls.add('copy:$branchId:$from');
+    return company = copied;
+  }
+
+  /// What [copyBranchCompany] answers.
+  BranchCompany copied = const BranchCompany();
+
+  @override
+  Future<BranchCompany> branchCompany(
+    String branchId, {
+    bool refresh = false,
+  }) async {
+    companyCalls.add('${refresh ? 'refresh' : 'get'}:$branchId');
+    return refresh ? (company = refreshed) : company;
+  }
+
+  @override
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q}) async {
+    halalChecks.add(q == null ? 'branch:$branchId' : 'branch:$branchId:$q');
     return halalCheck;
   }
 
@@ -419,6 +458,12 @@ class FakePlaces implements PlacesRepository {
     JakimRow? cert,
     String? certUrl,
   }) async => siblings.add((branchId, address, lat, cert?.premise));
+
+  /// What [pinQueries] answers (none by default: the box starts empty).
+  Map<String, String> pinDefaults = const {};
+
+  @override
+  Future<Map<String, String>> pinQueries(String branchId) async => pinDefaults;
 
   /// What [searchPin] answers; [pinSearches] records (branch, source, q).
   List<PinHit> pinHits = const [];

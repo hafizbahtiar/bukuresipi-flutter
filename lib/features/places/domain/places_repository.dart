@@ -76,6 +76,9 @@ abstract interface class PlacesRepository {
   Future<MapsPin> pinFromMapsLink(String url);
 
   /// Owner: [source] 'osm' | 'here' | 'grab'; [q] null = the shop name + area. Throws `source_off` (no key, meter off).
+  /// Owner: each map's default words for the search box (source -> words); nothing is asked outside.
+  Future<Map<String, String>> pinQueries(String branchId);
+
   Future<({String query, List<PinHit> hits})> searchPin(
     String branchId,
     String source, {
@@ -106,7 +109,17 @@ abstract interface class PlacesRepository {
   Future<void> setRestaurantCover(String placeId, String? cover);
 
   /// Owner only: "Check JAKIM" on one branch now. Throws ApiException.
-  Future<JakimCheck> checkHalalBranch(String branchId);
+  /// [q] = the owner's own words: rows listed (status `listed`), nothing stored.
+  Future<JakimCheck> checkHalalBranch(String branchId, {String? q});
+
+  /// Owner: the company behind the branch's certificate; [refresh] = read JAKIM's company page again now.
+  /// Owner: every certified branch of a place with its company.
+  Future<PlaceCompanies> placeCompanies(String placeId);
+
+  Future<BranchCompany> branchCompany(String branchId, {bool refresh = false});
+
+  /// Owner: "Same company as…": [branchId] (certified) takes branch [from]'s company (same place).
+  Future<BranchCompany> copyBranchCompany(String branchId, String from);
 
   /// Owner only: the brand's JAKIM outlets across Malaysia ([q] = the owner's own words); nothing written.
   Future<JakimOutlets> placeOutlets(String placeId, {String? q});
@@ -159,6 +172,9 @@ abstract interface class PlacesRepository {
     double lng, {
     bool submit = false,
   });
+
+  /// The caller's last searches (pressed Search), newest first, at most 8.
+  Future<List<String>> recentSearches();
 
   /// Saves a search result that is not in the app yet (it becomes a restaurant).
   Future<Place> savePoi(String poiId);
