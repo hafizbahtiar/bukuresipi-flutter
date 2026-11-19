@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/open_link.dart';
@@ -132,8 +131,10 @@ class _NearbySheetState extends State<NearbySheet> {
                         height: 1.15,
                       ),
                     ),
-                    HalalStatus(
-                      claim: p.halalQuote == null ? null : p.halalClaim,
+                    HalalBadge(
+                      HalalKind.ofClaim(
+                        p.halalQuote == null ? null : p.halalClaim,
+                      ),
                     ),
                   ],
                 ),
@@ -176,70 +177,18 @@ class _NearbySheetState extends State<NearbySheet> {
               // JAKIM's directory lists this outlet: its own block, apart from what posts say.
               if (p.halalCert case final cert?) ...[
                 SectionHeader(l.halalCertTitle),
-                ListTile(
+                HalalCertRow(
                   key: const ValueKey('nearby-jakim'),
-                  leading: Icon(
-                    Icons.verified_outlined,
-                    color: cert.expiredAt(DateTime.now())
-                        ? nb.margin
-                        : nb.pandanDeep,
-                  ),
-                  title: Text(cert.premise),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        (cert.expiredAt(DateTime.now())
-                            ? l.halalCertExpired
-                            : l.halalCertValid)(
-                          _day(context, cert.expiresOn),
-                          _day(context, cert.checkedAt),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () =>
-                            openLink(context, cert.url, failed: l.openFailed),
-                        icon: const Icon(Icons.open_in_new, size: 16),
-                        label: Text(l.halalCertOpen),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ],
-                  ),
+                  title: p.label ?? p.name,
+                  cert: cert,
                 ),
               ],
               if (p.halalClaim != null && p.halalQuote != null) ...[
                 SectionHeader(l.halalTitle),
-                ListTile(
-                  leading: Icon(Icons.info_outline, color: nb.kunyit),
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '“${p.halalQuote}”',
-                        style: text.bodyLarge?.copyWith(
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      if (p.halalSourceUrl case final url?)
-                        TextButton.icon(
-                          onPressed: () =>
-                              openLink(context, url, failed: l.openFailed),
-                          icon: const Icon(Icons.open_in_new, size: 16),
-                          label: Text(l.halalSource),
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      Text(
-                        l.halalNotCert,
-                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                      ),
-                    ],
-                  ),
+                HalalQuoteRow(
+                  claim: p.halalClaim,
+                  quote: p.halalQuote!,
+                  sourceUrl: p.halalSourceUrl,
                 ),
               ],
             ],
@@ -319,6 +268,3 @@ class _NearbySheetState extends State<NearbySheet> {
     );
   }
 }
-
-String _day(BuildContext context, DateTime d) =>
-    DateFormat.yMMMd(Localizations.localeOf(context).toString()).format(d);

@@ -321,13 +321,18 @@ class BranchPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: HalalStatus(
-                  claim: r.halalQuote == null ? null : r.halalClaim,
+                child: HalalBadge(
+                  HalalKind.ofClaim(r.halalQuote == null ? null : r.halalClaim),
+                  variant: HalalBadgeVariant.simple,
                 ),
               ),
             ),
-            if (branch.halalCert != null)
-              HalalCertRow(branch: branch)
+            if (branch.halalCert case final cert?)
+              HalalCertRow(
+                key: ValueKey('halal-cert-${branch.id}'),
+                title: branch.label ?? branch.where ?? cert.premise,
+                cert: cert,
+              )
             else if (r.halalBrand case final brand?)
               HalalBrandRow(
                 outlets: brand.outlets,

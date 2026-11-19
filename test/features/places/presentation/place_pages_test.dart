@@ -286,6 +286,8 @@ void main() {
   testWidgets(
     'halal is shown as the post\'s quote with its source, never as a badge',
     (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
       repo = FakePlaces()..places = [place(id: 'a')];
       await pump(t, const PlaceDetailPage(id: 'a'));
       await tapKey(t, 'place-tab-halal');
@@ -736,6 +738,66 @@ void main() {
       // One branch alone.
       await tapKey(t, 'place-company-refresh-b-3');
       expect(repo.companyCalls.last, 'refresh:b-3');
+    },
+  );
+
+  testWidgets(
+    'Edit place > Company: Get missing reads only branches with no company page read yet',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      repo = FakePlaces()
+        ..places = [place(id: 'a')]
+        ..placeCompaniesList = [
+          (
+            branchId: 'b-1',
+            label: 'Pelita Ampang',
+            info: BranchCompany(
+              premise: 'P1',
+              company: HalalCompany(
+                code: 'COMP-1',
+                name: 'KOPITIAM SDN BHD',
+                readAt: DateTime(2026, 11, 1),
+              ),
+            ),
+          ),
+          // Only its name, from the directory row: its page still to read.
+          (
+            branchId: 'b-2',
+            label: 'Pelita KLCC',
+            info: const BranchCompany(
+              premise: 'P2',
+              company: HalalCompany(code: 'COMP-2', name: 'KLCC SDN BHD'),
+            ),
+          ),
+          (
+            branchId: 'b-3',
+            label: 'Pelita Cheras',
+            info: const BranchCompany(premise: 'P3'),
+          ),
+        ]
+        ..refreshed = BranchCompany(
+          status: 'ok',
+          premise: 'P3',
+          company: HalalCompany(
+            code: 'COMP-3',
+            name: 'CHERAS SDN BHD',
+            readAt: DateTime(2026, 11, 19),
+          ),
+        );
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await tapKey(t, 'more-menu');
+      await t.tap(find.text('Edit place'));
+      await t.pumpAndSettle();
+      await tapKey(t, 'place-edit-tab-company');
+      expect(find.text('Get missing (2)'), findsOneWidget);
+      await tapKey(t, 'place-companies-missing');
+      expect(repo.companyCalls.skip(1), ['refresh:b-2', 'refresh:b-3']);
+      // Every page read: nothing missing, the button goes.
+      expect(
+        find.byKey(const ValueKey('place-companies-missing')),
+        findsNothing,
+      );
     },
   );
 

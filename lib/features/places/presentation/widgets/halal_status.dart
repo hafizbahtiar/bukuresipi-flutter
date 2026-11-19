@@ -7,127 +7,285 @@ import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../domain/place.dart';
 
-/// The halal status as a pill under the restaurant's name: what the post claims ('says_halal' / 'says_not_halal'),
-/// or that it claims nothing. Always a quote's summary, never "certified" (the quote and JAKIM note sit below).
-class HalalStatus extends StatelessWidget {
-  const HalalStatus({super.key, required this.claim}) : jakim = null;
+/// What is known about halal, strongest first. Only [jakim] is a certificate (JAKIM's directory lists the outlet,
+/// not expired); [says] and [saysNot] are quotes from a post; [expired] is a certificate past its date.
+enum HalalKind {
+  jakim,
+  says,
+  saysNot,
+  expired,
+  none;
 
-  /// JAKIM's directory lists the place's outlet(s): [jakim] is the pill's text ("JAKIM halal · 2 outlets").
-  const HalalStatus.jakim(String this.jakim, {super.key}) : claim = null;
-
-  /// null = no claim (no quote, or no source to quote).
-  final String? claim;
-  final String? jakim;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final (icon, label, color) = switch (claim) {
-      _ when jakim != null => (Icons.verified, jakim!, nb.pandanDeep),
-      'says_halal' => (
-        Icons.verified_outlined,
-        l.halalSaysHalal,
-        nb.pandanDeep,
-      ),
-      'says_not_halal' => (
-        Icons.do_not_disturb_on_outlined,
-        l.halalSaysNotHalal,
-        nb.margin,
-      ),
-      _ => (Icons.help_outline, l.halalNoClaim, nb.inkSoft),
-    };
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  /// A post's quoted claim ('says_halal' / 'says_not_halal'); null = no claim.
+  static HalalKind ofClaim(String? claim) => switch (claim) {
+    'says_halal' => says,
+    'says_not_halal' => saysNot,
+    _ => none,
+  };
 }
 
-/// A branch's JAKIM directory row: the outlet, until when, when we checked, and JAKIM's own page to check it.
-/// Expired stays shown (in red, with its date): never silently dropped, never "not halal".
-class HalalCertRow extends StatelessWidget {
-  const HalalCertRow({super.key, required this.branch});
+enum HalalBadgeVariant {
+  /// Icon and words in the kind's colour, no box: a line inside other text.
+  simple,
 
-  final Branch branch;
+  /// A pill: under a place's name. JAKIM is filled, a quote is outlined.
+  standard,
+
+  /// A card with a round icon, a title, a subtitle and [HalalBadge.children]: a halal tab's item.
+  full,
+}
+
+/// The one halal badge. Never says "certified" for a quote, and uses no JAKIM logo: the app does not certify, and
+/// the logo is JAKIM's mark for certified premises only.
+class HalalBadge extends StatelessWidget {
+  const HalalBadge(
+    this.kind, {
+    super.key,
+    this.variant = HalalBadgeVariant.standard,
+    this.label,
+    this.subtitle,
+    this.children = const [],
+  });
+
+  final HalalKind kind;
+  final HalalBadgeVariant variant;
+
+  /// null = the kind's own words ("JAKIM halal", "The post says halal"...).
+  final String? label;
+
+  /// [HalalBadgeVariant.full] only: the line under the title, and what sits below it.
+  final String? subtitle;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    final cert = branch.halalCert!;
-    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
-    final expired = cert.expiredAt(DateTime.now());
-    final dates = (expired ? l.halalCertExpired : l.halalCertValid)(
-      day.format(cert.expiresOn),
-      day.format(cert.checkedAt),
-    );
-    return Container(
-      key: ValueKey('halal-cert-${branch.id}'),
-      margin: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
-      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-      decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(color: expired ? nb.margin : nb.pandan, width: 4),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            branch.label ?? branch.where ?? cert.premise,
-            style: text.titleSmall,
-          ),
-          Text(
-            cert.premise,
-            style: text.bodySmall?.copyWith(color: nb.inkSoft),
-          ),
-          Text(
-            dates,
-            style: text.bodyMedium?.copyWith(color: expired ? nb.margin : null),
-          ),
-          TextButton.icon(
-            onPressed: () => openLink(context, cert.url, failed: l.openFailed),
-            icon: const Icon(Icons.open_in_new, size: 16),
-            label: Text(l.halalCertOpen),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
+    final (icon, color) = switch (kind) {
+      HalalKind.jakim => (Icons.verified, nb.pandan),
+      HalalKind.says => (Icons.format_quote_rounded, nb.pandanDeep),
+      HalalKind.saysNot => (Icons.do_not_disturb_on_outlined, nb.margin),
+      HalalKind.expired => (Icons.event_busy_outlined, nb.margin),
+      HalalKind.none => (Icons.help_outline, nb.inkSoft),
+    };
+    final words =
+        label ??
+        switch (kind) {
+          HalalKind.jakim => l.feedJakimHalal,
+          HalalKind.says => l.halalSaysHalal,
+          HalalKind.saysNot => l.halalSaysNotHalal,
+          HalalKind.expired || HalalKind.none => l.halalNoClaim,
+        };
+    switch (variant) {
+      case HalalBadgeVariant.simple:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                words,
+                style: text.labelLarge?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      case HalalBadgeVariant.standard:
+        final filled = kind == HalalKind.jakim;
+        final fg = filled ? Colors.white : color;
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: filled ? color : color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: filled ? color : color.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 10, 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      words,
+                      style: TextStyle(
+                        color: fg,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          Text(
-            l.halalCertNote,
-            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+        );
+      case HalalBadgeVariant.full:
+        return Container(
+          margin: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: kind == HalalKind.none
+                ? nb.mist
+                : color.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: kind == HalalKind.none
+                  ? nb.line
+                  : color.withValues(alpha: 0.25),
+            ),
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.14),
+                      shape: BoxShape.circle,
+                    ),
+                    child: SizedBox.square(
+                      dimension: 40,
+                      child: Icon(icon, size: 22, color: color),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          words,
+                          style: text.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (subtitle case final s?)
+                          Text(
+                            s,
+                            style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (children.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                // Under the title, past the icon; full width in a narrow card (a 320 dp phone), where it costs lines.
+                LayoutBuilder(
+                  builder: (context, box) => Padding(
+                    padding: EdgeInsets.only(left: box.maxWidth < 300 ? 0 : 52),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: children,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+    }
+  }
+}
+
+/// A small link under a card's text ("Check on JAKIM", "Open the post").
+class _CardLink extends StatelessWidget {
+  const _CardLink({required this.label, required this.url});
+
+  final String label, url;
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+    onPressed: () =>
+        openLink(context, url, failed: AppLocalizations.of(context).openFailed),
+    icon: const Icon(Icons.open_in_new, size: 16),
+    label: Text(label),
+    style: TextButton.styleFrom(
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+    ),
+  );
+}
+
+Widget _note(BuildContext context, String s) => Text(
+  s,
+  style: Theme.of(context).textTheme.bodySmall
+      ?.copyWith(color: Notebook.of(context).inkSoft),
+);
+
+/// An outlet's JAKIM directory row: the outlet, until when, when we checked, and JAKIM's own page to check it.
+/// Expired stays shown (in red, with its date): never silently dropped, never "not halal".
+class HalalCertRow extends StatelessWidget {
+  const HalalCertRow({
+    super.key,
+    required this.title,
+    required this.cert,
+    this.note = true,
+  });
+
+  /// The outlet as we name it (its branch); JAKIM's premise name goes under it.
+  final String title;
+  final HalalCert cert;
+
+  /// "Listed for this outlet only": once under a list of them, so the last one says it.
+  final bool note;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final day = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    final expired = cert.expiredAt(DateTime.now());
+    final color = expired ? nb.margin : nb.pandanDeep;
+    return HalalBadge(
+      expired ? HalalKind.expired : HalalKind.jakim,
+      variant: HalalBadgeVariant.full,
+      label: title,
+      subtitle: cert.premise,
+      children: [
+        Row(
+          children: [
+            Icon(
+              expired ? Icons.event_busy_outlined : Icons.event_available,
+              size: 16,
+              color: color,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                (expired ? l.halalCertExpiredOn : l.halalCertUntil)(
+                  day.format(cert.expiresOn),
+                ),
+                style: text.bodyMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          l.halalCertChecked(day.format(cert.checkedAt)),
+          style: text.bodySmall?.copyWith(color: nb.inkSoft),
+        ),
+        _CardLink(label: l.halalCertOpen, url: cert.url),
+        if (note) _note(context, l.halalCertNote),
+      ],
     );
   }
 }
@@ -149,42 +307,57 @@ class HalalBrandRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    return Container(
+    return HalalBadge(
+      HalalKind.none,
       key: const ValueKey('halal-brand'),
-      margin: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
-      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: nb.line, width: 4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l.halalBrandCount(outlets), style: text.bodyMedium),
-          for (final b in branches)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                l.halalBrandBranch(b.label ?? b.where ?? '-'),
-                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ),
-          TextButton.icon(
-            onPressed: () => openLink(context, url, failed: l.openFailed),
-            icon: const Icon(Icons.open_in_new, size: 16),
-            label: Text(l.halalBrandOpen),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
+      variant: HalalBadgeVariant.full,
+      label: l.halalBrandCount(outlets),
+      children: [
+        for (final b in branches)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              l.halalBrandBranch(b.label ?? b.where ?? '-'),
+              style: text.bodyMedium,
             ),
           ),
-          Text(
-            l.halalBrandNote,
-            style: text.bodySmall?.copyWith(color: nb.inkSoft),
-          ),
-        ],
-      ),
+        _CardLink(label: l.halalBrandOpen, url: url),
+        _note(context, l.halalBrandNote),
+      ],
+    );
+  }
+}
+
+/// What a post says about halal: the quote, its post, and that a quote is not a certificate.
+class HalalQuoteRow extends StatelessWidget {
+  const HalalQuoteRow({
+    super.key,
+    required this.claim,
+    required this.quote,
+    required this.sourceUrl,
+  });
+
+  final String? claim;
+  final String quote;
+  final String? sourceUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return HalalBadge(
+      HalalKind.ofClaim(claim),
+      variant: HalalBadgeVariant.full,
+      children: [
+        Text(
+          '“$quote”',
+          style: Theme.of(context).textTheme.bodyLarge
+              ?.copyWith(fontStyle: FontStyle.italic),
+        ),
+        if (sourceUrl case final url?)
+          _CardLink(label: l.halalSource, url: url),
+        _note(context, l.halalNotCert),
+      ],
     );
   }
 }

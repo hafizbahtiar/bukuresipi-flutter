@@ -972,8 +972,8 @@ class _PlaceHalalEditorState extends State<PlaceHalalEditor> {
 
 typedef _Row = ({String branchId, String? label, BranchCompany info});
 
-/// Owner, Edit place > Company: each certified branch of the place with its company. "Get all again" refreshes the
-/// branches one by one, each with its own refresh (a certificate paired by hand is checked on JAKIM first), its own
+/// Owner, Edit place > Company: each certified branch of the place with its company. "Get missing" refreshes only the
+/// branches with no company page read yet; "Get all again" every one. One by one, each with its own refresh (a certificate paired by hand is checked on JAKIM first), its own
 /// progress and its own answer; "Get again" on one branch does that one.
 class PlaceCompanyPanel extends StatefulWidget {
   const PlaceCompanyPanel({super.key, required this.placeId});
@@ -994,7 +994,16 @@ class _PlaceCompanyPanelState extends State<PlaceCompanyPanel> {
   final _reading = <String>{};
   int _done = 0, _total = 0;
 
+  /// The run under way is "Get missing" (else "Get all again").
+  bool _missingRun = false;
+
   bool get _all => _total > 0;
+
+  /// Branches whose company page was never read (no company, or only its name from the directory row).
+  List<String> get _missing => [
+    for (final b in _list ?? const <_Row>[])
+      if ((_fresh[b.branchId] ?? b.info).company?.readAt == null) b.branchId,
+  ];
 
   @override
   void initState() {
@@ -1041,12 +1050,15 @@ class _PlaceCompanyPanelState extends State<PlaceCompanyPanel> {
     await places.reloadBook();
   }
 
-  Future<void> _everyOne() async {
+  Future<void> _everyOne({bool missing = false}) async {
     final places = context.read<PlacesController>();
-    final ids = [for (final b in _list ?? const <_Row>[]) b.branchId];
+    final ids = missing
+        ? _missing
+        : [for (final b in _list ?? const <_Row>[]) b.branchId];
     setState(() {
       _done = 0;
       _total = ids.length;
+      _missingRun = missing;
     });
     for (final id in ids) {
       if (!mounted) return;
@@ -1064,6 +1076,11 @@ class _PlaceCompanyPanelState extends State<PlaceCompanyPanel> {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final list = _list;
+    final missing = _missing.length;
+    final progress = l.companiesReadingN(
+      (_done + 1).clamp(1, _total.clamp(1, 1 << 30)),
+      _total,
+    );
     return OwnerPanel(
       key: const ValueKey('place-companies'),
       icon: Icons.business_outlined,
@@ -1075,20 +1092,30 @@ class _PlaceCompanyPanelState extends State<PlaceCompanyPanel> {
         else if (list.isEmpty)
           PanelNotice(text: l.companiesNone, tone: PanelTone.info)
         else ...[
-          Align(
-            alignment: Alignment.centerRight,
-            child: BusyButton(
-              key: const ValueKey('place-companies-refresh'),
-              kind: BusyButtonKind.outlined,
-              icon: Icons.refresh,
-              label: l.companiesRefreshAll,
-              busyLabel: l.companiesReadingN(
-                (_done + 1).clamp(1, _total.clamp(1, 1 << 30)),
-                _total,
-              ),
-              busy: _all,
-              onPressed: _reading.isEmpty ? _everyOne : null,
-            ),
+          PanelActions(
+            children: [
+              if (!(_all && _missingRun))
+                BusyButton(
+                  key: const ValueKey('place-companies-refresh'),
+                  kind: BusyButtonKind.outlined,
+                  icon: Icons.refresh,
+                  label: l.companiesRefreshAll,
+                  busyLabel: progress,
+                  busy: _all,
+                  onPressed: _reading.isEmpty ? _everyOne : null,
+                ),
+              if (missing > 0 && !(_all && !_missingRun))
+                BusyButton(
+                  key: const ValueKey('place-companies-missing'),
+                  icon: Icons.download_outlined,
+                  label: l.companiesGetMissing(missing),
+                  busyLabel: progress,
+                  busy: _all,
+                  onPressed: _reading.isEmpty
+                      ? () => _everyOne(missing: true)
+                      : null,
+                ),
+            ],
           ),
           for (final b in list) ...[
             const SizedBox(height: spaceM),
