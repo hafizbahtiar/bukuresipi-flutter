@@ -8,7 +8,13 @@ abstract interface class ReceiptsRepository {
   /// Uploads a photo (a local JPEG path); the server starts reading it. Returns the receipt id.
   Future<String> upload(String path);
   Future<Receipt> get(String id);
-  Future<({List<Receipt> items, String? next})> list({String? cursor});
+
+  /// [place] = only the saved visits at that place (its id), up to [limit].
+  Future<({List<Receipt> items, String? next})> list({
+    String? cursor,
+    String? place,
+    int? limit,
+  });
 
   /// The user's check: their total and time win. [branchId] picks the place when the read found none.
   Future<Receipt> confirm(
