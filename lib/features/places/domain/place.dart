@@ -75,6 +75,7 @@ class BranchCompany {
     this.company,
     this.status,
     this.source,
+    this.placeId,
   });
 
   factory BranchCompany.fromJson(Map<String, dynamic> j) {
@@ -85,6 +86,7 @@ class BranchCompany {
       premiseAddress: j['premiseAddress'] as String?,
       status: j['status'] as String?,
       source: j['source'] as String?,
+      placeId: j['placeId'] as String?,
       company: c == null
           ? null
           : HalalCompany(
@@ -107,6 +109,9 @@ class BranchCompany {
   /// [source] owner = paired by hand; null = matched by the JAKIM check.
   final String? premise, brand, premiseAddress, status, source;
   final HalalCompany? company;
+
+  /// The branch's place (Edit branch only): its other branches for "Same company as…".
+  final String? placeId;
 }
 
 /// A company holding JAKIM certificates (its halal.gov.my page). [readAt] null = only its name, page not read yet.

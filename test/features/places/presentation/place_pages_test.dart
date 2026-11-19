@@ -588,6 +588,65 @@ void main() {
   );
 
   testWidgets(
+    'Edit branch > Company: no company yet = Same company as…, the owner picks a branch of the place',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      const kopi = HalalCompany(code: 'COMP-1', name: 'PELITA SDN BHD');
+      repo = FakePlaces()
+        ..places = [
+          place(
+            id: 'a',
+            cert: HalalCert(
+              premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+              expiresOn: DateTime(2028, 4, 15),
+              url: 'https://www.halal.gov.my/x',
+              checkedAt: DateTime.utc(2026, 11, 17),
+            ),
+          ),
+        ]
+        ..company = const BranchCompany(
+          premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+          placeId: 'r-a',
+        )
+        ..placeCompaniesList = const [
+          // This branch, and one with no company: neither is offered.
+          (branchId: 'b-1', label: 'Pelita Ampang', info: BranchCompany()),
+          (branchId: 'b-2', label: 'Pelita Cheras', info: BranchCompany()),
+          (
+            branchId: 'b-3',
+            label: 'Pelita KLCC',
+            info: BranchCompany(company: kopi),
+          ),
+        ]
+        ..copied = const BranchCompany(
+          premise: 'NASI KANDAR PELITA - JALAN AMPANG',
+          placeId: 'r-a',
+          company: kopi,
+        );
+      await pump(t, const PlaceDetailPage(id: 'a'), role: 'owner');
+      await branchMenu(t);
+      await t.tap(find.text('Edit branch'));
+      await t.pumpAndSettle();
+      await tapKey(t, 'branch-tab-company');
+      await tapKey(t, 'branch-company-same');
+      expect(repo.companyCalls.last, 'list:r-a');
+      expect(find.text('PELITA SDN BHD\nPelita KLCC'), findsOneWidget);
+      expect(find.textContaining('Pelita Cheras'), findsNothing);
+      await t.tap(find.text('PELITA SDN BHD\nPelita KLCC'));
+      await t.pumpAndSettle();
+      expect(repo.companyCalls.last, 'copy:b-1:b-3');
+      expect(find.byKey(const ValueKey('company-name')), findsOneWidget);
+      expect(
+        find.textContaining('Company taken from Pelita KLCC'),
+        findsOneWidget,
+      );
+      // A company now: the pick is gone.
+      expect(find.byKey(const ValueKey('branch-company-same')), findsNothing);
+    },
+  );
+
+  testWidgets(
     'a branch with no certificate: Company says to link one first, asks nothing',
     (t) async {
       repo = FakePlaces()..places = [place(id: 'a')];

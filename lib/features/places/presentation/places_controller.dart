@@ -389,6 +389,10 @@ class PlacesController extends ChangeNotifier {
     return r;
   }
 
+  /// Owner only: "Same company as…" (nothing in the book changes). Throws ApiException.
+  Future<BranchCompany> copyBranchCompany(String branchId, String from) =>
+      _repo.copyBranchCompany(branchId, from);
+
   /// The book again (after several [branchCompany] refreshes with reload off).
   Future<void> reloadBook() => _reload();
 

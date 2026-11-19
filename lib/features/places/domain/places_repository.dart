@@ -118,6 +118,9 @@ abstract interface class PlacesRepository {
 
   Future<BranchCompany> branchCompany(String branchId, {bool refresh = false});
 
+  /// Owner: "Same company as…": [branchId] (certified) takes branch [from]'s company (same place).
+  Future<BranchCompany> copyBranchCompany(String branchId, String from);
+
   /// Owner only: the brand's JAKIM outlets across Malaysia ([q] = the owner's own words); nothing written.
   Future<JakimOutlets> placeOutlets(String placeId, {String? q});
 

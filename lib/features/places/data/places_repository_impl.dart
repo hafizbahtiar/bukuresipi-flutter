@@ -575,6 +575,17 @@ class PlacesRepositoryImpl implements PlacesRepository {
   });
 
   @override
+  Future<BranchCompany> copyBranchCompany(String branchId, String from) =>
+      apiCall(
+        () async => BranchCompany.fromJson(
+          (await _dio.put<Map<String, dynamic>>(
+            '/places/branches/$branchId/halal-company',
+            data: {'from': from},
+          )).data!,
+        ),
+      );
+
+  @override
   Future<JakimCheck> checkHalalBranch(String branchId, {String? q}) =>
       apiCall(() async {
         final j = (await _dio.post<Map<String, dynamic>>(
