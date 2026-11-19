@@ -2232,6 +2232,21 @@
   "@spendingSpent": {},
   "spendingVisits": "Visits",
   "@spendingVisits": {},
+  "spendingAverage": "Average",
+  "@spendingAverage": {},
+  "spendingFirstLast": "First {first} · last {last}",
+  "@spendingFirstLast": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "placeVisitsOpen": "Open place",
+  "@placeVisitsOpen": {},
   "spendingTopPlaces": "Top places",
   "@spendingTopPlaces": {},
   "spendingShare": "{percent}% of spending",

@@ -8,6 +8,8 @@ import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../places/presentation/places_controller.dart';
+import '../../../places/presentation/widgets/halal_status.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
@@ -244,11 +246,20 @@ class _TopPlaces extends StatelessWidget {
                 children: [
                   for (final (i, p) in stats.places.indexed) ...[
                     if (i > 0) const SizedBox(width: 10),
-                    _PlaceCard(
-                      key: ValueKey('top-place-${p.placeId}'),
-                      rank: i + 1,
-                      place: p,
-                      totalSen: stats.totalSen,
+                    Semantics(
+                      button: true,
+                      child: GestureDetector(
+                        onTap: () => showBaseSheet<void>(
+                          context,
+                          builder: (_) => PlaceVisitsSheet(place: p),
+                        ),
+                        child: _PlaceCard(
+                          key: ValueKey('top-place-${p.placeId}'),
+                          rank: i + 1,
+                          place: p,
+                          totalSen: stats.totalSen,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -401,10 +412,13 @@ class _PlaceCard extends StatelessWidget {
 }
 
 class _Figure extends StatelessWidget {
-  const _Figure({required this.label, required this.value});
+  const _Figure({required this.label, required this.value, this.small = false});
 
   final String label;
   final String value;
+
+  /// In a sheet: three side by side, on a 320 dp phone too.
+  final bool small;
 
   @override
   Widget build(BuildContext context) {
@@ -418,9 +432,195 @@ class _Figure extends StatelessWidget {
         ),
         Text(
           value,
-          style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: (small ? text.titleMedium : text.headlineSmall)?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         ),
       ],
+    );
+  }
+}
+
+/// A place the user has been to (Spending > a top place): what they spent there in all, how often, the average, the
+/// first and last visit, then every visit by day (a day's total when it had more than one); a visit opens its
+/// receipt. The halal badge is the user's Book entry's (saving a receipt puts the place there).
+class PlaceVisitsSheet extends StatefulWidget {
+  const PlaceVisitsSheet({super.key, required this.place});
+
+  final SpendPlace place;
+
+  /// shortcut: one page of visits (the newest 50), enough for one place; page it if someone passes 50 visits.
+  static const _limit = 50;
+
+  @override
+  State<PlaceVisitsSheet> createState() => _PlaceVisitsSheetState();
+}
+
+class _PlaceVisitsSheetState extends State<PlaceVisitsSheet> {
+  late final Future<List<Receipt>> _visits = context
+      .read<ReceiptsRepository>()
+      .list(place: widget.place.placeId, limit: PlaceVisitsSheet._limit)
+      // The API pages by save order; a visit list reads by when it happened.
+      .then(
+        (p) => [...p.items]
+          ..sort(
+            (a, b) => (b.visitedAt ?? DateTime(0)).compareTo(
+              a.visitedAt ?? DateTime(0),
+            ),
+          ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final loc = MaterialLocalizations.of(context);
+    final book = context
+        .watch<PlacesController?>()
+        ?.places
+        .where((p) => p.restaurant.id == widget.place.placeId)
+        .firstOrNull;
+    final r = book?.restaurant;
+    final now = DateTime.now();
+    final halal = r == null || !r.isFood
+        ? null
+        : book!.branches.any(
+            (b) => !b.closed && b.halalCert?.expiredAt(now) == false,
+          )
+        ? HalalKind.jakim
+        : HalalKind.ofClaim(r.halalQuote == null ? null : r.halalClaim);
+    return FutureBuilder(
+      future: _visits,
+      builder: (context, snap) {
+        final visits = snap.data;
+        final total = visits?.fold(0, (s, v) => s + (v.totalSen ?? 0)) ?? 0;
+        final days = <DateTime, List<Receipt>>{};
+        for (final v in visits ?? const <Receipt>[]) {
+          final at = v.visitedAt;
+          if (at == null) continue;
+          (days[DateTime(at.year, at.month, at.day)] ??= []).add(v);
+        }
+        return ListView(
+          key: const ValueKey('place-visits'),
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.place.name,
+                    style: text.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
+                  ),
+                  if (halal != null && halal != HalalKind.none)
+                    HalalBadge(halal),
+                ],
+              ),
+            ),
+            if (snap.hasError)
+              Padding(
+                padding: const EdgeInsets.all(spaceM),
+                child: Text(errorText(l, snap.error!)),
+              )
+            else if (visits == null)
+              const Padding(
+                padding: EdgeInsets.all(spaceL),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                child: Row(
+                  children: [
+                    for (final (label, value) in [
+                      (l.spendingSpent, rm(total)),
+                      (l.spendingVisits, '${visits.length}'),
+                      (
+                        l.spendingAverage,
+                        visits.isEmpty
+                            ? '-'
+                            : rm((total / visits.length).round()),
+                      ),
+                    ])
+                      Expanded(
+                        child: _Figure(label: label, value: value, small: true),
+                      ),
+                  ],
+                ),
+              ),
+              if (days.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(spaceM, 6, spaceM, 0),
+                  child: Text(
+                    l.spendingFirstLast(
+                      loc.formatMediumDate(days.keys.last),
+                      loc.formatMediumDate(days.keys.first),
+                    ),
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                ),
+              const SizedBox(height: spaceS),
+              for (final MapEntry(key: day, value: list) in days.entries) ...[
+                SectionHeader(
+                  list.length > 1
+                      ? '${loc.formatFullDate(day)} · ${rm(list.fold(0, (s, v) => s + (v.totalSen ?? 0)))}'
+                      : loc.formatFullDate(day),
+                ),
+                for (final v in list)
+                  ListTile(
+                    key: ValueKey('visit-${v.id}'),
+                    dense: true,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push('/receipts/${v.id}');
+                    },
+                    leading: Icon(
+                      Icons.receipt_long_outlined,
+                      color: nb.inkSoft,
+                    ),
+                    title: Text(
+                      loc.formatTimeOfDay(TimeOfDay.fromDateTime(v.visitedAt!)),
+                      style: text.bodyLarge,
+                    ),
+                    trailing: Text(
+                      v.totalSen == null ? '' : rm(v.totalSen!),
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+              ],
+              if (book != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    spaceM,
+                    spaceS,
+                    spaceM,
+                    spaceM,
+                  ),
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('place-visits-open'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.push('/places/${book.id}');
+                    },
+                    icon: const Icon(Icons.storefront_outlined),
+                    label: Text(l.placeVisitsOpen),
+                  ),
+                ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

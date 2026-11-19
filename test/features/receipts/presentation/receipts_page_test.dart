@@ -84,4 +84,75 @@ void main() {
       greaterThan(t.getTopLeft(find.byKey(const ValueKey('top-place-x'))).dx),
     );
   });
+
+  testWidgets(
+    'a top place opens its visits: totals, average, each day with its total when it had more than one',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(800, 2400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      final repo = FakeReceipts()
+        ..stats_ = const ReceiptStats(
+          totalSen: 9000,
+          visits: 3,
+          months: [],
+          places: [
+            (
+              placeId: 'x',
+              name: 'Port Lepak',
+              cover: null,
+              visits: 3,
+              totalSen: 9000,
+              lastVisitAt: null,
+            ),
+          ],
+        )
+        ..items = [
+          receipt(
+            id: 'a',
+            status: 'saved',
+            totalSen: 2000,
+            visitedAt: DateTime(2026, 11, 8, 12, 5),
+          ),
+          receipt(
+            id: 'b',
+            status: 'saved',
+            totalSen: 3000,
+            visitedAt: DateTime(2026, 11, 8, 20, 41),
+          ),
+          receipt(
+            id: 'c',
+            status: 'saved',
+            totalSen: 4000,
+            visitedAt: DateTime(2026, 10, 2, 9),
+          ),
+          receipt(id: 'd'), // still in review: not a visit
+        ];
+      await pump(t, repo);
+      await t.tap(find.byKey(const ValueKey('top-place-x')));
+      await t.pumpAndSettle();
+      expect(repo.listedPlaces, ['x']);
+      final sheet = find.byKey(const ValueKey('place-visits'));
+      Finder inSheet(String s) =>
+          find.descendant(of: sheet, matching: find.text(s));
+      expect(inSheet('RM 90.00'), findsOneWidget); // spent
+      expect(inSheet('RM 30.00'), findsNWidgets(2)); // average, and visit b
+      // Two visits on Nov 8: the day says its total; one on Oct 2: no total.
+      expect(
+        find.descendant(of: sheet, matching: find.textContaining('· RM 50.00')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.byKey(const ValueKey('visit-d')),
+        ),
+        findsNothing,
+      );
+      // Newest first.
+      expect(
+        t.getTopLeft(find.byKey(const ValueKey('visit-b'))).dy,
+        lessThan(t.getTopLeft(find.byKey(const ValueKey('visit-c'))).dy),
+      );
+    },
+  );
 }
