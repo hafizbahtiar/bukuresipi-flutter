@@ -258,6 +258,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         family: family,
         skipOptional: skipOptional,
         have: have,
+        // Only a changed "Serves N": the list then has the amounts the page shows.
+        servings: _people == recipe.servings ? null : _people,
       );
       _snack(added == 0 ? l.shoppingAlreadyAdded : l.shoppingAdded(added));
     } catch (e) {

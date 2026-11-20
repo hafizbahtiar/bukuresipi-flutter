@@ -48,16 +48,19 @@ class FakeShopping implements ShoppingRepository {
 
   final skippedOptional = <bool>[];
   final haves = <List<String>>[];
+  final servingsAsked = <int?>[];
   @override
   Future<List<ShoppingItem>> addRecipe(
     String recipeId, {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    int? servings,
   }) async {
     recipesAdded.add(recipeId);
     skippedOptional.add(skipOptional);
     haves.add(have);
+    servingsAsked.add(servings);
     if (items.any((i) => i.recipes.any((r) => r.id == recipeId))) return [];
     final item = ShoppingItem(
       id: 'i${_next++}',
