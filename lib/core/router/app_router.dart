@@ -37,6 +37,7 @@ import '../../features/owner/presentation/pages/owner_users_page.dart';
 import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
 import '../../features/shares/presentation/share_page.dart';
 import '../../features/shopping/presentation/pages/shopping_page.dart';
+import '../../features/receipts/presentation/pages/einvoice_details_page.dart';
 import '../../features/receipts/presentation/pages/receipt_page.dart';
 import '../network/update_gate.dart';
 import '../widgets/system_pages.dart';
@@ -145,6 +146,10 @@ GoRouter buildRouter(
       _page(path: '/account', builder: (_, _) => const AccountPage()),
       _page(path: '/settings', builder: (_, _) => const SettingsPage()),
       _page(path: '/usage', builder: (_, _) => const UsagePage()),
+      _page(
+        path: '/account/einvoice',
+        builder: (_, _) => const EinvoiceDetailsPage(),
+      ),
       _page(path: '/badges', builder: (_, _) => const BadgesPage()),
       _page(path: '/credits', builder: (_, _) => const CreditsPage()),
       _page(path: '/about', builder: (_, _) => const AboutPage()),

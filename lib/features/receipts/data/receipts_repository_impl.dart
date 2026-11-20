@@ -277,6 +277,16 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
   );
 
   @override
+  Future<bool> addEinvoiceFromPhoto(String id, String path) async {
+    final url = await einvoiceLinkIn(path);
+    if (url == null) return false;
+    await apiCall(
+      () => _dio.put<void>('/receipts/$id/einvoice/link', data: {'url': url}),
+    );
+    return true;
+  }
+
+  @override
   Future<Receipt> get(String id) => apiCall(
     () async =>
         _receipt((await _dio.get<Map<String, dynamic>>('/receipts/$id')).data!),

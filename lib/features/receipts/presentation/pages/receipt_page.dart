@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -18,8 +19,10 @@ import '../../../../core/widgets/photo_sheet.dart';
 import '../../../../core/widgets/pill_switch.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/places_controller.dart';
+import '../../domain/einvoice_details.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
 import '../widgets/split_bill.dart';
@@ -45,7 +48,7 @@ class ReceiptPage extends StatefulWidget {
   State<ReceiptPage> createState() => _ReceiptPageState();
 }
 
-class _ReceiptPageState extends State<ReceiptPage> {
+class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
   late final _repo = context.read<ReceiptsRepository>();
   Receipt? _r;
   Object? _error;
@@ -61,14 +64,81 @@ class _ReceiptPageState extends State<ReceiptPage> {
   final _pages = PageController();
   Future<Uint8List?>? _photo;
 
+  // The user's e-invoice details (this phone only), offered as copy buttons; null = none saved or no account.
+  EinvoiceDetails? _details;
+  // Back from the shop's e-invoice page: ask once whether it was requested.
+  bool _askOnReturn = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+    _loadDetails();
+  }
+
+  Future<void> _loadDetails() async {
+    final store = context.read<EinvoiceDetailsStore?>();
+    final userId = context.read<AuthController?>()?.user?.id;
+    if (store == null || userId == null) return;
+    final d = await store.load(userId);
+    if (mounted) setState(() => _details = d.isEmpty ? null : d);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_askOnReturn) return;
+    _askOnReturn = false;
+    if (_r?.einvoice case final e? when !e.done) _askDone();
+  }
+
+  Future<void> _askDone() async {
+    final l = AppLocalizations.of(context);
+    final yes = await showBaseDialog(
+      context,
+      message: l.einvoiceAskDone,
+      confirmLabel: l.einvoiceAskYes,
+      cancelLabel: l.einvoiceUndo,
+    );
+    if (yes && mounted) await _einvoiceDone(true);
+  }
+
+  Future<void> _openEinvoice(String url) async {
+    _askOnReturn = true;
+    await openLink(
+      context,
+      url,
+      failed: AppLocalizations.of(context).openFailed,
+    );
+  }
+
+  Future<void> _editDetails() async {
+    await context.push('/account/einvoice');
+    await _loadDetails();
+  }
+
+  /// The photo's QR was not read: a close-up of the QR alone.
+  Future<void> _scanEinvoice() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+    if (picked == null) return;
+    try {
+      final found = await _repo.addEinvoiceFromPhoto(widget.id, picked.path);
+      if (!found) {
+        messenger.showSnackBar(SnackBar(content: Text(l.einvoiceNoQr)));
+        return;
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+    _timer?.cancel();
+    await _load();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _total.dispose();
     _pages.dispose();
@@ -491,10 +561,25 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
-        if (r.einvoice case final e?) ...[
-          const SizedBox(height: 16),
-          _Einvoice(einvoice: e, onDone: _einvoiceDone),
-        ],
+        const SizedBox(height: 16),
+        if (r.einvoice case final e?)
+          _Einvoice(
+            einvoice: e,
+            details: _details,
+            onDone: _einvoiceDone,
+            onOpen: () => _openEinvoice(e.url),
+            onDetails: _editDetails,
+          )
+        else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('einvoice-scan'),
+              onPressed: _scanEinvoice,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: Text(AppLocalizations.of(context).einvoiceScan),
+            ),
+          ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -660,10 +745,25 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
-        if (r.einvoice case final e?) ...[
-          const SizedBox(height: 16),
-          _Einvoice(einvoice: e, onDone: _einvoiceDone),
-        ],
+        const SizedBox(height: 16),
+        if (r.einvoice case final e?)
+          _Einvoice(
+            einvoice: e,
+            details: _details,
+            onDone: _einvoiceDone,
+            onOpen: () => _openEinvoice(e.url),
+            onDetails: _editDetails,
+          )
+        else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('einvoice-scan'),
+              onPressed: _scanEinvoice,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: Text(AppLocalizations.of(context).einvoiceScan),
+            ),
+          ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -677,10 +777,19 @@ enum _Tone { normal, problem }
 
 /// The receipt's e-invoice request: the shop's page, its last day, then "I've requested it" (no reminder after).
 class _Einvoice extends StatelessWidget {
-  const _Einvoice({required this.einvoice, required this.onDone});
+  const _Einvoice({
+    required this.einvoice,
+    required this.details,
+    required this.onDone,
+    required this.onOpen,
+    required this.onDetails,
+  });
 
   final ReceiptEinvoice einvoice;
+  final EinvoiceDetails? details;
   final ValueChanged<bool> onDone;
+  final VoidCallback onOpen;
+  final VoidCallback onDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -753,14 +862,67 @@ class _Einvoice extends StatelessWidget {
                 ),
                 FilledButton.tonalIcon(
                   key: const ValueKey('einvoice-open'),
-                  onPressed: () =>
-                      openLink(context, einvoice.url, failed: l.openFailed),
+                  onPressed: onOpen,
                   icon: const Icon(Icons.open_in_new, size: 18),
                   label: Text(l.einvoiceRequest),
                 ),
               ],
             ),
           ),
+          if (!einvoice.done) ...[
+            Divider(height: 24, color: nb.line),
+            if (details case final d?) ...[
+              Text(
+                l.einvoiceCopyHint,
+                style: text.labelMedium?.copyWith(color: nb.inkSoft),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 0,
+                children: [
+                  for (final (key, label, value) in [
+                    ('name', l.einvoiceName, d.name),
+                    ('tin', l.einvoiceTin, d.tin),
+                    ('id', l.einvoiceIdNumber, d.idNumber),
+                    ('email', l.einvoiceEmail, d.email),
+                    ('phone', l.einvoicePhone, d.phone),
+                    ('address', l.einvoiceAddress, d.address),
+                  ])
+                    if (value.trim().isNotEmpty)
+                      ActionChip(
+                        key: ValueKey('einvoice-copy-$key'),
+                        avatar: const Icon(Icons.copy, size: 16),
+                        visualDensity: VisualDensity.compact,
+                        label: Text(label),
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          await Clipboard.setData(ClipboardData(text: value));
+                          messenger
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(content: Text(l.einvoiceCopied(label))),
+                            );
+                        },
+                      ),
+                  ActionChip(
+                    key: const ValueKey('einvoice-details-edit'),
+                    avatar: const Icon(Icons.edit_outlined, size: 16),
+                    visualDensity: VisualDensity.compact,
+                    label: Text(l.einvoiceDetailsEdit),
+                    onPressed: onDetails,
+                  ),
+                ],
+              ),
+            ] else
+              TextButton.icon(
+                key: const ValueKey('einvoice-details-add'),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                onPressed: onDetails,
+                icon: const Icon(Icons.badge_outlined, size: 18),
+                label: Text(l.einvoiceDetailsAdd),
+              ),
+          ],
         ],
       ),
     );

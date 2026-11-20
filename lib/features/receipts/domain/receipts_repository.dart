@@ -11,6 +11,9 @@ abstract interface class ReceiptsRepository {
 
   /// "I've requested the e-invoice": no reminder (false = not after all).
   Future<void> setEinvoiceDone(String id, bool done);
+
+  /// Reads the e-invoice QR in a photo of it ([path]) and saves its link on the receipt. false = no QR link found.
+  Future<bool> addEinvoiceFromPhoto(String id, String path);
   Future<Receipt> get(String id);
 
   /// [place] = only the saved visits at that place (its id), up to [limit].

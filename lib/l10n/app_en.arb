@@ -3299,5 +3299,49 @@
   "einvoiceMarkDone": "I've requested it",
   "@einvoiceMarkDone": {},
   "einvoiceUndo": "Not yet",
-  "@einvoiceUndo": {}
+  "@einvoiceUndo": {},
+  "einvoiceDetailsTitle": "My e-invoice",
+  "@einvoiceDetailsTitle": {},
+  "einvoiceDetailsHelp": "Shops' e-invoice forms ask for these. Saved on this phone only, never sent to Bukuresipi. On a receipt, tap one to copy it into the form.",
+  "@einvoiceDetailsHelp": {},
+  "einvoiceDetailsSaved": "Saved on this phone",
+  "@einvoiceDetailsSaved": {},
+  "einvoiceDetailsAdd": "Save your details to copy into the form",
+  "@einvoiceDetailsAdd": {},
+  "einvoiceDetailsEdit": "Edit details",
+  "@einvoiceDetailsEdit": {},
+  "einvoiceName": "Name",
+  "@einvoiceName": {},
+  "einvoiceTin": "TIN",
+  "@einvoiceTin": {},
+  "einvoiceIdNumber": "IC / passport",
+  "@einvoiceIdNumber": {},
+  "einvoiceEmail": "Email",
+  "@einvoiceEmail": {},
+  "einvoicePhone": "Phone",
+  "@einvoicePhone": {},
+  "einvoiceAddress": "Address",
+  "@einvoiceAddress": {},
+  "einvoiceCopyHint": "Tap to copy into the form",
+  "@einvoiceCopyHint": {},
+  "einvoiceCopied": "{field} copied",
+  "@einvoiceCopied": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceAskDone": "Did you request your e-invoice?",
+  "@einvoiceAskDone": {},
+  "einvoiceAskYes": "Yes, requested",
+  "@einvoiceAskYes": {},
+  "einvoiceScan": "Scan the e-invoice QR",
+  "@einvoiceScan": {},
+  "einvoiceNoQr": "No e-invoice QR found. Try closer, with the QR filling the photo.",
+  "@einvoiceNoQr": {},
+  "einvoiceNameHelp": "As on your IC",
+  "@einvoiceNameHelp": {},
+  "einvoiceTinHelp": "Your tax number from LHDN (MyTax)",
+  "@einvoiceTinHelp": {}
 }

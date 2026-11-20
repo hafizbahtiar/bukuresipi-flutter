@@ -259,6 +259,13 @@ class _AccountPageState extends State<AccountPage> {
                 child: Text(l.usageTitle),
               ),
               NotebookRow(
+                key: const ValueKey('account-einvoice'),
+                mark: mark(Icons.request_quote_outlined),
+                onTap: () => context.push('/account/einvoice'),
+                trailing: next,
+                child: Text(l.einvoiceDetailsTitle),
+              ),
+              NotebookRow(
                 key: const ValueKey('account-settings'),
                 mark: mark(Icons.settings_outlined),
                 onTap: () => context.push('/settings'),
