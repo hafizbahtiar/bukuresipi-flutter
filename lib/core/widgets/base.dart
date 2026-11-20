@@ -66,6 +66,8 @@ Future<bool> showBaseDialog(
   return await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          // A phone on its side (or big text) leaves little height: the words scroll instead of overflowing.
+          scrollable: true,
           icon: Icon(switch (tone) {
             DialogTone.info => Icons.info_outline,
             DialogTone.confirm => Icons.help_outline,

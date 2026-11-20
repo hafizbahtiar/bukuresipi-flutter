@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
 import '../../features/places/presentation/pages/pin_picker_page.dart';
+import '../widgets/wide_page.dart';
 import '../../features/places/presentation/pages/places_map_page.dart';
 import '../../features/places/presentation/pages/place_detail_page.dart';
 import '../../features/places/presentation/pages/reviews_page.dart';
@@ -197,6 +198,7 @@ GoRouter buildRouter(
       ),
       _page(
         path: '/places/:id/pin/:branchId',
+        wide: false,
         builder: (_, state) => PinPickerPage(
           placeId: state.pathParameters['id']!,
           branchId: state.pathParameters['branchId']!,
@@ -230,10 +232,12 @@ GoRouter buildRouter(
 
 // go_router 18 recognises MaterialApp only from package:material_ui, not this app's flutter/material one, so its
 // default pages have no transition. Building flutter MaterialPages here lets the theme's book page turn run.
+/// [wide] false = the page uses the whole screen on a tablet (a map); else a readable column (WidePage).
 GoRoute _page({
   required String path,
   required GoRouterWidgetBuilder builder,
   List<RouteBase> routes = const [],
+  bool wide = true,
 }) => GoRoute(
   path: path,
   routes: routes,
@@ -241,13 +245,25 @@ GoRoute _page({
     key: state.pageKey,
     name: state.name ?? state.path,
     restorationId: state.pageKey.value,
-    child: builder(context, state),
+    child: wide
+        ? WidePage(child: builder(context, state))
+        : builder(context, state),
   ),
 );
 
 /// [flight]: opened from a card with a photo; the photo flies into the page's header (hero) while the page fades in,
 /// since a page flip would fight it. Otherwise it opens like every page.
 Page<void> _flightPage(
+  GoRouterState state, {
+  required bool flight,
+  required Widget child,
+}) => _flight(
+  state,
+  flight: flight,
+  child: WidePage(child: child),
+);
+
+Page<void> _flight(
   GoRouterState state, {
   required bool flight,
   required Widget child,
