@@ -129,9 +129,8 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     }
   }
 
-  Future<void> _report(Place place) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
+  Future<void> _report(Place place) => showBaseSheet<void>(
+    context,
     builder: (_) => PlaceReportSheet(
       subject: ReportSubject.fromPlace(place),
       onSubmit: (draft) => context.read<PlacesController>().report(draft),

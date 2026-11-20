@@ -284,10 +284,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final l = AppLocalizations.of(context);
     final recipes = context.read<RecipesController>();
     final inFamily = context.read<FamilyController?>()?.inFamily ?? false;
-    final picked = await showModalBottomSheet<RecipeVisibility>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
+    final picked = await showBaseSheet<RecipeVisibility>(
+      context,
       builder: (sheet) {
         Widget choice(RecipeVisibility v, String label, String hint) =>
             ListTile(
@@ -300,7 +298,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             );
         return ListView(
           shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: spaceM),
           children: [
             ListTile(
               title: Text(

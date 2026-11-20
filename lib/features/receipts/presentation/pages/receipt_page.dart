@@ -153,31 +153,29 @@ class _ReceiptPageState extends State<ReceiptPage> {
         .places
         .where((p) => p.mine && p.savedBranch != null)
         .toList();
-    final picked = await showModalBottomSheet<({String id, String name})>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ListTile(
-              title: Text(
-                l.receiptChoosePlace,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+    final picked = await showBaseSheet<({String id, String name})>(
+      context,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            title: Text(
+              l.receiptChoosePlace,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            for (final p in places)
-              ListTile(
-                title: Text(p.restaurant.name),
-                subtitle: p.savedBranch!.label == null
-                    ? null
-                    : Text(p.savedBranch!.label!),
-                onTap: () => Navigator.pop(context, (
-                  id: p.savedBranch!.id,
-                  name: p.restaurant.name,
-                )),
-              ),
-          ],
-        ),
+          ),
+          for (final p in places)
+            ListTile(
+              title: Text(p.restaurant.name),
+              subtitle: p.savedBranch!.label == null
+                  ? null
+                  : Text(p.savedBranch!.label!),
+              onTap: () => Navigator.pop(context, (
+                id: p.savedBranch!.id,
+                name: p.restaurant.name,
+              )),
+            ),
+        ],
       ),
     );
     if (picked == null) return;

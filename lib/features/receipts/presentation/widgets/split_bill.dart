@@ -222,9 +222,8 @@ class _SplitBillState extends State<SplitBill> {
       for (final p in split.portions)
         if (p.position == position) p.person: p.quantity,
     };
-    final picked = await showModalBottomSheet<Map<int, double>>(
-      context: context,
-      isScrollControlled: true,
+    final picked = await showBaseSheet<Map<int, double>>(
+      context,
       builder: (_) => _PortionSheet(
         item: item,
         people: split.people,

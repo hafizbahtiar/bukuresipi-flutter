@@ -8,6 +8,7 @@ import '../../domain/owner_repository.dart';
 import '../../../../core/widgets/deleting_overlay.dart';
 import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/load_view.dart';
+import '../../../../core/widgets/base.dart' show showBaseSheet;
 import '../../../../core/widgets/notebook.dart';
 import '../widgets/user_action_sheets.dart';
 
@@ -75,43 +76,40 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final error = Theme.of(context).colorScheme.error;
     // The owner account is never banned or deleted (the API refuses it too).
     final other = u.role != 'owner';
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _UserTile(user: u),
+    final action = await showBaseSheet<String>(
+      context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _UserTile(user: u),
+          ListTile(
+            key: const ValueKey('user-logout'),
+            leading: Icon(Icons.logout, color: error),
+            title: Text(l.ownerEndSessions),
+            onTap: () => Navigator.pop(context, 'logout'),
+          ),
+          if (other && u.ban != null)
             ListTile(
-              key: const ValueKey('user-logout'),
-              leading: Icon(Icons.logout, color: error),
-              title: Text(l.ownerEndSessions),
-              onTap: () => Navigator.pop(context, 'logout'),
+              key: const ValueKey('user-unban'),
+              leading: const Icon(Icons.lock_open),
+              title: Text(l.ownerUnban),
+              onTap: () => Navigator.pop(context, 'unban'),
+            )
+          else if (other)
+            ListTile(
+              key: const ValueKey('user-ban'),
+              leading: Icon(Icons.block, color: error),
+              title: Text(l.ownerBan),
+              onTap: () => Navigator.pop(context, 'ban'),
             ),
-            if (other && u.ban != null)
-              ListTile(
-                key: const ValueKey('user-unban'),
-                leading: const Icon(Icons.lock_open),
-                title: Text(l.ownerUnban),
-                onTap: () => Navigator.pop(context, 'unban'),
-              )
-            else if (other)
-              ListTile(
-                key: const ValueKey('user-ban'),
-                leading: Icon(Icons.block, color: error),
-                title: Text(l.ownerBan),
-                onTap: () => Navigator.pop(context, 'ban'),
-              ),
-            if (other)
-              ListTile(
-                key: const ValueKey('user-delete'),
-                leading: Icon(Icons.delete_forever_outlined, color: error),
-                title: Text(l.ownerDeleteUser, style: TextStyle(color: error)),
-                onTap: () => Navigator.pop(context, 'delete'),
-              ),
-          ],
-        ),
+          if (other)
+            ListTile(
+              key: const ValueKey('user-delete'),
+              leading: Icon(Icons.delete_forever_outlined, color: error),
+              title: Text(l.ownerDeleteUser, style: TextStyle(color: error)),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+        ],
       ),
     );
     if (!mounted) return;
