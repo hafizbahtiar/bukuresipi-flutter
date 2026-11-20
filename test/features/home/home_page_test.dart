@@ -175,4 +175,29 @@ void main() {
     expect(selectedTab(t), 1);
     expect(find.text('Kedai Kopi Ah Seng'), findsOneWidget);
   });
+
+  for (final size in const [Size(1280, 800), Size(800, 360)]) {
+    testWidgets('wide ($size): the nav is a rail on the left, tabs beside it', (
+      t,
+    ) async {
+      t.view.physicalSize = size;
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      await pumpHome(t, open: HomePage.bookTab);
+      await t.pump();
+      expect(t.takeException(), isNull);
+      final home = t.getCenter(find.byKey(const ValueKey('nav-tab-0')));
+      final book = t.getCenter(find.byKey(const ValueKey('nav-tab-1')));
+      expect(book.dx, home.dx); // stacked, top to bottom
+      expect(book.dy, greaterThan(home.dy));
+      expect(home.dx, lessThan(60));
+      // The Book's list starts right of the rail, never under it.
+      final row = t.getTopLeft(find.text('Kedai Kopi Ah Seng'));
+      final rail = t.getTopRight(find.byKey(const ValueKey('nav-bar-scale')));
+      expect(row.dx, greaterThan(rail.dx));
+      await t.tap(find.byKey(const ValueKey('nav-tab-2')));
+      await t.pump();
+      expect(selectedTab(t), 2);
+    });
+  }
 }
