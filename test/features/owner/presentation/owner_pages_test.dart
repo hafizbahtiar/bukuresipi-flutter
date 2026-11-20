@@ -202,6 +202,26 @@ void main() {
     await t.tap(confirm);
     await t.pumpAndSettle();
     expect(repo.bans, [('u-ali@b.c', 30, 'Spam reviews')]);
+    expect(find.text('Banned'), findsOneWidget);
+  });
+
+  testWidgets('a ban whose email failed says so', (t) async {
+    repo
+      ..users = [ownerUser('ali@b.c')]
+      ..banEmailed = false;
+    await pump(t, const OwnerUsersPage());
+    await t.tap(find.text('ali@b.c'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('user-ban')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const ValueKey('action-reason')), 'Spam');
+    await t.pump();
+    await t.tap(find.byKey(const ValueKey('ban-confirm')));
+    await t.pumpAndSettle();
+    expect(
+      find.text('Banned. The email to the user was not sent.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets(

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -113,7 +115,10 @@ class _NearbySheetState extends State<NearbySheet> {
       p.label,
       p.address,
     ].whereType<String>().where((s) => s.trim().isNotEmpty).toList();
-    return Column(
+    // In the map's sheet: as tall as its shown part, so Save / Directions stay at its edge while the rest scrolls
+    // (a floor keeps them laid out when lowered: clipped, never squeezed).
+    final visible = sheetVisibleHeight(context);
+    final card = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Flexible(
@@ -267,5 +272,8 @@ class _NearbySheetState extends State<NearbySheet> {
         ],
       ],
     );
+    return visible == null
+        ? card
+        : SizedBox(height: math.max(visible, 220), child: card);
   }
 }

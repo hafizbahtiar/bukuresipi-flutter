@@ -5,14 +5,27 @@ import '../../../../core/theme/app_theme.dart';
 /// Inside the map's sheet, a content's "done" (saved, edited, deleted) goes back to the sheet's list; in a modal
 /// sheet (Home's nearby sheet) it pops as before.
 class MapSheetScope extends InheritedWidget {
-  const MapSheetScope({super.key, required this.close, required super.child});
+  const MapSheetScope({
+    super.key,
+    required this.close,
+    required this.visible,
+    required super.child,
+  });
 
   /// [result] = what a modal sheet would have popped (a saved Place, for a search hit).
   final ValueChanged<Object?> close;
 
+  /// How much of the content shows now (px): it is laid out at the sheet's full height and clipped.
+  final double visible;
+
   @override
-  bool updateShouldNotify(MapSheetScope oldWidget) => false;
+  bool updateShouldNotify(MapSheetScope oldWidget) =>
+      visible != oldWidget.visible;
 }
+
+/// Inside the map's sheet, how tall its shown part is (a content keeps its buttons in it); null elsewhere.
+double? sheetVisibleHeight(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<MapSheetScope>()?.visible;
 
 /// "Done" for a sheet's content. Take it before an await, as Navigator.of(context).
 ValueChanged<Object?> sheetCloser(BuildContext context) {
@@ -191,8 +204,19 @@ class _MapSheetState extends State<MapSheet> {
                           maxHeight: _max * _height - _handle,
                           child: PrimaryScrollController(
                             controller: scroll,
-                            child: MapSheetScope(
-                              close: widget.onClose,
+                            // Rebuilt as the sheet moves; only the contents that ask for the height follow it.
+                            child: ListenableBuilder(
+                              listenable: widget.controller,
+                              builder: (context, child) => MapSheetScope(
+                                close: widget.onClose,
+                                visible:
+                                    (widget.controller.isAttached
+                                            ? widget.controller.size
+                                            : _min) *
+                                        _height -
+                                    _handle,
+                                child: child!,
+                              ),
                               child: widget.child,
                             ),
                           ),
