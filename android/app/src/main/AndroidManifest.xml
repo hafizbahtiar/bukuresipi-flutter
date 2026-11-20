@@ -13,6 +13,9 @@
     <!-- "My location" when setting a place's pin by hand (asked only then). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- The ML Kit document scanner's own screen is portrait-only, which makes Play require a portrait screen and
+         hide the app from tablets, desktops and XR. The app itself turns with the device: the feature is optional. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false"/>
     <application
         android:label="Bukuresipi"
         android:name="${applicationName}"
