@@ -102,6 +102,22 @@ void main() {
     expect(shop.skippedOptional, [true, false]);
   });
 
+  testWidgets('Add to list sends Serves N only when it was changed', (t) async {
+    await pump(t, recipeDetail(servings: 4));
+    Future<void> add() async {
+      await t.tap(find.byKey(const ValueKey('more-menu')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Add to list'));
+      await t.pumpAndSettle();
+    }
+
+    await add();
+    await t.tap(find.byKey(const ValueKey('recipe-serves-more')));
+    await t.pump();
+    await add();
+    expect(shop.servingsAsked, [null, 5]);
+  });
+
   testWidgets('no optional lines: nothing is asked', (t) async {
     await pump(t, recipeDetail());
     await t.tap(find.byKey(const ValueKey('more-menu')));
