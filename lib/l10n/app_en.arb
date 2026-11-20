@@ -3188,5 +3188,7 @@
   "recipeServesLess": "Fewer people",
   "recipeServesMore": "More people",
   "recipeServingsField": "Serves (people)",
-  "recipeServingsHint": "1 to 50. Empty if the recipe does not say."
+  "recipeServingsHint": "1 to 50. Empty if the recipe does not say.",
+  "caloriesMacrosAverage": "Average of {days} days: {macros}",
+  "@caloriesMacrosAverage": {"placeholders": {"days": {"type": "int"}, "macros": {"type": "String"}}}
 }
