@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/theme_reveal.dart';
+import 'core/time_format.dart';
 import 'core/network/update_gate.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
@@ -140,6 +141,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     supportedLocales: LocaleController.supported,
     localizationsDelegates: const [
       AppLocalizations.delegate,
+      MalayTimeDelegate(), // before Flutter's: AM/PM in Malay too
       GlobalMaterialLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,

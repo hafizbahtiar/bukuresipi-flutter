@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
@@ -702,7 +703,7 @@ class _PlaceVisitsSheetState extends State<PlaceVisitsSheet> {
                       color: nb.inkSoft,
                     ),
                     title: Text(
-                      loc.formatTimeOfDay(TimeOfDay.fromDateTime(v.visitedAt!)),
+                      formatTime(context, v.visitedAt!),
                       style: text.bodyLarge,
                     ),
                     trailing: Text(

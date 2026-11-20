@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/time_format.dart';
 import '../../../../core/open_link.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../domain/owner.dart';
@@ -81,7 +82,7 @@ class _OwnerSharesPageState extends State<OwnerSharesPage> {
                     ),
                     subtitle: Text(
                       [
-                        '${m.formatShortDate(at)} ${m.formatTimeOfDay(TimeOfDay.fromDateTime(at))}, ${s.platform ?? s.input}, ${s.kind}',
+                        '${m.formatShortDate(at)} ${formatTime(context, at)}, ${s.platform ?? s.input}, ${s.kind}',
                         ?s.sourceUrl,
                         ?s.caption,
                       ].join('\n'),
