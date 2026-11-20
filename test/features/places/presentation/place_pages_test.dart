@@ -768,6 +768,21 @@ void main() {
     },
   );
 
+  testWidgets('Book: "Your regular" beside the halal tag, only on a regular', (
+    t,
+  ) async {
+    repo = FakePlaces()
+      ..places = [
+        place(id: 'a', name: 'Kedai Satu', visited: true, regular: true),
+        place(id: 'b', name: 'Kedai Dua', visited: true),
+      ];
+    await pump(t, const PlacesListPage());
+    expect(find.byKey(const ValueKey('place-regular-tag-a')), findsOneWidget);
+    expect(find.byKey(const ValueKey('place-halal-tag-a')), findsOneWidget);
+    expect(find.byKey(const ValueKey('place-regular-tag-b')), findsNothing);
+    expect(find.text('Your regular'), findsOneWidget);
+  });
+
   testWidgets('Book: no receipts and no family, no filter row', (t) async {
     repo = FakePlaces()..places = [place(id: 'a')];
     await pump(t, const PlacesListPage());

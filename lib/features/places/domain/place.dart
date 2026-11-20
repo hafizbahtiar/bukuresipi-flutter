@@ -206,6 +206,7 @@ class Place {
     this.sourceUrl,
     this.shareId,
     this.visited = false,
+    this.regular = false,
     this.mine = true,
     this.private = false,
     this.savedBy = const [],
@@ -243,6 +244,9 @@ class Place {
 
   /// The caller has a confirmed receipt here (Book: "Been there"; none = "Want to try"). Their own receipts only.
   final bool visited;
+
+  /// "Your regular": 3+ of the caller's own confirmed visits in the last 90 days. Their own receipts only.
+  final bool regular;
   final PlaceRestaurant restaurant;
   final List<Branch> branches;
 
@@ -277,6 +281,7 @@ class Place {
     sourceUrl: sourceUrl,
     shareId: shareId,
     visited: visited,
+    regular: regular,
   );
 }
 
