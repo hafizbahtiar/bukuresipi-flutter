@@ -123,7 +123,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
       case 'unban':
         await _run(
           () => context.read<OwnerRepository>().unban(u.id),
-          l.ownerUnbanned,
+          (_) => l.ownerUnbanned,
         );
       case 'delete':
         await _delete(u);
@@ -131,12 +131,14 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   }
 
   /// Runs an owner action, says it worked (or why not) and reloads the list.
-  Future<void> _run(Future<void> Function() call, String done) async {
+  Future<void> _run<T>(
+    Future<T> Function() call,
+    String Function(T) done,
+  ) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await call();
-      messenger.showSnackBar(SnackBar(content: Text(done)));
+      messenger.showSnackBar(SnackBar(content: Text(done(await call()))));
       await _load();
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
@@ -153,7 +155,8 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     if (r == null || !mounted) return;
     await _run(
       () => repo.ban(u.id, days: r.days, reason: r.reason),
-      l.ownerBanned,
+      // The ban holds either way; the owner should know the user was not told.
+      (emailed) => emailed ? l.ownerBanned : l.ownerBannedNoEmail,
     );
   }
 
@@ -167,7 +170,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     if (r == null || !mounted) return;
     await _run(
       () => repo.deleteUser(u.id, reason: r.reason, banEmail: r.banEmail),
-      l.ownerDeleted,
+      (_) => l.ownerDeleted,
     );
   }
 

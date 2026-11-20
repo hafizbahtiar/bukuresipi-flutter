@@ -92,9 +92,13 @@ class FakeOwner implements OwnerRepository {
   /// (user, reason, banEmail).
   final deleted = <(String, String, bool)>[];
 
+  bool banEmailed = true;
+
   @override
-  Future<void> ban(String userId, {int? days, required String reason}) async =>
-      bans.add((userId, days, reason));
+  Future<bool> ban(String userId, {int? days, required String reason}) async {
+    bans.add((userId, days, reason));
+    return banEmailed;
+  }
 
   @override
   Future<void> unban(String userId) async => unbans.add(userId);

@@ -91,12 +91,14 @@ class OwnerRepositoryImpl implements OwnerRepository {
       apiCall(() => _dio.post<void>('/owner/users/$userId/logout'));
 
   @override
-  Future<void> ban(String userId, {int? days, required String reason}) =>
+  Future<bool> ban(String userId, {int? days, required String reason}) =>
       apiCall(
-        () => _dio.post<void>(
-          '/owner/users/$userId/ban',
-          data: {'days': ?days, 'reason': reason},
-        ),
+        () async =>
+            (await _dio.post<Map<String, dynamic>>(
+              '/owner/users/$userId/ban',
+              data: {'days': ?days, 'reason': reason},
+            )).data?['emailed'] !=
+            false,
       );
 
   @override
