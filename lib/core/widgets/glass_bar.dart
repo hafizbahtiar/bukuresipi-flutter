@@ -7,9 +7,12 @@ import '../theme/app_theme.dart';
 /// The frosted pill floating over the page's bottom edge: Home's tab bar and a detail page's action dock. A thin
 /// tint over the blurred page, brighter at the top like light on a pane, a light rim instead of a drawn border.
 class GlassBar extends StatelessWidget {
-  const GlassBar({super.key, required this.child});
+  const GlassBar({super.key, required this.child, this.vertical = false});
 
   final Widget child;
+
+  /// Standing up (Home's rail on a wide screen): [height] is then its width.
+  final bool vertical;
 
   static const height = 56.0;
   static const _radius = BorderRadius.all(Radius.circular(28));
@@ -34,7 +37,8 @@ class GlassBar extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: Container(
-            height: height,
+            height: vertical ? null : height,
+            width: vertical ? height : null,
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               borderRadius: _radius,
