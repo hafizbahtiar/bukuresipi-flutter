@@ -275,6 +275,73 @@ void main() {
     expect(find.text('AI estimate'), findsOneWidget); // the chip
   });
 
+  testWidgets(
+    'e-invoice: its last day with the reminder note; "I\'ve requested it" stops the reminder, "Not yet" undoes it',
+    (t) async {
+      final link = (
+        url: 'https://einvoice.example.com/r/1',
+        until: DateTime(2099, 11, 27),
+        done: false,
+      );
+      final repo = FakeReceipts()
+        ..answers = [
+          receipt(status: 'saved', einvoice: link),
+          receipt(
+            status: 'saved',
+            einvoice: (url: link.url, until: link.until, done: true),
+          ),
+          receipt(status: 'saved', einvoice: link),
+        ];
+      await pump(t, repo);
+      await t.ensureVisible(find.byKey(const ValueKey('receipt-einvoice')));
+      expect(
+        find.textContaining("We'll remind you the day before."),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('einvoice-done')));
+      await t.pumpAndSettle();
+      expect(repo.einvoiceDone, [('r-1', true)]);
+      expect(find.text("You've requested it. No reminder."), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('einvoice-done')));
+      await t.pumpAndSettle();
+      expect(repo.einvoiceDone.last, ('r-1', false));
+
+      // Past its last day, or no deadline printed: said so, still openable.
+      repo
+        ..gets = 0
+        ..answers = [
+          receipt(
+            status: 'saved',
+            einvoice: (url: link.url, until: DateTime(2020), done: false),
+          ),
+        ];
+      await pump(t, repo);
+      expect(
+        find.textContaining('The request period ended on'),
+        findsOneWidget,
+      );
+      repo
+        ..gets = 0
+        ..answers = [
+          receipt(
+            status: 'saved',
+            einvoice: (url: link.url, until: null, done: false),
+          ),
+        ];
+      await pump(t, repo);
+      expect(
+        find.text("No deadline is printed, so there's no reminder."),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('einvoice-open')), findsOneWidget);
+      repo
+        ..gets = 0
+        ..answers = [receipt(status: 'saved')];
+      await pump(t, repo);
+      expect(find.byKey(const ValueKey('receipt-einvoice')), findsNothing);
+    },
+  );
+
   testWidgets('a line of 3 counts up to 3, no further', (t) async {
     final repo = FakeReceipts()
       ..answers = [

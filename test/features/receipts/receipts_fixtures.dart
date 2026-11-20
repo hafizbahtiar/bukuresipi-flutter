@@ -22,6 +22,7 @@ Receipt receipt({
   bool hasEstimate = false,
   bool caloriesPending = false,
   bool hasSplit = false,
+  ReceiptEinvoice? einvoice,
 }) => Receipt(
   id: id,
   status: status,
@@ -38,6 +39,7 @@ Receipt receipt({
   hasEstimate: hasEstimate,
   caloriesPending: caloriesPending,
   hasSplit: hasSplit,
+  einvoice: einvoice,
 );
 
 class FakeReceipts implements ReceiptsRepository {
@@ -58,6 +60,12 @@ class FakeReceipts implements ReceiptsRepository {
       <({String id, int totalSen, DateTime visitedAt, String? branchId})>[];
   final removed = <String>[];
   int gets = 0;
+
+  final einvoiceDone = <(String, bool)>[];
+
+  @override
+  Future<void> setEinvoiceDone(String id, bool done) async =>
+      einvoiceDone.add((id, done));
 
   @override
   Future<String> upload(String path) async {

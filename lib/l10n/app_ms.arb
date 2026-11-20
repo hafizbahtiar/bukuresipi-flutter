@@ -1205,5 +1205,13 @@
   "recipeServingsField": "Untuk (orang)",
   "recipeServingsHint": "1 hingga 50. Kosongkan jika resipi tidak menyebutnya.",
   "caloriesMacrosAverage": "Purata {days} hari: {macros}",
-  "ownerBannedNoEmail": "Disekat. Emel kepada pengguna tidak dihantar."
+  "ownerBannedNoEmail": "Disekat. Emel kepada pengguna tidak dihantar.",
+  "einvoiceTitle": "E-invois",
+  "einvoiceBy": "Mohon sebelum {date}. Kami ingatkan sehari sebelum.",
+  "einvoiceEnded": "Tempoh permohonan tamat pada {date}.",
+  "einvoiceNoLimit": "Tiada tarikh akhir dicetak, jadi tiada peringatan.",
+  "einvoiceDoneNote": "Anda sudah memohon. Tiada peringatan.",
+  "einvoiceRequest": "Mohon",
+  "einvoiceMarkDone": "Sudah mohon",
+  "einvoiceUndo": "Belum lagi"
 }

@@ -156,6 +156,31 @@ void main() {
     expect(senOf('41.155'), isNull);
   });
 
+  test(
+    'the e-invoice link: its last day as a calendar date, none = null',
+    () async {
+      final r = await make(
+        (_) => (
+          200,
+          {
+            ...json,
+            'einvoice': {
+              'url': 'https://einvoice.example.com/r/1',
+              'until': '2026-11-27',
+              'done': false,
+            },
+          },
+        ),
+      ).get('r-1');
+      expect(r.einvoice, (
+        url: 'https://einvoice.example.com/r/1',
+        until: DateTime(2026, 11, 27),
+        done: false,
+      ));
+      expect((await make((_) => (200, json)).get('r-1')).einvoice, isNull);
+    },
+  );
+
   test('hasSplit and a day of calories with its eaten lines', () async {
     final r = await make((_) => (200, {...json, 'hasSplit': true})).get('r-1');
     expect(r.hasSplit, isTrue);

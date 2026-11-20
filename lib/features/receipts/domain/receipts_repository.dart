@@ -5,8 +5,12 @@ import 'receipt.dart';
 /// Throws ApiException (codes: invalid_image, duplicate_receipt (confirm: `existingId` = the saved one; [update] then
 /// gives it this read's items and charges), receipt_limit, not_ready, place_required, not_found).
 abstract interface class ReceiptsRepository {
-  /// Uploads a photo (a local JPEG path); the server starts reading it. Returns the receipt id.
+  /// Uploads a photo (a local JPEG path), with its e-invoice QR link when the phone can read one; the server starts
+  /// reading it. Returns the receipt id.
   Future<String> upload(String path);
+
+  /// "I've requested the e-invoice": no reminder (false = not after all).
+  Future<void> setEinvoiceDone(String id, bool done);
   Future<Receipt> get(String id);
 
   /// [place] = only the saved visits at that place (its id), up to [limit].

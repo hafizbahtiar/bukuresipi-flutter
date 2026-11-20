@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/utils/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
@@ -100,6 +101,19 @@ class _ReceiptPageState extends State<ReceiptPage> {
     }
   }
 
+  /// "I've requested it" (or not yet): the server stops (or keeps) the day-before reminder.
+  Future<void> _einvoiceDone(bool done) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l = AppLocalizations.of(context);
+    try {
+      await _repo.setEinvoiceDone(widget.id, done);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+    _timer?.cancel();
+    await _load();
+  }
+
   /// Ticks line [i] as eaten [n] times: shown at once, then the server's totals.
   Future<void> _eat(int i, double n) async {
     final r = _r!;
@@ -131,6 +145,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         unknownEaten: r.unknownEaten,
         caloriesPending: r.caloriesPending,
         hasSplit: r.hasSplit,
+        einvoice: r.einvoice,
       ),
     );
     try {
@@ -476,6 +491,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
+        if (r.einvoice case final e?) ...[
+          const SizedBox(height: 16),
+          _Einvoice(einvoice: e, onDone: _einvoiceDone),
+        ],
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -641,6 +660,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
+        if (r.einvoice case final e?) ...[
+          const SizedBox(height: 16),
+          _Einvoice(einvoice: e, onDone: _einvoiceDone),
+        ],
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -652,9 +675,105 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
 enum _Tone { normal, problem }
 
+/// The receipt's e-invoice request: the shop's page, its last day, then "I've requested it" (no reminder after).
+class _Einvoice extends StatelessWidget {
+  const _Einvoice({required this.einvoice, required this.onDone});
+
+  final ReceiptEinvoice einvoice;
+  final ValueChanged<bool> onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final until = einvoice.until;
+    final now = DateTime.now();
+    final ended =
+        until != null && until.isBefore(DateTime(now.year, now.month, now.day));
+    final date = until == null
+        ? null
+        : MaterialLocalizations.of(context).formatMediumDate(until);
+    final note = einvoice.done
+        ? l.einvoiceDoneNote
+        : until == null
+        ? l.einvoiceNoLimit
+        : ended
+        ? l.einvoiceEnded(date!)
+        : l.einvoiceBy(date!);
+    return _Card(
+      key: const ValueKey('receipt-einvoice'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.request_quote_outlined, color: nb.pandan),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.einvoiceTitle,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      note,
+                      style: text.bodySmall?.copyWith(
+                        color: ended && !einvoice.done
+                            ? Theme.of(context).colorScheme.error
+                            : nb.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Negative left, positive right; full width so the pair sits at the right.
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                TextButton(
+                  key: const ValueKey('einvoice-done'),
+                  onPressed: () => onDone(!einvoice.done),
+                  child: Text(
+                    einvoice.done ? l.einvoiceUndo : l.einvoiceMarkDone,
+                  ),
+                ),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('einvoice-open'),
+                  onPressed: () =>
+                      openLink(context, einvoice.url, failed: l.openFailed),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: Text(l.einvoiceRequest),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// An outlined card, the app's standard surface.
 class _Card extends StatelessWidget {
-  const _Card({required this.child, this.padding = const EdgeInsets.all(16)});
+  const _Card({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
 
   final Widget child;
   final EdgeInsets padding;

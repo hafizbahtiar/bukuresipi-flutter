@@ -3271,5 +3271,33 @@
     }
   },
   "ownerBannedNoEmail": "Banned. The email to the user was not sent.",
-  "@ownerBannedNoEmail": {}
+  "@ownerBannedNoEmail": {},
+  "einvoiceTitle": "E-invoice",
+  "@einvoiceTitle": {},
+  "einvoiceBy": "Request by {date}. We'll remind you the day before.",
+  "@einvoiceBy": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceEnded": "The request period ended on {date}.",
+  "@einvoiceEnded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceNoLimit": "No deadline is printed, so there's no reminder.",
+  "@einvoiceNoLimit": {},
+  "einvoiceDoneNote": "You've requested it. No reminder.",
+  "@einvoiceDoneNote": {},
+  "einvoiceRequest": "Request",
+  "@einvoiceRequest": {},
+  "einvoiceMarkDone": "I've requested it",
+  "@einvoiceMarkDone": {},
+  "einvoiceUndo": "Not yet",
+  "@einvoiceUndo": {}
 }
