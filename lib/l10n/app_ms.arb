@@ -1191,5 +1191,11 @@
   "spendingBudgetRange": "RM 10 hingga RM 100,000. Kosongkan jika tiada.",
   "spendingBudgetOf": "Bulan ini: {spent} daripada {budget}",
   "spendingBudgetLeft": "Baki {amount}",
-  "spendingBudgetOver": "Lebih {amount}"
+  "spendingBudgetOver": "Lebih {amount}",
+  "recipeServes": "Untuk {n} orang",
+  "recipeServesScaled": "Sukatan diubah daripada {n} orang: perkataan seperti “secukup rasa” kekal",
+  "recipeServesLess": "Kurang orang",
+  "recipeServesMore": "Lebih orang",
+  "recipeServingsField": "Untuk (orang)",
+  "recipeServingsHint": "1 hingga 50. Kosongkan jika resipi tidak menyebutnya."
 }

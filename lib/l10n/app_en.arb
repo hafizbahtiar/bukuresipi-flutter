@@ -3180,5 +3180,13 @@
   "spendingBudgetLeft": "{amount} left",
   "@spendingBudgetLeft": {"placeholders": {"amount": {"type": "String"}}},
   "spendingBudgetOver": "{amount} over",
-  "@spendingBudgetOver": {"placeholders": {"amount": {"type": "String"}}}
+  "@spendingBudgetOver": {"placeholders": {"amount": {"type": "String"}}},
+  "recipeServes": "Serves {n}",
+  "@recipeServes": {"placeholders": {"n": {"type": "int"}}},
+  "recipeServesScaled": "Amounts changed from {n}: words like “to taste” stay as written",
+  "@recipeServesScaled": {"placeholders": {"n": {"type": "int"}}},
+  "recipeServesLess": "Fewer people",
+  "recipeServesMore": "More people",
+  "recipeServingsField": "Serves (people)",
+  "recipeServingsHint": "1 to 50. Empty if the recipe does not say."
 }

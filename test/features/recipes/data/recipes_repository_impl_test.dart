@@ -71,7 +71,7 @@ void main() {
     final detail = await repo.get('r-1');
     expect(adapter.requests.single.path, '/recipes/r-1');
     expect(detail.name, 'Nasi Lemak Ayam');
-    expect(detail.ingredients.first.amount, '500 g');
+    expect(detail.ingredients.first.amount(), '500 g');
     expect(detail.ingredients.first.label, 'Ayam');
     expect(detail.ingredients.last.label, 'sedikit bahan rahsia');
     expect(detail.steps.single.instruction, 'Goreng ayam hingga masak.');
