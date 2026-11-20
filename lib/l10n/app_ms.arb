@@ -1185,5 +1185,11 @@
   "yourBranchMake": "Jadikan cawangan saya",
   "yourBranchSet": "Ini cawangan anda sekarang.",
   "branchesShowAll": "Tunjuk semua {count} cawangan",
-  "shareSendScreenshot": "Hantar tangkapan skrin"
+  "shareSendScreenshot": "Hantar tangkapan skrin",
+  "spendingBudget": "Bajet makan sebulan",
+  "spendingBudgetSet": "Tetapkan bajet sebulan",
+  "spendingBudgetRange": "RM 10 hingga RM 100,000. Kosongkan jika tiada.",
+  "spendingBudgetOf": "Bulan ini: {spent} daripada {budget}",
+  "spendingBudgetLeft": "Baki {amount}",
+  "spendingBudgetOver": "Lebih {amount}"
 }

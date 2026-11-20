@@ -3171,5 +3171,14 @@
   "yourBranchSet": "This is now your branch.",
   "branchesShowAll": "Show all {count} branches",
   "@branchesShowAll": {"placeholders": {"count": {"type": "int"}}},
-  "shareSendScreenshot": "Send a screenshot"
+  "shareSendScreenshot": "Send a screenshot",
+  "spendingBudget": "Monthly food budget",
+  "spendingBudgetSet": "Set a monthly budget",
+  "spendingBudgetRange": "RM 10 to RM 100,000. Leave empty for none.",
+  "spendingBudgetOf": "This month: {spent} of {budget}",
+  "@spendingBudgetOf": {"placeholders": {"spent": {"type": "String"}, "budget": {"type": "String"}}},
+  "spendingBudgetLeft": "{amount} left",
+  "@spendingBudgetLeft": {"placeholders": {"amount": {"type": "String"}}},
+  "spendingBudgetOver": "{amount} over",
+  "@spendingBudgetOver": {"placeholders": {"amount": {"type": "String"}}}
 }
