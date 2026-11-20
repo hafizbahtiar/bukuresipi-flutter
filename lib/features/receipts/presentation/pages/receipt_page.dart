@@ -1108,55 +1108,64 @@ class _Items extends StatelessWidget {
             for (final (n, i) in items.indexed)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (onEaten != null)
-                      _Tick(
-                        key: (i.quantity ?? 1) > 1
-                            ? null
-                            : ValueKey('eaten-$n'),
-                        item: i,
-                        onChanged: (v) => onEaten!(n, v),
-                      ),
-                    SizedBox(
-                      width: 36,
-                      child: Text(
-                        i.quantity == null ? '' : '${qty(i.quantity!)} ×',
-                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(i.name, style: text.bodyMedium),
-                          if (i.kcal != null)
-                            Text(
-                              [
-                                l.caloriesKcal('${i.kcal}'),
-                                if (i.kcalSource == 'ai') l.caloriesAiEstimate,
-                              ].join(' · '),
-                              style: text.bodySmall?.copyWith(
-                                color: nb.inkSoft,
-                              ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (onEaten != null)
+                          _Tick(
+                            key: (i.quantity ?? 1) > 1
+                                ? null
+                                : ValueKey('eaten-$n'),
+                            item: i,
+                            onChanged: (v) => onEaten!(n, v),
+                          ),
+                        SizedBox(
+                          width: 36,
+                          child: Text(
+                            i.quantity == null ? '' : '${qty(i.quantity!)} ×',
+                            style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(i.name, style: text.bodyMedium),
+                              if (i.kcal != null)
+                                Text(
+                                  [
+                                    l.caloriesKcal('${i.kcal}'),
+                                    if (i.kcalSource == 'ai')
+                                      l.caloriesAiEstimate,
+                                  ].join(' · '),
+                                  style: text.bodySmall?.copyWith(
+                                    color: nb.inkSoft,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (i.amountSen != null)
+                          Text(
+                            rm(i.amountSen!),
+                            style: figures?.copyWith(
+                              color: i.amountSen! < 0 ? nb.pandan : null,
                             ),
-                          // under the name, so a long name keeps its width on a narrow phone
-                          if (onEaten != null && (i.quantity ?? 1) > 1)
-                            _Eaten(
-                              key: ValueKey('eaten-$n'),
-                              item: i,
-                              onChanged: (v) => onEaten!(n, v),
-                            ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    if (i.amountSen != null)
-                      Text(
-                        rm(i.amountSen!),
-                        style: figures?.copyWith(
-                          color: i.amountSen! < 0 ? nb.pandan : null,
+                    // Under the whole line, past the tick: inside the name's column it ran off a 360 px phone.
+                    if (onEaten != null && (i.quantity ?? 1) > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 32),
+                        child: _Eaten(
+                          key: ValueKey('eaten-$n'),
+                          item: i,
+                          onChanged: (v) => onEaten!(n, v),
                         ),
                       ),
                   ],

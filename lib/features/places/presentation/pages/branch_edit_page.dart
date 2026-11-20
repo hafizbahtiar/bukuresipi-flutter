@@ -974,7 +974,9 @@ class _DraftBanner extends StatelessWidget {
                   children: [
                     Icon(Icons.warning_amber_rounded, size: 18, color: nb.ink),
                     const SizedBox(width: 6),
-                    Text(l.aiDraftWarningsTitle, style: heading),
+                    Expanded(
+                      child: Text(l.aiDraftWarningsTitle, style: heading),
+                    ),
                   ],
                 ),
                 for (final w in suggestion.warnings)
