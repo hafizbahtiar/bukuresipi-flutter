@@ -831,7 +831,8 @@ class _PantryCard extends StatelessWidget {
 }
 
 /// Columns for a width: 2 on a phone, one more per ~220 dp after that.
-int _columns(double width) => math.max(2, (width - 32) ~/ 220);
+int _columns(double width) =>
+    math.max(2, (width - 2 * spaceM) ~/ feedCardMinWidth);
 
 /// A recipe card's photo, tagged to fly into its page's header (CoverAppBar); null = no photo (the drawing shows).
 Widget Function(Widget)? _heroPhoto(

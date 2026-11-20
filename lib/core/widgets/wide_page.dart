@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/app_theme_constant.dart';
 
 /// On a tablet, a desktop window or a phone on its side, a page of lists and forms stays a readable column (a
 /// notebook page on the desk) instead of stretching edge to edge. Under [maxWidth] it is the page as is. Inside, the
@@ -11,7 +12,7 @@ import '../theme/app_theme.dart';
 class WidePage extends StatelessWidget {
   const WidePage({super.key, required this.child});
 
-  static const maxWidth = 720.0;
+  static const maxWidth = readableWidth;
 
   final Widget child;
 
