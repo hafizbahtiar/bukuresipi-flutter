@@ -57,12 +57,7 @@ class _MergeSheetState extends State<MergeSheet> {
     final name = _name.text.trim();
     // Scrolls when the list of places and the keyboard leave too little room.
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        notebookGutter + 10,
-        0,
-        20,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

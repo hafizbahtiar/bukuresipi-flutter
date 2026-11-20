@@ -11,7 +11,6 @@ import '../../../../core/widgets/skeleton.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../core/widgets/pill_switch.dart';
 import '../../../../core/widgets/ai_button.dart';

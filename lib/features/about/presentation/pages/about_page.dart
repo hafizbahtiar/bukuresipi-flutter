@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';

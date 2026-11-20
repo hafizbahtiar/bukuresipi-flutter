@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-import '../../../core/log.dart';
+import '../../../core/utils/log.dart';
 import '../domain/caption_reader.dart';
 
 /// Opens the post in an invisible WebView on the phone (the user's own connection, a real browser) and reads the

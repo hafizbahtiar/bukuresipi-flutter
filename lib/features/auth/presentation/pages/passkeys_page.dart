@@ -6,7 +6,6 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/auth_api.dart';
 import '../../data/passkey_auth.dart';
@@ -81,7 +80,7 @@ class _PasskeysPageState extends State<PasskeysPage> {
 
   Future<void> _remove(Passkey p) async {
     final l = AppLocalizations.of(context);
-    if (!await showNotebookDialog(
+    if (!await showBaseDialog(
       context,
       message: l.passkeysRemoveConfirm(p.name ?? l.passkeysUnnamed),
       tone: DialogTone.danger,

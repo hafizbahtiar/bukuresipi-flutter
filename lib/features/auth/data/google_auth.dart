@@ -1,6 +1,6 @@
 import 'package:google_sign_in/google_sign_in.dart';
 
-import '../../../core/log.dart';
+import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 
 /// Asks Google (the Android account sheet) for an ID token; the API checks it (bukuresipi-hono src/features/auth/google.ts).

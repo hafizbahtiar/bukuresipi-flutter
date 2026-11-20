@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/widgets/base.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../core/network/api_exception.dart';
-import '../../../core/widgets/notebook_dialog.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../auth/presentation/auth_text.dart';
@@ -20,7 +22,7 @@ Future<String?> askText(
 }) async {
   final l = AppLocalizations.of(context);
   var text = initial;
-  final ok = await showNotebookDialog(
+  final ok = await showBaseDialog(
     context,
     title: title,
     message: message,

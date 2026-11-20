@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/log.dart';
+import '../../../../core/utils/log.dart';
 import '../../../../core/settings/locale_controller.dart';
 import '../../../../core/settings/theme_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/theme_reveal.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/pill_switch.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../push/push_controller.dart';
@@ -64,7 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final google = context.read<GoogleAuth?>();
     try {
       if (linked) {
-        final yes = await showNotebookDialog(
+        final yes = await showBaseDialog(
           context,
           message: l.googleUnlinkConfirm,
           tone: DialogTone.danger,

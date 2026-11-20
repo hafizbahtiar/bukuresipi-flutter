@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/base.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 
@@ -58,7 +59,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       message: l.reviewRemoveConfirm,
       tone: DialogTone.danger,
@@ -84,93 +85,89 @@ class _ReviewSheetState extends State<ReviewSheet> {
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
     final canSave = !_saving && !_removing && _text.text.trim().isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    widget.initialText == null ? l.reviewWrite : l.reviewEdit,
-                    style: text.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      for (var n = 1; n <= 5; n++)
-                        IconButton(
-                          key: ValueKey('review-star-$n'),
-                          onPressed: _saving || _removing
-                              ? null
-                              : () => setState(() => _stars = n),
-                          icon: Icon(
-                            n <= _stars
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded,
-                            color: n <= _stars ? nb.kunyit : nb.inkSoft,
-                          ),
-                        ),
-                    ],
-                  ),
-                  TextField(
-                    controller: _text,
-                    minLines: 3,
-                    maxLines: 6,
-                    maxLength: 1000,
-                    textCapitalization: TextCapitalization.sentences,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(hintText: l.reviewTextHint),
-                  ),
-                  if (widget.onRemove != null)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _saving || _removing ? null : _remove,
-                        child: Text(l.reviewRemove),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
-            child: Row(
+    // The floating sheet keeps itself above the keyboard.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: _saving || _removing
-                        ? null
-                        : () => Navigator.pop(context, false),
-                    child: Text(l.cancel),
-                  ),
+                Text(
+                  widget.initialText == null ? l.reviewWrite : l.reviewEdit,
+                  style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: canSave ? _save : null,
-                    child: _saving || _removing
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(l.save),
-                  ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    for (var n = 1; n <= 5; n++)
+                      IconButton(
+                        key: ValueKey('review-star-$n'),
+                        onPressed: _saving || _removing
+                            ? null
+                            : () => setState(() => _stars = n),
+                        icon: Icon(
+                          n <= _stars
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          color: n <= _stars ? nb.kunyit : nb.inkSoft,
+                        ),
+                      ),
+                  ],
                 ),
+                TextField(
+                  controller: _text,
+                  minLines: 3,
+                  maxLines: 6,
+                  maxLength: 1000,
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(hintText: l.reviewTextHint),
+                ),
+                if (widget.onRemove != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _saving || _removing ? null : _remove,
+                      child: Text(l.reviewRemove),
+                    ),
+                  ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _saving || _removing
+                      ? null
+                      : () => Navigator.pop(context, false),
+                  child: Text(l.cancel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: canSave ? _save : null,
+                  child: _saving || _removing
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(l.save),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

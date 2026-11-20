@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/time_format.dart';
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/time_format.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';

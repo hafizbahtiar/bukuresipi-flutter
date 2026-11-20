@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/log.dart';
+import '../../core/utils/log.dart';
 import '../../core/network/api_exception.dart';
 import '../auth/presentation/auth_controller.dart';
 import 'push_messaging.dart';

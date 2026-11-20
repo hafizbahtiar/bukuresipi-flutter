@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/share.dart';
@@ -311,7 +313,7 @@ class _ShareProblemRowState extends State<ShareProblemRow> {
 
   Future<void> _dismiss() async {
     final l = AppLocalizations.of(context);
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       message: l.shareDismissConfirm,
       tone: DialogTone.danger,

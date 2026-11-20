@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../auth/presentation/widgets/avatar.dart';
@@ -92,7 +94,7 @@ class _FamilyPageState extends State<FamilyPage> {
     final until = l.familyLinkUntil(
       DateFormat.yMMMd(l.localeName).format(link.expiresAt),
     );
-    await showNotebookSheet<void>(
+    await showBaseSheet<void>(
       context,
       builder: (sheet) {
         final nb = Notebook.of(sheet);
@@ -136,7 +138,7 @@ class _FamilyPageState extends State<FamilyPage> {
   Future<void> _memberMenu(Family f, FamilyMember m) async {
     final l = AppLocalizations.of(context);
     final family = context.read<FamilyController>();
-    final choice = await showNotebookSheet<String>(
+    final choice = await showBaseSheet<String>(
       context,
       builder: (sheet) => ListView(
         shrinkWrap: true,
@@ -161,7 +163,7 @@ class _FamilyPageState extends State<FamilyPage> {
     );
     if (!mounted || choice == null) return;
     if (choice == 'owner') return _run(() => family.handOver(m.id));
-    if (await showNotebookDialog(
+    if (await showBaseDialog(
       context,
       message: l.familyRemoveConfirm(m.name ?? '?'),
       tone: DialogTone.danger,
@@ -189,7 +191,7 @@ class _FamilyPageState extends State<FamilyPage> {
   Future<void> _leave(Family f) async {
     final l = AppLocalizations.of(context);
     final family = context.read<FamilyController>();
-    if (await showNotebookDialog(
+    if (await showBaseDialog(
       context,
       message: l.familyLeaveConfirm(f.name),
       tone: DialogTone.danger,

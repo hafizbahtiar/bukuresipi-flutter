@@ -57,83 +57,76 @@ class _ReportReviewSheetState extends State<ReportReviewSheet> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l.reviewReportTitle,
-                    style: text.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    l.reviewReportReason,
-                    style: text.labelLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  NotebookSegmented<ReviewReason>(
-                    selected: _reason,
-                    onChanged: (reason) => setState(() => _reason = reason),
-                    segments: [
-                      for (final reason in ReviewReason.values)
-                        NotebookSegment(
-                          value: reason,
-                          label: _label(l, reason),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _note,
-                    minLines: 2,
-                    maxLines: 4,
-                    maxLength: 500,
-                    decoration: InputDecoration(labelText: l.reviewReportNote),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
-            child: Row(
+    // The floating sheet keeps itself above the keyboard.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    child: Text(l.cancel),
+                Text(
+                  l.reviewReportTitle,
+                  style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  l.reviewReportReason,
+                  style: text.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _saving ? null : _submit,
-                    child: _saving
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(l.reviewReport),
-                  ),
+                const SizedBox(height: 6),
+                NotebookSegmented<ReviewReason>(
+                  selected: _reason,
+                  onChanged: (reason) => setState(() => _reason = reason),
+                  segments: [
+                    for (final reason in ReviewReason.values)
+                      NotebookSegment(value: reason, label: _label(l, reason)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _note,
+                  minLines: 2,
+                  maxLines: 4,
+                  maxLength: 500,
+                  decoration: InputDecoration(labelText: l.reviewReportNote),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _saving ? null : () => Navigator.pop(context),
+                  child: Text(l.cancel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _saving ? null : _submit,
+                  child: _saving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(l.reviewReport),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

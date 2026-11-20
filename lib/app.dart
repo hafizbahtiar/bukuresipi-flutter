@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/theme_reveal.dart';
-import 'core/time_format.dart';
+import 'core/utils/time_format.dart';
 import 'core/network/update_gate.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';

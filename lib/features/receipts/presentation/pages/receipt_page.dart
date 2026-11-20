@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../core/time_format.dart';
+import '../../../../core/utils/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';

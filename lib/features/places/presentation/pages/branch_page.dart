@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/router/base_page_transitions.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';

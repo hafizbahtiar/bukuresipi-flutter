@@ -81,7 +81,9 @@ Found a problem? Tell us. Thanks for testing!
 - `lib/main.dart` - composition root: the only place concrete classes are built and wired (Provider).
 - `lib/core/` - shared: `env/` (envied), `network/` (Dio `ApiClient`: app-version header, bearer token, single-flight
   refresh, `ApiException`, 426 `UpdateGate`), `storage/` (tokens in secure storage), `settings/` (language, shared
-  preferences), `router/` (go_router + redirect rules), `theme/`, `widgets/`.
+  preferences), `router/` (go_router + redirect rules), `theme/` (colours, fonts; `app_theme_constant.dart` = spacing
+  and screen sizes), `utils/` (log, open a link, time of day), `widgets/` (the house components, below).
+  `core/` never imports a feature.
 - `lib/features/<feature>/`
   - `domain/` - entities + repository interface. No Flutter, no Dio.
   - `data/` - API calls + the repository implementation (JSON -> entity).
@@ -94,10 +96,18 @@ database (drift) is not added yet; add it with the first offline feature.
 
 ## Shared widgets (use these, don't copy them)
 
+The house components are in `core/widgets/`; import them all with `core/widgets/base.dart`, which re-exports
+`base/`: `dialog.dart` (`showBaseDialog`, `DialogTone`), `sheets.dart` (`showBaseSheet`, `showPhotoSourceSheet`),
+`picker.dart` (`showBasePicker`, `PickerField`), `menus.dart` (`MenuAction`, `MoreMenu`, `showActionSheet`),
+`tiles.dart` (`SectionHeader`, `BaseTile`, `TagChip`, `InfoCard`), `tabs.dart` (`DetailTabs`, `EditTabs`,
+`PinnedBar`), `owner.dart` (`OwnerStrip`, `DeleteScopeCard`). A feature builds its screens from these and keeps only
+what reads its own data (a widget another feature uses stays in its feature when it reads that feature's state, as
+`ShareImage` or `Avatar`). Every sheet is `showBaseSheet` and every dialog `showBaseDialog`.
+
 - Photos: `features/shares/presentation/widgets/share_image.dart`. `loadPhoto` (cover, else the share's photo),
   `ShareFill` (a photo filling a box, with a shimmer while it loads; `ShareFill.warm` decodes ahead of a hero),
   `SharePhoto` (the taped snapshot; `.cover` / `.place`), `placePhoto(place)`, `recipeSnapshot(recipe)`.
-- Sheets: `showBaseSheet` (`core/widgets/base.dart`): floating by default (anchored mask reveal), `floating: false` =
+- Sheets: `showBaseSheet` (`core/widgets/base/sheets.dart`): floating by default (anchored mask reveal), `floating: false` =
   full width. `showActionSheet`, `showPhotoSourceSheet` (camera or photos) build on it.
 - Photo viewer: `showPhotoDialog(bytes, heroTag:, actions:)` (`core/widgets/photo_sheet.dart`) with `PhotoHero` around
   the thumbnail; `actions` = buttons along the bottom (the profile picture's Change / Remove).

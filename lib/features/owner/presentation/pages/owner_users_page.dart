@@ -6,10 +6,8 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../../../../core/widgets/deleting_overlay.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/load_view.dart';
-import '../../../../core/widgets/base.dart' show showBaseSheet;
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/base.dart';
 import '../widgets/user_action_sheets.dart';
 
 /// Owner: users, newest first, searchable by email. Actions: end their sessions, ban / unban, delete the account.
@@ -146,7 +144,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Future<void> _ban(OwnerUser u) async {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
-    final r = await showNotebookSheet<({int? days, String reason})>(
+    final r = await showBaseSheet<({int? days, String reason})>(
       context,
       builder: (_) => BanSheet(email: u.email),
     );
@@ -161,7 +159,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Future<void> _delete(OwnerUser u) async {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
-    final r = await showNotebookSheet<({String reason, bool banEmail})>(
+    final r = await showBaseSheet<({String reason, bool banEmail})>(
       context,
       builder: (_) => DeleteUserSheet(email: u.email),
     );
@@ -188,7 +186,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final messenger = ScaffoldMessenger.of(context);
     final ids = [..._picked];
     if (ids.isEmpty) return;
-    final r = await showNotebookSheet<({String reason, bool banEmail})>(
+    final r = await showBaseSheet<({String reason, bool banEmail})>(
       context,
       builder: (_) => DeleteUserSheet(email: l.ownerAccounts(ids.length)),
     );
@@ -227,7 +225,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
     final messenger = ScaffoldMessenger.of(context);
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       message: l.ownerEndSessionsConfirm(u.email),
       tone: DialogTone.danger,

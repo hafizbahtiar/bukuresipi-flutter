@@ -3,10 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/base.dart'
-    show MenuAction, showPhotoSourceSheet;
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../core/widgets/photo_sheet.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -86,7 +84,7 @@ class _AccountPageState extends State<AccountPage> {
 
   Future<void> _removeAvatar() async {
     final l = AppLocalizations.of(context);
-    final sure = await showNotebookDialog(
+    final sure = await showBaseDialog(
       context,
       message: l.avatarRemoveConfirm,
       tone: DialogTone.danger,
@@ -270,7 +268,7 @@ class _AccountPageState extends State<AccountPage> {
               NotebookRow(
                 mark: mark(Icons.logout, nb.margin),
                 onTap: () async {
-                  final yes = await showNotebookDialog(
+                  final yes = await showBaseDialog(
                     context,
                     title: l.signOutTitle,
                     message: l.signOutConfirm,

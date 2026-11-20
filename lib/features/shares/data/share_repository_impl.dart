@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
-import '../../../core/log.dart';
+import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/disk_image_cache.dart';
 import '../domain/share.dart';

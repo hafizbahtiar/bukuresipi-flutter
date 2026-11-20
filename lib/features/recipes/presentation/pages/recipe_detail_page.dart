@@ -4,12 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';

@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
-import '../../../../core/widgets/base.dart' show TagChip, TagTone, TileTag;
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -54,7 +54,7 @@ class _PlacesListPageState extends State<PlacesListPage> {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final places = context.read<PlacesController>();
-    final r = await showNotebookSheet<({String into, String? name})>(
+    final r = await showBaseSheet<({String into, String? name})>(
       context,
       builder: (_) => MergeSheet(places: picked),
     );
