@@ -3,6 +3,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -221,7 +222,7 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
         Flexible(
           child: ListView(
             shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 8),
             children: [
               Text(
                 l.reportTitle,
@@ -345,7 +346,7 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 16),
           child: Row(
             children: [
               Expanded(

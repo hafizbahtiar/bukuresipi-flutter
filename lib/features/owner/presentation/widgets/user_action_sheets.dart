@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+
 import '../../../../l10n/gen/app_localizations.dart';
 
 /// The ban form: a reason (the user sees it) and how long. Pops `(days, reason)`; days null = for good.
@@ -159,7 +160,7 @@ class _Form extends StatelessWidget {
       children: [
         Flexible(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -208,7 +209,7 @@ class _Form extends StatelessWidget {
         ),
         // Always in sight, just above the keyboard: only the form above scrolls.
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 16),
           child: Row(
             children: [
               Expanded(

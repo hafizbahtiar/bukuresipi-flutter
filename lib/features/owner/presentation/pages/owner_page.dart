@@ -11,6 +11,7 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/load_view.dart';
 
@@ -304,7 +305,7 @@ class _MeterSheetState extends State<_MeterSheet> {
     // The floating sheet keeps itself above the keyboard.
     return ListView(
       shrinkWrap: true,
-      padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 16),
+      padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 16),
       children: [
         Text(
           widget.meter.name,

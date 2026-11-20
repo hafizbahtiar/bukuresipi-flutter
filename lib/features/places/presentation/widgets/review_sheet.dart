@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/base.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 
@@ -91,7 +91,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
       children: [
         Flexible(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
+            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -139,7 +139,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 16),
           child: Row(
             children: [
               Expanded(
