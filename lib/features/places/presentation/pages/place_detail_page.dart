@@ -407,12 +407,7 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 label: '${l.branchesTitle} (${branches.length})',
                 rows: [
                   for (final b in branches) ...[
-                    _BranchRow(
-                      place: place,
-                      branch: b,
-                      fromPost: b == branch && place.branchId != null,
-                      owner: owner,
-                    ),
+                    _BranchRow(place: place, branch: b, owner: owner),
                   ],
                 ],
               ),
@@ -518,14 +513,23 @@ class _BranchRow extends StatelessWidget {
   const _BranchRow({
     required this.place,
     required this.branch,
-    required this.fromPost,
     required this.owner,
   });
 
   final Place place;
   final Branch branch;
-  final bool fromPost;
   final bool owner;
+
+  Future<void> _makeMine(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<PlacesController>().setBranch(place.id, branch.id);
+      messenger.showSnackBar(SnackBar(content: Text(l.yourBranchSet)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -541,7 +545,7 @@ class _BranchRow extends StatelessWidget {
         branch.hasPin ? Icons.place : Icons.location_off_outlined,
         color: branch.hasPin ? nb.pandanDeep : nb.kunyit,
       ),
-      tags: branchTags(l, branch, fromPost: fromPost),
+      tags: branchTags(l, branch, mine: place.isMyBranch(branch)),
       onTap: () => BranchPage.open(context, place, branch),
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,6 +568,12 @@ class _BranchRow extends StatelessWidget {
           label: l.reviewsTitle,
           onTap: () => context.push('/branches/${branch.id}/reviews'),
         ),
+        if (place.mine && !place.isMyBranch(branch) && !branch.closed)
+          MenuAction(
+            icon: Icons.where_to_vote_outlined,
+            label: l.yourBranchMake,
+            onTap: () => _makeMine(context),
+          ),
         if (owner)
           MenuAction(
             icon: Icons.delete_outline,

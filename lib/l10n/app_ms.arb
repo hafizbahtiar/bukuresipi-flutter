@@ -99,7 +99,6 @@
   "unpinnedHelp": "Kami tidak dapat mencari lokasinya, jadi tiada pin. Ia kekal dalam buku anda.",
   "mapEmpty": "Tempat yang anda simpan akan muncul di sini sebagai pin.",
   "branchesTitle": "Cawangan",
-  "fromYourPost": "Dari hantaran anda",
   "openYourPost": "Buka hantaran anda",
   "halalTitle": "Apa kata hantaran tentang halal",
   "halalSource": "Buka hantaran",
@@ -1181,5 +1180,8 @@
   "companiesDone": "{count, plural, =1{1 cawangan dibaca semula.} other{{count} cawangan dibaca semula.}}",
   "ownerSaving": "Menyimpan…",
   "ownerSearching": "Mencari…",
-  "mapLabelNotListed": "Belum ada dalam Bukuresipi."
+  "mapLabelNotListed": "Belum ada dalam Bukuresipi.",
+  "yourBranch": "Cawangan anda",
+  "yourBranchMake": "Jadikan cawangan saya",
+  "yourBranchSet": "Ini cawangan anda sekarang."
 }

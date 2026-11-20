@@ -49,6 +49,11 @@ class PlacesRepositoryImpl implements PlacesRepository {
   );
 
   @override
+  Future<void> setBranch(String id, String branchId) => apiCall(
+    () => _dio.patch<void>('/places/$id', data: {'branchId': branchId}),
+  );
+
+  @override
   Future<void> setPin(String branchId, double lat, double lng) => apiCall(
     () => _dio.put<void>(
       '/places/branches/$branchId/pin',

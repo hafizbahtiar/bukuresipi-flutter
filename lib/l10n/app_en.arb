@@ -198,8 +198,6 @@
   "@mapEmpty": {},
   "branchesTitle": "Branches",
   "@branchesTitle": {},
-  "fromYourPost": "From your post",
-  "@fromYourPost": {},
   "openYourPost": "Open your post",
   "@openYourPost": {},
   "halalTitle": "What the post says about halal",
@@ -3167,5 +3165,8 @@
   "ownerSearching": "Searching…",
   "@ownerSearching": {},
   "mapLabelNotListed": "Not in Bukuresipi yet.",
-  "@mapLabelNotListed": {}
+  "@mapLabelNotListed": {},
+  "yourBranch": "Your branch",
+  "yourBranchMake": "Make this my branch",
+  "yourBranchSet": "This is now your branch."
 }
