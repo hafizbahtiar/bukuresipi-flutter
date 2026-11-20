@@ -99,6 +99,16 @@ RecipeDetail recipeDetail({
 class FakeRecipes implements RecipesRepository {
   List<PantryMatch> pantryAnswer = const [];
   final pantryAsked = <(List<String>, bool)>[];
+  List<DishSuggestion> dishAnswer = const [];
+  Object? dishError;
+  final dishesAsked = <List<String>>[];
+
+  @override
+  Future<List<DishSuggestion>> suggestDishes(List<String> ingredients) async {
+    dishesAsked.add(ingredients);
+    if (dishError case final e?) throw e;
+    return dishAnswer;
+  }
 
   @override
   Future<List<PantryMatch>> fromPantry(
