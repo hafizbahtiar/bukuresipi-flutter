@@ -77,9 +77,61 @@ class MapSheet extends StatefulWidget {
   State<MapSheet> createState() => _MapSheetState();
 }
 
-class _MapSheetState extends State<MapSheet> {
+class _MapSheetState extends State<MapSheet>
+    with SingleTickerProviderStateMixin {
   static const _handle = 36.0;
   double _height = 1;
+
+  /// A content change, as Wolt's modal sheet pages: 350 ms; the old content slides 30% of the sheet's width away and
+  /// is gone by 150 ms, the new one slides in from the other side and fades in from 150 ms.
+  static const _page = Duration(milliseconds: 350);
+  static const _outFade = Interval(50 / 350, 150 / 350);
+  static const _inFade = Interval(150 / 350, 1);
+  static const _slide = Interval(50 / 350, 1, curve: Curves.fastOutSlowIn);
+
+  /// Forward = something picked (comes in from the right); back = the list again (from the left).
+  bool _forward = true;
+
+  /// The content whose list scrolls the sheet. The sheet's scroll controller takes one list at a time, so while
+  /// both contents show, the old one keeps it; the new one takes it once the old has faded out.
+  Key? _attached;
+
+  /// What the other content's list scrolls with meanwhile. Not PrimaryScrollController.none: a list under it never
+  /// asks for the controller, so it would not notice being handed the sheet's.
+  final _spare = ScrollController();
+
+  /// The sheet's moves to a height, on this state's own clock: the sheet's animateTo runs on its list's and stops
+  /// when that list detaches, which a content change does mid-move.
+  late final _move = AnimationController(
+    vsync: this,
+    // The height as in Wolt's page change.
+    duration: const Duration(milliseconds: 300),
+  )..addListener(_moved);
+  late final _moveCurve = CurvedAnimation(
+    parent: _move,
+    curve: Curves.fastOutSlowIn,
+  );
+  Tween<double> _moveSizes = Tween(begin: 0, end: 0);
+
+  void _moved() {
+    if (widget.controller.isAttached) {
+      widget.controller.jumpTo(_moveSizes.evaluate(_moveCurve));
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _attached = widget.child.key;
+  }
+
+  @override
+  void dispose() {
+    _moveCurve.dispose();
+    _move.dispose();
+    _spare.dispose();
+    super.dispose();
+  }
 
   double get _min => (widget.peek / _height).clamp(0.05, MapSheet.half - 0.05);
   double get _max =>
@@ -87,16 +139,32 @@ class _MapSheetState extends State<MapSheet> {
 
   void _to(double size) {
     if (!widget.controller.isAttached) return;
-    widget.controller.animateTo(
-      size,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
-    );
+    if (MediaQuery.disableAnimationsOf(context)) {
+      widget.controller.jumpTo(size);
+      return;
+    }
+    _moveSizes = Tween(begin: widget.controller.size, end: size);
+    _move.forward(from: 0);
   }
 
   @override
   void didUpdateWidget(MapSheet old) {
     super.didUpdateWidget(old);
+    final key = widget.child.key;
+    if (old.child.key != key) {
+      _forward = widget.showClose;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _attached = key;
+      } else {
+        // shortcut: changes faster than one every 150 ms for 350 ms can leave no list attached for a moment (a drag
+        // then does nothing); a tap's pace never does.
+        Future<void>.delayed(_page * (150 / 350), () {
+          if (mounted && widget.child.key == key) {
+            setState(() => _attached = key);
+          }
+        });
+      }
+    }
     if (old.shown != widget.shown) {
       WidgetsBinding.instance.addPostFrameCallback(
         // A wide screen's side panel rises all the way: half of a phone on its side is a few lines.
@@ -113,6 +181,7 @@ class _MapSheetState extends State<MapSheet> {
 
   void _drag(DragUpdateDetails d) {
     if (!widget.controller.isAttached) return;
+    _move.stop(); // the finger wins
     widget.controller.jumpTo(
       (widget.controller.size - d.primaryDelta! / _height).clamp(_min, _max),
     );
@@ -130,6 +199,35 @@ class _MapSheetState extends State<MapSheet> {
         ? sizes.lastWhere((s) => s < now - 0.01, orElse: () => _min)
         : sizes.reduce((a, b) => (a - now).abs() < (b - now).abs() ? a : b);
     _to(target);
+  }
+
+  /// [animation] runs 0 -> 1 for the new content and 1 -> 0 for the old one.
+  Widget _transition(Widget content, Animation<double> animation) {
+    final incoming = content.key == widget.child.key;
+    final side = (_forward ? 1 : -1) * (incoming ? 0.3 : -0.3);
+    final attached = content.key == _attached;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final t = incoming ? animation.value : 1 - animation.value;
+        final moved = incoming ? 1 - _slide.transform(t) : _slide.transform(t);
+        // Always this widget, only its controller changes: the content's list keeps its state.
+        final scroll = PrimaryScrollController.maybeOf(context);
+        return FractionalTranslation(
+          translation: Offset(side * moved, 0),
+          child: Opacity(
+            opacity: incoming
+                ? _inFade.transform(t)
+                : 1 - _outFade.transform(t),
+            child: PrimaryScrollController(
+              controller: attached && scroll != null ? scroll : _spare,
+              child: child!,
+            ),
+          ),
+        );
+      },
+      child: content,
+    );
   }
 
   @override
@@ -226,7 +324,21 @@ class _MapSheetState extends State<MapSheet> {
                                     _handle,
                                 child: child!,
                               ),
-                              child: widget.child,
+                              child: AnimatedSwitcher(
+                                duration:
+                                    MediaQuery.disableAnimationsOf(context)
+                                    ? Duration.zero
+                                    : _page,
+                                layoutBuilder: (current, previous) => Stack(
+                                  alignment: Alignment.topCenter,
+                                  children: [...previous, ?current],
+                                ),
+                                // A new closure each build: the switcher re-runs the old content's transition too
+                                // (direction, who holds the scroll).
+                                transitionBuilder: (child, animation) =>
+                                    _transition(child, animation),
+                                child: widget.child,
+                              ),
                             ),
                           ),
                         ),

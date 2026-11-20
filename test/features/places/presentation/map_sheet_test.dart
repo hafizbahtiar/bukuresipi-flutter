@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// A 400 x 800 map with the sheet on it; [shown] / [showClose] as the map page passes them.
 class _Host extends StatefulWidget {
-  const _Host({required this.closed});
+  const _Host({required this.closed, this.keyed = false});
 
   final List<Object?> closed;
+
+  /// Each thing shown is its own content (keyed), as the map page's: the sheet animates the change.
+  final bool keyed;
 
   @override
   State<_Host> createState() => _HostState();
@@ -40,9 +43,10 @@ class _HostState extends State<_Host> {
             });
           },
           child: Builder(
+            key: widget.keyed ? ValueKey(shown) : null,
             builder: (context) => ListView(
               children: [
-                const Text('Title'),
+                Text(widget.keyed ? 'Page $shown' : 'Title'),
                 // A content's "done", as the place sheets call it.
                 TextButton(
                   onPressed: () => sheetCloser(context)('saved'),
@@ -63,11 +67,16 @@ void main() {
     WidgetTester t,
     List<Object?> closed, {
     Size size = const Size(400, 800),
+    bool keyed = false,
   }) async {
     t.view.physicalSize = size;
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    await t.pumpWidget(MaterialApp(home: _Host(closed: closed)));
+    await t.pumpWidget(
+      MaterialApp(
+        home: _Host(closed: closed, keyed: keyed),
+      ),
+    );
     await t.pumpAndSettle();
     return t.state<_HostState>(find.byType(_Host));
   }
@@ -119,6 +128,41 @@ void main() {
     await t.pumpAndSettle();
     expect(sheetHeight(t), moreOrLessEquals(300, epsilon: 1)); // 400 - top 100
   });
+
+  testWidgets(
+    'a new content slides in as the old one fades away; then its list moves the sheet',
+    (t) async {
+      final host = await pump(t, [], keyed: true);
+      host.pick();
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 100));
+      expect(find.text('Page 0'), findsOneWidget); // fading out
+      expect(find.text('Page 1'), findsOneWidget); // sliding in, from the right
+      expect(
+        t.getTopLeft(find.text('Page 1')).dx,
+        greaterThan(t.getTopLeft(find.text('Page 0')).dx),
+      );
+      await t.pumpAndSettle();
+      expect(find.text('Page 0'), findsNothing);
+      expect(sheetHeight(t), moreOrLessEquals(400, epsilon: 1));
+      // The new content's list holds the sheet's scroll now: a fling up opens it full.
+      await t.fling(find.text('Page 1'), const Offset(0, -300), 2000);
+      await t.pumpAndSettle();
+      expect(sheetHeight(t), moreOrLessEquals(700, epsilon: 1));
+      expect(t.takeException(), isNull);
+
+      // Back (the X): the list comes in from the left.
+      await t.tap(find.byKey(const ValueKey('map-sheet-close')));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 100));
+      expect(
+        t.getTopLeft(find.text('Page 2')).dx,
+        lessThan(t.getTopLeft(find.text('Page 1')).dx),
+      );
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+    },
+  );
 
   testWidgets("a content's done closes the sheet's pick, not the page", (
     t,
