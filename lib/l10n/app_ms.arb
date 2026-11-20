@@ -1180,5 +1180,6 @@
   "jakimDownShort": "JAKIM tidak menjawab",
   "companiesDone": "{count, plural, =1{1 cawangan dibaca semula.} other{{count} cawangan dibaca semula.}}",
   "ownerSaving": "Menyimpan…",
-  "ownerSearching": "Mencari…"
+  "ownerSearching": "Mencari…",
+  "mapLabelNotListed": "Belum ada dalam Bukuresipi."
 }

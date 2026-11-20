@@ -15,6 +15,7 @@ import '../../domain/report.dart';
 import '../places_controller.dart';
 import '../pages/branch_edit_page.dart';
 import 'halal_status.dart';
+import 'map_sheet.dart';
 import 'notebook_rating.dart';
 import 'place_report_sheet.dart';
 
@@ -51,7 +52,7 @@ class _NearbySheetState extends State<NearbySheet> {
   Future<void> _edit() async {
     final owner = context.read<AuthController>().user?.isOwner ?? false;
     final places = context.read<PlacesController>();
-    final navigator = Navigator.of(context);
+    final close = sheetCloser(context);
     final p = widget.place;
     final saved = await showBranchEdit(
       context,
@@ -80,19 +81,19 @@ class _NearbySheetState extends State<NearbySheet> {
     );
     if (saved != true || !mounted) return;
     await widget.onEdited?.call();
-    if (mounted) navigator.pop();
+    if (mounted) close(null);
   }
 
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
+    final close = sheetCloser(context);
     setState(() => _saving = true);
     try {
       await widget.onSave();
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l.nearbySaved)));
-      navigator.pop();
+      close(null);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {

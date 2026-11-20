@@ -3165,5 +3165,7 @@
   "ownerSaving": "Saving…",
   "@ownerSaving": {},
   "ownerSearching": "Searching…",
-  "@ownerSearching": {}
+  "@ownerSearching": {},
+  "mapLabelNotListed": "Not in Bukuresipi yet.",
+  "@mapLabelNotListed": {}
 }
