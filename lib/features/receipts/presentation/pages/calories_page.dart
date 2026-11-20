@@ -289,6 +289,30 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           CalorieChart(days: days.days, target: target),
+          // The chart draws kcal; the range's carbs/protein/fat as a day's average, over the days whose lines all
+          // have numbers (a partial day would pull the average down).
+          if ([
+                for (final d in days.days)
+                  if (d.eatenKcal > 0) ?d.macros,
+              ]
+              case final known when known.isNotEmpty)
+            Padding(
+              key: const ValueKey('calorie-macros'),
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                l.caloriesMacrosAverage(
+                  known.length,
+                  l.mealMacros(
+                    _g(known.fold(0.0, (s, m) => s + m.carbsG) / known.length),
+                    _g(
+                      known.fold(0.0, (s, m) => s + m.proteinG) / known.length,
+                    ),
+                    _g(known.fold(0.0, (s, m) => s + m.fatG) / known.length),
+                  ),
+                ),
+                style: text.bodySmall,
+              ),
+            ),
           const SizedBox(height: 4),
           Text(
             l.caloriesDisclaimer,

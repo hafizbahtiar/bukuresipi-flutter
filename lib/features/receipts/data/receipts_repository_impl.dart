@@ -172,6 +172,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
             eatenKcal: (d['eatenKcal'] as num).round(),
             hasEstimate: d['hasEstimate'] as bool,
             unknownEaten: (d['unknownEaten'] as num).toDouble(),
+            macros: _macros(d['macros']),
           ),
       ],
       target: j['target'] as int?,

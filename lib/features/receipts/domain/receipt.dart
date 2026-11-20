@@ -123,6 +123,7 @@ typedef CalorieDay = ({
   int eatenKcal,
   bool hasEstimate,
   double unknownEaten,
+  Macros? macros,
 });
 
 /// The last 7 / 30 days of calories, oldest first, against [target].

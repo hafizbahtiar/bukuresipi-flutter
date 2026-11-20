@@ -1197,5 +1197,6 @@
   "recipeServesLess": "Kurang orang",
   "recipeServesMore": "Lebih orang",
   "recipeServingsField": "Untuk (orang)",
-  "recipeServingsHint": "1 hingga 50. Kosongkan jika resipi tidak menyebutnya."
+  "recipeServingsHint": "1 hingga 50. Kosongkan jika resipi tidak menyebutnya.",
+  "caloriesMacrosAverage": "Purata {days} hari: {macros}"
 }
