@@ -3168,5 +3168,7 @@
   "@mapLabelNotListed": {},
   "yourBranch": "Your branch",
   "yourBranchMake": "Make this my branch",
-  "yourBranchSet": "This is now your branch."
+  "yourBranchSet": "This is now your branch.",
+  "branchesShowAll": "Show all {count} branches",
+  "@branchesShowAll": {"placeholders": {"count": {"type": "int"}}}
 }

@@ -283,6 +283,43 @@ void main() {
     expect(find.text('Remove'), findsNothing);
   });
 
+  testWidgets('a chain lists your branch and 10 more, then Show all', (
+    t,
+  ) async {
+    final p = place(id: 'a');
+    repo = FakePlaces()
+      ..places = [
+        p.copyWith(
+          branches: [
+            for (var i = 2; i <= 30; i++)
+              Branch(id: 'b-$i', label: 'Cawangan $i'),
+            ...p.branches,
+          ],
+        ),
+      ];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await tapKey(t, 'place-tab-branches');
+    // Yours first, though the server sent it last.
+    expect(find.byKey(const ValueKey('branch-b-1')), findsOneWidget);
+    final more = find.byKey(const ValueKey('branches-show-all'));
+    await t.scrollUntilVisible(
+      more,
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.byKey(const ValueKey('branch-b-11')), findsOneWidget);
+    expect(find.byKey(const ValueKey('branch-b-12')), findsNothing);
+    expect(find.text('Show all 30 branches'), findsOneWidget);
+    await t.tap(more);
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(
+      find.byKey(const ValueKey('branch-b-30')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(more, findsNothing);
+  });
+
   testWidgets('make this my branch: another branch of a saved place', (
     t,
   ) async {

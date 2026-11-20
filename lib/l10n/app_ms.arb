@@ -1183,5 +1183,6 @@
   "mapLabelNotListed": "Belum ada dalam Bukuresipi.",
   "yourBranch": "Cawangan anda",
   "yourBranchMake": "Jadikan cawangan saya",
-  "yourBranchSet": "Ini cawangan anda sekarang."
+  "yourBranchSet": "Ini cawangan anda sekarang.",
+  "branchesShowAll": "Tunjuk semua {count} cawangan"
 }

@@ -46,6 +46,11 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
   final _note = TextEditingController();
   String? _savedNote; // what the server has; null until the place is shown
   bool _savingNote = false;
+
+  /// A chain (hundreds of outlets): your branch and the next [_branchesShown], then "Show all".
+  /// shortcut: GET /places still sends every branch; page them on the server when a chain makes the Book slow.
+  static const _branchesShown = 10;
+  bool _allBranches = false;
   bool _checking = false;
 
   @override
@@ -406,9 +411,20 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 id: 'place-tab-branches',
                 label: '${l.branchesTitle} (${branches.length})',
                 rows: [
-                  for (final b in branches) ...[
+                  for (final b
+                      in _allBranches
+                          ? branches
+                          : branches.take(_branchesShown + 1))
                     _BranchRow(place: place, branch: b, owner: owner),
-                  ],
+                  if (!_allBranches && branches.length > _branchesShown + 1)
+                    Padding(
+                      padding: const EdgeInsets.all(spaceS),
+                      child: TextButton(
+                        key: const ValueKey('branches-show-all'),
+                        onPressed: () => setState(() => _allBranches = true),
+                        child: Text(l.branchesShowAll(branches.length)),
+                      ),
+                    ),
                 ],
               ),
             if (r.isFood)
