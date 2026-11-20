@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/utils/open_link.dart';
+import '../../../../core/widgets/ai_button.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
 import '../../../../l10n/gen/app_localizations.dart';
@@ -46,6 +48,8 @@ class _PantryPageState extends State<PantryPage> {
   int _query = 0;
   List<PantryMatch>? _results;
   bool _finding = false;
+  List<DishSuggestion>? _dishes;
+  bool _suggesting = false;
 
   @override
   void initState() {
@@ -129,11 +133,31 @@ class _PantryPageState extends State<PantryPage> {
         _have,
         staples: _staples,
       );
-      if (mounted) setState(() => _results = r);
+      if (mounted) {
+        setState(() {
+          _results = r;
+          _dishes = null;
+        });
+      }
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
       if (mounted) setState(() => _finding = false);
+    }
+  }
+
+  /// Nothing fits: dish names from AI (no recipe made up); a tap searches the web for one.
+  Future<void> _suggestDishes() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _suggesting = true);
+    try {
+      final d = await context.read<RecipesController>().suggestDishes(_have);
+      if (mounted) setState(() => _dishes = d);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _suggesting = false);
     }
   }
 
@@ -235,7 +259,7 @@ class _PantryPageState extends State<PantryPage> {
               label: Text(l.pantryFind),
             ),
           ),
-          if (results != null && results.isEmpty)
+          if (results != null && results.isEmpty) ...[
             Padding(
               padding: const EdgeInsets.all(spaceM),
               child: Text(
@@ -243,6 +267,50 @@ class _PantryPageState extends State<PantryPage> {
                 style: text.bodyMedium?.copyWith(color: nb.inkSoft),
               ),
             ),
+            if (_dishes == null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: AiButton(
+                    key: const ValueKey('pantry-suggest'),
+                    label: l.pantrySuggest,
+                    busy: _suggesting,
+                    onPressed: _suggestDishes,
+                  ),
+                ),
+              )
+            else if (_dishes!.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                child: Text(
+                  l.pantrySuggestNone,
+                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                ),
+              )
+            else ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                child: Text(
+                  l.pantrySuggestNote,
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                ),
+              ),
+              for (final d in _dishes!)
+                ListTile(
+                  key: ValueKey('pantry-dish-${d.name}'),
+                  leading: const AiBadge(),
+                  title: Text(d.name, style: text.titleMedium),
+                  subtitle: Text(l.pantryUses(d.uses.join(', '))),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => openLink(
+                    context,
+                    'https://www.google.com/search?q=${Uri.encodeQueryComponent('resepi ${d.name}')}',
+                    failed: l.openFailed,
+                  ),
+                ),
+            ],
+          ],
           if (results != null)
             for (final m in results)
               ListTile(

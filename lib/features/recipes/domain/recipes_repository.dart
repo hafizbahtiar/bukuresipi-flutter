@@ -46,6 +46,9 @@ abstract interface class RecipesRepository {
     bool staples = true,
   });
 
+  /// Nothing fits: up to 3 dish names AI makes from [ingredients] (no steps). Throws `suggest_limit` (10 a day).
+  Future<List<DishSuggestion>> suggestDishes(List<String> ingredients);
+
   /// Catalogue ingredient names matching [query] (2+ characters).
   Future<List<String>> searchIngredients(String query);
 

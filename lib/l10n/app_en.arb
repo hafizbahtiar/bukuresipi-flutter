@@ -2038,7 +2038,9 @@
   "@feedRestaurants": {},
   "feedSaysHalal": "Says halal",
   "placeRegular": "Your regular",
-  "@placeRegular": { "description": "Tag on a place the user went to 3+ times in 90 days (their own confirmed receipts)" },
+  "@placeRegular": {
+    "description": "Tag on a place the user went to 3+ times in 90 days (their own confirmed receipts)"
+  },
   "@feedSaysHalal": {},
   "feedJakimHalal": "JAKIM halal",
   "@feedJakimHalal": {},
@@ -2950,6 +2952,22 @@
   "@pantryAddMissing": {},
   "pantryAdded": "Added to your shopping list",
   "@pantryAdded": {},
+  "pantrySuggest": "Suggest a dish",
+  "@pantrySuggest": {},
+  "pantrySuggestNote": "AI names a dish you could make with these. Tap one to look for a recipe online.",
+  "@pantrySuggestNote": {},
+  "pantrySuggestNone": "No dish comes to mind with these. Add a few more ingredients.",
+  "@pantrySuggestNone": {},
+  "pantryUses": "Uses: {items}",
+  "@pantryUses": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "errSuggestLimit": "That's 10 dish suggestions today. Try again tomorrow.",
+  "@errSuggestLimit": {},
   "ownerEditsEveryone": "Owner: every user sees what you save here",
   "@ownerEditsEveryone": {},
   "saveForEveryone": "Save for everyone",
@@ -3169,30 +3187,89 @@
   "mapLabelNotListed": "Not in Bukuresipi yet.",
   "@mapLabelNotListed": {},
   "yourBranch": "Your branch",
+  "@yourBranch": {},
   "yourBranchMake": "Make this my branch",
+  "@yourBranchMake": {},
   "yourBranchSet": "This is now your branch.",
+  "@yourBranchSet": {},
   "branchesShowAll": "Show all {count} branches",
-  "@branchesShowAll": {"placeholders": {"count": {"type": "int"}}},
+  "@branchesShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "shareSendScreenshot": "Send a screenshot",
+  "@shareSendScreenshot": {},
   "spendingBudget": "Monthly food budget",
+  "@spendingBudget": {},
   "spendingBudgetSet": "Set a monthly budget",
+  "@spendingBudgetSet": {},
   "spendingBudgetRange": "RM 10 to RM 100,000. Leave empty for none.",
+  "@spendingBudgetRange": {},
   "spendingBudgetOf": "This month: {spent} of {budget}",
-  "@spendingBudgetOf": {"placeholders": {"spent": {"type": "String"}, "budget": {"type": "String"}}},
+  "@spendingBudgetOf": {
+    "placeholders": {
+      "spent": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
+  },
   "spendingBudgetLeft": "{amount} left",
-  "@spendingBudgetLeft": {"placeholders": {"amount": {"type": "String"}}},
+  "@spendingBudgetLeft": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "spendingBudgetOver": "{amount} over",
-  "@spendingBudgetOver": {"placeholders": {"amount": {"type": "String"}}},
+  "@spendingBudgetOver": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "recipeServes": "Serves {n}",
-  "@recipeServes": {"placeholders": {"n": {"type": "int"}}},
+  "@recipeServes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "recipeServesScaled": "Amounts changed from {n}: words like “to taste” stay as written",
-  "@recipeServesScaled": {"placeholders": {"n": {"type": "int"}}},
+  "@recipeServesScaled": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "recipeServesLess": "Fewer people",
+  "@recipeServesLess": {},
   "recipeServesMore": "More people",
+  "@recipeServesMore": {},
   "recipeServingsField": "Serves (people)",
+  "@recipeServingsField": {},
   "recipeServingsHint": "1 to 50. Empty if the recipe does not say.",
+  "@recipeServingsHint": {},
   "caloriesMacrosAverage": "Average of {days} days: {macros}",
-  "@caloriesMacrosAverage": {"placeholders": {"days": {"type": "int"}, "macros": {"type": "String"}}},
+  "@caloriesMacrosAverage": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "macros": {
+        "type": "String"
+      }
+    }
+  },
   "ownerBannedNoEmail": "Banned. The email to the user was not sent.",
   "@ownerBannedNoEmail": {}
 }

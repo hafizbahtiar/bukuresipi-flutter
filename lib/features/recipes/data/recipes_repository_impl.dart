@@ -207,6 +207,22 @@ class RecipesRepositoryImpl implements RecipesRepository {
       apiCall(() => _dio.delete<void>('/recipes/$id'));
 
   @override
+  Future<List<DishSuggestion>> suggestDishes(List<String> ingredients) =>
+      apiCall(() async {
+        final data = (await _dio.post<Map<String, dynamic>>(
+          '/recipes/from-pantry/suggest',
+          data: {'ingredients': ingredients},
+        )).data!;
+        return [
+          for (final d in (data['dishes'] as List).cast<Map<String, dynamic>>())
+            (
+              name: d['name'] as String,
+              uses: (d['uses'] as List).cast<String>(),
+            ),
+        ];
+      });
+
+  @override
   Future<List<PantryMatch>> fromPantry(
     List<String> ingredients, {
     bool staples = true,

@@ -217,6 +217,9 @@ typedef PantryMatch = ({
   List<String> unknown,
 });
 
+/// A dish AI named for ingredients no recipe fits: a name only; [uses] = the user's own ingredients it takes.
+typedef DishSuggestion = ({String name, List<String> uses});
+
 const _glyphs = {'½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3};
 
 /// One amount as written: "2", "1.5", "1/2", "1 1/2", "1½"; null = words ("secukupnya") or anything else.
