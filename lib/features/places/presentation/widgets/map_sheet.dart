@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 
 /// Inside the map's sheet, a content's "done" (saved, edited, deleted) goes back to the sheet's list; in a modal
 /// sheet (Home's nearby sheet) it pops as before.
@@ -36,7 +37,8 @@ ValueChanged<Object?> sheetCloser(BuildContext context) {
 }
 
 /// The map's sheet, as Google Maps': always on screen, never closed, only lowered to its peek (the handle and the
-/// first line of what it shows). Three heights: peek, half, full (the map's top stays in view). Its content's own
+/// first line of what it shows). Three heights: peek, half, full (the map's top stays in view); on a wide screen the
+/// map page puts it in a left column ([sidePanelWidth]) and a pick opens it full. Its content's own
 /// list scrolls it (the content's ListView takes the sheet's controller as its primary one); anywhere else drags it.
 class MapSheet extends StatefulWidget {
   const MapSheet({
@@ -97,7 +99,14 @@ class _MapSheetState extends State<MapSheet> {
     super.didUpdateWidget(old);
     if (old.shown != widget.shown) {
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _to(widget.showClose ? MapSheet.half : _min),
+        // A wide screen's side panel rises all the way: half of a phone on its side is a few lines.
+        (_) => _to(
+          !widget.showClose
+              ? _min
+              : isWide(context)
+              ? _max
+              : MapSheet.half,
+        ),
       );
     }
   }

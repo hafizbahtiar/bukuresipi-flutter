@@ -59,8 +59,12 @@ class _HostState extends State<_Host> {
 }
 
 void main() {
-  Future<_HostState> pump(WidgetTester t, List<Object?> closed) async {
-    t.view.physicalSize = const Size(400, 800);
+  Future<_HostState> pump(
+    WidgetTester t,
+    List<Object?> closed, {
+    Size size = const Size(400, 800),
+  }) async {
+    t.view.physicalSize = size;
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
     await t.pumpWidget(MaterialApp(home: _Host(closed: closed)));
@@ -105,6 +109,15 @@ void main() {
     await t.pumpAndSettle();
     expect(closed, [null]);
     expect(find.byKey(const ValueKey('map-sheet-close')), findsNothing);
+  });
+
+  testWidgets('on a wide screen (a phone on its side) a pick opens it full', (
+    t,
+  ) async {
+    final host = await pump(t, [], size: const Size(800, 400));
+    host.pick();
+    await t.pumpAndSettle();
+    expect(sheetHeight(t), moreOrLessEquals(300, epsilon: 1)); // 400 - top 100
   });
 
   testWidgets("a content's done closes the sheet's pick, not the page", (

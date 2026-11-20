@@ -898,7 +898,11 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     unawaited(
       quietMap(
         _map?.updateContentInsets(
-          EdgeInsets.only(bottom: what == null ? 0 : height * MapSheet.half),
+          what == null
+              ? EdgeInsets.zero
+              : isWide(context)
+              ? EdgeInsets.only(left: _panelLeft(context) + sidePanelWidth)
+              : EdgeInsets.only(bottom: height * MapSheet.half),
         ),
       ),
     );
@@ -1107,11 +1111,16 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _ => const SizedBox.shrink(),
   };
 
+  /// On a wide screen, where the side panel and the search bar above it start (past a notch on its side).
+  double _panelLeft(BuildContext context) =>
+      12 + MediaQuery.paddingOf(context).left;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final places = context.watch<PlacesController>();
+    final side = isWide(context);
     // No app bar: the search bar floats on the map, the buttons below it. The keyboard covers the map and the
     // sheet (resizing a native map view stutters).
     final belowBar =
@@ -1162,7 +1171,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                 logoEnabled: false,
                 // The credit OpenStreetMap needs stays, as a faint "i" in the bottom-left corner.
                 attributionButtonPosition: AttributionButtonPosition.bottomLeft,
-                attributionButtonMargins: Point(8, peek + 8),
+                attributionButtonMargins: Point(
+                  side ? _panelLeft(context) + sidePanelWidth + 8 : 8,
+                  side ? 8 : peek + 8,
+                ),
                 attributionButtonColor: nb.ink.withValues(alpha: 0.3),
               ),
               if (_map != null)
@@ -1213,8 +1225,13 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                   ),
                 ),
               // Keyed: the slips above come and go, and a re-created sheet would attach its controller twice.
-              Positioned.fill(
+              Positioned(
                 key: const ValueKey('map-sheet-host'),
+                top: 0,
+                bottom: 0,
+                left: side ? _panelLeft(context) : 0,
+                width: side ? sidePanelWidth : null,
+                right: side ? null : 0,
                 child: MapSheet(
                   controller: _sheet,
                   peek: peek,
@@ -1229,10 +1246,14 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                 ),
               ),
               // Last: its results drop over everything else.
+              // On a wide screen, over the side panel (its SafeArea takes the notch off the left).
               Positioned(
                 top: 0,
                 left: 12,
-                right: 12,
+                width: side
+                    ? sidePanelWidth + MediaQuery.paddingOf(context).left
+                    : null,
+                right: side ? null : 12,
                 child: SafeArea(
                   bottom: false,
                   child: Padding(
