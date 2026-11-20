@@ -40,7 +40,7 @@ class PushController extends ChangeNotifier {
   /// The user tapped a share's notification: open it.
   void Function(String shareId)? onTap;
 
-  /// The user tapped a push that is not a share's: `sign_in` ("new sign-in to your account") or `family`.
+  /// The user tapped a push that is not a share's: `sign_in` ("new sign-in to your account"), `family` or `badge`.
   void Function(String type)? onTypeTap;
 
   bool _allowed = false;
