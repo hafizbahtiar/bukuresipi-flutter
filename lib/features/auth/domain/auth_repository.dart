@@ -19,6 +19,9 @@ abstract interface class AuthRepository {
   /// The daily calorie target (500-10,000 kcal); null clears it.
   Future<User> setKcalTarget(int? kcal);
 
+  /// The monthly food budget in sen (RM 10 to RM 100,000); null clears it.
+  Future<User> setFoodBudget(int? sen);
+
   /// Profile picture from a local JPEG; returns the user with its new avatar id.
   Future<User> setAvatar(String path);
   Future<User> removeAvatar();

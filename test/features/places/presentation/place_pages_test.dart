@@ -283,6 +283,80 @@ void main() {
     expect(find.text('Remove'), findsNothing);
   });
 
+  testWidgets('a chain lists your branch and 10 more, then Show all', (
+    t,
+  ) async {
+    final p = place(id: 'a');
+    repo = FakePlaces()
+      ..places = [
+        p.copyWith(
+          branches: [
+            for (var i = 2; i <= 30; i++)
+              Branch(id: 'b-$i', label: 'Cawangan $i'),
+            ...p.branches,
+          ],
+        ),
+      ];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await tapKey(t, 'place-tab-branches');
+    // Yours first, though the server sent it last.
+    expect(find.byKey(const ValueKey('branch-b-1')), findsOneWidget);
+    final more = find.byKey(const ValueKey('branches-show-all'));
+    await t.scrollUntilVisible(
+      more,
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.byKey(const ValueKey('branch-b-11')), findsOneWidget);
+    expect(find.byKey(const ValueKey('branch-b-12')), findsNothing);
+    expect(find.text('Show all 30 branches'), findsOneWidget);
+    await t.tap(more);
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(
+      find.byKey(const ValueKey('branch-b-30')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(more, findsNothing);
+  });
+
+  testWidgets('make this my branch: another branch of a saved place', (
+    t,
+  ) async {
+    final p = place(id: 'a');
+    repo = FakePlaces()
+      ..places = [
+        p.copyWith(
+          branches: [
+            ...p.branches,
+            const Branch(id: 'b-2', label: 'Bangi'),
+          ],
+        ),
+      ];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await tapKey(t, 'place-tab-branches');
+    expect(find.byKey(const ValueKey('branch-mine-b-1')), findsOneWidget);
+    final tile = find.byKey(const ValueKey('branch-b-2'));
+    await t.ensureVisible(tile);
+    await t.tap(find.descendant(of: tile, matching: find.byTooltip('More')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Make this my branch'));
+    await t.pumpAndSettle();
+    expect(repo.myBranches, {'a': 'b-2'});
+    expect(find.text('This is now your branch.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('branch-mine-b-2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('branch-mine-b-1')), findsNothing);
+    // Already yours: no such item.
+    await t.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('branch-b-2')),
+        matching: find.byTooltip('More'),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('Make this my branch'), findsNothing);
+  });
+
   testWidgets(
     'halal is shown as the post\'s quote with its source, never as a badge',
     (t) async {
@@ -1803,6 +1877,11 @@ void main() {
       );
       // Why, for whoever is looking into it.
       expect(find.textContaining('ai_failed'), findsOneWidget);
+      // Or the post as a screenshot instead.
+      expect(
+        find.byKey(const ValueKey('problem-screenshot-s2')),
+        findsOneWidget,
+      );
       shared = [];
     },
   );

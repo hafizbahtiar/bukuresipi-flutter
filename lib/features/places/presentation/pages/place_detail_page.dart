@@ -46,6 +46,11 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
   final _note = TextEditingController();
   String? _savedNote; // what the server has; null until the place is shown
   bool _savingNote = false;
+
+  /// A chain (hundreds of outlets): your branch and the next [_branchesShown], then "Show all".
+  /// shortcut: GET /places still sends every branch; page them on the server when a chain makes the Book slow.
+  static const _branchesShown = 10;
+  bool _allBranches = false;
   bool _checking = false;
 
   @override
@@ -406,14 +411,20 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                 id: 'place-tab-branches',
                 label: '${l.branchesTitle} (${branches.length})',
                 rows: [
-                  for (final b in branches) ...[
-                    _BranchRow(
-                      place: place,
-                      branch: b,
-                      fromPost: b == branch && place.branchId != null,
-                      owner: owner,
+                  for (final b
+                      in _allBranches
+                          ? branches
+                          : branches.take(_branchesShown + 1))
+                    _BranchRow(place: place, branch: b, owner: owner),
+                  if (!_allBranches && branches.length > _branchesShown + 1)
+                    Padding(
+                      padding: const EdgeInsets.all(spaceS),
+                      child: TextButton(
+                        key: const ValueKey('branches-show-all'),
+                        onPressed: () => setState(() => _allBranches = true),
+                        child: Text(l.branchesShowAll(branches.length)),
+                      ),
                     ),
-                  ],
                 ],
               ),
             if (r.isFood)
@@ -518,14 +529,23 @@ class _BranchRow extends StatelessWidget {
   const _BranchRow({
     required this.place,
     required this.branch,
-    required this.fromPost,
     required this.owner,
   });
 
   final Place place;
   final Branch branch;
-  final bool fromPost;
   final bool owner;
+
+  Future<void> _makeMine(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<PlacesController>().setBranch(place.id, branch.id);
+      messenger.showSnackBar(SnackBar(content: Text(l.yourBranchSet)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -541,7 +561,7 @@ class _BranchRow extends StatelessWidget {
         branch.hasPin ? Icons.place : Icons.location_off_outlined,
         color: branch.hasPin ? nb.pandanDeep : nb.kunyit,
       ),
-      tags: branchTags(l, branch, fromPost: fromPost),
+      tags: branchTags(l, branch, mine: place.isMyBranch(branch)),
       onTap: () => BranchPage.open(context, place, branch),
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,6 +584,12 @@ class _BranchRow extends StatelessWidget {
           label: l.reviewsTitle,
           onTap: () => context.push('/branches/${branch.id}/reviews'),
         ),
+        if (place.mine && !place.isMyBranch(branch) && !branch.closed)
+          MenuAction(
+            icon: Icons.where_to_vote_outlined,
+            label: l.yourBranchMake,
+            onTap: () => _makeMine(context),
+          ),
         if (owner)
           MenuAction(
             icon: Icons.delete_outline,

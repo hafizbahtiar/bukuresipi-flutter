@@ -11,6 +11,7 @@ class User {
     this.google = false,
     this.avatar,
     this.kcalTarget,
+    this.foodBudgetSen,
   });
 
   final String id;
@@ -31,6 +32,9 @@ class User {
 
   /// The daily calorie target the user set (Receipts); null = none.
   final int? kcalTarget;
+
+  /// The monthly food budget the user set (Spending), in sen; null = none.
+  final int? foodBudgetSen;
 
   bool get isOwner => role == 'owner';
 }

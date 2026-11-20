@@ -17,6 +17,9 @@ abstract interface class PlacesRepository {
   /// "Only me": keeps the caller's own save out of the family book.
   Future<void> setPrivate(String id, bool private);
 
+  /// "Make this my branch": another branch of the same saved place.
+  Future<void> setBranch(String id, String branchId);
+
   /// The user's own pin for an unpinned branch (one per user + branch; moving it replaces it).
   Future<void> setPin(String branchId, double lat, double lng);
 

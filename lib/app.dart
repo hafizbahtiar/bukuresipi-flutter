@@ -9,6 +9,7 @@ import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
 import 'core/settings/theme_controller.dart';
 import 'core/theme/app_theme.dart';
+import 'features/home/presentation/pages/home_page.dart';
 import 'features/auth/presentation/auth_controller.dart';
 import 'features/places/presentation/places_controller.dart';
 import 'features/push/push_controller.dart';
@@ -48,10 +49,11 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
       push
         ..onForeground = _foreground
         ..onTap = _openShare
-        // A new sign-in opens the device list (sign that one out); a family change opens the family.
+        // A new sign-in opens the device list (sign that one out); a family change opens the family; a badge, Badges.
         ..onTypeTap = ((type) => switch (type) {
           'sign_in' => _router.push('/account/sessions'),
           'family' => _router.push('/family'),
+          'badge' => _router.push('/badges'),
           _ => null,
         })
         ..start();
@@ -74,12 +76,17 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 5),
           content: Text(push.body == null ? title : '$title\n${push.body}'),
-          action: shareId == null
-              ? null
-              : SnackBarAction(
+          action: shareId != null
+              ? SnackBarAction(
                   label: AppLocalizations.of(context).openPlace,
                   onPressed: () => _openShare(shareId),
-                ),
+                )
+              : push.data['type'] == 'badge'
+              ? SnackBarAction(
+                  label: AppLocalizations.of(context).badgesTitle,
+                  onPressed: () => _router.push('/badges'),
+                )
+              : null,
         ),
       );
   }
@@ -109,7 +116,8 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     } catch (_) {
       // Signed out, offline or gone: the book is the right place anyway.
     }
-    _router.go('/');
+    // Couldn't read (or nothing found): the Book's row has Try again and Send a screenshot.
+    _router.go('/', extra: HomePage.bookTab);
   }
 
   @override

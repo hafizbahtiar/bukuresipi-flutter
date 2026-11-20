@@ -67,7 +67,9 @@ RecipeDetail recipeDetail({
   String? cover,
   String id = 'r-1',
   String name = 'Nasi Lemak Ayam',
+  int? servings,
 }) => RecipeDetail(
+  servings: servings,
   cover: cover,
   sourceType: sourceType,
   canEdit: canEdit,
@@ -257,14 +259,18 @@ class FakeRecipes implements RecipesRepository {
 
   final created = <(String, List<String>, List<String>)>[];
 
+  final servingsSent = <int?>[];
+
   @override
   Future<RecipeDetail> create({
     required String name,
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   }) async {
     created.add((name, ingredients, steps));
+    servingsSent.add(servings);
     optionals.add(optional);
     return detailResult!;
   }
@@ -276,8 +282,10 @@ class FakeRecipes implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   }) async {
     edited.add((id, name, ingredients, steps));
+    servingsSent.add(servings);
     optionals.add(optional);
     return detailResult!;
   }

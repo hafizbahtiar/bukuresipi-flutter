@@ -250,6 +250,9 @@ class Place {
       branches.where((b) => b.id == branchId).firstOrNull ??
       branches.firstOrNull;
 
+  /// The branch this save names (its post's, or the one the user made theirs).
+  bool isMyBranch(Branch b) => branchId != null && b.id == branchId;
+
   /// Branches with coordinates. A branch that did not geocode has none: no pin beats a wrong pin.
   List<Branch> get pins => branches.where((b) => b.hasPin).toList();
 
@@ -260,6 +263,7 @@ class Place {
     Object? note = _keep,
     List<Branch>? branches,
     bool? private,
+    String? branchId,
   }) => Place(
     id: id,
     mine: mine,
@@ -267,7 +271,7 @@ class Place {
     savedBy: savedBy,
     note: identical(note, _keep) ? this.note : note as String?,
     createdAt: createdAt,
-    branchId: branchId,
+    branchId: branchId ?? this.branchId,
     restaurant: restaurant,
     branches: branches ?? this.branches,
     sourceUrl: sourceUrl,

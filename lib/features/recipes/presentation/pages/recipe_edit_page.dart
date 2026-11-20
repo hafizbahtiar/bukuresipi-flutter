@@ -216,6 +216,10 @@ class RecipeEditPage extends StatefulWidget {
 
 class _RecipeEditPageState extends State<RecipeEditPage> {
   late final _name = TextEditingController(text: widget.recipe?.name);
+  late final _servings = TextEditingController(
+    text: widget.recipe?.servings?.toString() ?? '',
+  );
+  bool _servingsBad = false;
   late final List<_Ingredient> _ingredients = switch (widget.recipe) {
     final r? when r.ingredients.isNotEmpty => [
       for (final i in r.ingredients)
@@ -290,6 +294,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     _scroll.dispose();
     _pages.dispose();
     _name.dispose();
+    _servings.dispose();
     for (final r in [..._ingredients, ..._gone.whereType<_Ingredient>()]) {
       r.dispose();
     }
@@ -301,6 +306,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
 
   String _snapshot() => [
     _name.text.trim(),
+    _servings.text.trim(),
     for (final r in _ingredients) '${r.line} ${r.optional}',
     '|',
     for (final s in _steps) s.text.text.trim(),
@@ -663,6 +669,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final name = _name.text.trim();
+    final servingsText = _servings.text.trim();
+    final servings = int.tryParse(servingsText);
+    final servingsBad =
+        servingsText.isNotEmpty &&
+        (servings == null || servings < 1 || servings > 50);
     // An amount or unit with no ingredient would save as "2 cawan": ask for the ingredient instead.
     final nameless = [
       for (final r in _ingredients)
@@ -670,12 +681,13 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
     ];
     setState(() {
       _nameMissing = name.isEmpty;
+      _servingsBad = servingsBad;
       for (final r in _ingredients) {
         r.nameMissing = nameless.contains(r);
       }
     });
     // A problem on another tab: go there, or the error is never seen.
-    if (name.isEmpty) return _goTo(_EditTab.details);
+    if (name.isEmpty || servingsBad) return _goTo(_EditTab.details);
     if (nameless.isNotEmpty) {
       _goTo(_EditTab.ingredients);
       return _focusLater(nameless.first.nameFocus);
@@ -706,12 +718,14 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           ingredients: ingredients,
           steps: steps,
           optional: optional,
+          servings: servings,
         ),
         null => await recipes.create(
           name: name,
           ingredients: ingredients,
           steps: steps,
           optional: optional,
+          servings: servings,
         ),
       };
       var done = saved;
@@ -1132,6 +1146,17 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                             ? _addIngredient()
                             : _focusLater(_ingredients.first.nameFocus);
                       },
+                    ),
+                    TextField(
+                      key: const ValueKey('recipe-edit-servings'),
+                      controller: _servings,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: l.recipeServingsField,
+                        helperText: l.recipeServingsHint,
+                        errorText: _servingsBad ? l.recipeServingsHint : null,
+                      ),
+                      onChanged: (_) => setState(() => _servingsBad = false),
                     ),
                   ]),
                   _tabList(_EditTab.ingredients, [

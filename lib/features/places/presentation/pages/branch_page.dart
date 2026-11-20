@@ -22,11 +22,7 @@ import '../widgets/unpinned_actions.dart';
 import 'branch_edit_page.dart';
 
 /// What to know about a branch at a glance, as tags (its tile and its page).
-List<TileTag> branchTags(
-  AppLocalizations l,
-  Branch b, {
-  bool fromPost = false,
-}) => [
+List<TileTag> branchTags(AppLocalizations l, Branch b, {bool mine = false}) => [
   if (b.closed)
     TileTag(
       l.branchClosed,
@@ -38,7 +34,7 @@ List<TileTag> branchTags(
   if (!b.hasPin) TileTag(l.noPin, tone: TagTone.warn),
   if (b.pinnedByUser) TileTag(l.pinnedByUser, tone: TagTone.good),
   if (b.pinnedByOwner) TileTag(l.pinnedByOwner, tone: TagTone.good),
-  if (fromPost) TileTag(l.fromYourPost),
+  if (mine) TileTag(l.yourBranch, key: ValueKey('branch-mine-${b.id}')),
 ];
 
 /// Edit mode: the branch form, full page.
@@ -133,9 +129,7 @@ class BranchPage extends StatelessWidget {
     final owner = context.select<AuthController, bool>(
       (a) => a.user?.isOwner ?? false,
     );
-    final fromPost =
-        branch.id == place.savedBranch?.id && place.branchId != null;
-    final tags = branchTags(l, branch, fromPost: fromPost);
+    final tags = branchTags(l, branch, mine: place.isMyBranch(branch));
     final r = place.restaurant;
     final pinned = branch.hasPin;
     String shown(String? v) => v == null || v.trim().isEmpty ? '—' : v;

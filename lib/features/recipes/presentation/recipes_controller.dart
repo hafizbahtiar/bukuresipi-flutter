@@ -133,12 +133,14 @@ class RecipesController extends ChangeNotifier {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   }) async {
     final saved = await _repo.create(
       name: name,
       ingredients: ingredients,
       steps: steps,
       optional: optional,
+      servings: servings,
     );
     unawaited(load());
     return saved;
@@ -150,6 +152,7 @@ class RecipesController extends ChangeNotifier {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   }) async {
     final saved = await _repo.edit(
       id,
@@ -157,6 +160,7 @@ class RecipesController extends ChangeNotifier {
       ingredients: ingredients,
       steps: steps,
       optional: optional,
+      servings: servings,
     );
     unawaited(load());
     return saved;
