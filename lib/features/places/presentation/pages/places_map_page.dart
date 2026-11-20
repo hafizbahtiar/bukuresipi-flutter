@@ -1480,12 +1480,25 @@ class _PinSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  place.restaurant.name,
-                  style: text.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      place.restaurant.name,
+                      style: text.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
+                      ),
+                    ),
+                    if (place.regular)
+                      Padding(
+                        padding: const EdgeInsets.only(top: spaceXs),
+                        child: TagChip(
+                          TileTag(l.placeRegular),
+                          key: const ValueKey('pin-sheet-regular'),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               ?placePhoto(place, size: 64),

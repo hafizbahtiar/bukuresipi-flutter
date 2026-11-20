@@ -766,6 +766,7 @@ Place placeFromJson(Map<String, dynamic> j) {
     sourceUrl: j['sourceUrl'] as String?,
     shareId: j['shareId'] as String?,
     visited: j['visited'] as bool? ?? false, // older API: none visited
+    regular: j['regular'] as bool? ?? false,
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
       name: r['name'] as String,

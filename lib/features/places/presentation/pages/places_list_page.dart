@@ -478,11 +478,25 @@ class PlaceTile extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-          if (halal != null)
+          if (halal != null || place.regular)
             Padding(
-              key: ValueKey('place-halal-tag-${place.id}'),
               padding: const EdgeInsets.only(top: spaceXs),
-              child: TagChip(halal),
+              child: Wrap(
+                spacing: spaceXs,
+                runSpacing: spaceXs,
+                children: [
+                  if (halal != null)
+                    TagChip(
+                      halal,
+                      key: ValueKey('place-halal-tag-${place.id}'),
+                    ),
+                  if (place.regular)
+                    TagChip(
+                      TileTag(l.placeRegular),
+                      key: ValueKey('place-regular-tag-${place.id}'),
+                    ),
+                ],
+              ),
             ),
         ],
       ),

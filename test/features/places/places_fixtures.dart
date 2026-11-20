@@ -62,9 +62,11 @@ Place place({
   HalalCert? cert,
   ({int outlets, String url})? brand,
   bool visited = false,
+  bool regular = false,
 }) => Place(
   id: id,
   visited: visited,
+  regular: regular,
   sourceUrl: sourceUrl,
   note: null,
   createdAt: DateTime.utc(2026, 11, 2),

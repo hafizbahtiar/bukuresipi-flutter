@@ -2037,6 +2037,8 @@
   "feedRestaurants": "Restaurants",
   "@feedRestaurants": {},
   "feedSaysHalal": "Says halal",
+  "placeRegular": "Your regular",
+  "@placeRegular": { "description": "Tag on a place the user went to 3+ times in 90 days (their own confirmed receipts)" },
   "@feedSaysHalal": {},
   "feedJakimHalal": "JAKIM halal",
   "@feedJakimHalal": {},
