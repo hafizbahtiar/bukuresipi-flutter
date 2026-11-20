@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/widgets/wide_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/domain/user.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -152,10 +153,11 @@ class _HomePageState extends State<HomePage> {
         child: IndexedStack(
           index: _tab,
           children: [
+            // The feed's grid uses the whole screen; the lists are a readable column on a tablet.
             FeedPage(toTop: _feedTop),
-            const PlacesListPage(),
-            const ReceiptsTab(),
-            const AccountPage(),
+            const WidePage(child: PlacesListPage()),
+            const WidePage(child: ReceiptsTab()),
+            const WidePage(child: AccountPage()),
           ],
         ),
       ),
