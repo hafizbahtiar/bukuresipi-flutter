@@ -5,7 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 
-/// Every data source and open-source credit the map and place pages rely on, on one notebook page.
+/// Every data source, service and open-source credit the app relies on, the licences, and who makes it.
 class CreditsPage extends StatelessWidget {
   const CreditsPage({super.key});
 
@@ -71,6 +71,30 @@ class CreditsPage extends StatelessWidget {
         detail: l.creditsParallelDetail,
         url: 'https://parallel.ai',
       ),
+      _Credit(
+        icon: Icons.travel_explore,
+        title: l.creditsTinyFish,
+        detail: l.creditsTinyFishDetail,
+        url: 'https://www.tinyfish.ai',
+      ),
+      _Credit(
+        icon: Icons.storefront_outlined,
+        title: l.creditsGrab,
+        detail: l.creditsGrabDetail,
+        url: 'https://aws.amazon.com/location/',
+      ),
+      _Credit(
+        icon: Icons.markunread_mailbox_outlined,
+        title: l.creditsPostcodes,
+        detail: l.creditsPostcodesDetail,
+        url: 'https://www.npmjs.com/package/malaysia-postcodes',
+      ),
+      _Credit(
+        icon: Icons.verified_outlined,
+        title: l.creditsJakim,
+        detail: l.creditsJakimDetail,
+        url: 'https://www.halal.gov.my',
+      ),
     ];
     final type = [
       _Credit(
@@ -86,6 +110,18 @@ class CreditsPage extends StatelessWidget {
         title: l.creditsFlutter,
         detail: l.creditsFlutterDetail,
         url: 'https://flutter.dev',
+      ),
+      _Credit(
+        icon: Icons.cloud_outlined,
+        title: l.creditsCloudflare,
+        detail: l.creditsCloudflareDetail,
+        url: 'https://www.cloudflare.com',
+      ),
+      _Credit(
+        icon: Icons.auto_awesome_outlined,
+        title: l.creditsDeepSeek,
+        detail: l.creditsDeepSeekDetail,
+        url: 'https://commandcode.ai',
       ),
     ];
     return Scaffold(
@@ -110,6 +146,37 @@ class CreditsPage extends StatelessWidget {
             for (final credit in type) _CreditRow(credit: credit),
             NotebookHeading(l.creditsApp),
             for (final credit in app) _CreditRow(credit: credit),
+            NotebookRow(
+              key: const Key('credits-licenses'),
+              mark: Icon(
+                Icons.description_outlined,
+                size: 18,
+                color: nb.inkSoft,
+              ),
+              trailing: Icon(Icons.chevron_right, color: nb.inkSoft),
+              // Flutter's own page: every package's licence text, which MIT/BSD/Apache ask us to carry.
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: 'Bukuresipi',
+                applicationLegalese:
+                    '© ${DateTime.now().year} Tri Digital Niaga',
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.creditsLicenses,
+                    style: text.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    l.creditsLicensesDetail,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 notebookGutter + 10,
@@ -118,7 +185,7 @@ class CreditsPage extends StatelessWidget {
                 16,
               ),
               child: Text(
-                l.dataCredits,
+                '${l.dataCredits}\n\n${l.creditsMaker}',
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ),

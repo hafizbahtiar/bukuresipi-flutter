@@ -30,5 +30,35 @@ void main() {
     await t.scrollUntilVisible(find.text('Overture Maps'), 200);
     await t.scrollUntilVisible(find.text('Google Fonts'), 200);
     expect(find.text('Google Fonts'), findsOneWidget);
+    await t.scrollUntilVisible(
+      find.text('Halal Malaysia directory (JAKIM)'),
+      200,
+    );
+    await t.scrollUntilVisible(find.byKey(const Key('credits-licenses')), 200);
+    await t.tap(find.byKey(const Key('credits-licenses')));
+    await t.pumpAndSettle();
+    expect(find.byType(LicensePage), findsOneWidget);
+    expect(find.textContaining('Tri Digital Niaga'), findsWidgets);
+  });
+
+  testWidgets('the maker is named at the end', (t) async {
+    await t.pumpWidget(
+      const MaterialApp(
+        locale: Locale('ms'),
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: [Locale('en'), Locale('ms')],
+        home: CreditsPage(),
+      ),
+    );
+    await t.scrollUntilVisible(
+      find.textContaining('dibangunkan oleh Tri Digital Niaga'),
+      300,
+    );
+    expect(find.textContaining('SSM 202603244841'), findsOneWidget);
   });
 }

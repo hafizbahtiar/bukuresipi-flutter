@@ -26,9 +26,16 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Bukuresipi'), findsOneWidget);
     expect(find.textContaining('does not certify'), findsOneWidget);
-    for (final label in ['Website', 'Credits', 'Delete my account']) {
+    for (final label in [
+      'Website',
+      'Credits',
+      'Privacy policy',
+      'Terms of use',
+      'Delete my account',
+    ]) {
       expect(find.text(label), findsOneWidget);
     }
-    expect(find.text('Version 1.4.0 (12)'), findsOneWidget);
+    expect(find.textContaining('Version 1.4.0 (12)'), findsOneWidget);
+    expect(find.textContaining('Tri Digital Niaga'), findsOneWidget);
   });
 }
