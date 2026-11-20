@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
-import '../../../core/log.dart';
+import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
@@ -207,6 +207,22 @@ class RecipesRepositoryImpl implements RecipesRepository {
       apiCall(() => _dio.delete<void>('/recipes/$id'));
 
   @override
+  Future<List<DishSuggestion>> suggestDishes(List<String> ingredients) =>
+      apiCall(() async {
+        final data = (await _dio.post<Map<String, dynamic>>(
+          '/recipes/from-pantry/suggest',
+          data: {'ingredients': ingredients},
+        )).data!;
+        return [
+          for (final d in (data['dishes'] as List).cast<Map<String, dynamic>>())
+            (
+              name: d['name'] as String,
+              uses: (d['uses'] as List).cast<String>(),
+            ),
+        ];
+      });
+
+  @override
   Future<List<PantryMatch>> fromPantry(
     List<String> ingredients, {
     bool staples = true,
@@ -269,6 +285,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   }) => apiCall(() async {
     final data = (await _dio.post<Map<String, dynamic>>(
       '/recipes',
@@ -276,6 +293,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
         'name': name,
         'ingredients': _lines(ingredients, optional),
         'steps': steps,
+        'servings': servings,
       },
     )).data!;
     return recipeDetailFromJson(data);
@@ -288,6 +306,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   }) => apiCall(() async {
     final data = (await _dio.patch<Map<String, dynamic>>(
       '/recipes/$id',
@@ -295,6 +314,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
         'name': name,
         'ingredients': _lines(ingredients, optional),
         'steps': steps,
+        'servings': servings,
       },
     )).data!;
     return recipeDetailFromJson(data);
@@ -347,6 +367,7 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
   shareId: j['shareId'] as String?,
   cover: j['cover'] as String?,
   missing: _missing(j['missing']),
+  servings: j['servings'] as int?,
   ingredients: [
     for (final i
         in (j['ingredients'] as List? ?? const []).cast<Map<String, dynamic>>())

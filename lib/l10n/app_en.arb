@@ -198,8 +198,6 @@
   "@mapEmpty": {},
   "branchesTitle": "Branches",
   "@branchesTitle": {},
-  "fromYourPost": "From your post",
-  "@fromYourPost": {},
   "openYourPost": "Open your post",
   "@openYourPost": {},
   "halalTitle": "What the post says about halal",
@@ -2039,6 +2037,10 @@
   "feedRestaurants": "Restaurants",
   "@feedRestaurants": {},
   "feedSaysHalal": "Says halal",
+  "placeRegular": "Your regular",
+  "@placeRegular": {
+    "description": "Tag on a place the user went to 3+ times in 90 days (their own confirmed receipts)"
+  },
   "@feedSaysHalal": {},
   "feedJakimHalal": "JAKIM halal",
   "@feedJakimHalal": {},
@@ -2950,6 +2952,22 @@
   "@pantryAddMissing": {},
   "pantryAdded": "Added to your shopping list",
   "@pantryAdded": {},
+  "pantrySuggest": "Suggest a dish",
+  "@pantrySuggest": {},
+  "pantrySuggestNote": "AI names a dish you could make with these. Tap one to look for a recipe online.",
+  "@pantrySuggestNote": {},
+  "pantrySuggestNone": "No dish comes to mind with these. Add a few more ingredients.",
+  "@pantrySuggestNone": {},
+  "pantryUses": "Uses: {items}",
+  "@pantryUses": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "errSuggestLimit": "That's 10 dish suggestions today. Try again tomorrow.",
+  "@errSuggestLimit": {},
   "ownerEditsEveryone": "Owner: every user sees what you save here",
   "@ownerEditsEveryone": {},
   "saveForEveryone": "Save for everyone",
@@ -3165,5 +3183,165 @@
   "ownerSaving": "Saving…",
   "@ownerSaving": {},
   "ownerSearching": "Searching…",
-  "@ownerSearching": {}
+  "@ownerSearching": {},
+  "mapLabelNotListed": "Not in Bukuresipi yet.",
+  "@mapLabelNotListed": {},
+  "yourBranch": "Your branch",
+  "@yourBranch": {},
+  "yourBranchMake": "Make this my branch",
+  "@yourBranchMake": {},
+  "yourBranchSet": "This is now your branch.",
+  "@yourBranchSet": {},
+  "branchesShowAll": "Show all {count} branches",
+  "@branchesShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareSendScreenshot": "Send a screenshot",
+  "@shareSendScreenshot": {},
+  "spendingBudget": "Monthly food budget",
+  "@spendingBudget": {},
+  "spendingBudgetSet": "Set a monthly budget",
+  "@spendingBudgetSet": {},
+  "spendingBudgetRange": "RM 10 to RM 100,000. Leave empty for none.",
+  "@spendingBudgetRange": {},
+  "spendingBudgetOf": "This month: {spent} of {budget}",
+  "@spendingBudgetOf": {
+    "placeholders": {
+      "spent": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
+  },
+  "spendingBudgetLeft": "{amount} left",
+  "@spendingBudgetLeft": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "spendingBudgetOver": "{amount} over",
+  "@spendingBudgetOver": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "recipeServes": "Serves {n}",
+  "@recipeServes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeServesScaled": "Amounts changed from {n}: words like “to taste” stay as written",
+  "@recipeServesScaled": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recipeServesLess": "Fewer people",
+  "@recipeServesLess": {},
+  "recipeServesMore": "More people",
+  "@recipeServesMore": {},
+  "recipeServingsField": "Serves (people)",
+  "@recipeServingsField": {},
+  "recipeServingsHint": "1 to 50. Empty if the recipe does not say.",
+  "@recipeServingsHint": {},
+  "caloriesMacrosAverage": "Average of {days} days: {macros}",
+  "@caloriesMacrosAverage": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "macros": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerBannedNoEmail": "Banned. The email to the user was not sent.",
+  "@ownerBannedNoEmail": {},
+  "einvoiceTitle": "E-invoice",
+  "@einvoiceTitle": {},
+  "einvoiceBy": "Request by {date}. We'll remind you the day before.",
+  "@einvoiceBy": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceEnded": "The request period ended on {date}.",
+  "@einvoiceEnded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceNoLimit": "No deadline is printed, so there's no reminder.",
+  "@einvoiceNoLimit": {},
+  "einvoiceDoneNote": "You've requested it. No reminder.",
+  "@einvoiceDoneNote": {},
+  "einvoiceRequest": "Request",
+  "@einvoiceRequest": {},
+  "einvoiceMarkDone": "I've requested it",
+  "@einvoiceMarkDone": {},
+  "einvoiceUndo": "Not yet",
+  "@einvoiceUndo": {},
+  "einvoiceDetailsTitle": "My e-invoice",
+  "@einvoiceDetailsTitle": {},
+  "einvoiceDetailsHelp": "Shops' e-invoice forms ask for these. Saved on this phone only, never sent to Bukuresipi. On a receipt, tap one to copy it into the form.",
+  "@einvoiceDetailsHelp": {},
+  "einvoiceDetailsSaved": "Saved on this phone",
+  "@einvoiceDetailsSaved": {},
+  "einvoiceDetailsAdd": "Save your details to copy into the form",
+  "@einvoiceDetailsAdd": {},
+  "einvoiceDetailsEdit": "Edit details",
+  "@einvoiceDetailsEdit": {},
+  "einvoiceName": "Name",
+  "@einvoiceName": {},
+  "einvoiceTin": "TIN",
+  "@einvoiceTin": {},
+  "einvoiceIdNumber": "IC / passport",
+  "@einvoiceIdNumber": {},
+  "einvoiceEmail": "Email",
+  "@einvoiceEmail": {},
+  "einvoicePhone": "Phone",
+  "@einvoicePhone": {},
+  "einvoiceAddress": "Address",
+  "@einvoiceAddress": {},
+  "einvoiceCopyHint": "Tap to copy into the form",
+  "@einvoiceCopyHint": {},
+  "einvoiceCopied": "{field} copied",
+  "@einvoiceCopied": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceAskDone": "Did you request your e-invoice?",
+  "@einvoiceAskDone": {},
+  "einvoiceAskYes": "Yes, requested",
+  "@einvoiceAskYes": {},
+  "einvoiceScan": "Scan the e-invoice QR",
+  "@einvoiceScan": {},
+  "einvoiceNoQr": "No e-invoice QR found. Try closer, with the QR filling the photo.",
+  "@einvoiceNoQr": {},
+  "einvoiceNameHelp": "As on your IC",
+  "@einvoiceNameHelp": {},
+  "einvoiceTinHelp": "Your tax number from LHDN (MyTax)",
+  "@einvoiceTinHelp": {}
 }

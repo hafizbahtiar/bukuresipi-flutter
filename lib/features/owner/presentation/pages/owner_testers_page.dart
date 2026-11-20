@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
@@ -64,7 +66,7 @@ class _OwnerTestersPageState extends State<OwnerTestersPage> {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final owner = context.read<OwnerRepository>();
-    final sure = await showNotebookDialog(
+    final sure = await showBaseDialog(
       context,
       message: t.invitedAt == null
           ? l.ownerTesterInviteConfirm(t.email)

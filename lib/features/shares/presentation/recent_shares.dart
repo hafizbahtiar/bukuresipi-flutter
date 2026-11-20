@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../core/log.dart';
+import '../../../core/utils/log.dart';
 import '../domain/share.dart';
 import '../domain/share_repository.dart';
 

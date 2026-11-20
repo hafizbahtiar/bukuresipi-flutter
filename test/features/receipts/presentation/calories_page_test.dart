@@ -53,18 +53,20 @@ void main() {
     meals: meals,
   );
 
-  CalorieDays days({int? target, int count = 30}) => CalorieDays(
-    days: [
-      for (var i = 0; i < count; i++)
-        (
-          date: DateTime(2026, 10, 12 + i),
-          eatenKcal: i == count - 1 ? 900 : 100 + i,
-          hasEstimate: false,
-          unknownEaten: 0.0,
-        ),
-    ],
-    target: target,
-  );
+  CalorieDays days({int? target, int count = 30, Macros? macros}) =>
+      CalorieDays(
+        days: [
+          for (var i = 0; i < count; i++)
+            (
+              date: DateTime(2026, 10, 12 + i),
+              eatenKcal: i == count - 1 ? 900 : 100 + i,
+              hasEstimate: false,
+              unknownEaten: 0.0,
+              macros: i.isEven ? macros : null,
+            ),
+        ],
+        target: target,
+      );
 
   testWidgets('today against the target; the target is set from here', (
     t,
@@ -111,6 +113,32 @@ void main() {
     await t.tap(find.text('30 days'));
     await t.pumpAndSettle();
     expect(repo.calorieDayRanges, [30, 7, 30]);
+  });
+
+  testWidgets(
+    'the range average of carbs, protein and fat, over the days that have them',
+    (t) async {
+      final repo = FakeReceipts()
+        ..today = day(eaten: 900)
+        ..calorieDaysAnswer = days(
+          count: 7,
+          macros: (carbsG: 100, proteinG: 40.4, fatG: 30),
+        );
+      await pump(t, repo);
+      // Days 0, 2, 4, 6 have numbers; 1, 3, 5 do not and are left out of the average.
+      expect(
+        find.text('Average of 4 days: Carbs 100 g · Protein 40 g · Fat 30 g'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('no day with numbers: no average', (t) async {
+    final repo = FakeReceipts()
+      ..today = day(eaten: 900)
+      ..calorieDaysAnswer = days(count: 7);
+    await pump(t, repo);
+    expect(find.byKey(const ValueKey('calorie-macros')), findsNothing);
   });
 
   testWidgets("today's eaten lines are listed", (t) async {

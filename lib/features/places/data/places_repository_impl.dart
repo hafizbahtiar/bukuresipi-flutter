@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
-import '../../../core/log.dart';
+import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
@@ -46,6 +46,11 @@ class PlacesRepositoryImpl implements PlacesRepository {
   @override
   Future<void> setPrivate(String id, bool private) => apiCall(
     () => _dio.patch<void>('/places/$id', data: {'private': private}),
+  );
+
+  @override
+  Future<void> setBranch(String id, String branchId) => apiCall(
+    () => _dio.patch<void>('/places/$id', data: {'branchId': branchId}),
   );
 
   @override
@@ -761,6 +766,7 @@ Place placeFromJson(Map<String, dynamic> j) {
     sourceUrl: j['sourceUrl'] as String?,
     shareId: j['shareId'] as String?,
     visited: j['visited'] as bool? ?? false, // older API: none visited
+    regular: j['regular'] as bool? ?? false,
     restaurant: PlaceRestaurant(
       id: r['id'] as String,
       name: r['name'] as String,

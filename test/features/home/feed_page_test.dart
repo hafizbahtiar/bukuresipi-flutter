@@ -53,6 +53,7 @@ void main() {
           name: 'Kedai Sederhana',
           distanceM: 900,
           cert: cert,
+          cuisine: 'Mamak',
         ),
         nearbyBranch(
           branchId: 'b-2',
@@ -167,6 +168,45 @@ void main() {
       await t.tap(find.byKey(const ValueKey('feed-kind-restaurants')));
       await t.pumpAndSettle();
       expect(cardKeys(t), ['feed-place-b-2', 'feed-place-b-1']);
+    },
+  );
+
+  testWidgets(
+    'Cuisine opens the floating sheet (not a popup menu): pick one, the current one ticked, Any undoes it',
+    (t) async {
+      await pump(t);
+      await t.tap(find.byKey(const ValueKey('feed-cuisine')));
+      await t.pumpAndSettle();
+      expect(find.byType(PopupMenuItem<String?>), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('feed-cuisine-any')),
+          matching: find.byIcon(Icons.check),
+        ),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('feed-cuisine-Mamak')));
+      await t.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('feed-cuisine-any')),
+        findsNothing,
+      ); // closed
+      expect(find.byKey(const ValueKey('feed-place-b-1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('feed-place-b-2')), findsNothing);
+
+      await t.tap(find.byKey(const ValueKey('feed-cuisine')));
+      await t.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('feed-cuisine-Mamak')),
+          matching: find.byIcon(Icons.check),
+        ),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('feed-cuisine-any')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('feed-place-b-2')), findsOneWidget);
+      expect(find.text(l.feedCuisine), findsOneWidget);
     },
   );
 

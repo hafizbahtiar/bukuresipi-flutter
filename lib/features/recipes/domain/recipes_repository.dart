@@ -46,6 +46,9 @@ abstract interface class RecipesRepository {
     bool staples = true,
   });
 
+  /// Nothing fits: up to 3 dish names AI makes from [ingredients] (no steps). Throws `suggest_limit` (10 a day).
+  Future<List<DishSuggestion>> suggestDishes(List<String> ingredients);
+
   /// Catalogue ingredient names matching [query] (2+ characters).
   Future<List<String>> searchIngredients(String query);
 
@@ -67,6 +70,7 @@ abstract interface class RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   });
 
   /// The owner's photo from a local jpeg/png/webp file (5 MB max); returns the recipe with its new cover.
@@ -84,5 +88,6 @@ abstract interface class RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    int? servings,
   });
 }

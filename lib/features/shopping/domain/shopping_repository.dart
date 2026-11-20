@@ -8,12 +8,14 @@ abstract interface class ShoppingRepository {
   /// Returns what was added. A recipe adds only its lines not already on the list.
   Future<List<ShoppingItem>> addText(String text, {bool family = false});
 
-  /// [skipOptional] leaves the recipe's optional lines out; [have] = ingredient names the user has (left out).
+  /// [skipOptional] leaves the recipe's optional lines out; [have] = ingredient names the user has (left out);
+  /// [servings] = the recipe page's "Serves N" when changed (number amounts scaled from the recipe's own).
   Future<List<ShoppingItem>> addRecipe(
     String recipeId, {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    int? servings,
   });
 
   /// Catalogue ingredient names for what the user is typing (2+ characters), names starting with it first.

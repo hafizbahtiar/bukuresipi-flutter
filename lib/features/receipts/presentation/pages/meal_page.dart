@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
-import '../../../../core/widgets/base.dart' show showBaseDialog;
+import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/receipt.dart';
@@ -258,8 +258,7 @@ class _MealPageState extends State<MealPage> {
               leading: const Icon(Icons.schedule),
               title: Text(l.mealTime),
               trailing: Text(
-                MaterialLocalizations.of(context)
-                    .formatTimeOfDay(TimeOfDay.fromDateTime(_at)),
+                formatTime(context, _at),
                 style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               onTap: _pickTime,

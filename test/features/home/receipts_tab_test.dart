@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/receipts_tab.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../../fakes.dart';
 import '../receipts/receipts_fixtures.dart';
 
 void main() {
@@ -23,8 +25,13 @@ void main() {
         meals: const [],
       );
     await t.pumpWidget(
-      Provider<ReceiptsRepository>.value(
-        value: repo,
+      MultiProvider(
+        providers: [
+          Provider<ReceiptsRepository>.value(value: repo),
+          ChangeNotifierProvider.value(
+            value: AuthController(FakeAuthRepository()),
+          ),
+        ],
         child: const MaterialApp(
           locale: Locale('en'),
           localizationsDelegates: [
@@ -62,8 +69,13 @@ void main() {
     (t) async {
       final repo = FakeReceipts();
       await t.pumpWidget(
-        Provider<ReceiptsRepository>.value(
-          value: repo,
+        MultiProvider(
+          providers: [
+            Provider<ReceiptsRepository>.value(value: repo),
+            ChangeNotifierProvider.value(
+              value: AuthController(FakeAuthRepository()),
+            ),
+          ],
           child: const MaterialApp(
             locale: Locale('en'),
             localizationsDelegates: [
@@ -110,8 +122,13 @@ void main() {
         meals: const [],
       );
     await t.pumpWidget(
-      Provider<ReceiptsRepository>.value(
-        value: repo,
+      MultiProvider(
+        providers: [
+          Provider<ReceiptsRepository>.value(value: repo),
+          ChangeNotifierProvider.value(
+            value: AuthController(FakeAuthRepository()),
+          ),
+        ],
         child: const MaterialApp(
           locale: Locale('en'),
           localizationsDelegates: [

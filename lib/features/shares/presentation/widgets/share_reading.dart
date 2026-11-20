@@ -2,15 +2,19 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/share.dart';
 import '../recent_shares.dart';
+import '../share_intake.dart';
 
 /// The API's platform for a link, read on the phone (the share screen has no server answer yet).
 String? platformOfUrl(String url) {
@@ -309,13 +313,22 @@ class _ShareProblemRowState extends State<ShareProblemRow> {
 
   Future<void> _dismiss() async {
     final l = AppLocalizations.of(context);
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       message: l.shareDismissConfirm,
       tone: DialogTone.danger,
       confirmLabel: l.remove,
     );
     if (ok) await _run((s) => s.dismiss(widget.share.id));
+  }
+
+  /// The post as a screenshot instead: read as a new share, and this one goes.
+  Future<void> _screenshot() async {
+    final intake = context.read<ShareIntake>();
+    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (image == null || !mounted) return;
+    intake.add(Incoming.image(image.path));
+    await _run((s) => s.dismiss(widget.share.id));
   }
 
   @override
@@ -374,6 +387,12 @@ class _ShareProblemRowState extends State<ShareProblemRow> {
                           : const Icon(Icons.refresh, size: 18),
                       label: Text(l.tryAgain),
                     ),
+                  TextButton.icon(
+                    key: ValueKey('problem-screenshot-${s.id}'),
+                    onPressed: _busy ? null : _screenshot,
+                    icon: const Icon(Icons.screenshot_outlined, size: 18),
+                    label: Text(l.shareSendScreenshot),
+                  ),
                   TextButton.icon(
                     onPressed: _busy ? null : _dismiss,
                     icon: const Icon(Icons.delete_outline, size: 18),

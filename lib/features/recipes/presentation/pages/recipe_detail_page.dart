@@ -4,12 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -79,6 +78,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   RecipeDetail? _recipe;
   Object? _error;
   bool _loading = true;
+
+  /// "Serves" turned up or down on this page (not saved); null = as the recipe says.
+  int? _people;
 
   /// How far the page has been pulled down past its top in this drag; [_closeAt] closes it.
   double _pull = 0;
@@ -255,6 +257,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         family: family,
         skipOptional: skipOptional,
         have: have,
+        // Only a changed "Serves N": the list then has the amounts the page shows.
+        servings: _people == recipe.servings ? null : _people,
       );
       _snack(added == 0 ? l.shoppingAlreadyAdded : l.shoppingAdded(added));
     } catch (e) {
@@ -279,10 +283,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final l = AppLocalizations.of(context);
     final recipes = context.read<RecipesController>();
     final inFamily = context.read<FamilyController?>()?.inFamily ?? false;
-    final picked = await showModalBottomSheet<RecipeVisibility>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
+    final picked = await showBaseSheet<RecipeVisibility>(
+      context,
       builder: (sheet) {
         Widget choice(RecipeVisibility v, String label, String hint) =>
             ListTile(
@@ -295,7 +297,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             );
         return ListView(
           shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: spaceM),
           children: [
             ListTile(
               title: Text(
@@ -614,10 +615,44 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           ),
       ],
     );
+    final serves = recipe.servings;
+    final people = _people ?? serves;
+    final factor = serves == null ? 1.0 : people! / serves;
     final ingredientRows = <Widget>[
       // No heading over an empty section, nor over a tab's own section.
       if (recipe.ingredients.isNotEmpty && !tabs)
         SectionHeader(l.recipeIngredients),
+      // For more or fewer people: amounts written as numbers follow; words ("secukupnya") stay.
+      if (serves != null && recipe.ingredients.isNotEmpty)
+        ListTile(
+          key: const ValueKey('recipe-serves'),
+          leading: Icon(Icons.people_outline, color: nb.inkSoft),
+          title: Text(l.recipeServes(people!)),
+          subtitle: people == serves
+              ? null
+              : Text(l.recipeServesScaled(serves)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                key: const ValueKey('recipe-serves-less'),
+                tooltip: l.recipeServesLess,
+                onPressed: people > 1
+                    ? () => setState(() => _people = people - 1)
+                    : null,
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              IconButton(
+                key: const ValueKey('recipe-serves-more'),
+                tooltip: l.recipeServesMore,
+                onPressed: people < 50
+                    ? () => setState(() => _people = people + 1)
+                    : null,
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
+          ),
+        ),
       for (final (index, i) in recipe.ingredients.indexed)
         ListTile(
           // Tap: link the line to a catalogue ingredient (allergens, shopping hints) or change that link.
@@ -642,7 +677,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           title: Text.rich(
             TextSpan(
               children: [
-                if (i.amount case final amount?)
+                if (i.amount(factor) case final amount?)
                   TextSpan(
                     text: '$amount  ',
                     style: const TextStyle(fontWeight: FontWeight.w700),

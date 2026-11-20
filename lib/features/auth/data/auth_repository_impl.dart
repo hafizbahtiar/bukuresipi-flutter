@@ -55,7 +55,16 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<User> setKcalTarget(int? kcal) => apiCall(
     () async => _remember(
-      (await _api.setKcalTarget(kcal))['user'] as Map<String, dynamic>,
+      (await _api.patchMe({'kcalTarget': kcal}))['user']
+          as Map<String, dynamic>,
+    ),
+  );
+
+  @override
+  Future<User> setFoodBudget(int? sen) => apiCall(
+    () async => _remember(
+      (await _api.patchMe({'foodBudgetSen': sen}))['user']
+          as Map<String, dynamic>,
     ),
   );
 
@@ -205,4 +214,5 @@ User userFromJson(Map<String, dynamic> j) => User(
   google: j['google'] as bool? ?? false,
   avatar: j['avatar'] as String?,
   kcalTarget: j['kcalTarget'] as int?,
+  foodBudgetSen: j['foodBudgetSen'] as int?,
 );

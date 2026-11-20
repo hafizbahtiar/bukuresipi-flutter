@@ -11,8 +11,11 @@ const _items = [
 ];
 
 /// The bar at 400 dp: 5 slots of ~74 dp (Home, Book, +, Receipts, Account).
-Future<({List<int> picked, List<int> adds})> _pump(WidgetTester t) async {
-  t.view.physicalSize = const Size(400, 800);
+Future<({List<int> picked, List<int> adds})> _pump(
+  WidgetTester t, {
+  bool vertical = false,
+}) async {
+  t.view.physicalSize = vertical ? const Size(800, 400) : const Size(400, 800);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
   final picked = <int>[];
@@ -24,17 +27,34 @@ Future<({List<int> picked, List<int> adds})> _pump(WidgetTester t) async {
       home: StatefulBuilder(
         builder: (context, setState) => Scaffold(
           extendBody: true,
-          body: const SizedBox.expand(),
-          bottomNavigationBar: FloatingNav(
-            items: _items,
-            selected: selected,
-            onSelected: (i) => setState(() {
-              selected = i;
-              picked.add(i);
-            }),
-            addLabel: 'Add',
-            onAdd: () => adds.add(1),
-          ),
+          body: vertical
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: FloatingNav(
+                    vertical: true,
+                    items: _items,
+                    selected: selected,
+                    onSelected: (i) => setState(() {
+                      selected = i;
+                      picked.add(i);
+                    }),
+                    addLabel: 'Add',
+                    onAdd: () => adds.add(1),
+                  ),
+                )
+              : const SizedBox.expand(),
+          bottomNavigationBar: vertical
+              ? null
+              : FloatingNav(
+                  items: _items,
+                  selected: selected,
+                  onSelected: (i) => setState(() {
+                    selected = i;
+                    picked.add(i);
+                  }),
+                  addLabel: 'Add',
+                  onAdd: () => adds.add(1),
+                ),
         ),
       ),
     ),
@@ -160,4 +180,27 @@ void main() {
       expect(find.byTooltip('Account'), findsOneWidget);
     },
   );
+
+  testWidgets('standing (a rail): a tap picks, the chip drags down to a tab', (
+    t,
+  ) async {
+    final r = await _pump(t, vertical: true);
+    expect(t.takeException(), isNull);
+    double y(String key) => t.getCenter(find.byKey(ValueKey(key))).dy;
+    expect(y('nav-tab-1'), greaterThan(y('nav-tab-0')));
+    expect(y('nav-add'), greaterThan(y('nav-tab-1')));
+    await t.tap(find.byKey(const ValueKey('nav-tab-2')));
+    await t.pumpAndSettle();
+    expect(r.picked, [2]);
+    // From tab 2 one slot down = tab 3.
+    await t.drag(find.byKey(const ValueKey('nav-tab-2')), const Offset(0, 56));
+    await t.pumpAndSettle();
+    expect(r.picked, [2, 3]);
+    expect(
+      t.getCenter(find.byKey(const ValueKey('nav-chip'))).dy,
+      closeTo(y('nav-tab-3'), 1),
+    );
+    await t.tap(find.byKey(const ValueKey('nav-add')));
+    expect(r.adds, [1]);
+  });
 }

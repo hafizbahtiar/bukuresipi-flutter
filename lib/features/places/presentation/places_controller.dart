@@ -107,6 +107,15 @@ class PlacesController extends ChangeNotifier {
     }
   }
 
+  /// "Make this my branch". Throws ApiException; the place keeps its branch then.
+  Future<void> setBranch(String id, String branchId) async {
+    await _repo.setBranch(id, branchId);
+    _places = [
+      for (final p in _places) p.id == id ? p.copyWith(branchId: branchId) : p,
+    ];
+    notifyListeners();
+  }
+
   /// Throws ApiException. The branch's pin is the server's call (earliest hand pin), so reload.
   Future<void> setPin(String branchId, double lat, double lng) async {
     await _repo.setPin(branchId, lat, lng);

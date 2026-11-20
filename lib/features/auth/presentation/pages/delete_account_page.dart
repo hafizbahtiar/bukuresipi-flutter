@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/google_auth.dart';
 import '../auth_controller.dart';
@@ -38,7 +40,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
     final l = AppLocalizations.of(context);
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       title: l.deleteAccountTitle,
       message: l.deleteAccountConfirm,
@@ -67,7 +69,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
   Future<void> _submitGoogle(GoogleAuth google) async {
     final l = AppLocalizations.of(context);
     final auth = context.read<AuthController>();
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       title: l.deleteAccountTitle,
       message: l.deleteAccountConfirm,

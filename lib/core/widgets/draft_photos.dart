@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
-import '../open_link.dart';
+import '../utils/open_link.dart';
 import '../theme/app_theme.dart';
 
 /// An AI draft's photos from web pages (up to 5, side by side and scrolled, 4:3): tap one to pick it as the cover, again to drop

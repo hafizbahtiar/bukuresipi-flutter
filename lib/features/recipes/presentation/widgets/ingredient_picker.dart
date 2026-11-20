@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart' show showBaseSheet;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../recipes_controller.dart';
 
@@ -17,13 +18,10 @@ Future<LineChoice?> pickIngredient(
   required String line,
   required bool linked,
   required bool optional,
-}) => showModalBottomSheet<LineChoice>(
-  context: context,
-  showDragHandle: true,
-  isScrollControlled: true,
-  builder: (_) => SafeArea(
-    child: _IngredientPicker(line: line, linked: linked, optional: optional),
-  ),
+}) => showBaseSheet<LineChoice>(
+  context,
+  builder: (_) =>
+      _IngredientPicker(line: line, linked: linked, optional: optional),
 );
 
 class _IngredientPicker extends StatefulWidget {
@@ -81,9 +79,8 @@ class _IngredientPickerState extends State<_IngredientPicker> {
     final error = Theme.of(context).colorScheme.error;
     return ListView(
       shrinkWrap: true,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom + spaceM,
-      ),
+      // The floating sheet keeps itself above the keyboard.
+      padding: const EdgeInsets.only(bottom: spaceS),
       children: [
         ListTile(
           title: Text(

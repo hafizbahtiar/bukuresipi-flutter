@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_details.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 
@@ -22,6 +23,7 @@ Receipt receipt({
   bool hasEstimate = false,
   bool caloriesPending = false,
   bool hasSplit = false,
+  ReceiptEinvoice? einvoice,
 }) => Receipt(
   id: id,
   status: status,
@@ -38,6 +40,7 @@ Receipt receipt({
   hasEstimate: hasEstimate,
   caloriesPending: caloriesPending,
   hasSplit: hasSplit,
+  einvoice: einvoice,
 );
 
 class FakeReceipts implements ReceiptsRepository {
@@ -58,6 +61,22 @@ class FakeReceipts implements ReceiptsRepository {
       <({String id, int totalSen, DateTime visitedAt, String? branchId})>[];
   final removed = <String>[];
   int gets = 0;
+
+  final einvoiceDone = <(String, bool)>[];
+
+  /// What addEinvoiceFromPhoto finds in a photo; null = no QR.
+  String? qrLink;
+  final qrPhotos = <String>[];
+
+  @override
+  Future<bool> addEinvoiceFromPhoto(String id, String path) async {
+    qrPhotos.add(path);
+    return qrLink != null;
+  }
+
+  @override
+  Future<void> setEinvoiceDone(String id, bool done) async =>
+      einvoiceDone.add((id, done));
 
   @override
   Future<String> upload(String path) async {
@@ -250,4 +269,17 @@ class FakeReceipts implements ReceiptsRepository {
       totalSen: splitAnswer.totalSen,
     );
   }
+}
+
+/// The phone-only e-invoice details, per user id.
+class FakeEinvoiceDetails implements EinvoiceDetailsStore {
+  final saved = <String, EinvoiceDetails>{};
+
+  @override
+  Future<EinvoiceDetails> load(String userId) async =>
+      saved[userId] ?? const EinvoiceDetails();
+
+  @override
+  Future<void> save(String userId, EinvoiceDetails details) async =>
+      saved[userId] = details;
 }

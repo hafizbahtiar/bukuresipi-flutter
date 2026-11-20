@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../domain/place.dart';
 
@@ -57,12 +58,7 @@ class _MergeSheetState extends State<MergeSheet> {
     final name = _name.text.trim();
     // Scrolls when the list of places and the keyboard leave too little room.
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        notebookGutter + 10,
-        0,
-        20,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(spaceM, 0, spaceM, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

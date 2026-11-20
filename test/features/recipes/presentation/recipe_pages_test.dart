@@ -108,6 +108,44 @@ void main() {
     expect(find.text('Open video'), findsOneWidget);
   });
 
+  testWidgets('serves 4: more or fewer people scale the number amounts only', (
+    t,
+  ) async {
+    final recipes = RecipesController(
+      FakeRecipes()..detailResult = recipeDetail(servings: 4),
+    );
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('Serves 4'), findsOneWidget);
+    for (var i = 0; i < 2; i++) {
+      await t.tap(find.byKey(const ValueKey('recipe-serves-more')));
+      await t.pump();
+    }
+    expect(find.text('Serves 6'), findsOneWidget);
+    expect(find.textContaining('750 g'), findsOneWidget);
+    expect(find.textContaining('sedikit bahan rahsia'), findsOneWidget);
+    expect(find.textContaining('Amounts changed from 4'), findsOneWidget);
+  });
+
+  testWidgets('a recipe that says no servings has no Serves row', (t) async {
+    final recipes = RecipesController(
+      FakeRecipes()..detailResult = recipeDetail(),
+    );
+    await t.pumpWidget(
+      app(
+        providers: [ChangeNotifierProvider.value(value: recipes)],
+        home: const RecipeDetailPage(id: 'r-1'),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-serves')), findsNothing);
+  });
+
   testWidgets('swiping the ingredients sideways turns to the steps, and back', (
     t,
   ) async {

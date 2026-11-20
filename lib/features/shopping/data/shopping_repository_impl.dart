@@ -46,6 +46,7 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    int? servings,
   }) => apiCall(
     () => _items(
       _dio.post<Map<String, dynamic>>(
@@ -54,6 +55,7 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
           'recipeId': recipeId,
           'list': _list(family),
           if (skipOptional) 'skipOptional': true,
+          'servings': ?servings,
           // The API takes 50 names of 1-60 characters; a longer one would refuse the whole request.
           if (have.isNotEmpty)
             'have': [

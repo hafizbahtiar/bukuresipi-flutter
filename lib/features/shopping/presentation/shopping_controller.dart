@@ -164,12 +164,14 @@ class ShoppingController extends ChangeNotifier {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    int? servings,
   }) async {
     final added = await _repo.addRecipe(
       recipeId,
       family: family,
       skipOptional: skipOptional,
       have: have,
+      servings: servings,
     );
     lastRecipeList = family;
     if (family == _family) await load();

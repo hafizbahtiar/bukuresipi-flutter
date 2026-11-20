@@ -1,9 +1,10 @@
-import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
+import 'package:bukuresipi_flutter/core/widgets/base.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/widgets/map_sheet.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/nearby_sheet.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +33,36 @@ Widget app({
   ),
 );
 
+/// The map's sheet with [child] in it; [pick] raises it to half, as a tapped pin does.
+class _OnMap extends StatefulWidget {
+  const _OnMap({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_OnMap> createState() => _OnMapState();
+}
+
+class _OnMapState extends State<_OnMap> {
+  final controller = DraggableScrollableController();
+  int shown = 0;
+
+  void pick() => setState(() => shown++);
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: MapSheet(
+      controller: controller,
+      peek: 80,
+      top: 60,
+      shown: shown,
+      showClose: shown > 0,
+      onClose: (_) {},
+      child: widget.child,
+    ),
+  );
+}
+
 void main() {
   testWidgets('edit from the nearby sheet is personal to this user', (t) async {
     final repo = FakePlaces()..places = [place(id: 'p')];
@@ -51,7 +82,7 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showNotebookSheet<void>(
+                onPressed: () => showBaseSheet<void>(
                   context,
                   builder: (_) => NearbySheet(
                     place: nearbyBranch(),
@@ -103,7 +134,7 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showNotebookSheet<void>(
+                onPressed: () => showBaseSheet<void>(
                   context,
                   builder: (_) => NearbySheet(
                     place: nearbyBranch(
@@ -147,7 +178,7 @@ void main() {
             builder: (context) => Scaffold(
               body: Center(
                 child: ElevatedButton(
-                  onPressed: () => showNotebookSheet<void>(
+                  onPressed: () => showBaseSheet<void>(
                     context,
                     builder: (_) => NearbySheet(
                       place: nearbyBranch(),
@@ -207,7 +238,7 @@ void main() {
             builder: (context) => Scaffold(
               body: Center(
                 child: ElevatedButton(
-                  onPressed: () => showNotebookSheet<void>(
+                  onPressed: () => showBaseSheet<void>(
                     context,
                     builder: (_) =>
                         NearbySheet(place: nearbyBranch(), onSave: () async {}),
@@ -228,6 +259,39 @@ void main() {
       await t.pumpAndSettle();
       // The owner's edit is the shared one.
       expect(find.text('Only you will see these changes.'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'on the map at half: Save and Directions stay in the shown part',
+    (t) async {
+      t.view.physicalSize = const Size(360, 560);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      final controller = PlacesController(FakePlaces());
+      await t.pumpWidget(
+        app(
+          providers: [ChangeNotifierProvider.value(value: controller)],
+          home: _OnMap(
+            child: NearbySheet(
+              place: nearbyBranch(),
+              onSave: () async {},
+              onEdited: () async {},
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      t.state<_OnMapState>(find.byType(_OnMap)).pick();
+      await t.pumpAndSettle();
+      final sheet = t.getRect(find.byKey(const ValueKey('map-sheet')));
+      final directions = t.getRect(
+        find.byKey(const ValueKey('nearby-directions')),
+      );
+      expect(sheet.height, lessThan(300)); // half: the card is longer than this
+      expect(directions.top, greaterThan(sheet.top));
+      expect(directions.bottom, lessThanOrEqualTo(sheet.bottom));
+      expect(t.takeException(), isNull);
     },
   );
 }

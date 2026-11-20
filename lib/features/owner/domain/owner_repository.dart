@@ -33,8 +33,8 @@ abstract interface class OwnerRepository {
   Future<void> endSessions(String userId);
 
   /// Bans for [days] (null = for good) with the [reason] the user is shown; ends their sessions.
-  /// Throws 'owner_account'.
-  Future<void> ban(String userId, {int? days, required String reason});
+  /// Throws 'owner_account'. Returns whether the user was emailed (false = the send failed; the ban still holds).
+  Future<bool> ban(String userId, {int? days, required String reason});
 
   Future<void> unban(String userId);
 

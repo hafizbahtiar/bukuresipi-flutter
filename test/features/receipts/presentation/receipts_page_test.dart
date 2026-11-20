@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 import 'package:bukuresipi_flutter/features/receipts/presentation/pages/receipts_page.dart';
@@ -6,13 +7,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../../../fakes.dart';
 import '../receipts_fixtures.dart';
 
 void main() {
+  late FakeAuthRepository authRepo;
+
   Future<void> pump(WidgetTester t, FakeReceipts repo) async {
+    final auth = AuthController(
+      authRepo = FakeAuthRepository()..session = true,
+    );
+    await auth.restore();
     await t.pumpWidget(
-      Provider<ReceiptsRepository>.value(
-        value: repo,
+      MultiProvider(
+        providers: [
+          Provider<ReceiptsRepository>.value(value: repo),
+          ChangeNotifierProvider.value(value: auth),
+        ],
         child: const MaterialApp(
           locale: Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -42,6 +53,30 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('receipt-r-3')), findsOneWidget);
     expect(find.byKey(const ValueKey('receipts-more')), findsNothing);
+  });
+
+  testWidgets('a monthly budget: set it, then this month against it', (
+    t,
+  ) async {
+    final my = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final month = '${my.year}-${my.month.toString().padLeft(2, '0')}';
+    final repo = FakeReceipts()
+      ..stats_ = ReceiptStats(
+        totalSen: 90000,
+        visits: 3,
+        months: [(month: month, visits: 3, totalSen: 90000)],
+        places: const [],
+      )
+      ..items = [receipt(id: 'r-1', status: 'saved')];
+    await pump(t, repo);
+    await t.tap(find.byKey(const ValueKey('budget-set')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const ValueKey('budget-field')), '800');
+    await t.tap(find.text('Save'));
+    await t.pumpAndSettle();
+    expect(authRepo.budgets, [80000]);
+    expect(find.text('This month: RM 900.00 of RM 800.00'), findsOneWidget);
+    expect(find.text('RM 100.00 over'), findsOneWidget);
   });
 
   testWidgets('the spend chart sits above the receipts', (t) async {

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/widgets/base.dart';
-import 'package:bukuresipi_flutter/core/widgets/notebook_dialog.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';

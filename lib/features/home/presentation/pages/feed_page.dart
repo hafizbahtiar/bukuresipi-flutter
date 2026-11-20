@@ -415,6 +415,43 @@ class _FeedPageState extends State<FeedPage> {
     );
   }
 
+  /// "Masakan": one cuisine (or any) from a floating sheet; the current one ticked.
+  void _pickCuisine(List<String> cuisines) {
+    final l = AppLocalizations.of(context);
+    showBaseSheet<void>(
+      context,
+      builder: (sheet) {
+        Widget option(String? c, String label) => ListTile(
+          key: ValueKey('feed-cuisine-${c ?? 'any'}'),
+          title: Text(label),
+          selected: _cuisine == c,
+          trailing: _cuisine == c ? const Icon(Icons.check) : null,
+          onTap: () {
+            Navigator.pop(sheet);
+            setState(() => _cuisine = c);
+          },
+        );
+        return SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+                child: Text(
+                  l.feedCuisine,
+                  style: Theme.of(sheet).textTheme.titleMedium,
+                ),
+              ),
+              option(null, l.feedAnyCuisine),
+              for (final c in cuisines) option(c, c),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -675,22 +712,14 @@ class _FeedPageState extends State<FeedPage> {
                           onSelected: (on) => setState(() => _halal = on),
                         ),
                         if (cuisines.isNotEmpty)
-                          PopupMenuButton<String?>(
-                            tooltip: l.feedCuisine,
-                            initialValue: _cuisine,
-                            onSelected: (c) => setState(() => _cuisine = c),
-                            itemBuilder: (_) => [
-                              PopupMenuItem(
-                                value: null,
-                                child: Text(l.feedAnyCuisine),
-                              ),
-                              for (final c in cuisines)
-                                PopupMenuItem(value: c, child: Text(c)),
-                            ],
-                            child: Chip(
-                              label: Text(_cuisine ?? l.feedCuisine),
-                              avatar: const Icon(Icons.arrow_drop_down),
-                            ),
+                          // The house floating sheet, as every other menu (a popup menu sat apart).
+                          FilterChip(
+                            key: const ValueKey('feed-cuisine'),
+                            label: Text(_cuisine ?? l.feedCuisine),
+                            avatar: const Icon(Icons.arrow_drop_down),
+                            showCheckmark: false,
+                            selected: _cuisine != null,
+                            onSelected: (_) => _pickCuisine(cuisines),
                           ),
                       ],
                     ],
@@ -831,7 +860,8 @@ class _PantryCard extends StatelessWidget {
 }
 
 /// Columns for a width: 2 on a phone, one more per ~220 dp after that.
-int _columns(double width) => math.max(2, (width - 32) ~/ 220);
+int _columns(double width) =>
+    math.max(2, (width - 2 * spaceM) ~/ feedCardMinWidth);
 
 /// A recipe card's photo, tagged to fly into its page's header (CoverAppBar); null = no photo (the drawing shows).
 Widget Function(Widget)? _heroPhoto(

@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/log.dart';
+import '../../core/utils/log.dart';
 import '../../core/network/api_exception.dart';
 import '../auth/presentation/auth_controller.dart';
 import 'push_messaging.dart';
@@ -40,8 +40,8 @@ class PushController extends ChangeNotifier {
   /// The user tapped a share's notification: open it.
   void Function(String shareId)? onTap;
 
-  /// The user tapped a push that is not a share's: `sign_in` ("new sign-in to your account") or `family`.
-  void Function(String type)? onTypeTap;
+  /// The user tapped a push that is not a share's: `sign_in` ("new sign-in to your account"), `family` or `badge`.
+  void Function(String type, Map<String, String> data)? onTypeTap;
 
   bool _allowed = false;
 
@@ -73,7 +73,7 @@ class PushController extends ChangeNotifier {
     final id = data['shareId'];
     if (id != null && id.isNotEmpty) return onTap?.call(id);
     final type = data['type'];
-    if (type != null) onTypeTap?.call(type);
+    if (type != null) onTypeTap?.call(type, data);
   }
 
   void _authChanged() {

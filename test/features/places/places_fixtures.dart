@@ -62,9 +62,11 @@ Place place({
   HalalCert? cert,
   ({int outlets, String url})? brand,
   bool visited = false,
+  bool regular = false,
 }) => Place(
   id: id,
   visited: visited,
+  regular: regular,
   sourceUrl: sourceUrl,
   note: null,
   createdAt: DateTime.utc(2026, 11, 2),
@@ -120,6 +122,7 @@ NearbyBranch nearbyBranch({
   String? cover,
   RatingSummary? rating,
   HalalCert? cert,
+  String? cuisine = 'Melayu',
 }) => NearbyBranch(
   branchId: branchId,
   placeId: 'r-1',
@@ -129,7 +132,7 @@ NearbyBranch nearbyBranch({
   lat: lat,
   lng: lng,
   distanceM: distanceM,
-  cuisine: 'Melayu',
+  cuisine: cuisine,
   halalClaim: 'says_halal',
   halalQuote: 'Halal ya',
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',
@@ -330,6 +333,14 @@ class FakePlaces implements PlacesRepository {
   Future<void> setPrivate(String id, bool private) async {
     if (error != null) throw error!;
     privates[id] = private;
+  }
+
+  final myBranches = <String, String>{};
+
+  @override
+  Future<void> setBranch(String id, String branchId) async {
+    if (error != null) throw error!;
+    myBranches[id] = branchId;
   }
 
   final pins = <(String, double, double)>[];

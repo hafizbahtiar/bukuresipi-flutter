@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../../../core/ads/ads.dart';
-import '../../../../core/log.dart';
+import '../../../../core/utils/log.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import 'feed_card.dart';

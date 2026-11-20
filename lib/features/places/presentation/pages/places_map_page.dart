@@ -9,13 +9,9 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../l10n/gen/app_localizations.dart';
-import '../../../../core/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
-import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../auth/presentation/auth_text.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../owner/domain/owner.dart';
 import '../../../owner/domain/owner_repository.dart';
@@ -25,16 +21,15 @@ import '../../domain/place.dart';
 import '../places_controller.dart';
 import '../widgets/map_search.dart';
 import '../widgets/location_button.dart';
-import 'branch_edit_page.dart';
 import '../widgets/map_legend.dart';
-import '../widgets/nearby_carousel.dart';
+import '../widgets/map_place_sheets.dart';
+import '../widgets/map_sheet.dart';
+import '../widgets/nearby_card.dart';
 import '../widgets/nearby_sheet.dart';
-import '../widgets/notebook_rating.dart';
 import '../widgets/north_button.dart';
 import '../widgets/unpinned_actions.dart';
 import '../widgets/view_mode_button.dart';
 import '../location.dart';
-import '../../../shares/presentation/widgets/share_image.dart';
 
 /// OpenFreeMap: free vector tiles, no key, no request cap; its styles carry the OpenStreetMap attribution.
 /// Liberty in light mode, Dark in dark mode; a switch reloads the style, and [_styleLoaded] redraws our layers.
@@ -112,7 +107,16 @@ class _PlacesMapPageState extends State<PlacesMapPage>
           for (final n in _nearby)
             if (n.saved) n,
         ];
-  String? _selectedNearbyId;
+
+  /// What the sheet shows: null = the list (near me); else a NearbyBranch, (Place, Branch?), PlaceHit,
+  /// OwnerPlace, [_unpinned] or a map label ([MapLabel]). [_shown] bumps on each pick: the sheet rises for it.
+  Object? _selected;
+  int _shown = 0;
+  final _sheet = DraggableScrollableController();
+  static const _unpinned = 'unpinned';
+
+  /// OpenFreeMap Liberty's place labels (the Dark style draws none, so there is nothing to tap there).
+  static const _poiLayers = ['poi_r1', 'poi_r7', 'poi_r20'];
   LatLng? _here;
   LatLng? _nearbyOrigin;
   double _bearing = 0;
@@ -145,6 +149,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     _positionSub?.cancel();
     _places.removeListener(_draw);
     _places.changes.removeListener(_loadNearby);
+    _sheet.dispose();
     _map?.onCircleTapped.remove(_tapped);
     _map?.onFeatureTapped.remove(_featureTapped);
     // Calls still in flight find no map and stop (see quietMap).
@@ -402,10 +407,6 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       setState(() {
         _nearby = measured;
         _nearbyOrigin = here;
-        if (_selectedNearbyId != null &&
-            !measured.any((p) => p.branchId == _selectedNearbyId)) {
-          _selectedNearbyId = null;
-        }
       });
       await _draw();
     } catch (_) {
@@ -815,12 +816,9 @@ class _PlacesMapPageState extends State<PlacesMapPage>
           .firstOrNull;
       final all = _all.where((a) => a.branchId == ownerBranch).firstOrNull;
       if (nearby != null) {
-        _focusNearby(nearby);
+        _showNearby(nearby);
       } else if (all != null) {
-        showBaseSheet<void>(
-          context,
-          builder: (_) => _OwnerPlaceSheet(place: all, onChanged: _loadAll),
-        );
+        _show(all, lat: all.branch.lat, lng: all.branch.lng);
       }
       return;
     }
@@ -829,8 +827,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       final nearby = _nearby
           .where((n) => n.branchId == nearbyBranch)
           .firstOrNull;
-      // A nearby circle selects its card and centres the map; tapping the card opens the sheet.
-      if (nearby != null) _focusNearby(nearby);
+      if (nearby != null) _showNearby(nearby);
       return;
     }
     final place = _places.byId(data?['place'] as String? ?? '');
@@ -838,15 +835,93 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final branch =
         place.branches.where((b) => b.id == data?['branch']).firstOrNull ??
         place.savedBranch;
-    final nearby = _nearby.where((n) => n.branchId == branch?.id).firstOrNull;
-    if (nearby != null) {
-      setState(() => _selectedNearbyId = nearby.branchId);
+    _show((place, branch), lat: branch?.lat, lng: branch?.lng);
+  }
+
+  /// A tap on the map itself: a place label (OSM) shows its name at once, then our place of that name there if
+  /// there is one; anywhere else goes back to the list, as Google Maps does.
+  Future<void> _mapClicked(Point<double> point, LatLng at) async {
+    final map = _map;
+    if (map == null) return;
+    List<dynamic> features = const [];
+    try {
+      features = await map.queryRenderedFeatures(point, _poiLayers, null);
+    } on PlatformException {
+      // A style still loading has no layers to ask.
     }
-    showBaseSheet<void>(
-      context,
-      builder: (context) => _PinSheet(place: place, branch: branch),
+    final name = [
+      for (final f in features)
+        if (f case {'properties': {'name': final String n}}) n,
+    ].firstOrNull;
+    if (!mounted) return;
+    if (name == null) {
+      if (_selected != null) _show(null);
+      return;
+    }
+    final label = MapLabel(name, at.latitude, at.longitude);
+    _show(label, lat: at.latitude, lng: at.longitude);
+    try {
+      final hits = await _places.search(
+        name,
+        at.latitude,
+        at.longitude,
+        submit: false,
+      );
+      final hit = hits.where((h) => h.distanceM < 250).firstOrNull;
+      if (hit == null || !mounted || _selected != label) return;
+      setState(() => _selected = _pinOf(hit) ?? hit);
+    } catch (_) {
+      // The name stays: the label is all we know.
+    }
+  }
+
+  /// A branch in your book, as a pin tap shows it.
+  (Place, Branch)? _pinOf(PlaceHit hit) => [
+    for (final p in _places.pinned)
+      for (final b in p.pins)
+        if (b.id == hit.branchId) (p, b),
+  ].firstOrNull;
+
+  /// The sheet shows [what] (null = the list), and the map centres a point above it.
+  void _show(Object? what, {double? lat, double? lng}) {
+    setState(() {
+      _selected = what;
+      _shown++;
+    });
+    final height = MediaQuery.sizeOf(context).height;
+    unawaited(
+      quietMap(
+        _map?.updateContentInsets(
+          what == null
+              ? EdgeInsets.zero
+              : isWide(context)
+              ? EdgeInsets.only(left: _panelLeft(context) + sidePanelWidth)
+              : EdgeInsets.only(bottom: height * MapSheet.half),
+        ),
+      ),
+    );
+    if (lat != null && lng != null) _flyTo(lat, lng);
+  }
+
+  /// A nearby place: yours as your pin, another one with Save.
+  void _showNearby(NearbyBranch n) {
+    final mine = n.saved ? _places.byId(n.savedPlaceId ?? '') : null;
+    _show(
+      mine == null
+          ? n
+          : (
+              mine,
+              mine.branches.where((b) => b.id == n.branchId).firstOrNull ??
+                  mine.savedBranch,
+            ),
+      lat: n.lat,
+      lng: n.lng,
     );
   }
+
+  /// The sheet's "done" or X: back to the list; a saved search hit shows as your pin.
+  void _closed(Object? result) =>
+      result is Place ? _show((result, result.savedBranch)) : _show(null);
 
   /// Others' places near the map's centre, for the search bar.
   Future<List<PlaceHit>> _searchNear(String q, {required bool submit}) {
@@ -860,38 +935,11 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   Future<void> _picked(Object hit) async {
     if (!mounted) return;
     if (hit is PlaceHit) {
-      _flyTo(hit.lat, hit.lng);
-      final saved = [
-        for (final p in _places.pinned)
-          for (final b in p.pins)
-            if (b.id == hit.branchId) (p, b),
-      ].firstOrNull;
-      if (saved != null) {
-        showBaseSheet<void>(
-          context,
-          builder: (context) => _PinSheet(place: saved.$1, branch: saved.$2),
-        );
-        return;
-      }
-      final place = await showBaseSheet<Place>(
-        context,
-        builder: (_) => _HitSheet(hit: hit, places: _places),
-      );
-      if (place != null && mounted) {
-        showBaseSheet<void>(
-          context,
-          builder: (context) =>
-              _PinSheet(place: place, branch: place.savedBranch),
-        );
-      }
+      _show(_pinOf(hit) ?? hit, lat: hit.lat, lng: hit.lng);
       return;
     }
     final (place, branch) = hit as (Place, Branch);
-    _flyTo(branch.lat!, branch.lng!);
-    showBaseSheet<void>(
-      context,
-      builder: (context) => _PinSheet(place: place, branch: branch),
-    );
+    _show((place, branch), lat: branch.lat, lng: branch.lng);
   }
 
   void _flyTo(double lat, double lng) {
@@ -913,750 +961,311 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     );
   }
 
-  /// Carousel snap / map tap: select the card and centre the map on that branch, keeping the 2D/3D angle.
-  void _focusNearby(NearbyBranch place) {
-    setState(() => _selectedNearbyId = place.branchId);
-    final map = _map;
-    if (map == null) return;
-    unawaited(
-      quietMap(
-        map.easeCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: LatLng(place.lat, place.lng),
-              zoom: 15,
-              bearing: _bearing,
-              tilt: _tilt,
+  Widget _nearbySheet(NearbyBranch place) => NearbySheet(
+    place: place,
+    onEdited: _loadNearby,
+    onSave: () async {
+      final saved = await _places.saveBranch(place.branchId);
+      if (!mounted) return;
+      // The saved place carries the branch's fresh rating: canRate is true now for a verified saver.
+      final rating = saved.branches
+          .where((b) => b.id == place.branchId)
+          .firstOrNull
+          ?.rating;
+      setState(() {
+        _nearby = [
+          for (final n in _nearby)
+            n.branchId == place.branchId
+                ? n.copyWith(
+                    saved: true,
+                    savedPlaceId: saved.id,
+                    rating: rating,
+                  )
+                : n,
+        ];
+      });
+      await _draw();
+    },
+  );
+
+  /// Places with no pin, each with Find location / Set on map. Rebuilds as places get pinned: a found one leaves.
+  Widget _unpinnedList(AppLocalizations l) => Consumer<PlacesController>(
+    builder: (context, places, _) {
+      final text = Theme.of(context).textTheme;
+      return ListView(
+        shrinkWrap: true,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
+            child: Text(
+              l.unpinnedHelp,
+              style: text.bodyMedium?.copyWith(
+                color: Notebook.of(context).inkSoft,
+              ),
             ),
           ),
-          duration: const Duration(milliseconds: 900),
-          interpolation: CameraAnimationInterpolation.easeInOut,
-        ),
-      ),
-    );
-  }
-
-  void _openNearby(NearbyBranch place) {
-    if (place.saved && place.savedPlaceId != null) {
-      context.push('/places/${place.savedPlaceId}');
-      return;
-    }
-    final places = context.read<PlacesController>();
-    showBaseSheet<void>(
-      context,
-      builder: (context) => NearbySheet(
-        place: place,
-        onEdited: _loadNearby,
-        onSave: () async {
-          final saved = await places.saveBranch(place.branchId);
-          if (!mounted) return;
-          // The saved place carries the branch's fresh rating: canRate is true now for a verified saver.
-          final rating = saved.branches
-              .where((b) => b.id == place.branchId)
-              .firstOrNull
-              ?.rating;
-          setState(() {
-            _nearby = [
-              for (final n in _nearby)
-                n.branchId == place.branchId
-                    ? n.copyWith(
-                        saved: true,
-                        savedPlaceId: saved.id,
-                        rating: rating,
-                      )
-                    : n,
-            ];
-          });
-          await _draw();
-        },
-      ),
-    );
-  }
-
-  void _showUnpinned() {
-    final l = AppLocalizations.of(context);
-    showBaseSheet<void>(
-      context, // floating like the add sheet; it caps its height and the list scrolls
-      // Rebuilds as places get pinned: a found place leaves this list.
-      builder: (context) => Consumer<PlacesController>(
-        builder: (context, places, _) {
-          final text = Theme.of(context).textTheme;
-          return ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
-                child: Text(
-                  l.unpinnedHelp,
-                  style: text.bodyMedium?.copyWith(
-                    color: Notebook.of(context).inkSoft,
+          for (final p in places.unpinned)
+            ListTile(
+              leading: const PinMark(pinned: false),
+              onTap: () => context.push('/places/${p.id}'),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.restaurant.name,
+                    style: text.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                  if (p.savedBranch case final b?) ...[
+                    if (b.label != null && b.label != p.restaurant.name)
+                      Text(b.label!, style: text.bodySmall),
+                    UnpinnedActions(place: p, branch: b),
+                  ],
+                ],
               ),
-              for (final p in places.unpinned)
-                ListTile(
-                  leading: const PinMark(pinned: false),
-                  onTap: () => context.push('/places/${p.id}'),
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        p.restaurant.name,
-                        style: text.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (p.savedBranch case final b?) ...[
-                        if (b.label != null && b.label != p.restaurant.name)
-                          Text(b.label!, style: text.bodySmall),
-                        UnpinnedActions(place: p, branch: b),
-                      ],
-                    ],
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+            ),
+        ],
+      );
+    },
+  );
+
+  /// The sheet's list: near me (the phone's location), and the places with no pin.
+  Widget _nearbyList(AppLocalizations l) {
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final shown = _shownNearby;
+    final unpinned = _places.unpinned.length;
+    return ListView(
+      key: const ValueKey('map-sheet-list'),
+      padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceM),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l.feedNearMe,
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+            if (_nearbyLoading)
+              const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
+        const SizedBox(height: spaceS),
+        if (_here == null)
+          InkWell(
+            onTap: _myLocation,
+            child: Text(
+              l.feedLocationOff,
+              style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+            ),
+          )
+        else if (shown.isEmpty && !_nearbyLoading)
+          Text(
+            l.mapSearchNone,
+            style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+          ),
+        for (final n in shown)
+          Padding(
+            padding: const EdgeInsets.only(bottom: spaceS),
+            child: SizedBox(
+              key: ValueKey('nearby-card-${n.branchId}'),
+              height: NearbyCard.heightOf(context),
+              child: NearbyCard(place: n, onTap: () => _showNearby(n)),
+            ),
+          ),
+        if (unpinned > 0)
+          ListTile(
+            key: const ValueKey('map-sheet-unpinned'),
+            contentPadding: EdgeInsets.zero,
+            leading: const PinMark(pinned: false),
+            title: Text(
+              l.unpinnedCount(unpinned),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            trailing: Icon(Icons.chevron_right, color: nb.inkSoft),
+            onTap: () => _show(_unpinned),
+          ),
+      ],
     );
   }
+
+  Widget _sheetContent(AppLocalizations l) => switch (_selected) {
+    null => _nearbyList(l),
+    _unpinned => _unpinnedList(l),
+    final NearbyBranch n => _nearbySheet(n),
+    (final Place p, final Branch? b) => PinSheet(place: p, branch: b),
+    final PlaceHit h => SearchHitSheet(hit: h, places: _places),
+    final OwnerPlace o => OwnerPlaceSheet(place: o, onChanged: _loadAll),
+    final MapLabel label => MapLabelSheet(label: label),
+    _ => const SizedBox.shrink(),
+  };
+
+  /// On a wide screen, where the side panel and the search bar above it start (past a notch on its side).
+  double _panelLeft(BuildContext context) =>
+      12 + MediaQuery.paddingOf(context).left;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final places = context.watch<PlacesController>();
-    final unpinned = places.unpinned.length;
-    final shownNearby = _shownNearby;
-    final showNearby = shownNearby.isNotEmpty;
-    // No app bar: the search bar floats on the map, the buttons below it.
-    // The keyboard covers the map (resizing a native map view stutters); the cards at the bottom ride above it.
-    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final side = isWide(context);
+    // No app bar: the search bar floats on the map, the buttons below it. The keyboard covers the map and the
+    // sheet (resizing a native map view stutters).
     final belowBar =
         MediaQuery.paddingOf(context).top + 8 + MapSearchBar.height + 12;
-    // The credit "i" sits bottom left, above whatever holds the bottom.
-    // shortcut: the slip's height is a guess (~52); a large font may cover the "i" until the slip is measured.
-    final bottomUsed = unpinned > 0
-        ? (showNearby ? NearbyCarousel.heightOf(context) + 32 : 16) + 52
-        : (showNearby ? NearbyCarousel.heightOf(context) + 16 : 0);
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: Theme.of(context).brightness == Brightness.dark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        // The keyboard covers the map instead of resizing it: a native map view re-laid out every frame stutters.
-        resizeToAvoidBottomInset: false,
-        body: Stack(
-          children: [
-            MapLibreMap(
-              styleString: mapStyle(context),
-              initialCameraPosition: malaysiaCamera,
-              onMapCreated: _created,
-              onStyleLoadedCallback: _styleLoaded,
-              onCameraIdle: _cameraIdle,
-              // Pan, pinch-zoom, two-finger rotate and two-finger tilt (3D) all on.
-              rotateGesturesEnabled: true,
-              scrollGesturesEnabled: true,
-              zoomGesturesEnabled: true,
-              tiltGesturesEnabled: true,
-              dragEnabled: true,
-              doubleClickZoomEnabled: true,
-              compassEnabled: false, // our own north button: always there, on the notebook's paper
-              // No per-frame camera stream: the page queries the camera on idle (compass + tilt).
-              trackCameraPosition: false,
-              // The native location component is created before permission is granted and does not
-              // reliably start afterwards; _draw paints our own dot as soon as we have a fix.
-              myLocationEnabled: false,
-              // Pins are style layers (_addLayers); annotations are only the you-are-here dot.
-              annotationOrder: const [AnnotationType.circle],
-              annotationConsumeTapEvents: const [AnnotationType.circle],
-              logoEnabled: false,
-              // The credit OpenStreetMap needs stays, as a faint "i" in the bottom-left corner.
-              attributionButtonPosition: AttributionButtonPosition.bottomLeft,
-              attributionButtonMargins: Point(8, bottomUsed + 8),
-              attributionButtonColor: nb.ink.withValues(alpha: 0.3),
-            ),
-            if (_map != null)
-              Positioned(
-                top: belowBar,
-                right: 12,
-                child: Column(
-                  children: [
-                    NorthButton(
-                      bearing: _bearing,
-                      tooltip: l.northUp,
-                      onPressed: _northUp,
-                    ),
-                    const SizedBox(height: 8),
-                    LocationButton(
-                      tooltip: l.myLocation,
-                      onPressed: _myLocation,
-                      busy: _locating,
-                    ),
-                    const SizedBox(height: 8),
-                    ViewModeButton(
-                      threeD: _tilt > 1,
-                      tooltip: _tilt > 1 ? l.view2d : l.view3d,
-                      onPressed: _toggleTilt,
-                    ),
-                    const SizedBox(height: 8),
-                    MapLegendButton(
-                      owner: _owner,
-                      showCommunity: _showCommunity,
-                      onShowCommunity: (on) {
-                        setState(() => _showCommunity = on);
-                        unawaited(_draw());
-                      },
-                    ),
-                  ],
+    // Lowered, the sheet keeps its handle and the first line of what it shows.
+    final peek =
+        36 +
+        MediaQuery.textScalerOf(context).scale(48) +
+        MediaQuery.paddingOf(context).bottom;
+    return PopScope(
+      // Back closes what the sheet shows first, as Google Maps does.
+      canPop: _selected == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _show(null);
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: Theme.of(context).brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          // The keyboard covers the map instead of resizing it: a native map view re-laid out every frame stutters.
+          resizeToAvoidBottomInset: false,
+          body: Stack(
+            children: [
+              MapLibreMap(
+                styleString: mapStyle(context),
+                initialCameraPosition: malaysiaCamera,
+                onMapCreated: _created,
+                onStyleLoadedCallback: _styleLoaded,
+                onCameraIdle: _cameraIdle,
+                onMapClick: _mapClicked,
+                // Pan, pinch-zoom, two-finger rotate and two-finger tilt (3D) all on.
+                rotateGesturesEnabled: true,
+                scrollGesturesEnabled: true,
+                zoomGesturesEnabled: true,
+                tiltGesturesEnabled: true,
+                dragEnabled: true,
+                doubleClickZoomEnabled: true,
+                compassEnabled: false, // our own north button: always there, on the notebook's paper
+                // No per-frame camera stream: the page queries the camera on idle (compass + tilt).
+                trackCameraPosition: false,
+                // The native location component is created before permission is granted and does not
+                // reliably start afterwards; _draw paints our own dot as soon as we have a fix.
+                myLocationEnabled: false,
+                // Pins are style layers (_addLayers); annotations are only the you-are-here dot.
+                annotationOrder: const [AnnotationType.circle],
+                annotationConsumeTapEvents: const [AnnotationType.circle],
+                logoEnabled: false,
+                // The credit OpenStreetMap needs stays, as a faint "i" in the bottom-left corner.
+                attributionButtonPosition: AttributionButtonPosition.bottomLeft,
+                attributionButtonMargins: Point(
+                  side ? _panelLeft(context) + sidePanelWidth + 8 : 8,
+                  side ? 8 : peek + 8,
                 ),
+                attributionButtonColor: nb.ink.withValues(alpha: 0.3),
               ),
-            if (places.loaded &&
-                places.pinned.isEmpty &&
-                _nearby.isEmpty &&
-                _here == null)
-              Positioned(
-                left: 16,
-                right: 72,
-                top: belowBar,
-                child: _Slip(
-                  child: Text(l.mapEmpty, textAlign: TextAlign.center),
-                ),
-              ),
-            if (unpinned > 0)
-              Positioned(
-                left: 16,
-                right: 16,
-                // The nearby cards have the bottom; the unpinned slip sits just above them.
-                bottom:
-                    keyboard +
-                    (showNearby ? NearbyCarousel.heightOf(context) + 32 : 16),
-                child: SafeArea(
-                  // As wide as a nearby card, centred over it.
-                  child: Center(
-                    child: SizedBox(
-                      width: NearbyCarousel.cardWidth,
-                      child: _Slip(
-                        onTap: _showUnpinned,
-                        child: Row(
-                          children: [
-                            const PinMark(pinned: false),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                l.unpinnedCount(unpinned),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            Icon(Icons.expand_less, color: nb.inkSoft),
-                          ],
-                        ),
+              if (_map != null)
+                Positioned(
+                  top: belowBar,
+                  right: 12,
+                  child: Column(
+                    children: [
+                      NorthButton(
+                        bearing: _bearing,
+                        tooltip: l.northUp,
+                        onPressed: _northUp,
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      LocationButton(
+                        tooltip: l.myLocation,
+                        onPressed: _myLocation,
+                        busy: _locating,
+                      ),
+                      const SizedBox(height: 8),
+                      ViewModeButton(
+                        threeD: _tilt > 1,
+                        tooltip: _tilt > 1 ? l.view2d : l.view3d,
+                        onPressed: _toggleTilt,
+                      ),
+                      const SizedBox(height: 8),
+                      MapLegendButton(
+                        owner: _owner,
+                        showCommunity: _showCommunity,
+                        onShowCommunity: (on) {
+                          setState(() => _showCommunity = on);
+                          unawaited(_draw());
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            if (showNearby)
+              if (places.loaded &&
+                  places.pinned.isEmpty &&
+                  _nearby.isEmpty &&
+                  _here == null)
+                Positioned(
+                  left: 16,
+                  right: 72,
+                  top: belowBar,
+                  child: MapSlip(
+                    child: Text(l.mapEmpty, textAlign: TextAlign.center),
+                  ),
+                ),
+              // Keyed: the slips above come and go, and a re-created sheet would attach its controller twice.
               Positioned(
-                left: 0,
-                right: 0,
-                bottom: keyboard + 16,
+                key: const ValueKey('map-sheet-host'),
+                top: 0,
+                bottom: 0,
+                left: side ? _panelLeft(context) : 0,
+                width: side ? sidePanelWidth : null,
+                right: side ? null : 0,
+                child: MapSheet(
+                  controller: _sheet,
+                  peek: peek,
+                  top: belowBar - 12,
+                  shown: _shown,
+                  showClose: _selected != null,
+                  onClose: _closed,
+                  child: KeyedSubtree(
+                    key: ValueKey(_shown),
+                    child: _sheetContent(l),
+                  ),
+                ),
+              ),
+              // Last: its results drop over everything else.
+              // On a wide screen, over the side panel (its SafeArea takes the notch off the left).
+              Positioned(
+                top: 0,
+                left: 12,
+                width: side
+                    ? sidePanelWidth + MediaQuery.paddingOf(context).left
+                    : null,
+                right: side ? null : 12,
                 child: SafeArea(
-                  top: false,
-                  left: false,
-                  right: false,
-                  child: NearbyCarousel(
-                    places: shownNearby,
-                    selectedBranchId: _selectedNearbyId,
-                    onTap: _openNearby,
-                    onSelected: _focusNearby,
-                  ),
-                ),
-              ),
-            // Last: its results drop over everything else.
-            Positioned(
-              top: 0,
-              left: 12,
-              right: 12,
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: MapSearchBar(
-                    places: places.pinned,
-                    search: _searchNear,
-                    recent: _places.recentSearches,
-                    onPicked: _picked,
-                    reserveBottom: showNearby
-                        ? NearbyCarousel.heightOf(context) + 24
-                        : 0,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A slip of paper laid on the map.
-class _Slip extends StatelessWidget {
-  const _Slip({required this.child, this.onTap});
-
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final nb = Notebook.of(context);
-    return Material(
-      color: nb.paper,
-      elevation: 2,
-      shadowColor: nb.ink.withValues(alpha: 0.25),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: nb.line),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-/// A search result not in your book: name, where, and Save (a place new to the app becomes a restaurant). Pops the
-/// saved Place.
-class _HitSheet extends StatefulWidget {
-  const _HitSheet({required this.hit, required this.places});
-
-  final PlaceHit hit;
-  final PlacesController places;
-
-  @override
-  State<_HitSheet> createState() => _HitSheetState();
-}
-
-class _HitSheetState extends State<_HitSheet> {
-  bool _saving = false;
-
-  Future<void> _save() async {
-    final l = AppLocalizations.of(context);
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final h = widget.hit;
-    setState(() => _saving = true);
-    try {
-      final place = await (h.branchId != null
-          ? widget.places.saveBranch(h.branchId!)
-          : widget.places.savePoi(h.poiId!));
-      navigator.pop(place);
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
-    final h = widget.hit;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceS),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(h.name, style: text.titleLarge),
-          Text(
-            [distanceText(h.distanceM), ?h.address].join(' · '),
-            style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-          ),
-          if (h.poiId != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                l.mapSearchNewPlace,
-                style: text.bodySmall?.copyWith(color: nb.inkSoft),
-              ),
-            ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            key: const ValueKey('search-hit-save'),
-            icon: _saving
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.bookmark_add_outlined),
-            label: Text(l.save),
-            onPressed: _saving ? null : _save,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A pin tapped on the map: the place on a sheet, then open it or get directions.
-class _PinSheet extends StatelessWidget {
-  const _PinSheet({required this.place, this.branch});
-
-  final Place place;
-  final Branch? branch;
-
-  Future<void> _edit(BuildContext context, Branch b) async {
-    final owner = context.read<AuthController>().user?.isOwner ?? false;
-    final navigator = Navigator.of(context);
-    final saved = await showBranchEdit(
-      context,
-      builder: (_) => BranchEditPage(
-        placeId: place.id,
-        branch: b,
-        canEditShared: owner,
-        onSuggest: owner
-            ? () => context.read<PlacesController>().suggestBranch(b.id)
-            : null,
-        onSave: (edit, scope) => context.read<PlacesController>().updateBranch(
-          b.id,
-          label: edit.label,
-          address: edit.address,
-          city: edit.city,
-          state: edit.state,
-          lat: edit.lat,
-          lng: edit.lng,
-          scope: scope,
-        ),
-      ),
-    );
-    if (saved == true && context.mounted) navigator.pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
-    final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
-    final b = branch;
-    // Owner: where the pin came from, and the shared edit under Owner tools (a user's pencil edits their own copy).
-    final owner = context.watch<AuthController>().user?.isOwner ?? false;
-    return ListView(
-      shrinkWrap: true,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceXs),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  place.restaurant.name,
-                  style: text.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
-                  ),
-                ),
-              ),
-              ?placePhoto(place, size: 64),
-            ],
-          ),
-        ),
-        if (b != null)
-          ListTile(
-            leading: PinMark(pinned: b.hasPin),
-            trailing: owner
-                ? null
-                : IconButton(
-                    tooltip: l.editBranch,
-                    icon: Icon(Icons.edit_outlined, color: nb.inkSoft),
-                    onPressed: () => _edit(context, b),
-                  ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  b.label ?? b.where ?? '-',
-                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                if (b.where != null && b.where != b.label)
-                  Text(
-                    b.where!,
-                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                  ),
-                if (owner)
-                  Text(
-                    b.pinSource == null
-                        ? l.branchPinNone
-                        : l.ownerPlacePinSource(sourceName(l, b.pinSource!)),
-                    key: const ValueKey('pin-sheet-source'),
-                    style: soft,
-                  )
-                else if (b.pinnedByUser)
-                  Text(l.pinnedByUser, style: soft)
-                else if (b.pinnedByOwner)
-                  Text(l.pinnedByOwner, style: soft),
-                Consumer<PlacesController>(
-                  builder: (context, places, _) {
-                    final live =
-                        places
-                            .byId(place.id)
-                            ?.branches
-                            .where((x) => x.id == b.id)
-                            .firstOrNull ??
-                        b;
-                    return RatingLine(
-                      rating: live.rating,
-                      onTap: () => context.push('/branches/${b.id}/reviews'),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        if (place.note case final note? when note.isNotEmpty)
-          ListTile(
-            leading: Icon(Icons.sticky_note_2_outlined, color: nb.inkSoft),
-            title: Text(note),
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    context.push('/places/${place.id}');
-                  },
-                  child: Text(l.openPlace),
-                ),
-              ),
-              if (b?.mapsUrl case final url?) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 46),
-                      shape: const StadiumBorder(),
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: MapSearchBar(
+                      places: places.pinned,
+                      search: _searchNear,
+                      recent: _places.recentSearches,
+                      onPicked: _picked,
+                      reserveBottom: peek,
                     ),
-                    onPressed: () =>
-                        openLink(context, url, failed: l.openFailed),
-                    icon: const Icon(Icons.directions),
-                    label: Text(l.directions),
                   ),
                 ),
-              ],
-            ],
-          ),
-        ),
-        if (owner && b != null) ...[
-          SectionHeader(l.ownerTools),
-          ListTile(
-            key: const ValueKey('pin-sheet-owner-edit'),
-            leading: const Icon(Icons.edit_outlined),
-            title: Text(l.editBranch),
-            onTap: () => _edit(context, b),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// The owner's look at any restaurant on the map (one they did not save): where its pin came from, how many saved
-/// it, and the shared edits: edit (with the AI draft), check the restaurant's branches, delete the branch.
-class _OwnerPlaceSheet extends StatefulWidget {
-  const _OwnerPlaceSheet({required this.place, required this.onChanged});
-
-  final OwnerPlace place;
-
-  /// The shared data changed: the map reloads the owner's layer.
-  final VoidCallback onChanged;
-
-  @override
-  State<_OwnerPlaceSheet> createState() => _OwnerPlaceSheetState();
-}
-
-class _OwnerPlaceSheetState extends State<_OwnerPlaceSheet> {
-  bool _busy = false;
-
-  OwnerPlace get place => widget.place;
-
-  void _snack(String message) =>
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-
-  Future<void> _edit() async {
-    final places = context.read<PlacesController>();
-    final navigator = Navigator.of(context);
-    final b = place.branch;
-    final saved = await showBranchEdit(
-      context,
-      builder: (_) => BranchEditPage(
-        placeId: '',
-        branch: b,
-        canEditShared: true,
-        onSuggest: () => places.suggestBranch(b.id),
-        onSave: (edit, scope) => places.updateBranch(
-          b.id,
-          label: edit.label,
-          address: edit.address,
-          city: edit.city,
-          state: edit.state,
-          lat: edit.lat,
-          lng: edit.lng,
-          scope: scope,
-        ),
-      ),
-    );
-    if (saved == true) {
-      widget.onChanged();
-      navigator.pop();
-    }
-  }
-
-  Future<void> _run(Future<String?> Function() action) async {
-    final l = AppLocalizations.of(context);
-    final navigator = Navigator.of(context);
-    setState(() => _busy = true);
-    try {
-      final done = await action();
-      if (done == null) return;
-      widget.onChanged();
-      _snack(done);
-      navigator.pop();
-    } catch (e) {
-      _snack(errorText(l, e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<String?> _check() async {
-    final l = AppLocalizations.of(context);
-    final done = await context.read<PlacesController>().tidyBranches(
-      place.placeId,
-    );
-    return l.branchesChecked(done.merged, done.removed);
-  }
-
-  Future<String?> _delete() async {
-    final l = AppLocalizations.of(context);
-    final places = context.read<PlacesController>();
-    final sure = await showBaseDialog(
-      context,
-      message: l.deleteBranchConfirm(
-        place.label ?? place.address ?? place.name,
-      ),
-      tone: DialogTone.danger,
-      confirmLabel: l.delete,
-      content: DeleteScopeCard(everyone: true, text: l.deleteScopeBranch),
-    );
-    if (!sure) return null;
-    await places.deleteBranch(place.branchId);
-    return l.deleteBranch;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final nb = Notebook.of(context);
-    final text = Theme.of(context).textTheme;
-    final where = [
-      for (final line in [place.address, place.city, place.state])
-        if (line != null && line.isNotEmpty) line,
-    ].join(', ');
-    final soft = text.bodySmall?.copyWith(color: nb.inkSoft);
-    return ListView(
-      shrinkWrap: true,
-      children: [
-        // As a saved pin's sheet: the place, then its branch and where; then the facts, Directions, the tools.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceXs),
-          child: Text(
-            place.name,
-            style: text.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              height: 1.15,
-            ),
-          ),
-        ),
-        ListTile(
-          leading: MapMarkDot(MapMark.forSource(place.pinSource)),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (place.label != null && place.label != place.name)
-                Text(
-                  place.label!,
-                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              if (where.isNotEmpty)
-                Text(
-                  where,
-                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                ),
-              Text(
-                [
-                  l.ownerPlaceSavers(place.savers),
-                  place.pinSource == null
-                      ? l.branchPinNone
-                      : l.ownerPlacePinSource(sourceName(l, place.pinSource!)),
-                ].join(' · '),
-                key: const ValueKey('owner-sheet-facts'),
-                style: soft,
               ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 46),
-              shape: const StadiumBorder(),
-            ),
-            onPressed: () => openLink(
-              context,
-              mapsSearchUrl(place.lat, place.lng),
-              failed: l.openFailed,
-            ),
-            icon: const Icon(Icons.directions),
-            label: Text(l.directions),
-          ),
-        ),
-        SectionHeader(l.ownerTools),
-        ListTile(
-          leading: const Icon(Icons.edit_outlined),
-          enabled: !_busy,
-          onTap: _edit,
-          title: Text(l.editBranch),
-        ),
-        ListTile(
-          leading: const Icon(Icons.merge_type),
-          enabled: !_busy,
-          onTap: () => _run(_check),
-          title: Text(l.checkBranches),
-        ),
-        ListTile(
-          leading: Icon(Icons.delete_outline, color: nb.margin),
-          enabled: !_busy,
-          onTap: () => _run(_delete),
-          title: Text(l.deleteBranch, style: TextStyle(color: nb.margin)),
-        ),
-      ],
+      ),
     );
   }
 }

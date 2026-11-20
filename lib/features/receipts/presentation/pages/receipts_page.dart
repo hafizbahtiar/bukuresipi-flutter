@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/places_controller.dart';
 import '../../../places/presentation/widgets/halal_status.dart';
@@ -205,8 +207,122 @@ class _Spending extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          _Budget(stats: stats),
+          const SizedBox(height: 12),
           SpendChart(months: stats.months),
         ],
+      ),
+    );
+  }
+}
+
+/// The monthly food budget: this Malaysia month's spend against it (a bar, red past it), or a button to set one.
+class _Budget extends StatelessWidget {
+  const _Budget({required this.stats});
+
+  final ReceiptStats stats;
+
+  Future<void> _edit(BuildContext context, int? budget) async {
+    final l = AppLocalizations.of(context);
+    final auth = context.read<AuthController>();
+    final messenger = ScaffoldMessenger.of(context);
+    final field = TextEditingController(
+      text: budget == null ? '' : (budget ~/ 100).toString(),
+    );
+    final ok = await showBaseDialog(
+      context,
+      title: l.spendingBudget,
+      message: l.spendingBudgetRange,
+      confirmLabel: l.save,
+      content: TextField(
+        key: const ValueKey('budget-field'),
+        controller: field,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(prefixText: 'RM '),
+      ),
+    );
+    // Not disposed here: the dialog's closing animation still shows the field.
+    final text = field.text.trim().replaceAll(',', '');
+    if (!ok) return;
+    final ringgit = int.tryParse(text);
+    if (text.isNotEmpty &&
+        (ringgit == null || ringgit < 10 || ringgit > 100000)) {
+      messenger.showSnackBar(SnackBar(content: Text(l.spendingBudgetRange)));
+      return;
+    }
+    try {
+      await auth.setFoodBudget(ringgit == null ? null : ringgit * 100);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final budget = context.select<AuthController, int?>(
+      (a) => a.user?.foodBudgetSen,
+    );
+    if (budget == null) {
+      return OutlinedButton.icon(
+        key: const ValueKey('budget-set'),
+        onPressed: () => _edit(context, null),
+        icon: const Icon(Icons.savings_outlined),
+        label: Text(l.spendingBudgetSet),
+      );
+    }
+    final my = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final month = '${my.year}-${my.month.toString().padLeft(2, '0')}';
+    final spent =
+        stats.months.where((m) => m.month == month).firstOrNull?.totalSen ?? 0;
+    final over = spent > budget;
+    return InkWell(
+      key: const ValueKey('budget'),
+      onTap: () => _edit(context, budget),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l.spendingBudgetOf(rm(spent), rm(budget)),
+                    style: text.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  over
+                      ? l.spendingBudgetOver(rm(spent - budget))
+                      : l.spendingBudgetLeft(rm(budget - spent)),
+                  style: text.bodySmall?.copyWith(
+                    color: over ? nb.margin : nb.inkSoft,
+                    fontWeight: over ? FontWeight.w700 : null,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.edit_outlined, size: 16, color: nb.inkSoft),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: (spent / budget).clamp(0.0, 1.0),
+                minHeight: 8,
+                color: over ? nb.margin : nb.pandan,
+                backgroundColor: nb.mist,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -587,7 +703,7 @@ class _PlaceVisitsSheetState extends State<PlaceVisitsSheet> {
                       color: nb.inkSoft,
                     ),
                     title: Text(
-                      loc.formatTimeOfDay(TimeOfDay.fromDateTime(v.visitedAt!)),
+                      formatTime(context, v.visitedAt!),
                       style: text.bodyLarge,
                     ),
                     trailing: Text(

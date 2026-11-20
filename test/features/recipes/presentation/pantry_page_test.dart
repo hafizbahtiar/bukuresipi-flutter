@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/pages/pantry_page.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
@@ -88,6 +89,73 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('Added to your shopping list'), findsOneWidget);
       expect(shoppingRepo.items.map((i) => i.text), ['Kicap']);
+    },
+  );
+
+  testWidgets(
+    'nothing fits: Suggest a dish lists AI names with the ingredients they use; again after a new search; the limit is said',
+    (t) async {
+      SharedPreferences.setMockInitialValues({
+        'pantry.ingredients': ['Telur', 'Kicap'],
+      });
+      final recipes = FakeRecipes()
+        ..dishAnswer = [
+          (name: 'Telur Masak Kicap', uses: const ['Telur', 'Kicap']),
+        ];
+      await t.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => RecipesController(recipes)),
+            ChangeNotifierProvider(
+              create: (_) => ShoppingController(FakeShopping()),
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PantryPage(),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('pantry-suggest')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('pantry-find')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('pantry-suggest')));
+      await t.pumpAndSettle();
+      expect(recipes.dishesAsked, [
+        ['Telur', 'Kicap'],
+      ]);
+      expect(
+        find.byKey(const ValueKey('pantry-dish-Telur Masak Kicap')),
+        findsOneWidget,
+      );
+      expect(find.text('Uses: Telur, Kicap'), findsOneWidget);
+      expect(find.byKey(const ValueKey('pantry-suggest')), findsNothing);
+
+      // A new search clears the old suggestions; none this time is said, a refusal is shown.
+      await t.tap(find.byKey(const ValueKey('pantry-find')));
+      await t.pumpAndSettle();
+      expect(find.text('Uses: Telur, Kicap'), findsNothing);
+      recipes.dishAnswer = const [];
+      await t.tap(find.byKey(const ValueKey('pantry-suggest')));
+      await t.pumpAndSettle();
+      expect(
+        find.text(
+          'No dish comes to mind with these. Add a few more ingredients.',
+        ),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('pantry-find')));
+      await t.pumpAndSettle();
+      recipes.dishError = const ApiException('suggest_limit', status: 429);
+      await t.tap(find.byKey(const ValueKey('pantry-suggest')));
+      await t.pumpAndSettle();
+      expect(
+        find.text("That's 10 dish suggestions today. Try again tomorrow."),
+        findsOneWidget,
+      );
     },
   );
 }

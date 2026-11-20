@@ -152,11 +152,9 @@ class AuthApi {
         data: {'name': name},
       )).data!;
 
-  Future<Map<String, dynamic>> setKcalTarget(int? kcal) async =>
-      (await _dio.patch<Map<String, dynamic>>(
-        '/auth/me',
-        data: {'kcalTarget': kcal},
-      )).data!;
+  /// PATCH /auth/me with one field (kcalTarget, foodBudgetSen); null clears it.
+  Future<Map<String, dynamic>> patchMe(Map<String, Object?> body) async =>
+      (await _dio.patch<Map<String, dynamic>>('/auth/me', data: body)).data!;
 
   Future<Map<String, dynamic>> setAvatar(String path) async =>
       (await _dio.put<Map<String, dynamic>>(

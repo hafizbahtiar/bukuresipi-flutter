@@ -1,8 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
@@ -15,6 +17,7 @@ import '../../domain/report.dart';
 import '../places_controller.dart';
 import '../pages/branch_edit_page.dart';
 import 'halal_status.dart';
+import 'map_sheet.dart';
 import 'notebook_rating.dart';
 import 'place_report_sheet.dart';
 
@@ -51,7 +54,7 @@ class _NearbySheetState extends State<NearbySheet> {
   Future<void> _edit() async {
     final owner = context.read<AuthController>().user?.isOwner ?? false;
     final places = context.read<PlacesController>();
-    final navigator = Navigator.of(context);
+    final close = sheetCloser(context);
     final p = widget.place;
     final saved = await showBranchEdit(
       context,
@@ -80,19 +83,19 @@ class _NearbySheetState extends State<NearbySheet> {
     );
     if (saved != true || !mounted) return;
     await widget.onEdited?.call();
-    if (mounted) navigator.pop();
+    if (mounted) close(null);
   }
 
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
+    final close = sheetCloser(context);
     setState(() => _saving = true);
     try {
       await widget.onSave();
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l.nearbySaved)));
-      navigator.pop();
+      close(null);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
@@ -112,7 +115,10 @@ class _NearbySheetState extends State<NearbySheet> {
       p.label,
       p.address,
     ].whereType<String>().where((s) => s.trim().isNotEmpty).toList();
-    return Column(
+    // In the map's sheet: as tall as its shown part, so Save / Directions stay at its edge while the rest scrolls
+    // (a floor keeps them laid out when lowered: clipped, never squeezed).
+    final visible = sheetVisibleHeight(context);
+    final card = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Flexible(
@@ -266,5 +272,8 @@ class _NearbySheetState extends State<NearbySheet> {
         ],
       ],
     );
+    return visible == null
+        ? card
+        : SizedBox(height: math.max(visible, 220), child: card);
   }
 }

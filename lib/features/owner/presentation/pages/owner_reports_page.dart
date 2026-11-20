@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
@@ -63,7 +65,7 @@ class _OwnerReportsPageState extends State<OwnerReportsPage> {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final repo = context.read<OwnerRepository>();
-    final ok = await showNotebookDialog(
+    final ok = await showBaseDialog(
       context,
       message: apply ? l.ownerReportApplyConfirm : l.ownerReportRejectConfirm,
       tone: apply ? DialogTone.confirm : DialogTone.danger,

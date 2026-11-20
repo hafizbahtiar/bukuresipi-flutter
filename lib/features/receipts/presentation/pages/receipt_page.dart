@@ -1,11 +1,14 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/utils/open_link.dart';
+import '../../../../core/utils/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
@@ -16,8 +19,10 @@ import '../../../../core/widgets/photo_sheet.dart';
 import '../../../../core/widgets/pill_switch.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/places_controller.dart';
+import '../../domain/einvoice_details.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
 import '../widgets/split_bill.dart';
@@ -43,7 +48,7 @@ class ReceiptPage extends StatefulWidget {
   State<ReceiptPage> createState() => _ReceiptPageState();
 }
 
-class _ReceiptPageState extends State<ReceiptPage> {
+class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
   late final _repo = context.read<ReceiptsRepository>();
   Receipt? _r;
   Object? _error;
@@ -59,14 +64,81 @@ class _ReceiptPageState extends State<ReceiptPage> {
   final _pages = PageController();
   Future<Uint8List?>? _photo;
 
+  // The user's e-invoice details (this phone only), offered as copy buttons; null = none saved or no account.
+  EinvoiceDetails? _details;
+  // Back from the shop's e-invoice page: ask once whether it was requested.
+  bool _askOnReturn = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+    _loadDetails();
+  }
+
+  Future<void> _loadDetails() async {
+    final store = context.read<EinvoiceDetailsStore?>();
+    final userId = context.read<AuthController?>()?.user?.id;
+    if (store == null || userId == null) return;
+    final d = await store.load(userId);
+    if (mounted) setState(() => _details = d.isEmpty ? null : d);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_askOnReturn) return;
+    _askOnReturn = false;
+    if (_r?.einvoice case final e? when !e.done) _askDone();
+  }
+
+  Future<void> _askDone() async {
+    final l = AppLocalizations.of(context);
+    final yes = await showBaseDialog(
+      context,
+      message: l.einvoiceAskDone,
+      confirmLabel: l.einvoiceAskYes,
+      cancelLabel: l.einvoiceUndo,
+    );
+    if (yes && mounted) await _einvoiceDone(true);
+  }
+
+  Future<void> _openEinvoice(String url) async {
+    _askOnReturn = true;
+    await openLink(
+      context,
+      url,
+      failed: AppLocalizations.of(context).openFailed,
+    );
+  }
+
+  Future<void> _editDetails() async {
+    await context.push('/account/einvoice');
+    await _loadDetails();
+  }
+
+  /// The photo's QR was not read: a close-up of the QR alone.
+  Future<void> _scanEinvoice() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+    if (picked == null) return;
+    try {
+      final found = await _repo.addEinvoiceFromPhoto(widget.id, picked.path);
+      if (!found) {
+        messenger.showSnackBar(SnackBar(content: Text(l.einvoiceNoQr)));
+        return;
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+    _timer?.cancel();
+    await _load();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _total.dispose();
     _pages.dispose();
@@ -97,6 +169,19 @@ class _ReceiptPageState extends State<ReceiptPage> {
     } catch (e) {
       if (mounted) setState(() => _error = e);
     }
+  }
+
+  /// "I've requested it" (or not yet): the server stops (or keeps) the day-before reminder.
+  Future<void> _einvoiceDone(bool done) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l = AppLocalizations.of(context);
+    try {
+      await _repo.setEinvoiceDone(widget.id, done);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+    _timer?.cancel();
+    await _load();
   }
 
   /// Ticks line [i] as eaten [n] times: shown at once, then the server's totals.
@@ -130,6 +215,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         unknownEaten: r.unknownEaten,
         caloriesPending: r.caloriesPending,
         hasSplit: r.hasSplit,
+        einvoice: r.einvoice,
       ),
     );
     try {
@@ -152,31 +238,29 @@ class _ReceiptPageState extends State<ReceiptPage> {
         .places
         .where((p) => p.mine && p.savedBranch != null)
         .toList();
-    final picked = await showModalBottomSheet<({String id, String name})>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ListTile(
-              title: Text(
-                l.receiptChoosePlace,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+    final picked = await showBaseSheet<({String id, String name})>(
+      context,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            title: Text(
+              l.receiptChoosePlace,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            for (final p in places)
-              ListTile(
-                title: Text(p.restaurant.name),
-                subtitle: p.savedBranch!.label == null
-                    ? null
-                    : Text(p.savedBranch!.label!),
-                onTap: () => Navigator.pop(context, (
-                  id: p.savedBranch!.id,
-                  name: p.restaurant.name,
-                )),
-              ),
-          ],
-        ),
+          ),
+          for (final p in places)
+            ListTile(
+              title: Text(p.restaurant.name),
+              subtitle: p.savedBranch!.label == null
+                  ? null
+                  : Text(p.savedBranch!.label!),
+              onTap: () => Navigator.pop(context, (
+                id: p.savedBranch!.id,
+                name: p.restaurant.name,
+              )),
+            ),
+        ],
       ),
     );
     if (picked == null) return;
@@ -418,7 +502,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
   String _when(BuildContext context, DateTime at) {
     final loc = MaterialLocalizations.of(context);
-    return '${loc.formatMediumDate(at)} · ${loc.formatTimeOfDay(TimeOfDay.fromDateTime(at))}';
+    return '${loc.formatMediumDate(at)} · ${formatTime(context, at)}';
   }
 
   Widget _saved(BuildContext context, Receipt r) {
@@ -477,6 +561,25 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        if (r.einvoice case final e?)
+          _Einvoice(
+            einvoice: e,
+            details: _details,
+            onDone: _einvoiceDone,
+            onOpen: () => _openEinvoice(e.url),
+            onDetails: _editDetails,
+          )
+        else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('einvoice-scan'),
+              onPressed: _scanEinvoice,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: Text(AppLocalizations.of(context).einvoiceScan),
+            ),
+          ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -642,6 +745,25 @@ class _ReceiptPageState extends State<ReceiptPage> {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        if (r.einvoice case final e?)
+          _Einvoice(
+            einvoice: e,
+            details: _details,
+            onDone: _einvoiceDone,
+            onOpen: () => _openEinvoice(e.url),
+            onDetails: _editDetails,
+          )
+        else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('einvoice-scan'),
+              onPressed: _scanEinvoice,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: Text(AppLocalizations.of(context).einvoiceScan),
+            ),
+          ),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -653,9 +775,167 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
 enum _Tone { normal, problem }
 
+/// The receipt's e-invoice request: the shop's page, its last day, then "I've requested it" (no reminder after).
+class _Einvoice extends StatelessWidget {
+  const _Einvoice({
+    required this.einvoice,
+    required this.details,
+    required this.onDone,
+    required this.onOpen,
+    required this.onDetails,
+  });
+
+  final ReceiptEinvoice einvoice;
+  final EinvoiceDetails? details;
+  final ValueChanged<bool> onDone;
+  final VoidCallback onOpen;
+  final VoidCallback onDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final until = einvoice.until;
+    final now = DateTime.now();
+    final ended =
+        until != null && until.isBefore(DateTime(now.year, now.month, now.day));
+    final date = until == null
+        ? null
+        : MaterialLocalizations.of(context).formatMediumDate(until);
+    final note = einvoice.done
+        ? l.einvoiceDoneNote
+        : until == null
+        ? l.einvoiceNoLimit
+        : ended
+        ? l.einvoiceEnded(date!)
+        : l.einvoiceBy(date!);
+    return _Card(
+      key: const ValueKey('receipt-einvoice'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.request_quote_outlined, color: nb.pandan),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.einvoiceTitle,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      note,
+                      style: text.bodySmall?.copyWith(
+                        color: ended && !einvoice.done
+                            ? Theme.of(context).colorScheme.error
+                            : nb.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Negative left, positive right; full width so the pair sits at the right.
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                TextButton(
+                  key: const ValueKey('einvoice-done'),
+                  onPressed: () => onDone(!einvoice.done),
+                  child: Text(
+                    einvoice.done ? l.einvoiceUndo : l.einvoiceMarkDone,
+                  ),
+                ),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('einvoice-open'),
+                  onPressed: onOpen,
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: Text(l.einvoiceRequest),
+                ),
+              ],
+            ),
+          ),
+          if (!einvoice.done) ...[
+            Divider(height: 24, color: nb.line),
+            if (details case final d?) ...[
+              Text(
+                l.einvoiceCopyHint,
+                style: text.labelMedium?.copyWith(color: nb.inkSoft),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 0,
+                children: [
+                  for (final (key, label, value) in [
+                    ('name', l.einvoiceName, d.name),
+                    ('tin', l.einvoiceTin, d.tin),
+                    ('id', l.einvoiceIdNumber, d.idNumber),
+                    ('email', l.einvoiceEmail, d.email),
+                    ('phone', l.einvoicePhone, d.phone),
+                    ('address', l.einvoiceAddress, d.address),
+                  ])
+                    if (value.trim().isNotEmpty)
+                      ActionChip(
+                        key: ValueKey('einvoice-copy-$key'),
+                        avatar: const Icon(Icons.copy, size: 16),
+                        visualDensity: VisualDensity.compact,
+                        label: Text(label),
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          await Clipboard.setData(ClipboardData(text: value));
+                          messenger
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(content: Text(l.einvoiceCopied(label))),
+                            );
+                        },
+                      ),
+                  ActionChip(
+                    key: const ValueKey('einvoice-details-edit'),
+                    avatar: const Icon(Icons.edit_outlined, size: 16),
+                    visualDensity: VisualDensity.compact,
+                    label: Text(l.einvoiceDetailsEdit),
+                    onPressed: onDetails,
+                  ),
+                ],
+              ),
+            ] else
+              TextButton.icon(
+                key: const ValueKey('einvoice-details-add'),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                onPressed: onDetails,
+                icon: const Icon(Icons.badge_outlined, size: 18),
+                label: Text(l.einvoiceDetailsAdd),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// An outlined card, the app's standard surface.
 class _Card extends StatelessWidget {
-  const _Card({required this.child, this.padding = const EdgeInsets.all(16)});
+  const _Card({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
 
   final Widget child;
   final EdgeInsets padding;
@@ -1109,55 +1389,64 @@ class _Items extends StatelessWidget {
             for (final (n, i) in items.indexed)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (onEaten != null)
-                      _Tick(
-                        key: (i.quantity ?? 1) > 1
-                            ? null
-                            : ValueKey('eaten-$n'),
-                        item: i,
-                        onChanged: (v) => onEaten!(n, v),
-                      ),
-                    SizedBox(
-                      width: 36,
-                      child: Text(
-                        i.quantity == null ? '' : '${qty(i.quantity!)} ×',
-                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(i.name, style: text.bodyMedium),
-                          if (i.kcal != null)
-                            Text(
-                              [
-                                l.caloriesKcal('${i.kcal}'),
-                                if (i.kcalSource == 'ai') l.caloriesAiEstimate,
-                              ].join(' · '),
-                              style: text.bodySmall?.copyWith(
-                                color: nb.inkSoft,
-                              ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (onEaten != null)
+                          _Tick(
+                            key: (i.quantity ?? 1) > 1
+                                ? null
+                                : ValueKey('eaten-$n'),
+                            item: i,
+                            onChanged: (v) => onEaten!(n, v),
+                          ),
+                        SizedBox(
+                          width: 36,
+                          child: Text(
+                            i.quantity == null ? '' : '${qty(i.quantity!)} ×',
+                            style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(i.name, style: text.bodyMedium),
+                              if (i.kcal != null)
+                                Text(
+                                  [
+                                    l.caloriesKcal('${i.kcal}'),
+                                    if (i.kcalSource == 'ai')
+                                      l.caloriesAiEstimate,
+                                  ].join(' · '),
+                                  style: text.bodySmall?.copyWith(
+                                    color: nb.inkSoft,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (i.amountSen != null)
+                          Text(
+                            rm(i.amountSen!),
+                            style: figures?.copyWith(
+                              color: i.amountSen! < 0 ? nb.pandan : null,
                             ),
-                          // under the name, so a long name keeps its width on a narrow phone
-                          if (onEaten != null && (i.quantity ?? 1) > 1)
-                            _Eaten(
-                              key: ValueKey('eaten-$n'),
-                              item: i,
-                              onChanged: (v) => onEaten!(n, v),
-                            ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    if (i.amountSen != null)
-                      Text(
-                        rm(i.amountSen!),
-                        style: figures?.copyWith(
-                          color: i.amountSen! < 0 ? nb.pandan : null,
+                    // Under the whole line, past the tick: inside the name's column it ran off a 360 px phone.
+                    if (onEaten != null && (i.quantity ?? 1) > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 32),
+                        child: _Eaten(
+                          key: ValueKey('eaten-$n'),
+                          item: i,
+                          onChanged: (v) => onEaten!(n, v),
                         ),
                       ),
                   ],

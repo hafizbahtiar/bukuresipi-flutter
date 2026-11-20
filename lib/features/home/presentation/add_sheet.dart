@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme_constant.dart';
 import '../../../core/widgets/base.dart';
-import '../../../core/widgets/notebook.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
 import '../../receipts/domain/receipts_repository.dart';
@@ -87,7 +86,7 @@ Future<void> showAddSheet(BuildContext context) async {
 }
 
 Future<String?> _askLink(BuildContext context) =>
-    showNotebookSheet<String>(context, builder: (_) => const _LinkSheet());
+    showBaseSheet<String>(context, builder: (_) => const _LinkSheet());
 
 /// One link to add. The sheet owns its field, so the field lives until the sheet has finished closing.
 class _LinkSheet extends StatefulWidget {
@@ -123,12 +122,7 @@ class _LinkSheetState extends State<_LinkSheet> {
     final l = AppLocalizations.of(context);
     final material = MaterialLocalizations.of(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        notebookGutter + 10,
-        0,
-        20,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(spaceM, 0, spaceM, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

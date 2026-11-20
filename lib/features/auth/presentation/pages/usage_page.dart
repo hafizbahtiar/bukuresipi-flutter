@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/time_format.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -59,8 +60,7 @@ class _UsagePageState extends State<UsagePage> {
             if (u == null) {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
-            final resets = MaterialLocalizations.of(context)
-                .formatTimeOfDay(TimeOfDay.fromDateTime(u.resetsAt));
+            final resets = formatTime(context, u.resetsAt);
             return RefreshIndicator(
               onRefresh: () async {
                 final next = apiCall(_api.usage);

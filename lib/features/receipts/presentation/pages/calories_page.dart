@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
@@ -289,6 +290,30 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           CalorieChart(days: days.days, target: target),
+          // The chart draws kcal; the range's carbs/protein/fat as a day's average, over the days whose lines all
+          // have numbers (a partial day would pull the average down).
+          if ([
+                for (final d in days.days)
+                  if (d.eatenKcal > 0) ?d.macros,
+              ]
+              case final known when known.isNotEmpty)
+            Padding(
+              key: const ValueKey('calorie-macros'),
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                l.caloriesMacrosAverage(
+                  known.length,
+                  l.mealMacros(
+                    _g(known.fold(0.0, (s, m) => s + m.carbsG) / known.length),
+                    _g(
+                      known.fold(0.0, (s, m) => s + m.proteinG) / known.length,
+                    ),
+                    _g(known.fold(0.0, (s, m) => s + m.fatG) / known.length),
+                  ),
+                ),
+                style: text.bodySmall,
+              ),
+            ),
           const SizedBox(height: 4),
           Text(
             l.caloriesDisclaimer,
@@ -320,7 +345,6 @@ class _DayItems extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    final loc = MaterialLocalizations.of(context);
     Widget entry({
       required Key key,
       required VoidCallback onTap,
@@ -340,7 +364,7 @@ class _DayItems extends StatelessWidget {
         children: [
           Text(title, style: text.titleMedium),
           Text(
-            loc.formatTimeOfDay(TimeOfDay.fromDateTime(at)),
+            formatTime(context, at),
             style: text.bodySmall?.copyWith(color: nb.inkSoft),
           ),
           const SizedBox(height: 4),

@@ -58,6 +58,7 @@ String errorText(
     'duplicate_receipt' => l.errDuplicateReceipt,
     'receipt_limit' => l.errReceiptLimit,
     'meal_limit' => l.errMealLimit,
+    'suggest_limit' => l.errSuggestLimit,
     'not_food' => l.errNotFood,
     'ai_unavailable' => l.errAiUnavailable,
     'place_required' => l.errPlaceRequired,

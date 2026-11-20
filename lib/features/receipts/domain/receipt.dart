@@ -18,6 +18,7 @@ class Receipt {
     this.unknownEaten = 0,
     this.caloriesPending = false,
     this.hasSplit = false,
+    this.einvoice,
   });
 
   final String id;
@@ -52,12 +53,19 @@ class Receipt {
   /// A split bill exists, so the calories follow what is assigned to "Me" (the ticks are not edited here).
   final bool hasSplit;
 
+  /// The receipt's "request your e-invoice" link (its QR); null = none.
+  final ReceiptEinvoice? einvoice;
+
   bool get notRestaurant => reason == 'not_restaurant';
   bool get reading => status == 'reading';
   bool get inReview => status == 'review';
   bool get saved => status == 'saved';
   bool get failed => status == 'failed';
 }
+
+/// [until] = the last day to request it (a calendar date; null = no limit printed); [done] = the user requested it
+/// (no reminder then).
+typedef ReceiptEinvoice = ({String url, DateTime? until, bool done});
 
 /// One printed line: [quantity] null = not printed; [amountSen] = the whole line (negative for a discount);
 /// [kcal] = one serving's calories (null = unknown), [kcalSource] 'table' | 'ai' (an AI estimate); [eaten] = how
@@ -123,6 +131,7 @@ typedef CalorieDay = ({
   int eatenKcal,
   bool hasEstimate,
   double unknownEaten,
+  Macros? macros,
 });
 
 /// The last 7 / 30 days of calories, oldest first, against [target].

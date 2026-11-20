@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../log.dart';
+import '../utils/log.dart';
 import '../storage/token_store.dart';
 
 /// The one Dio for the API (`<baseUrl>/api/v1`). Every request carries `X-App-Version` (the API answers 426 when the

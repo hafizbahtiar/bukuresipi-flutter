@@ -114,6 +114,7 @@ class RecipeDetail {
     this.shareId,
     this.cover,
     this.missing = const [],
+    this.servings,
     required this.ingredients,
     required this.steps,
     this.allergens = const [],
@@ -143,6 +144,9 @@ class RecipeDetail {
   /// The owner's own photo (RecipesRepository.cover); shown before the share's. Changes on every upload.
   final String? cover;
   final List<String> missing;
+
+  /// How many people it is for (the post's own words, or the owner's); null = not said, nothing scales.
+  final int? servings;
   final List<RecipeIngredient> ingredients;
   final List<RecipeStep> steps;
 
@@ -186,10 +190,10 @@ class RecipeIngredient {
 
   String get label => name ?? rawText ?? '';
 
-  /// "500 g", or null when the post gave no amount.
-  String? get amount {
+  /// "500 g", or null when the post gave no amount. [factor]: for more or fewer people (see [scaleQuantity]).
+  String? amount([double factor = 1]) {
     final parts = [
-      quantity,
+      scaleQuantity(quantity, factor),
       unit,
     ].whereType<String>().where((s) => s.trim().isNotEmpty).toList();
     return parts.isEmpty ? null : parts.join(' ');
@@ -212,3 +216,48 @@ typedef PantryMatch = ({
   List<String> missing,
   List<String> unknown,
 });
+
+/// A dish AI named for ingredients no recipe fits: a name only; [uses] = the user's own ingredients it takes.
+typedef DishSuggestion = ({String name, List<String> uses});
+
+const _glyphs = {'½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3};
+
+/// One amount as written: "2", "1.5", "1/2", "1 1/2", "1½"; null = words ("secukupnya") or anything else.
+double? _amountOf(String s) {
+  final tokens = s.trim().replaceAll(',', '.').split(RegExp(r'\s+'));
+  if (tokens.isEmpty || tokens.length > 2) return null;
+  var total = 0.0;
+  for (final t in tokens) {
+    final m = RegExp(r'^(\d+(?:\.\d+)?)?([½¼¾⅓⅔])?$').firstMatch(t);
+    final f = RegExp(r'^(\d+)/(\d+)$').firstMatch(t);
+    if (f != null && int.parse(f[2]!) > 0) {
+      total += int.parse(f[1]!) / int.parse(f[2]!);
+    } else if (m != null && (m[1] != null || m[2] != null)) {
+      total += (m[1] == null ? 0 : double.parse(m[1]!)) + (_glyphs[m[2]] ?? 0);
+    } else {
+      return null;
+    }
+  }
+  return total;
+}
+
+/// A cook's number: whole, or a whole and ½ ¼ ¾ when that close; past 10, whole.
+String _cookNumber(double x) {
+  if (x >= 10) return x.round().toString();
+  final quarters = (x * 4).round();
+  if ((x * 4 - quarters).abs() < 0.08 && quarters > 0) {
+    final whole = quarters ~/ 4;
+    final part = const ['', '¼', '½', '¾'][quarters % 4];
+    return whole == 0 ? part : '$whole$part';
+  }
+  return x.toStringAsFixed(1);
+}
+
+/// [quantity] for [factor] times the people. Numbers, fractions and ranges ("3-4") scale; words stay as written.
+String? scaleQuantity(String? quantity, double factor) {
+  if (quantity == null || factor == 1) return quantity;
+  final parts = quantity.trim().split(RegExp(r'\s*[-–]\s*'));
+  final amounts = [for (final p in parts) _amountOf(p)];
+  if (amounts.any((a) => a == null)) return quantity;
+  return [for (final a in amounts) _cookNumber(a! * factor)].join('-');
+}

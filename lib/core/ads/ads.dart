@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import '../log.dart';
+import '../utils/log.dart';
 
 /// AdMob for the Home feed's ad cards (design: bukuresipi-hono docs/superpowers/specs/2026-11-17-home-ads-design.md).
 /// Android only (iOS needs its own AdMob app and a Swift layout).

@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+
+import '../../../../core/widgets/wide_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/domain/user.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -140,55 +144,82 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final user = context.select<AuthController, User?>((a) => a.user);
-    return Scaffold(
-      // The nav floats: the tabs run under it (each pads its list by navRoom).
-      extendBody: true,
-      // While a list scrolls, either way, the nav shrinks out of the way; it grows back once the list is at rest.
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (n) {
-          _onScroll(n);
-          return false;
-        },
-        child: IndexedStack(
-          index: _tab,
-          children: [
-            FeedPage(toTop: _feedTop),
-            const PlacesListPage(),
-            const ReceiptsTab(),
-            const AccountPage(),
-          ],
+    // Material's adaptive layout: a bottom bar on a phone held upright, a rail on the left edge when wide.
+    final rail = isWide(context);
+    final nav = FloatingNav(
+      vertical: rail,
+      compact: _compact,
+      selected: _tab,
+      onSelected: _select,
+      addLabel: l.navAdd,
+      onAdd: () => showAddSheet(context),
+      items: [
+        // Outlined when idle, filled and rounded when active: one family, so the switch reads as a fill.
+        NavItem(Icons.home_outlined, Icons.home_rounded, l.navHome),
+        NavItem(Icons.menu_book_outlined, Icons.menu_book_rounded, l.navBook),
+        NavItem(Icons.receipt_long_outlined, Icons.receipt_long, l.navReceipts),
+        NavItem(
+          Icons.account_circle_outlined,
+          Icons.account_circle_rounded,
+          l.navAccount,
+          // Their photo when they have one; else the icon (a letter would read as a stray button).
+          picture: switch (user) {
+            final u? when u.avatar != null => Avatar(
+              key: const ValueKey('nav-avatar'),
+              userId: u.id,
+              avatar: u.avatar,
+              name: u.name ?? u.email,
+              size: 20,
+            ),
+            _ => null,
+          },
         ),
+      ],
+    );
+    final tabs = NotificationListener<ScrollNotification>(
+      // While a list scrolls, either way, the nav shrinks out of the way; it grows back once the list is at rest.
+      onNotification: (n) {
+        _onScroll(n);
+        return false;
+      },
+      child: IndexedStack(
+        index: _tab,
+        children: [
+          // The feed's grid uses the whole screen; the lists are a readable column on a tablet.
+          FeedPage(toTop: _feedTop),
+          const WidePage(child: PlacesListPage()),
+          const WidePage(child: ReceiptsTab()),
+          const WidePage(child: AccountPage()),
+        ],
       ),
-      bottomNavigationBar: FloatingNav(
-        compact: _compact,
-        selected: _tab,
-        onSelected: _select,
-        addLabel: l.navAdd,
-        onAdd: () => showAddSheet(context),
-        items: [
-          // Outlined when idle, filled and rounded when active: one family, so the switch reads as a fill.
-          NavItem(Icons.home_outlined, Icons.home_rounded, l.navHome),
-          NavItem(Icons.menu_book_outlined, Icons.menu_book_rounded, l.navBook),
-          NavItem(
-            Icons.receipt_long_outlined,
-            Icons.receipt_long,
-            l.navReceipts,
+    );
+    if (!rail) {
+      return Scaffold(
+        // The nav floats: the tabs run under it (each pads its list by navRoom).
+        extendBody: true,
+        body: tabs,
+        bottomNavigationBar: nav,
+      );
+    }
+    final media = MediaQuery.of(context);
+    return Scaffold(
+      body: Row(
+        children: [
+          // On the desk the readable column (WidePage) sits on: one surface beside a list, a sidebar beside the feed.
+          ColoredBox(
+            color: Notebook.of(context).mist,
+            child: Center(child: nav),
           ),
-          NavItem(
-            Icons.account_circle_outlined,
-            Icons.account_circle_rounded,
-            l.navAccount,
-            // Their photo when they have one; else the icon (a letter would read as a stray button).
-            picture: switch (user) {
-              final u? when u.avatar != null => Avatar(
-                key: const ValueKey('nav-avatar'),
-                userId: u.id,
-                avatar: u.avatar,
-                name: u.name ?? u.email,
-                size: 20,
+          Expanded(
+            child: LayoutBuilder(
+              // The tabs see the screen beside the rail (the feed's columns, WidePage); the notch is the rail's.
+              builder: (context, room) => MediaQuery(
+                data: media
+                    .removePadding(removeLeft: true)
+                    .copyWith(size: Size(room.maxWidth, media.size.height)),
+                child: tabs,
               ),
-              _ => null,
-            },
+            ),
           ),
         ],
       ),
