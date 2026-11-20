@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
@@ -418,7 +419,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
   String _when(BuildContext context, DateTime at) {
     final loc = MaterialLocalizations.of(context);
-    return '${loc.formatMediumDate(at)} · ${loc.formatTimeOfDay(TimeOfDay.fromDateTime(at))}';
+    return '${loc.formatMediumDate(at)} · ${formatTime(context, at)}';
   }
 
   Widget _saved(BuildContext context, Receipt r) {

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/time_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
@@ -344,7 +345,6 @@ class _DayItems extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    final loc = MaterialLocalizations.of(context);
     Widget entry({
       required Key key,
       required VoidCallback onTap,
@@ -364,7 +364,7 @@ class _DayItems extends StatelessWidget {
         children: [
           Text(title, style: text.titleMedium),
           Text(
-            loc.formatTimeOfDay(TimeOfDay.fromDateTime(at)),
+            formatTime(context, at),
             style: text.bodySmall?.copyWith(color: nb.inkSoft),
           ),
           const SizedBox(height: 4),
