@@ -6,9 +6,8 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../../../../core/widgets/deleting_overlay.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../core/widgets/load_view.dart';
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/widgets/base.dart';
 import '../widgets/user_action_sheets.dart';
 
 /// Owner: users, newest first, searchable by email. Actions: end their sessions, ban / unban, delete the account.
@@ -75,43 +74,40 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final error = Theme.of(context).colorScheme.error;
     // The owner account is never banned or deleted (the API refuses it too).
     final other = u.role != 'owner';
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _UserTile(user: u),
+    final action = await showBaseSheet<String>(
+      context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _UserTile(user: u),
+          ListTile(
+            key: const ValueKey('user-logout'),
+            leading: Icon(Icons.logout, color: error),
+            title: Text(l.ownerEndSessions),
+            onTap: () => Navigator.pop(context, 'logout'),
+          ),
+          if (other && u.ban != null)
             ListTile(
-              key: const ValueKey('user-logout'),
-              leading: Icon(Icons.logout, color: error),
-              title: Text(l.ownerEndSessions),
-              onTap: () => Navigator.pop(context, 'logout'),
+              key: const ValueKey('user-unban'),
+              leading: const Icon(Icons.lock_open),
+              title: Text(l.ownerUnban),
+              onTap: () => Navigator.pop(context, 'unban'),
+            )
+          else if (other)
+            ListTile(
+              key: const ValueKey('user-ban'),
+              leading: Icon(Icons.block, color: error),
+              title: Text(l.ownerBan),
+              onTap: () => Navigator.pop(context, 'ban'),
             ),
-            if (other && u.ban != null)
-              ListTile(
-                key: const ValueKey('user-unban'),
-                leading: const Icon(Icons.lock_open),
-                title: Text(l.ownerUnban),
-                onTap: () => Navigator.pop(context, 'unban'),
-              )
-            else if (other)
-              ListTile(
-                key: const ValueKey('user-ban'),
-                leading: Icon(Icons.block, color: error),
-                title: Text(l.ownerBan),
-                onTap: () => Navigator.pop(context, 'ban'),
-              ),
-            if (other)
-              ListTile(
-                key: const ValueKey('user-delete'),
-                leading: Icon(Icons.delete_forever_outlined, color: error),
-                title: Text(l.ownerDeleteUser, style: TextStyle(color: error)),
-                onTap: () => Navigator.pop(context, 'delete'),
-              ),
-          ],
-        ),
+          if (other)
+            ListTile(
+              key: const ValueKey('user-delete'),
+              leading: Icon(Icons.delete_forever_outlined, color: error),
+              title: Text(l.ownerDeleteUser, style: TextStyle(color: error)),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+        ],
       ),
     );
     if (!mounted) return;
@@ -148,7 +144,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Future<void> _ban(OwnerUser u) async {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
-    final r = await showNotebookSheet<({int? days, String reason})>(
+    final r = await showBaseSheet<({int? days, String reason})>(
       context,
       builder: (_) => BanSheet(email: u.email),
     );
@@ -163,7 +159,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
   Future<void> _delete(OwnerUser u) async {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
-    final r = await showNotebookSheet<({String reason, bool banEmail})>(
+    final r = await showBaseSheet<({String reason, bool banEmail})>(
       context,
       builder: (_) => DeleteUserSheet(email: u.email),
     );
@@ -190,7 +186,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final messenger = ScaffoldMessenger.of(context);
     final ids = [..._picked];
     if (ids.isEmpty) return;
-    final r = await showNotebookSheet<({String reason, bool banEmail})>(
+    final r = await showBaseSheet<({String reason, bool banEmail})>(
       context,
       builder: (_) => DeleteUserSheet(email: l.ownerAccounts(ids.length)),
     );
@@ -229,7 +225,7 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
     final messenger = ScaffoldMessenger.of(context);
-    final yes = await showNotebookDialog(
+    final yes = await showBaseDialog(
       context,
       message: l.ownerEndSessionsConfirm(u.email),
       tone: DialogTone.danger,

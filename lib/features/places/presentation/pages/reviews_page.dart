@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -99,7 +101,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
     if (page == null) return;
     final own = _mine;
     final places = context.read<PlacesController>();
-    await showNotebookSheet<bool>(
+    await showBaseSheet<bool>(
       context,
       builder: (_) => ReviewSheet(
         initialStars: page.rating.mine ?? 5,
@@ -139,7 +141,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
 
   Future<void> _report(Review review) async {
     final places = context.read<PlacesController>();
-    final reported = await showNotebookSheet<bool>(
+    final reported = await showBaseSheet<bool>(
       context,
       builder: (_) => ReportReviewSheet(
         onSubmit: (reason, note) =>
@@ -382,7 +384,7 @@ class _ReviewCard extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () async {
-                    final ok = await showNotebookDialog(
+                    final ok = await showBaseDialog(
                       context,
                       message: l.reviewRemoveConfirm,
                       tone: DialogTone.danger,

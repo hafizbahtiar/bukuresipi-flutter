@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/auth_api.dart';
 import '../../domain/session.dart';
@@ -64,7 +66,7 @@ class _SessionsPageState extends State<SessionsPage> {
 
   Future<void> _end(Session s) async {
     final l = AppLocalizations.of(context);
-    if (await showNotebookDialog(
+    if (await showBaseDialog(
       context,
       message: l.sessionsEndConfirm(_name(l, s)),
       tone: DialogTone.danger,
@@ -76,7 +78,7 @@ class _SessionsPageState extends State<SessionsPage> {
 
   Future<void> _endOthers() async {
     final l = AppLocalizations.of(context);
-    if (await showNotebookDialog(
+    if (await showBaseDialog(
       context,
       message: l.sessionsEndOthersConfirm,
       tone: DialogTone.danger,

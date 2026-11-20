@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../core/log.dart';
+import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../domain/caption_reader.dart';

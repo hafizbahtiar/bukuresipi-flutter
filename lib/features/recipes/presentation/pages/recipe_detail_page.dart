@@ -4,12 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -284,10 +283,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final l = AppLocalizations.of(context);
     final recipes = context.read<RecipesController>();
     final inFamily = context.read<FamilyController?>()?.inFamily ?? false;
-    final picked = await showModalBottomSheet<RecipeVisibility>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
+    final picked = await showBaseSheet<RecipeVisibility>(
+      context,
       builder: (sheet) {
         Widget choice(RecipeVisibility v, String label, String hint) =>
             ListTile(
@@ -300,7 +297,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             );
         return ListView(
           shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: spaceM),
           children: [
             ListTile(
               title: Text(

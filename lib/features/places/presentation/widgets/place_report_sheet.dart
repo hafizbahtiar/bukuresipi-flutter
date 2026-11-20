@@ -3,6 +3,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -214,171 +215,164 @@ class _PlaceReportSheetState extends State<PlaceReportSheet> {
         !_saving &&
         (status ||
             (location ? _picked != null : _value.text.trim().isNotEmpty));
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
-              children: [
-                Text(
-                  l.reportTitle,
-                  style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l.reportTarget,
-                  style: text.labelLarge?.copyWith(color: nb.inkSoft),
-                ),
-                const SizedBox(height: 6),
-                NotebookSegmented<String>(
-                  selected: _restaurant ? 'restaurant' : _branchId,
-                  onChanged: (value) => value == 'restaurant'
-                      ? _selectRestaurant()
-                      : _selectBranch(value),
-                  segments: [
-                    NotebookSegment(
-                      value: 'restaurant',
-                      label: l.reportRestaurant,
-                    ),
-                    for (final b in widget.subject.branches)
-                      NotebookSegment(value: b.id, label: b.title),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l.reportField,
-                  style: text.labelLarge?.copyWith(color: nb.inkSoft),
-                ),
-                const SizedBox(height: 6),
-                NotebookSegmented<ReportField>(
-                  selected: _field,
-                  onChanged: (field) => setState(() {
-                    _field = field;
-                    _picked = null;
-                    _value.clear();
-                  }),
-                  segments: [
-                    for (final field in _fields)
-                      NotebookSegment(
-                        value: field,
-                        label: _fieldLabel(l, field),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${l.reportCurrent}: ${_current(l) ?? '—'}',
-                  style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                ),
-                const SizedBox(height: 8),
-                if (location) ...[
-                  Text(
-                    _picked == null
-                        ? l.reportChooseLocation
-                        : '${_picked!.latitude.toStringAsFixed(6)}, ${_picked!.longitude.toStringAsFixed(6)}',
-                    style: text.bodyMedium?.copyWith(
-                      color: nb.inkSoft,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+    // The floating sheet keeps itself above the keyboard.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 8),
+            children: [
+              Text(
+                l.reportTitle,
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l.reportTarget,
+                style: text.labelLarge?.copyWith(color: nb.inkSoft),
+              ),
+              const SizedBox(height: 6),
+              NotebookSegmented<String>(
+                selected: _restaurant ? 'restaurant' : _branchId,
+                onChanged: (value) => value == 'restaurant'
+                    ? _selectRestaurant()
+                    : _selectBranch(value),
+                segments: [
+                  NotebookSegment(
+                    value: 'restaurant',
+                    label: l.reportRestaurant,
                   ),
-                  TextField(
-                    key: const ValueKey('report-maps-link'),
-                    controller: _mapsLink,
-                    keyboardType: TextInputType.url,
-                    textInputAction: TextInputAction.go,
-                    onSubmitted: (_) => _useMapsLink(),
-                    decoration: InputDecoration(
-                      labelText: l.mapsLinkLabel,
-                      helperText: l.reportMapsLinkHint,
-                      helperMaxLines: 3,
-                      prefixIcon: const Icon(Icons.link, size: 20),
-                      suffixIcon: _readingLink
-                          ? const Padding(
-                              padding: EdgeInsets.all(14),
-                              child: SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator.adaptive(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          : TextButton(
-                              onPressed: _useMapsLink,
-                              child: Text(l.mapsLinkUse),
-                            ),
-                    ),
+                  for (final b in widget.subject.branches)
+                    NotebookSegment(value: b.id, label: b.title),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l.reportField,
+                style: text.labelLarge?.copyWith(color: nb.inkSoft),
+              ),
+              const SizedBox(height: 6),
+              NotebookSegmented<ReportField>(
+                selected: _field,
+                onChanged: (field) => setState(() {
+                  _field = field;
+                  _picked = null;
+                  _value.clear();
+                }),
+                segments: [
+                  for (final field in _fields)
+                    NotebookSegment(value: field, label: _fieldLabel(l, field)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '${l.reportCurrent}: ${_current(l) ?? '—'}',
+                style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+              ),
+              const SizedBox(height: 8),
+              if (location) ...[
+                Text(
+                  _picked == null
+                      ? l.reportChooseLocation
+                      : '${_picked!.latitude.toStringAsFixed(6)}, ${_picked!.longitude.toStringAsFixed(6)}',
+                  style: text.bodyMedium?.copyWith(
+                    color: nb.inkSoft,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _pickLocation,
-                      icon: const Icon(Icons.map_outlined, size: 18),
-                      label: Text(l.reportSetLocation),
-                    ),
-                  ),
-                ] else if (status)
-                  Text(
-                    l.reportStatusSuggest(
-                      _suggestClosed ? l.branchClosed : l.branchOpen,
-                    ),
-                    key: const ValueKey('report-status'),
-                    style: text.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  )
-                else
-                  TextField(
-                    controller: _value,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: l.reportSuggestedValue,
-                    ),
-                  ),
-                const SizedBox(height: 8),
+                ),
                 TextField(
-                  controller: _note,
-                  minLines: 2,
-                  maxLines: 4,
-                  maxLength: 500,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(labelText: l.reportNote),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    child: Text(l.cancel),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: canSubmit ? _submit : null,
-                    child: _saving
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
+                  key: const ValueKey('report-maps-link'),
+                  controller: _mapsLink,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.go,
+                  onSubmitted: (_) => _useMapsLink(),
+                  decoration: InputDecoration(
+                    labelText: l.mapsLinkLabel,
+                    helperText: l.reportMapsLinkHint,
+                    helperMaxLines: 3,
+                    prefixIcon: const Icon(Icons.link, size: 20),
+                    suffixIcon: _readingLink
+                        ? const Padding(
+                            padding: EdgeInsets.all(14),
+                            child: SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator.adaptive(
+                                strokeWidth: 2,
+                              ),
                             ),
                           )
-                        : Text(l.report),
+                        : TextButton(
+                            onPressed: _useMapsLink,
+                            child: Text(l.mapsLinkUse),
+                          ),
                   ),
                 ),
-              ],
-            ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _pickLocation,
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: Text(l.reportSetLocation),
+                  ),
+                ),
+              ] else if (status)
+                Text(
+                  l.reportStatusSuggest(
+                    _suggestClosed ? l.branchClosed : l.branchOpen,
+                  ),
+                  key: const ValueKey('report-status'),
+                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                )
+              else
+                TextField(
+                  controller: _value,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: l.reportSuggestedValue,
+                  ),
+                ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _note,
+                minLines: 2,
+                maxLines: 4,
+                maxLength: 500,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(labelText: l.reportNote),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _saving ? null : () => Navigator.pop(context),
+                  child: Text(l.cancel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: canSubmit ? _submit : null,
+                  child: _saving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(l.report),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
-import '../../../../core/widgets/notebook_dialog.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../family/presentation/family_controller.dart';
@@ -123,7 +125,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
   Future<void> _clearDone() async {
     final l = AppLocalizations.of(context);
     final shopping = context.read<ShoppingController>();
-    if (!await showNotebookDialog(
+    if (!await showBaseDialog(
       context,
       message: l.shoppingClearDoneConfirm,
       tone: DialogTone.danger,
@@ -400,7 +402,7 @@ class _ItemRow extends StatelessWidget {
 Future<void> _showProducts(BuildContext context, String ingredient) {
   final shopping = context.read<ShoppingController>();
   final products = shopping.products(ingredient);
-  return showNotebookSheet<void>(
+  return showBaseSheet<void>(
     context,
     builder: (context) {
       final l = AppLocalizations.of(context);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
@@ -183,11 +183,9 @@ class _VariantRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final v = variant;
     return ListTile(
-      onTap: () => showModalBottomSheet<void>(
-        context: context,
-        showDragHandle: true,
-        isScrollControlled: true,
-        builder: (_) => SafeArea(child: _VariantSheet(variant: v)),
+      onTap: () => showBaseSheet<void>(
+        context,
+        builder: (_) => _VariantSheet(variant: v),
       ),
       leading: _MatchBadge(match: v.match),
       trailing: Icon(Icons.chevron_right, color: nb.inkSoft),

@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/open_link.dart';
+import '../../../../core/utils/open_link.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/cover_app_bar.dart';
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -129,9 +128,8 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     }
   }
 
-  Future<void> _report(Place place) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
+  Future<void> _report(Place place) => showBaseSheet<void>(
+    context,
     builder: (_) => PlaceReportSheet(
       subject: ReportSubject.fromPlace(place),
       onSubmit: (draft) => context.read<PlacesController>().report(draft),

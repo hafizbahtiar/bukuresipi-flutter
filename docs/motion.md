@@ -4,7 +4,7 @@ Notes on how the app moves, and why each choice was made. Code references are cl
 
 ## 1. Anchored mask reveal (the floating sheet)
 
-**Where:** `showBaseSheet` → `_FloatingSheet` in `lib/core/widgets/base.dart`.
+**Where:** `showBaseSheet` → `_FloatingSheet` in `lib/core/widgets/base/sheets.dart`.
 
 ### The idea
 

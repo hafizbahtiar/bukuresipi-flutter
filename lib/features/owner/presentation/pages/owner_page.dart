@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +11,7 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/load_view.dart';
 
@@ -54,7 +58,7 @@ class _OwnerPageState extends State<OwnerPage> {
     final l = AppLocalizations.of(context);
     final repo = context.read<OwnerRepository>();
     final messenger = ScaffoldMessenger.of(context);
-    final change = await showNotebookSheet<(int, String, bool)>(
+    final change = await showBaseSheet<(int, String, bool)>(
       context,
       builder: (_) => _MeterSheet(meter: m),
     );
@@ -298,68 +302,66 @@ class _MeterSheetState extends State<_MeterSheet> {
         fontWeight: FontWeight.w600,
       ),
     );
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 16),
-        children: [
-          Text(
-            widget.meter.name,
-            style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _cap,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(8),
-            ],
-            decoration: InputDecoration(labelText: l.ownerMeterCap),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            l.ownerMeterPeriod,
-            style: text.labelLarge?.copyWith(color: nb.inkSoft),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              period('day', l.ownerPeriodDay),
-              period('month', l.ownerPeriodMonth),
-            ],
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l.ownerMeterActive),
-            value: _active,
-            onChanged: (v) => setState(() => _active = v),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l.cancel),
-                ),
+    // The floating sheet keeps itself above the keyboard.
+    return ListView(
+      shrinkWrap: true,
+      padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 16),
+      children: [
+        Text(
+          widget.meter.name,
+          style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _cap,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(8),
+          ],
+          decoration: InputDecoration(labelText: l.ownerMeterCap),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          l.ownerMeterPeriod,
+          style: text.labelLarge?.copyWith(color: nb.inkSoft),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            period('day', l.ownerPeriodDay),
+            period('month', l.ownerPeriodMonth),
+          ],
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l.ownerMeterActive),
+          value: _active,
+          onChanged: (v) => setState(() => _active = v),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l.cancel),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: cap == null
-                      ? null
-                      : () => Navigator.pop(context, (cap, _period, _active)),
-                  child: Text(l.save),
-                ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: cap == null
+                    ? null
+                    : () => Navigator.pop(context, (cap, _period, _active)),
+                child: Text(l.save),
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

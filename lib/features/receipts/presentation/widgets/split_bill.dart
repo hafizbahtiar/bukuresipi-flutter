@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
-import '../../../../core/widgets/notebook_dialog.dart' show DialogTone;
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -222,9 +221,8 @@ class _SplitBillState extends State<SplitBill> {
       for (final p in split.portions)
         if (p.position == position) p.person: p.quantity,
     };
-    final picked = await showModalBottomSheet<Map<int, double>>(
-      context: context,
-      isScrollControlled: true,
+    final picked = await showBaseSheet<Map<int, double>>(
+      context,
       builder: (_) => _PortionSheet(
         item: item,
         people: split.people,

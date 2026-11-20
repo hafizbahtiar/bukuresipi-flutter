@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/widgets/base.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -46,22 +49,13 @@ class _UnpinnedActionsState extends State<UnpinnedActions> {
       if (mounted) setState(() => _finding = false);
     }
     if (!nav.mounted) return;
-    final setPin = await showDialog<bool>(
-      context: nav.context,
-      builder: (context) => AlertDialog(
-        content: Text(message),
-        actions: [
-          if (offerPin)
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l.setOnMap),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l.ok),
-          ),
-        ],
-      ),
+    // Not found: OK, or set the pin by hand.
+    final setPin = await showBaseDialog(
+      nav.context,
+      message: message,
+      tone: offerPin ? DialogTone.confirm : DialogTone.info,
+      confirmLabel: offerPin ? l.setOnMap : l.ok,
+      cancelLabel: l.ok,
     );
     if (setPin == true && nav.mounted) nav.context.push(pinPath);
   }

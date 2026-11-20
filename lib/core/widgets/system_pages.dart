@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 import '../network/update_gate.dart';
-import '../open_link.dart';
+import '../utils/open_link.dart';
 import '../theme/app_theme.dart';
 
 /// While the session is being restored at launch. Same color as the native splash (pubspec flutter_native_splash),

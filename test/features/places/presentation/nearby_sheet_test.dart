@@ -1,4 +1,4 @@
-import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
+import 'package:bukuresipi_flutter/core/widgets/base.dart';
 import 'package:bukuresipi_flutter/features/auth/domain/user.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
@@ -82,7 +82,7 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showNotebookSheet<void>(
+                onPressed: () => showBaseSheet<void>(
                   context,
                   builder: (_) => NearbySheet(
                     place: nearbyBranch(),
@@ -134,7 +134,7 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showNotebookSheet<void>(
+                onPressed: () => showBaseSheet<void>(
                   context,
                   builder: (_) => NearbySheet(
                     place: nearbyBranch(
@@ -178,7 +178,7 @@ void main() {
             builder: (context) => Scaffold(
               body: Center(
                 child: ElevatedButton(
-                  onPressed: () => showNotebookSheet<void>(
+                  onPressed: () => showBaseSheet<void>(
                     context,
                     builder: (_) => NearbySheet(
                       place: nearbyBranch(),
@@ -238,7 +238,7 @@ void main() {
             builder: (context) => Scaffold(
               body: Center(
                 child: ElevatedButton(
-                  onPressed: () => showNotebookSheet<void>(
+                  onPressed: () => showBaseSheet<void>(
                     context,
                     builder: (_) =>
                         NearbySheet(place: nearbyBranch(), onSave: () async {}),

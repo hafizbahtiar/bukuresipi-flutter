@@ -122,6 +122,7 @@ NearbyBranch nearbyBranch({
   String? cover,
   RatingSummary? rating,
   HalalCert? cert,
+  String? cuisine = 'Melayu',
 }) => NearbyBranch(
   branchId: branchId,
   placeId: 'r-1',
@@ -131,7 +132,7 @@ NearbyBranch nearbyBranch({
   lat: lat,
   lng: lng,
   distanceM: distanceM,
-  cuisine: 'Melayu',
+  cuisine: cuisine,
   halalClaim: 'says_halal',
   halalQuote: 'Halal ya',
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',

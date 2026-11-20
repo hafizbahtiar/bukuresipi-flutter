@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../log.dart';
+import '../utils/log.dart';
 
 /// Any failed API call. [code] is the API's `error` field (`invalid_credentials`, `rate_limited`, ...), or
 /// `network` (no response) / `unknown`. Screens map codes to text; nothing else inspects Dio errors.

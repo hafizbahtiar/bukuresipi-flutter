@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/widgets/notebook.dart';
+import '../../../../core/theme/app_theme_constant.dart';
+
 import '../../../../l10n/gen/app_localizations.dart';
 
 /// The ban form: a reason (the user sees it) and how long. Pops `(days, reason)`; days null = for good.
@@ -152,91 +153,89 @@ class _Form extends StatelessWidget {
     final ready = reason.text.trim().length >= 3;
     // The keyboard's room sits below everything: the sheet rises above the keyboard, the buttons stay in sight,
     // and on a small phone the form between the title and the buttons scrolls instead of running under it.
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 0, 20, 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 16),
-                  if (presets.isNotEmpty) ...[
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        for (final (i, preset) in presets.indexed)
-                          ChoiceChip(
-                            key: ValueKey('delete-reason-$i'),
-                            label: Text(preset),
-                            selected: reason.text.trim() == preset,
-                            onSelected: (_) {
-                              reason.text = preset;
-                              onChanged();
-                            },
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  TextField(
-                    key: const ValueKey('action-reason'),
-                    controller: reason,
-                    autofocus: presets.isEmpty,
-                    maxLength: 500,
-                    minLines: 1,
-                    maxLines: 3,
-                    textCapitalization: TextCapitalization.sentences,
-                    onChanged: (_) => onChanged(),
-                    decoration: InputDecoration(labelText: reasonLabel),
-                  ),
-                  const SizedBox(height: 8),
-                  ...children,
-                ],
-              ),
-            ),
-          ),
-          // Always in sight, just above the keyboard: only the form above scrolls.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(notebookGutter + 10, 8, 20, 16),
-            child: Row(
+    // The floating sheet keeps itself above the keyboard.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(material.cancelButtonLabel),
-                  ),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    key: confirmKey,
-                    style: danger
-                        ? FilledButton.styleFrom(
-                            backgroundColor: scheme.error,
-                            foregroundColor: scheme.onError,
-                          )
-                        : null,
-                    onPressed: ready ? onConfirm : null,
-                    child: Text(confirmLabel),
+                const SizedBox(height: 16),
+                if (presets.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final (i, preset) in presets.indexed)
+                        ChoiceChip(
+                          key: ValueKey('delete-reason-$i'),
+                          label: Text(preset),
+                          selected: reason.text.trim() == preset,
+                          onSelected: (_) {
+                            reason.text = preset;
+                            onChanged();
+                          },
+                        ),
+                    ],
                   ),
+                  const SizedBox(height: 12),
+                ],
+                TextField(
+                  key: const ValueKey('action-reason'),
+                  controller: reason,
+                  autofocus: presets.isEmpty,
+                  maxLength: 500,
+                  minLines: 1,
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: (_) => onChanged(),
+                  decoration: InputDecoration(labelText: reasonLabel),
                 ),
+                const SizedBox(height: 8),
+                ...children,
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        // Always in sight, just above the keyboard: only the form above scrolls.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, 8, spaceM, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(material.cancelButtonLabel),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  key: confirmKey,
+                  style: danger
+                      ? FilledButton.styleFrom(
+                          backgroundColor: scheme.error,
+                          foregroundColor: scheme.onError,
+                        )
+                      : null,
+                  onPressed: ready ? onConfirm : null,
+                  child: Text(confirmLabel),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
