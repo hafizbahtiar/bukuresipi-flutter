@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../domain/receipt.dart';
+import 'receipt_qr.dart';
 import '../domain/receipts_repository.dart';
 
 class ReceiptsRepositoryImpl implements ReceiptsRepository {
@@ -47,6 +48,19 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       unknownEaten: (j['unknownEaten'] as num?)?.toDouble() ?? 0,
       caloriesPending: j['caloriesPending'] as bool? ?? false,
       hasSplit: j['hasSplit'] as bool? ?? false,
+      einvoice: switch (j['einvoice']) {
+        {'url': final String url, 'done': final bool done} && final e => (
+          url: url,
+          until: switch (e['until']) {
+            final String d => DateTime.parse(
+              d,
+            ), // a calendar day, not a moment: no time zone
+            _ => null,
+          },
+          done: done,
+        ),
+        _ => null,
+      },
     );
   }
 
@@ -242,11 +256,13 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
 
   @override
   Future<String> upload(String path) => apiCall(() async {
+    final einvoice = await einvoiceLinkIn(path);
     final form = FormData.fromMap({
       'image': await MultipartFile.fromFile(
         path,
         contentType: DioMediaType('image', 'jpeg'),
       ),
+      'einvoiceUrl': ?einvoice,
     });
     return (await _dio.post<Map<String, dynamic>>(
           '/receipts',
@@ -254,6 +270,21 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
         )).data!['id']
         as String;
   });
+
+  @override
+  Future<void> setEinvoiceDone(String id, bool done) => apiCall(
+    () => _dio.put<void>('/receipts/$id/einvoice', data: {'done': done}),
+  );
+
+  @override
+  Future<bool> addEinvoiceFromPhoto(String id, String path) async {
+    final url = await einvoiceLinkIn(path);
+    if (url == null) return false;
+    await apiCall(
+      () => _dio.put<void>('/receipts/$id/einvoice/link', data: {'url': url}),
+    );
+    return true;
+  }
 
   @override
   Future<Receipt> get(String id) => apiCall(

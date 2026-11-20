@@ -159,13 +159,18 @@ void main() {
               platform: 'android',
             )
             ..onTap = opened.add
-            ..onTypeTap = opened.add;
+            ..onTypeTap = ((type, data) => opened.add(
+              data['receiptId'] == null ? type : '$type ${data['receiptId']}',
+            ));
       await push.start();
       fcm.taps_.add({'shareId': 's-2'});
       await pumpEventQueue();
       fcm.taps_.add({'type': 'sign_in'});
       await pumpEventQueue();
-      expect(opened, ['s-1', 's-2', 'sign_in']);
+      // An e-invoice reminder carries the receipt to open.
+      fcm.taps_.add({'type': 'einvoice', 'receiptId': 'r-9'});
+      await pumpEventQueue();
+      expect(opened, ['s-1', 's-2', 'sign_in', 'einvoice r-9']);
     },
   );
 }

@@ -1,16 +1,20 @@
 import 'dart:convert';
 
+import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_details.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 import 'package:bukuresipi_flutter/features/receipts/presentation/pages/receipt_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../fakes.dart';
 import '../../places/places_fixtures.dart';
 import '../receipts_fixtures.dart';
 
@@ -19,11 +23,15 @@ void main() {
     WidgetTester t,
     FakeReceipts repo, {
     Future<void> Function(String text, Rect? origin)? share,
+    EinvoiceDetailsStore? details,
+    AuthController? auth,
   }) async {
     await t.pumpWidget(
       MultiProvider(
         providers: [
           Provider<ReceiptsRepository>.value(value: repo),
+          Provider<EinvoiceDetailsStore?>.value(value: details),
+          ChangeNotifierProvider<AuthController?>.value(value: auth),
           ChangeNotifierProvider(create: (_) => PlacesController(FakePlaces())),
         ],
         child: MaterialApp(
@@ -273,6 +281,167 @@ void main() {
     expect(repo.eaten.single, (id: 'r-1', position: 0, eaten: 1.0));
     expect(find.text('You ate: 640 kcal'), findsOneWidget);
     expect(find.text('AI estimate'), findsOneWidget); // the chip
+  });
+
+  testWidgets(
+    'e-invoice: its last day with the reminder note; "I\'ve requested it" stops the reminder, "Not yet" undoes it',
+    (t) async {
+      final link = (
+        url: 'https://einvoice.example.com/r/1',
+        until: DateTime(2099, 11, 27),
+        done: false,
+      );
+      final repo = FakeReceipts()
+        ..answers = [
+          receipt(status: 'saved', einvoice: link),
+          receipt(
+            status: 'saved',
+            einvoice: (url: link.url, until: link.until, done: true),
+          ),
+          receipt(status: 'saved', einvoice: link),
+        ];
+      await pump(t, repo);
+      await t.ensureVisible(find.byKey(const ValueKey('receipt-einvoice')));
+      expect(
+        find.textContaining("We'll remind you the day before."),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('einvoice-done')));
+      await t.pumpAndSettle();
+      expect(repo.einvoiceDone, [('r-1', true)]);
+      expect(find.text("You've requested it. No reminder."), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('einvoice-done')));
+      await t.pumpAndSettle();
+      expect(repo.einvoiceDone.last, ('r-1', false));
+
+      // Past its last day, or no deadline printed: said so, still openable.
+      repo
+        ..gets = 0
+        ..answers = [
+          receipt(
+            status: 'saved',
+            einvoice: (url: link.url, until: DateTime(2020), done: false),
+          ),
+        ];
+      await pump(t, repo);
+      expect(
+        find.textContaining('The request period ended on'),
+        findsOneWidget,
+      );
+      repo
+        ..gets = 0
+        ..answers = [
+          receipt(
+            status: 'saved',
+            einvoice: (url: link.url, until: null, done: false),
+          ),
+        ];
+      await pump(t, repo);
+      expect(
+        find.text("No deadline is printed, so there's no reminder."),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('einvoice-open')), findsOneWidget);
+      repo
+        ..gets = 0
+        ..answers = [receipt(status: 'saved')];
+      await pump(t, repo);
+      expect(find.byKey(const ValueKey('receipt-einvoice')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'e-invoice details: copy buttons from the phone\'s saved details; none = a link to save them',
+    (t) async {
+      final auth = AuthController(FakeAuthRepository()..session = true);
+      await auth.restore();
+      final store = FakeEinvoiceDetails();
+      final link = (
+        url: 'https://e.example.com/1',
+        until: DateTime(2099),
+        done: false,
+      );
+      final repo = FakeReceipts()
+        ..answers = [receipt(status: 'saved', einvoice: link)];
+      await pump(t, repo, details: store, auth: auth);
+      await t.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('einvoice-details-add')),
+        findsOneWidget,
+      );
+
+      store.saved[testUser.id] = const EinvoiceDetails(
+        tin: 'IG12345678090',
+        email: 'a@b.my',
+      );
+      String? copied;
+      t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      repo.gets = 0;
+      await pump(t, repo, details: store, auth: auth);
+      await t.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('einvoice-copy-name')),
+        findsNothing,
+      ); // blank = no button
+      await t.ensureVisible(find.byKey(const ValueKey('einvoice-copy-tin')));
+      await t.tap(find.byKey(const ValueKey('einvoice-copy-tin')));
+      await t.pump();
+      expect(copied, 'IG12345678090');
+      expect(find.text('TIN copied'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'back from the shop\'s e-invoice page: asked once; "Yes" marks it requested',
+    (t) async {
+      final link = (
+        url: 'https://e.example.com/1',
+        until: DateTime(2099),
+        done: false,
+      );
+      final repo = FakeReceipts()
+        ..answers = [receipt(status: 'saved', einvoice: link)];
+      await pump(t, repo);
+      await t.pumpAndSettle();
+      await t.ensureVisible(find.byKey(const ValueKey('einvoice-open')));
+      await t.tap(find.byKey(const ValueKey('einvoice-open')));
+      await t.pumpAndSettle();
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await t.pumpAndSettle();
+      expect(find.text('Did you request your e-invoice?'), findsOneWidget);
+      await t.tap(find.text('Yes, requested'));
+      await t.pumpAndSettle();
+      expect(repo.einvoiceDone, [('r-1', true)]);
+
+      // Only after Request: a plain return to the app asks nothing.
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await t.pumpAndSettle();
+      expect(find.text('Did you request your e-invoice?'), findsNothing);
+    },
+  );
+
+  testWidgets('no e-invoice link: "Scan the e-invoice QR" is offered', (
+    t,
+  ) async {
+    await pump(t, FakeReceipts()..answers = [receipt(status: 'saved')]);
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('einvoice-scan')), findsOneWidget);
   });
 
   testWidgets('a line of 3 counts up to 3, no further', (t) async {

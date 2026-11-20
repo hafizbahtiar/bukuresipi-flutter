@@ -50,11 +50,13 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
       push
         ..onForeground = _foreground
         ..onTap = _openShare
-        // A new sign-in opens the device list (sign that one out); a family change opens the family; a badge, Badges.
-        ..onTypeTap = ((type) => switch (type) {
-          'sign_in' => _router.push('/account/sessions'),
-          'family' => _router.push('/family'),
-          'badge' => _router.push('/badges'),
+        // A new sign-in opens the device list (sign that one out); a family change opens the family; a badge, Badges;
+        // an e-invoice reminder, its receipt.
+        ..onTypeTap = ((type, data) => switch ((type, data['receiptId'])) {
+          ('sign_in', _) => _router.push('/account/sessions'),
+          ('family', _) => _router.push('/family'),
+          ('badge', _) => _router.push('/badges'),
+          ('einvoice', final String id) => _router.push('/receipts/$id'),
           _ => null,
         })
         ..start();
