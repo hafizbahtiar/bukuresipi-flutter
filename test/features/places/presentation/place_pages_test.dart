@@ -1877,6 +1877,11 @@ void main() {
       );
       // Why, for whoever is looking into it.
       expect(find.textContaining('ai_failed'), findsOneWidget);
+      // Or the post as a screenshot instead.
+      expect(
+        find.byKey(const ValueKey('problem-screenshot-s2')),
+        findsOneWidget,
+      );
       shared = [];
     },
   );

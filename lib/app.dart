@@ -9,6 +9,7 @@ import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
 import 'core/settings/theme_controller.dart';
 import 'core/theme/app_theme.dart';
+import 'features/home/presentation/pages/home_page.dart';
 import 'features/auth/presentation/auth_controller.dart';
 import 'features/places/presentation/places_controller.dart';
 import 'features/push/push_controller.dart';
@@ -115,7 +116,8 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
     } catch (_) {
       // Signed out, offline or gone: the book is the right place anyway.
     }
-    _router.go('/');
+    // Couldn't read (or nothing found): the Book's row has Try again and Send a screenshot.
+    _router.go('/', extra: HomePage.bookTab);
   }
 
   @override

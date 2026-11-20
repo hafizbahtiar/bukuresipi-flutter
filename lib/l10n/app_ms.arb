@@ -1184,5 +1184,6 @@
   "yourBranch": "Cawangan anda",
   "yourBranchMake": "Jadikan cawangan saya",
   "yourBranchSet": "Ini cawangan anda sekarang.",
-  "branchesShowAll": "Tunjuk semua {count} cawangan"
+  "branchesShowAll": "Tunjuk semua {count} cawangan",
+  "shareSendScreenshot": "Hantar tangkapan skrin"
 }

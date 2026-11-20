@@ -3170,5 +3170,6 @@
   "yourBranchMake": "Make this my branch",
   "yourBranchSet": "This is now your branch.",
   "branchesShowAll": "Show all {count} branches",
-  "@branchesShowAll": {"placeholders": {"count": {"type": "int"}}}
+  "@branchesShowAll": {"placeholders": {"count": {"type": "int"}}},
+  "shareSendScreenshot": "Send a screenshot"
 }
