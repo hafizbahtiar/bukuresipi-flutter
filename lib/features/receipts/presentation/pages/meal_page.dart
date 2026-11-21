@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/time_format.dart';
@@ -278,7 +279,8 @@ class _MealPageState extends State<MealPage> {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: _add,
+                // The API takes 20 dishes a meal (MEAL_MAX_ITEMS).
+                onPressed: items.length < 20 ? _add : null,
                 icon: const Icon(Icons.add),
                 label: Text(l.mealAddDish),
               ),
@@ -355,6 +357,8 @@ class _DishRow extends StatelessWidget {
                   initialValue: item.name,
                   autofocus: item.name.isEmpty,
                   textCapitalization: TextCapitalization.words,
+                  // The API's limit for a dish name.
+                  inputFormatters: [LengthLimitingTextInputFormatter(80)],
                   decoration: InputDecoration(
                     labelText: l.mealDishName,
                     isDense: true,
