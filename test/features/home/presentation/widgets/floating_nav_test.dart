@@ -62,8 +62,16 @@ Future<({List<int> picked, List<int> adds})> _pump(
   return (picked: picked, adds: adds);
 }
 
-double _chipX(WidgetTester t) =>
-    t.getCenter(find.byKey(const ValueKey('nav-chip'))).dx;
+/// The chip as drawn (it is painted, not a widget of its own).
+Rect _chip(WidgetTester t) {
+  final f = find.byKey(const ValueKey('nav-chip'));
+  return navChipRect(
+    t.widget<CustomPaint>(f).painter!,
+    t.getSize(f),
+  ).shift(t.getTopLeft(f));
+}
+
+double _chipX(WidgetTester t) => _chip(t).center.dx;
 
 void main() {
   testWidgets(
@@ -98,6 +106,8 @@ void main() {
       await t.pump();
       await g.moveBy(const Offset(40, 0));
       await t.pump();
+      // Its ends chase the finger on their springs, and catch up while it holds still.
+      await t.pump(const Duration(milliseconds: 600));
       expect(_chipX(t), closeTo(home.dx + 80, 2)); // under the finger
       expect(r.picked, isEmpty); // nothing switches until the finger lifts
       // Slowly on to "+" (slot 2): it is not a tab, so the chip settles on a neighbour.
@@ -106,6 +116,53 @@ void main() {
       await g.up();
       await t.pumpAndSettle();
       expect(r.picked.single, anyOf(1, 2)); // Book or Receipts, never "+"
+    },
+  );
+
+  testWidgets(
+    'while dragged, the chip moves with the finger frame by frame, before it lifts',
+    (t) async {
+      await _pump(t);
+      final home = t.getCenter(find.byKey(const ValueKey('nav-tab-0')));
+      final rest = _chipX(t);
+      final g = await t.startGesture(home);
+      // A finger moving every frame, as on a phone: 8 dp a frame for 10 frames.
+      for (var i = 0; i < 10; i++) {
+        await g.moveBy(const Offset(8, 0));
+        await t.pump(const Duration(milliseconds: 16));
+      }
+      expect(
+        _chipX(t) - rest,
+        greaterThan(50),
+      ); // most of the 80 dp already, the finger still down
+      await g.up();
+      await t.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'the chip flows like water: it stretches and thins towards the tab, then lands as one tab',
+    (t) async {
+      await _pump(t);
+      Size chip() => _chip(t).size;
+      final rest = chip();
+      // Home -> Account: 4 slots on.
+      await t.tap(find.byKey(const ValueKey('nav-tab-3')));
+      var longest = rest.width, thinnest = rest.height;
+      for (var i = 0; i < 20; i++) {
+        await t.pump(const Duration(milliseconds: 16));
+        if (chip().width > longest) longest = chip().width;
+        if (chip().height < thinnest) thinnest = chip().height;
+      }
+      expect(longest, greaterThan(rest.width * 1.3)); // the front end leads
+      expect(thinnest, lessThan(rest.height * 0.95)); // stretched, it thins
+      await t.pumpAndSettle();
+      expect(chip().width, closeTo(rest.width, 0.5));
+      expect(chip().height, closeTo(rest.height, 0.5));
+      expect(
+        _chipX(t),
+        closeTo(t.getCenter(find.byKey(const ValueKey('nav-tab-3'))).dx, 1),
+      );
     },
   );
 
@@ -196,10 +253,7 @@ void main() {
     await t.drag(find.byKey(const ValueKey('nav-tab-2')), const Offset(0, 56));
     await t.pumpAndSettle();
     expect(r.picked, [2, 3]);
-    expect(
-      t.getCenter(find.byKey(const ValueKey('nav-chip'))).dy,
-      closeTo(y('nav-tab-3'), 1),
-    );
+    expect(_chip(t).center.dy, closeTo(y('nav-tab-3'), 1));
     await t.tap(find.byKey(const ValueKey('nav-add')));
     expect(r.adds, [1]);
   });
