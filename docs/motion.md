@@ -124,6 +124,30 @@ Rule of thumb: *anything a flight lands on must already be decoded.*
   visible bounce) instead of a curve. A spring keeps the current **velocity** when the target changes mid-way, so
   shrink → grow → shrink never jerks. That's the main reason iOS motion feels "smooth": springs, not durations.
 
+### The active chip flows like water
+
+**Where:** the same file, `_Flow` (the physics) and `_ChipPainter` (the drawing).
+
+The chip is not one box sliding: its two ends move on their own springs.
+- The end facing the move **leads** (`stiffness 700`, ratio `0.8`: quick, almost no overshoot).
+- The other end **trails** (`stiffness 260`, ratio `0.68`): it follows slower, overshoots ~5% and comes back.
+- So on a tap, the chip stretches towards the tab. The tail catches up, squeezes a little as it lands and relaxes:
+  a drop of water, not a sliding box. About 0.35 s in all.
+- Stretched, it **thins** as 1 / sqrt(length): at twice a tab's length, ~70% as thick. Squeezed, it keeps the bar's
+  thickness. Its ends are drawn inside the bar.
+- **Dragged:** the end facing the move stays exactly at the finger (no lag under it), and only the other end flows
+  behind, as a drop pulled along. Which end leads comes from the target's side of the chip's middle, so a finger's
+  small step back never swaps them. Let go, and both ends spring on from their current speed.
+
+How it stays smooth:
+- **One ticker steps both springs** (semi-implicit Euler, 4 ms steps) towards a target that may move every frame. A
+  `SpringSimulation` restarted on each finger move starts again from its time 0 each frame, so the chip stood still
+  until the finger lifted.
+- After a dropped frame the springs catch up with the clock (no capped step, which would leave the chip behind).
+- The chip is **painted** (`CustomPaint` with the springs as its `repaint`) on its own `RepaintBoundary`: no rebuild,
+  no layout, and the bar and its icons are not repainted while it moves. During a drag the tabs rebuild only when
+  another tab lights up.
+
 ## 4. The map sheet becomes the page (full)
 
 **Where:** `MapSheet` in `lib/features/places/presentation/widgets/map_sheet.dart`.
