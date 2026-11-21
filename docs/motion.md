@@ -124,6 +124,21 @@ Rule of thumb: *anything a flight lands on must already be decoded.*
   visible bounce) instead of a curve. A spring keeps the current **velocity** when the target changes mid-way, so
   shrink → grow → shrink never jerks. That's the main reason iOS motion feels "smooth": springs, not durations.
 
+## 4. The map sheet becomes the page (full)
+
+**Where:** `MapSheet` in `lib/features/places/presentation/widgets/map_sheet.dart`.
+
+Over the last 10% of the screen height before full, three things follow the sheet (and the finger), all from one
+value (`_header`, 0 -> 1):
+- The map behind the floating back button and search bar fades to the sheet's paper colour (a band from the screen
+  top to the sheet's top at full, under its round corners too; it never takes a tap).
+- The sheet's top corners go from 20 to square.
+- Its shadow fades out.
+
+At full, the bar and the sheet read as one page, the bar floating on paper with `spaceM` above the sheet's handle
+(the map page passes `top: belowBar - 12 + spaceM`). No timer and no curve: it is tied to the sheet's height, so a
+drag back down undoes it at the same pace. On a wide screen the side panel becomes a flat paper column to the top.
+
 ## Reduce motion
 
 With the system's "remove animations" on (`MediaQuery.disableAnimations`), the floating sheet and the nav bar jump
