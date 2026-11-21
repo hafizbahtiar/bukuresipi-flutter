@@ -80,11 +80,11 @@ abstract interface class OwnerRepository {
     String recipeId,
   );
 
-  /// An AI draft of a catalogue dish from web recipes (metered: 1 search + 1 AI call). Nothing is saved: the edit
+  /// An AI draft of a catalogue dish or the owner's own recipe from web recipes (metered: 1 search + 1 AI call). Nothing is saved: the edit
   /// form shows it and the owner saves it.
   Future<DishDraft> draftDish(String recipeId);
 
-  /// A draft photo (its URL) as a catalogue dish's cover: the server downloads and keeps it. The dish as saved.
+  /// A draft photo (its URL) as the cover of a catalogue dish or the owner's own recipe: the server downloads and keeps it. The dish as saved.
   Future<RecipeDetail> setDishCover(String recipeId, String url);
 
   /// Every pinned branch, for the owner's map.
