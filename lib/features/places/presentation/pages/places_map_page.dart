@@ -1229,7 +1229,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
                 child: MapSheet(
                   controller: _sheet,
                   peek: peek,
-                  top: belowBar - 12,
+                  // Full: [spaceM] under the search bar, so the bar does not sit on the sheet's edge.
+                  top: belowBar - 12 + spaceM,
                   shown: _shown,
                   showClose: _selected != null,
                   onClose: _closed,

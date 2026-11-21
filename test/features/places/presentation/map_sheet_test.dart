@@ -120,6 +120,47 @@ void main() {
     expect(find.byKey(const ValueKey('map-sheet-close')), findsNothing);
   });
 
+  testWidgets(
+    'the map behind the search bar turns to paper as the sheet reaches full, and never takes a tap',
+    (t) async {
+      final host = await pump(t, []);
+      double paper() => t
+          .widget<ColoredBox>(
+            find.descendant(
+              of: find.byKey(const ValueKey('map-sheet-header')),
+              matching: find.byType(ColoredBox),
+            ),
+          )
+          .color
+          .a;
+      expect(paper(), 0); // peek
+      // Down to the sheet's top at full (100) and under its round corners.
+      expect(
+        t.getSize(find.byKey(const ValueKey('map-sheet-header'))).height,
+        120,
+      );
+      host.pick();
+      await t.pumpAndSettle();
+      expect(paper(), 0); // half
+      host.controller.jumpTo(
+        700 / 800 - 0.05,
+      ); // half way through the last stretch
+      await t.pump();
+      expect(paper(), moreOrLessEquals(0.5, epsilon: 0.01));
+      await t.fling(find.text('Title'), const Offset(0, -300), 2000);
+      await t.pumpAndSettle();
+      expect(sheetHeight(t), moreOrLessEquals(700, epsilon: 1));
+      expect(paper(), moreOrLessEquals(1, epsilon: 0.001));
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('map-sheet-header')),
+          matching: find.byType(IgnorePointer),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('on a wide screen (a phone on its side) a pick opens it full', (
     t,
   ) async {
