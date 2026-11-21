@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -106,9 +107,20 @@ class _PantryPageState extends State<PantryPage> {
     });
   }
 
+  // The API's limits (POST /recipes/from-pantry): 30 names of up to 50 characters.
+  static const _maxItems = 30;
+  static const _maxName = 50;
+
   void _add(String name) {
     final n = name.trim();
     if (n.isEmpty) return;
+    final known = _have.any((h) => h.toLowerCase() == n.toLowerCase());
+    if (!known && _have.length >= _maxItems) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).pantryFull)),
+      );
+      return;
+    }
     setState(() {
       if (!_have.any((h) => h.toLowerCase() == n.toLowerCase())) {
         _have = [..._have, n];
@@ -199,6 +211,7 @@ class _PantryPageState extends State<PantryPage> {
               key: const ValueKey('pantry-field'),
               controller: _field,
               textInputAction: TextInputAction.done,
+              inputFormatters: [LengthLimitingTextInputFormatter(_maxName)],
               decoration: InputDecoration(
                 labelText: l.pantryAdd,
                 suffixIcon: IconButton(

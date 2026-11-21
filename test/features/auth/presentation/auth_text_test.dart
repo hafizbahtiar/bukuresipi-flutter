@@ -38,4 +38,12 @@ void main() {
       'Akaun ini telah digantung.\nSebab: Akaun palsu',
     );
   });
+
+  test('a refused field is not called an email problem', () {
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(
+      errorText(en, const ApiException('invalid_input', status: 400)),
+      "Something you entered can't be accepted. Check it and try again.",
+    );
+  });
 }

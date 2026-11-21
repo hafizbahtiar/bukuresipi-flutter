@@ -158,4 +158,46 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'the kitchen holds 30 ingredients (the API\'s limit): a 31st is refused and said, a name stops at 50 letters',
+    (t) async {
+      SharedPreferences.setMockInitialValues({
+        'pantry.ingredients': [for (var i = 0; i < 30; i++) 'Bahan $i'],
+      });
+      await t.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (_) => RecipesController(FakeRecipes()),
+            ),
+            ChangeNotifierProvider(
+              create: (_) => ShoppingController(FakeShopping()),
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PantryPage(),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      final field = find.byKey(const ValueKey('pantry-field'));
+      await t.enterText(field, 'x' * 60);
+      expect(t.widget<TextField>(field).controller!.text.length, 50);
+      await t.enterText(field, 'Telur');
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pumpAndSettle();
+      expect(
+        find.text('Up to 30 ingredients. Remove one to add another.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Telur'),
+        findsOneWidget,
+      ); // still in the field, not added
+    },
+  );
 }

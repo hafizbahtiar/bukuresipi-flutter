@@ -81,7 +81,8 @@ String errorText(
     'invite_expired' => l.errInviteExpired,
     'not_in_family' => l.errNotInFamily,
     'not_owner' => l.errNotOwner,
-    'invalid_input' => l.errInvalidEmail,
+    // Email forms check the address before sending (emailError): here it is any other refused field.
+    'invalid_input' => l.errInvalidInput,
     ApiException.network => l.errNetwork,
     _ => l.errUnknown,
   };
