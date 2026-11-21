@@ -65,6 +65,14 @@ class _AddSheet extends StatefulWidget {
 class _AddSheetState extends State<_AddSheet> {
   /// null = the menu; 'link', 'receipt' or 'meal' = that row's next step.
   String? _step;
+
+  /// false = Back to the menu (the steps slide the other way).
+  bool _forward = true;
+
+  void _go(String? step) => setState(() {
+    _forward = step != null;
+    _step = step;
+  });
   final _field = TextEditingController();
 
   @override
@@ -92,13 +100,23 @@ class _AddSheetState extends State<_AddSheet> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SheetSwitcher(
+      forward: _forward,
       child: switch (_step) {
         null => _menu(l),
         'link' => _link(l),
-        final step => PhotoSourceTiles(
+        final step => Column(
           key: ValueKey('add-step-$step'),
-          camera: step == 'meal' ? l.mealSnap : l.receiptSnap,
-          onPick: (source) => _close(step, source),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SheetStepTitle(
+              title: step == 'meal' ? l.addMeal : l.addReceipt,
+              onBack: () => _go(null),
+            ),
+            PhotoSourceTiles(
+              camera: step == 'meal' ? l.mealSnap : l.receiptSnap,
+              onPick: (source) => _close(step, source),
+            ),
+          ],
         ),
       },
     );
@@ -142,68 +160,69 @@ class _AddSheetState extends State<_AddSheet> {
           leading: Icon(icon),
           title: Text(title),
           subtitle: Text(hint),
-          onTap: () => next ? setState(() => _step = key) : _close(key),
+          onTap: () => next ? _go(key) : _close(key),
         ),
     ],
   );
 
   Widget _link(AppLocalizations l) {
     final material = MaterialLocalizations.of(context);
-    return Padding(
+    return Column(
       key: const ValueKey('add-step-link'),
-      padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l.addLink,
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            key: const ValueKey('add-link-field'),
-            controller: _field,
-            autofocus: true,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.go,
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _addLink(),
-            decoration: InputDecoration(
-              labelText: l.linkFieldLabel,
-              helperText: l.addLinkHint,
-              helperMaxLines: 2,
-              prefixIcon: const Icon(Icons.link, size: 20),
-              suffixIcon: TextButton.icon(
-                key: const ValueKey('add-link-paste'),
-                onPressed: _paste,
-                icon: const Icon(Icons.content_paste, size: 18),
-                label: Text(material.pasteButtonLabel),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SheetStepTitle(title: l.addLink, onBack: () => _go(null)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(material.cancelButtonLabel),
+              TextField(
+                key: const ValueKey('add-link-field'),
+                controller: _field,
+                autofocus: true,
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.go,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _addLink(),
+                decoration: InputDecoration(
+                  labelText: l.linkFieldLabel,
+                  helperText: l.addLinkHint,
+                  helperMaxLines: 2,
+                  prefixIcon: const Icon(Icons.link, size: 20),
+                  suffixIcon: TextButton.icon(
+                    key: const ValueKey('add-link-paste'),
+                    onPressed: _paste,
+                    icon: const Icon(Icons.content_paste, size: 18),
+                    label: Text(material.pasteButtonLabel),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  key: const ValueKey('add-link-submit'),
-                  onPressed: _field.text.trim().isEmpty ? null : _addLink,
-                  child: Text(l.linkAdd),
-                ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(material.cancelButtonLabel),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      key: const ValueKey('add-link-submit'),
+                      onPressed: _field.text.trim().isEmpty ? null : _addLink,
+                      child: Text(l.linkAdd),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -186,9 +186,12 @@ the bottom never leaves its line). The choreography is wolt_modal_sheet's pagina
   `Positioned` on the bottom line, clipped by the moving edge), so the edge never waits for the fade.
 - **The slide says "forward".** Small (30%) and mostly hidden by the fades: felt more than seen.
 
+- **Back** (`SheetStepTitle`'s arrow, `SheetSwitcher(forward: false)`): the same choreography mirrored: the menu
+  comes back from the left, the step leaves to the right.
+
 smooth_sheets does the same job with a `Navigator` inside the sheet (each step a route, the height lerped between
-the routes' sizes, Android's fade-forwards page transition); worth it when steps need the system back gesture to
-step back. Ours has no back step: back closes the sheet.
+the routes' sizes, Android's fade-forwards page transition); worth it when the system back gesture must step back
+too. Ours: the arrow steps back; the system back, a tap outside and a drag down close the sheet.
 
 ## Reduce motion
 

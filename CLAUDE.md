@@ -40,7 +40,8 @@ No use-case classes, no DI container: a repository method is the use case, Provi
 - `sheets.dart` - `showBaseSheet` (floating by default; it draws the handle and keeps itself above the keyboard,
   so a sheet's content never pads for `viewInsets`; a change of its content's height moves its top edge),
   `SheetSwitcher` (steps inside one sheet: a menu, then the picked row's next step; never close a sheet to open
-  the next one; `docs/motion.md` 5), `PhotoSourceTiles` (camera or photos, as a step) and `showPhotoSourceSheet`
+  the next one; `docs/motion.md` 5; each step's `SheetStepTitle` has Back to the step before, sliding the other
+  way), `PhotoSourceTiles` (camera or photos, as a step) and `showPhotoSourceSheet`
   (the same as a sheet of its own). Never `showModalBottomSheet`.
 - `dialog.dart` - `showBaseDialog(message, tone: DialogTone.info|confirm|danger)`. Never `showDialog`/`AlertDialog`.
 - `picker.dart` - `showBasePicker`, `PickerField`. `menus.dart` - `MenuAction`, `MoreMenu`, `showActionSheet`

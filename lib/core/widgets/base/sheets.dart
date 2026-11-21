@@ -192,11 +192,14 @@ class _FloatingSheetState extends State<_FloatingSheet>
 /// close a sheet to open the next one. Choreography from wolt_modal_sheet (350 ms): the top edge moves to the new
 /// height from the start (the sheet's AnimatedSize); the old step fades out fast (50-150 ms) and the new one fades in
 /// only after it (150-350 ms), so their text never overlaps; both slide left by 30% of the width (50-350 ms), the
-/// new one arriving from the right: forward.
+/// new one arriving from the right: forward. A step has its [SheetStepTitle] with Back.
 class SheetSwitcher extends StatelessWidget {
-  const SheetSwitcher({super.key, required this.child});
+  const SheetSwitcher({super.key, required this.child, this.forward = true});
 
   final Widget child;
+
+  /// false = back to the step before: the new step comes from the left, the old one leaves to the right.
+  final bool forward;
 
   static const _slide = Interval(50 / 350, 1, curve: Curves.fastOutSlowIn);
   static const _fadeOut = Interval(50 / 350, 150 / 350);
@@ -221,7 +224,10 @@ class SheetSwitcher extends StatelessWidget {
                 ? _fadeIn.transform(t)
                 : 1 - _fadeOut.transform(t),
             child: FractionalTranslation(
-              translation: Offset(0.3 * (incoming ? 1 - moved : -moved), 0),
+              translation: Offset(
+                (forward ? 0.3 : -0.3) * (incoming ? 1 - moved : -moved),
+                0,
+              ),
               child: step,
             ),
           );
@@ -238,6 +244,33 @@ class SheetSwitcher extends StatelessWidget {
       ],
     ),
     child: child,
+  );
+}
+
+/// A sheet step's title row ([SheetSwitcher]), with Back to the step before; the arrow lines up with the rows' icons.
+class SheetStepTitle extends StatelessWidget {
+  const SheetStepTitle({super.key, required this.title, required this.onBack});
+
+  final String title;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(left: spaceXs, right: spaceM),
+    child: Row(
+      children: [
+        IconButton(
+          key: const ValueKey('sheet-back'),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: onBack,
+          icon: const Icon(Icons.arrow_back),
+        ),
+        const SizedBox(width: spaceXs),
+        Expanded(
+          child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+        ),
+      ],
+    ),
   );
 }
 
