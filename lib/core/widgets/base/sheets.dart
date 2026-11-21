@@ -19,6 +19,11 @@ const _floatMotion = Duration(milliseconds: 340);
 /// The gap a floating sheet keeps from the screen's sides and bottom.
 const _floatGap = 12.0;
 
+/// A floating sheet whose content changes height (the next step, a list arriving): its top edge moves there.
+/// Timings as wolt_modal_sheet's pagination: the height over 300 of a step's 350 ms.
+const _resizeMotion = Duration(milliseconds: 300);
+const _stepMotion = Duration(milliseconds: 350);
+
 /// A modal bottom sheet. [floating] (default): a card held off the screen's sides and bottom, rounded all round;
 /// best for short menus. Its bottom edge stays put on an unseen line: it grows up out of it and folds back down
 /// into it (drag the handle down to close). false: the full-width sheet sliding from the screen's edge, for long
@@ -160,7 +165,18 @@ class _FloatingSheetState extends State<_FloatingSheet>
                       ),
                     ),
                   ),
-                  Flexible(child: widget.child),
+                  // A new height (the next step: [SheetSwitcher]) moves the top edge, as when it opens;
+                  // the bottom stays on its line.
+                  Flexible(
+                    child: AnimatedSize(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : _resizeMotion,
+                      curve: Curves.fastOutSlowIn,
+                      alignment: Alignment.bottomCenter,
+                      child: widget.child,
+                    ),
+                  ),
                   const SizedBox(height: spaceS),
                 ],
               ),
@@ -172,28 +188,99 @@ class _FloatingSheetState extends State<_FloatingSheet>
   }
 }
 
-/// Camera or photos, as a floating sheet: [camera] names what the camera is for ("Snap a receipt"). null = closed.
+/// Steps inside one floating sheet (a menu, then what the picked row needs): give each step its own key. Never
+/// close a sheet to open the next one. Choreography from wolt_modal_sheet (350 ms): the top edge moves to the new
+/// height from the start (the sheet's AnimatedSize); the old step fades out fast (50-150 ms) and the new one fades in
+/// only after it (150-350 ms), so their text never overlaps; both slide left by 30% of the width (50-350 ms), the
+/// new one arriving from the right: forward.
+class SheetSwitcher extends StatelessWidget {
+  const SheetSwitcher({super.key, required this.child});
+
+  final Widget child;
+
+  static const _slide = Interval(50 / 350, 1, curve: Curves.fastOutSlowIn);
+  static const _fadeOut = Interval(50 / 350, 150 / 350);
+  static const _fadeIn = Interval(150 / 350, 1);
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : _stepMotion,
+    transitionBuilder: (step, animation) {
+      final incoming = step.key == child.key;
+      return AnimatedBuilder(
+        animation: animation,
+        child: step,
+        builder: (_, step) {
+          // Time since the switch, 0..1 (the outgoing step's animation runs backwards).
+          final t = incoming ? animation.value : 1 - animation.value;
+          final moved = _slide.transform(t);
+          return Opacity(
+            opacity: incoming
+                ? _fadeIn.transform(t)
+                : 1 - _fadeOut.transform(t),
+            child: FractionalTranslation(
+              translation: Offset(0.3 * (incoming ? 1 - moved : -moved), 0),
+              child: step,
+            ),
+          );
+        },
+      );
+    },
+    // Only the new step sizes the sheet (the old one is laid over it, on the bottom line), so the edge moves at once.
+    layoutBuilder: (current, previous) => Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        for (final p in previous)
+          Positioned(left: 0, right: 0, bottom: 0, child: p),
+        ?current,
+      ],
+    ),
+    child: child,
+  );
+}
+
+/// Camera or photos: [camera] names what the camera is for ("Snap a receipt"). A step of a sheet
+/// ([SheetSwitcher]), or a sheet of its own ([showPhotoSourceSheet]).
+class PhotoSourceTiles extends StatelessWidget {
+  const PhotoSourceTiles({
+    super.key,
+    required this.camera,
+    required this.onPick,
+  });
+
+  final String camera;
+  final ValueChanged<ImageSource> onPick;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      ListTile(
+        key: const ValueKey('photo-camera'),
+        leading: const Icon(Icons.photo_camera_outlined),
+        title: Text(camera),
+        onTap: () => onPick(ImageSource.camera),
+      ),
+      ListTile(
+        key: const ValueKey('photo-gallery'),
+        leading: const Icon(Icons.photo_library_outlined),
+        title: Text(AppLocalizations.of(context).receiptFromGallery),
+        onTap: () => onPick(ImageSource.gallery),
+      ),
+    ],
+  );
+}
+
+/// Camera or photos, as a floating sheet of its own. null = closed.
 Future<ImageSource?> showPhotoSourceSheet(
   BuildContext context, {
   required String camera,
-}) {
-  final l = AppLocalizations.of(context);
-  return showBaseSheet<ImageSource>(
-    context,
-    builder: (sheet) => Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ListTile(
-          leading: const Icon(Icons.photo_camera_outlined),
-          title: Text(camera),
-          onTap: () => Navigator.pop(sheet, ImageSource.camera),
-        ),
-        ListTile(
-          leading: const Icon(Icons.photo_library_outlined),
-          title: Text(l.receiptFromGallery),
-          onTap: () => Navigator.pop(sheet, ImageSource.gallery),
-        ),
-      ],
-    ),
-  );
-}
+}) => showBaseSheet<ImageSource>(
+  context,
+  builder: (sheet) => PhotoSourceTiles(
+    camera: camera,
+    onPick: (source) => Navigator.pop(sheet, source),
+  ),
+);

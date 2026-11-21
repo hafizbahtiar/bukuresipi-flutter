@@ -163,8 +163,35 @@ At full, the bar and the sheet read as one page, the bar floating on paper with 
 (the map page passes `top: belowBar - 12 + spaceM`). No timer and no curve: it is tied to the sheet's height, so a
 drag back down undoes it at the same pace. On a wide screen the side panel becomes a flat paper column to the top.
 
+## 5. Steps inside one sheet
+
+**Where:** `SheetSwitcher` and the floating sheet's `AnimatedSize` in `lib/core/widgets/base/sheets.dart`; used by
+the "+" sheet (`add_sheet.dart`: Paste a link, Receipt and Meal go on to their next step in the same sheet).
+
+Never close a sheet to open the next one: the card would fold away and grow again for what is one task. The sheet
+stays; its content changes, and the card's top edge moves to the new height (the same edge as the open reveal, so
+the bottom never leaves its line). The choreography is wolt_modal_sheet's pagination (350 ms):
+
+```
+ 0      50     150                   300   350 ms
+ |------ height: fastOutSlowIn -------|
+        |-out-|                                 old step fades (linear)
+               |------- in -------------------| new step fades (linear)
+        |------- slide: 30% of the width, fastOutSlowIn ------| both move left: forward
+```
+
+- **No double exposure.** The old step is gone before the new one shows; a plain cross-fade overlays two lists of
+  text, which reads as a smudge.
+- **The height moves from the first frame.** Only the new step sizes the sheet (the old one is laid over it,
+  `Positioned` on the bottom line, clipped by the moving edge), so the edge never waits for the fade.
+- **The slide says "forward".** Small (30%) and mostly hidden by the fades: felt more than seen.
+
+smooth_sheets does the same job with a `Navigator` inside the sheet (each step a route, the height lerped between
+the routes' sizes, Android's fade-forwards page transition); worth it when steps need the system back gesture to
+step back. Ours has no back step: back closes the sheet.
+
 ## Reduce motion
 
-With the system's "remove animations" on (`MediaQuery.disableAnimations`), the floating sheet and the nav bar jump
-to their end state and the book page flip is skipped. The hero flights and the photo viewer still animate (not done
+With the system's "remove animations" on (`MediaQuery.disableAnimations`), the floating sheet, its steps and the nav
+bar jump to their end state and the book page flip is skipped. The hero flights and the photo viewer still animate (not done
 yet).
