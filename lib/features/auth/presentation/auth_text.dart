@@ -49,7 +49,7 @@ String errorText(
     'already_verified' => l.errAlreadyVerified,
     'daily_limit' => l.errReportDailyLimit,
     'not_saved' => l.ratingNotSaved,
-    'email_unverified' => l.ratingVerifyEmail,
+    'email_unverified' => l.errEmailUnverified,
     'owner_account' => l.errOwnerAccount,
     'list_full' => l.errShoppingListFull,
     'not_maps_link' => l.errNotMapsLink,

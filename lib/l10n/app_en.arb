@@ -903,8 +903,8 @@
       }
     }
   },
-  "ratingVerifyEmail": "Verify your email to rate.",
-  "@ratingVerifyEmail": {},
+  "errEmailUnverified": "Confirm your email first: tap the link we sent you, or send it again in Account.",
+  "@errEmailUnverified": {},
   "ratingRemoved": "Rating removed.",
   "@ratingRemoved": {},
   "ratingUndo": "Undo",

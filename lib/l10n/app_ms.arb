@@ -345,7 +345,7 @@
   "ratingNotEnough": "Belum cukup untuk purata.",
   "ratingAverage": "{average} · {count} penilaian",
   "ratingYours": "Penilaian anda: {stars}",
-  "ratingVerifyEmail": "Sahkan emel untuk menilai.",
+  "errEmailUnverified": "Sahkan emel anda dahulu: tekan pautan yang kami hantar, atau hantar semula di Akaun.",
   "ratingRemoved": "Penilaian dibuang.",
   "ratingUndo": "Batal",
   "ratingStarLabel": "Beri {stars} bintang",
