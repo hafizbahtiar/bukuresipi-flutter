@@ -247,9 +247,11 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   bool _coverRemoved = false;
   String? get _shownCover => _coverRemoved ? null : widget.recipe?.cover;
 
-  /// A catalogue dish (the app owner edits it): the AI draft too.
-  bool get _catalogue =>
-      widget.recipe?.sourceType == RecipeSourceType.catalogue;
+  /// The app owner's AI draft: on a catalogue dish or their own saved recipe (a new one has nothing to draft from yet).
+  bool get _draftable => switch (widget.recipe) {
+    final r? => r.sourceType == RecipeSourceType.catalogue || r.canEdit,
+    null => false,
+  };
   bool _drafting = false;
 
   /// The last AI draft's pages and notes, shown under the name until the page closes.
@@ -1052,7 +1054,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
             widget.recipe == null ? l.recipeNew : l.recipeEdit,
           ),
           actions: [
-            if (_catalogue &&
+            if (_draftable &&
                 (context.read<AuthController?>()?.user?.isOwner ?? false))
               AiButton.icon(
                 key: const ValueKey('recipe-ai-draft'),

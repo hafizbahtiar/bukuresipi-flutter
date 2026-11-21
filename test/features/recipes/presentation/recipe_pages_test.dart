@@ -711,6 +711,56 @@ void main() {
       },
     );
   }
+  for (final owner in [true, false]) {
+    testWidgets(
+      'your own recipe: ${owner ? 'the owner gets the AI draft' : 'a user gets no AI draft'}',
+      (t) async {
+        final auth = AuthController(
+          FakeAuthRepository()
+            ..session = true
+            ..meResult = User(
+              id: 'u-1',
+              email: 'a@example.com',
+              name: 'Ali',
+              role: owner ? 'owner' : 'user',
+              lang: 'ms',
+              emailVerified: true,
+            ),
+        );
+        await auth.restore();
+        final ownerRepo = FakeOwner()
+          ..draft = (
+            name: 'Nasi Lemak Ayam Goreng',
+            ingredients: ['2 cawan beras'],
+            steps: ['Masak nasi.'],
+            sources: [(url: 'https://masak.example.my/nasi', title: null)],
+            images: const [],
+            warnings: const [],
+            complete: true,
+          );
+        await t.pumpWidget(
+          app(
+            providers: [
+              ChangeNotifierProvider.value(
+                value: RecipesController(FakeRecipes()),
+              ),
+              ChangeNotifierProvider.value(value: auth),
+              Provider<OwnerRepository>.value(value: ownerRepo),
+            ],
+            home: RecipeEditPage(recipe: recipeDetail()),
+          ),
+        );
+        await t.pumpAndSettle();
+        final button = find.byKey(const ValueKey('recipe-ai-draft'));
+        expect(button, owner ? findsOneWidget : findsNothing);
+        if (!owner) return;
+        await t.tap(button);
+        await t.pumpAndSettle();
+        expect(ownerRepo.drafted, ['r-1']);
+        expect(find.text('Nasi Lemak Ayam Goreng'), findsOneWidget);
+      },
+    );
+  }
 }
 
 /// Opens the app bar's ⋮ menu, where a page's actions are.
