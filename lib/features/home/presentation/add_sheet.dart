@@ -12,12 +12,15 @@ import '../../../core/widgets/base.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/presentation/auth_text.dart';
 import '../../receipts/domain/receipts_repository.dart';
+import '../../receipts/presentation/pages/meal_page.dart';
 import '../../recipes/domain/recipe.dart';
 import '../../recipes/presentation/pages/recipe_edit_page.dart';
 import '../../shares/presentation/share_intake.dart';
+import 'pages/home_page.dart';
 
 /// The bottom bar's "+": every way to add something, in one sheet. A link and a screenshot go through the same
-/// intake as the phone's share sheet; a receipt is uploaded and opened; a typed recipe opens the editor.
+/// intake as the phone's share sheet; a receipt is uploaded and opened; a meal photo is estimated, and once saved
+/// the day's calories show; a typed recipe opens the editor.
 Future<void> showAddSheet(BuildContext context) async {
   final l = AppLocalizations.of(context);
   final pick = await showBaseSheet<String>(
@@ -49,6 +52,7 @@ Future<void> showAddSheet(BuildContext context) async {
             l.addReceipt,
             l.addReceiptHint,
           ),
+          ('meal', Icons.restaurant_outlined, l.addMeal, l.addMealHint),
           ('recipe', Icons.edit_note, l.addRecipe, l.addRecipeHint),
         ])
           ListTile(
@@ -75,6 +79,8 @@ Future<void> showAddSheet(BuildContext context) async {
       }
     case 'receipt':
       await _addReceipt(context);
+    case 'meal':
+      await _addMeal(context);
     case 'recipe':
       final saved = await Navigator.of(context).push<RecipeDetail>(
         MaterialPageRoute(builder: (_) => const RecipeEditPage()),
@@ -195,6 +201,27 @@ Future<void> _addReceipt(BuildContext context) async {
     unawaited(router.push('/receipts/$id'));
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+  }
+}
+
+/// Camera or photos, then the estimate page; a saved meal lands on the Calories side, reloaded.
+Future<void> _addMeal(BuildContext context) async {
+  final l = AppLocalizations.of(context);
+  final source = await showPhotoSourceSheet(context, camera: l.mealSnap);
+  if (source == null || !context.mounted) return;
+  // 1600 px is plenty to tell dishes apart and keeps the upload small.
+  final picked = await ImagePicker().pickImage(
+    source: source,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    imageQuality: 85,
+  );
+  if (picked == null || !context.mounted) return;
+  final saved = await Navigator.of(
+    context,
+  ).push<bool>(MaterialPageRoute(builder: (_) => MealPage(path: picked.path)));
+  if (saved == true && context.mounted) {
+    context.go('/', extra: HomePage.caloriesTab);
   }
 }
 
