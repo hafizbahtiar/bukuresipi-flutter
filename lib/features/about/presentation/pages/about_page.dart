@@ -7,7 +7,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 
-/// What Bukuresipi is, how halal info works, the app version, and the links (website, credits, account deletion).
+/// What Bukuresipi is, how halal info works, the app version and maker, and the links (website, credits, privacy,
+/// terms, account deletion).
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key, this.version});
 
@@ -79,6 +80,16 @@ class AboutPage extends StatelessWidget {
               () => context.push('/credits'),
             ),
             link(
+              Icons.privacy_tip_outlined,
+              l.aboutPrivacy,
+              () => openLink(context, '$site/privacy', failed: l.openFailed),
+            ),
+            link(
+              Icons.gavel_outlined,
+              l.aboutTerms,
+              () => openLink(context, '$site/terms', failed: l.openFailed),
+            ),
+            link(
               Icons.delete_outline,
               l.aboutDeleteAccount,
               () =>
@@ -89,7 +100,7 @@ class AboutPage extends StatelessWidget {
               child: FutureBuilder<String>(
                 future: version == null ? _installed() : Future.value(version),
                 builder: (context, s) => Text(
-                  l.aboutVersion(s.data ?? '…'),
+                  '${l.aboutVersion(s.data ?? '…')}\n© ${DateTime.now().year} Tri Digital Niaga',
                   style: TextStyle(color: nb.inkSoft),
                 ),
               ),
