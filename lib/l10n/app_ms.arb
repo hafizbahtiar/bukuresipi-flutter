@@ -815,6 +815,8 @@
   "addScreenshotHint": "Hantaran, menu atau papan tanda",
   "addReceipt": "Resit",
   "addReceiptHint": "Ambil gambar resit restoran untuk jejak lawatan dan perbelanjaan",
+  "addMeal": "Makanan",
+  "addMealHint": "Ambil gambar hidangan untuk anggaran kalori",
   "addRecipe": "Tulis resipi",
   "addRecipeHint": "Resipi anda sendiri, dari awal",
   "linkFieldLabel": "Pautan",
