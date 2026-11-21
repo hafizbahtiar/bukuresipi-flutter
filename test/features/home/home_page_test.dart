@@ -24,7 +24,11 @@ import '../places/places_fixtures.dart';
 import '../recipes/recipes_fixtures.dart';
 import '../shopping/shopping_fixtures.dart';
 
-Future<void> pumpHome(WidgetTester t, {Object? open}) async {
+Future<void> pumpHome(
+  WidgetTester t, {
+  Object? open,
+  FakeReceipts? receipts,
+}) async {
   final places = PlacesController(
     FakePlaces()..places = [place(id: 'a', name: 'Kedai Kopi Ah Seng')],
   );
@@ -41,7 +45,7 @@ Future<void> pumpHome(WidgetTester t, {Object? open}) async {
         ChangeNotifierProvider(
           create: (_) => ShoppingController(FakeShopping()),
         ),
-        Provider<ReceiptsRepository>.value(value: FakeReceipts()),
+        Provider<ReceiptsRepository>.value(value: receipts ?? FakeReceipts()),
         ChangeNotifierProvider(create: (_) => LocaleController(prefs)),
         ChangeNotifierProvider(
           create: (_) => UpdateGate(playHasUpdate: () async => false),
@@ -85,6 +89,7 @@ void main() {
     await t.tap(find.byKey(const ValueKey('nav-add')));
     await t.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const ValueKey('add-receipt')), findsOneWidget);
+    expect(find.byKey(const ValueKey('add-meal')), findsOneWidget);
     expect(find.byKey(const ValueKey('add-link')), findsOneWidget);
     expect(selectedTab(t), 0);
     await t.tapAt(const Offset(10, 10)); // close the sheet
@@ -97,6 +102,31 @@ void main() {
     await t.pump();
     expect(selectedTab(t), 3);
   });
+
+  testWidgets(
+    'a meal saved from "+" lands on Receipts > Calories, reloaded each time',
+    (t) async {
+      final receipts = FakeReceipts();
+      await pumpHome(t, receipts: receipts);
+      await t.pump();
+      await pumpHome(t, receipts: receipts, open: HomePage.caloriesTab);
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 400));
+      expect(selectedTab(t), 2);
+      final title = find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Calories'),
+      );
+      expect(title, findsOneWidget);
+      // Already on Calories: another save reloads it.
+      final loads = receipts.calorieDayRanges.length;
+      expect(loads, greaterThan(0));
+      await pumpHome(t, receipts: receipts, open: HomePage.caloriesTab);
+      await t.pump();
+      expect(receipts.calorieDayRanges.length, greaterThan(loads));
+      expect(t.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'the nav shrinks while a list scrolls either way, and grows back once it has rested',

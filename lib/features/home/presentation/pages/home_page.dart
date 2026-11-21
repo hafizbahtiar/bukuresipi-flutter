@@ -36,6 +36,9 @@ class HomePage extends StatefulWidget {
   /// The same for the Book tab (Done after a share: the place or recipe lands there).
   static Object get bookTab => HomeOpen(1);
 
+  /// The Receipts tab on its Calories side, reloaded (a meal saved from "+").
+  static Object get caloriesTab => HomeOpen(2, calories: true);
+
   /// The `extra` of the route; a new one = show Home.
   final Object? open;
 
@@ -188,7 +191,7 @@ class _HomePageState extends State<HomePage> {
           // The feed's grid uses the whole screen; the lists are a readable column on a tablet.
           FeedPage(toTop: _feedTop),
           const WidePage(child: PlacesListPage()),
-          const WidePage(child: ReceiptsTab()),
+          WidePage(child: ReceiptsTab(open: widget.open)),
           const WidePage(child: AccountPage()),
         ],
       ),
@@ -229,7 +232,10 @@ class _HomePageState extends State<HomePage> {
 
 /// A route `extra` naming the tab to show; compared by identity, so each one switches once.
 class HomeOpen {
-  HomeOpen(this.tab);
+  HomeOpen(this.tab, {this.calories = false});
 
   final int tab;
+
+  /// The Receipts tab shows its Calories side, reloaded.
+  final bool calories;
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/time_format.dart';
@@ -92,25 +91,6 @@ class CaloriesSectionState extends State<CaloriesSection> {
     }
   }
 
-  /// Camera or photos, then the estimate page; a saved meal reloads the day.
-  Future<void> _snapMeal() async {
-    final l = AppLocalizations.of(context);
-    final source = await showPhotoSourceSheet(context, camera: l.mealSnap);
-    if (source == null || !mounted) return;
-    // 1600 px is plenty to tell dishes apart and keeps the upload small.
-    final picked = await ImagePicker().pickImage(
-      source: source,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      imageQuality: 85,
-    );
-    if (picked == null || !mounted) return;
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => MealPage(path: picked.path)),
-    );
-    if (saved == true && mounted) await refresh();
-  }
-
   /// A saved meal: change its dishes, servings or time, or delete it.
   Future<void> _openMeal(DayMeal meal) async {
     final changed = await Navigator.of(context)
@@ -160,7 +140,6 @@ class CaloriesSectionState extends State<CaloriesSection> {
                 range: _range,
                 onRange: _setRange,
                 onTarget: () => _setTarget(today.target),
-                onSnap: _snapMeal,
               ),
             ),
             SliverToBoxAdapter(
@@ -186,7 +165,6 @@ class _Header extends StatelessWidget {
     required this.range,
     required this.onRange,
     required this.onTarget,
-    required this.onSnap,
   });
 
   final DailyCalories today;
@@ -194,7 +172,6 @@ class _Header extends StatelessWidget {
   final int range;
   final ValueChanged<int> onRange;
   final VoidCallback onTarget;
-  final VoidCallback onSnap;
 
   @override
   Widget build(BuildContext context) {
@@ -267,14 +244,6 @@ class _Header extends StatelessWidget {
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ),
-          const SizedBox(height: 12),
-          // The page's main action: the app's standard full-width button (theme: 52 dp pill).
-          FilledButton.icon(
-            key: const ValueKey('snap-meal'),
-            onPressed: onSnap,
-            icon: const Icon(Icons.photo_camera_outlined),
-            label: Text(l.mealSnap),
-          ),
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,

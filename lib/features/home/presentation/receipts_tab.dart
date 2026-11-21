@@ -6,11 +6,15 @@ import '../../../core/widgets/pill_switch.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../receipts/presentation/pages/calories_page.dart';
 import '../../receipts/presentation/pages/receipts_page.dart';
+import 'pages/home_page.dart' show HomeOpen;
 
 /// The Receipts tab, like a recipe's page. Its Receipts | Calories switch stays under the title over
 /// two pages, swiped or picked; each side stays loaded once seen, so a switch is instant (and reloads that side quietly).
 class ReceiptsTab extends StatefulWidget {
-  const ReceiptsTab({super.key});
+  const ReceiptsTab({super.key, this.open});
+
+  /// Home's route `extra`: a new [HomeOpen] with `calories` switches to the Calories side and reloads it.
+  final Object? open;
 
   @override
   State<ReceiptsTab> createState() => _ReceiptsTabState();
@@ -22,6 +26,21 @@ class _ReceiptsTabState extends State<ReceiptsTab> {
   final _kcal = GlobalKey<CaloriesSectionState>();
   // Receipts | Calories as pages: swiped, or driven by the pill (it follows the swipe).
   final _pages = PageController();
+
+  @override
+  void didUpdateWidget(covariant ReceiptsTab old) {
+    super.didUpdateWidget(old);
+    final open = widget.open;
+    if (open is! HomeOpen || !open.calories || identical(open, old.open)) {
+      return;
+    }
+    // On Receipts: the page change reloads Calories (onPageChanged). Already there: reload it here.
+    if (_calories) {
+      _kcal.currentState?.refresh();
+    } else {
+      _pages.jumpToPage(1);
+    }
+  }
 
   @override
   void dispose() {
