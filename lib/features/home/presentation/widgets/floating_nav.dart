@@ -1,6 +1,9 @@
+import 'dart:math' show sqrt;
+
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -22,7 +25,7 @@ const _motion = Duration(milliseconds: 260);
 const _curve = Curves.easeOutCubic;
 
 /// Home's tab bar: a frosted pill floating over the page, icons only (long-press = the name). The active tab sits
-/// on a chip that slides to a tapped tab, and can be dragged along the bar like a [PillSwitch]'s: let go and it
+/// on a chip that flows to a tapped tab like a drop of water, and can be dragged along the bar like a [PillSwitch]'s: let go and it
 /// settles on the nearest tab (a flick goes on in its direction). "+" is a round button in the middle, not a tab:
 /// the chip passes it by. [vertical]: the same pill standing on the left edge (a navigation rail, as Material's
 /// tablet layout has it), top to bottom in the same order.
@@ -58,7 +61,7 @@ class FloatingNav extends StatefulWidget {
 }
 
 class _FloatingNavState extends State<FloatingNav>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   /// The chip's place in slots while a finger drags it; null = resting on the selected tab.
   double? _drag;
 
@@ -77,9 +80,21 @@ class _FloatingNavState extends State<FloatingNav>
     value: widget.compact ? _compactScale : 1,
   );
 
+  /// The chip's two ends on their springs (see [_Flow]).
+  late final _flow = _Flow(this, _slotOf(widget.selected).toDouble());
+
+  void _chipTo(double slot, {bool held = false}) => _flow.moveTo(
+    slot,
+    still: MediaQuery.disableAnimationsOf(context),
+    held: held,
+  );
+
   @override
   void didUpdateWidget(covariant FloatingNav old) {
     super.didUpdateWidget(old);
+    if (old.selected != widget.selected && _drag == null) {
+      _chipTo(_slotOf(widget.selected).toDouble());
+    }
     if (old.compact == widget.compact) return;
     final target = widget.compact ? _compactScale : 1.0;
     if (MediaQuery.disableAnimationsOf(context)) {
@@ -93,6 +108,7 @@ class _FloatingNavState extends State<FloatingNav>
 
   @override
   void dispose() {
+    _flow.dispose();
     _scale.dispose();
     super.dispose();
   }
@@ -121,8 +137,10 @@ class _FloatingNavState extends State<FloatingNav>
   void _dragEnd(DragEndDetails d) {
     final at = _drag;
     if (at == null) return;
-    final tab = _tabOf(_settle(at, d.primaryVelocity ?? 0));
+    final slot = _settle(at, d.primaryVelocity ?? 0);
+    final tab = _tabOf(slot);
     setState(() => _drag = null);
+    _chipTo(slot.toDouble());
     if (tab != widget.selected) {
       HapticFeedback.selectionClick();
       widget.onSelected(tab);
@@ -151,10 +169,19 @@ class _FloatingNavState extends State<FloatingNav>
     void dragUpdate(DragUpdateDetails d, double w) {
       final at = _drag;
       if (at == null) return;
-      setState(() => _drag = (at + along(d.delta) / w).clamp(0, _slots - 1));
+      final to = (at + along(d.delta) / w).clamp(0, _slots - 1).toDouble();
+      // The chip moves on its own layer: the tabs are rebuilt only when another one lights up.
+      final relit = _settle(to, 0) != _settle(at, 0);
+      _drag = to;
+      _chipTo(to, held: true);
+      if (relit) setState(() {});
     }
 
-    void dragCancel() => setState(() => _drag = null);
+    void dragCancel() {
+      setState(() => _drag = null);
+      _chipTo(_slotOf(widget.selected).toDouble());
+    }
+
     return SafeArea(
       top: vertical,
       right: !vertical,
@@ -179,7 +206,6 @@ class _FloatingNavState extends State<FloatingNav>
               child: LayoutBuilder(
                 builder: (context, box) {
                   final w = (vertical ? box.maxHeight : box.maxWidth) / _slots;
-                  final chipAt = _drag ?? _slotOf(widget.selected).toDouble();
                   final slots = [
                     for (var s = 0; s < _slots; s++)
                       SizedBox(
@@ -223,30 +249,23 @@ class _FloatingNavState extends State<FloatingNav>
                     onVerticalDragCancel: vertical ? dragCancel : null,
                     child: Stack(
                       children: [
-                        // The chip: follows the finger while dragged, slides when a tab is picked.
-                        AnimatedPositioned(
-                          key: const ValueKey('nav-chip'),
-                          duration: _drag != null || still
-                              ? Duration.zero
-                              : _motion,
-                          curve: _curve,
-                          left: vertical ? 0 : chipAt * w,
-                          right: vertical ? 0 : null,
-                          top: vertical ? chipAt * w : 0,
-                          bottom: vertical ? null : 0,
-                          width: vertical ? null : w,
-                          height: vertical ? w : null,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: dark
-                                  ? Color.alphaBlend(
-                                      nb.pandan.withValues(alpha: 0.24),
-                                      nb.mist,
-                                    )
-                                  : nb.mist,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: nb.pandan.withValues(
+                        // The chip, painted on its own layer from [_flow]: no rebuild, layout or repaint of the
+                        // bar and its icons while it moves.
+                        Positioned.fill(
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              key: const ValueKey('nav-chip'),
+                              painter: _ChipPainter(
+                                _flow,
+                                slots: _slots,
+                                vertical: vertical,
+                                fill: dark
+                                    ? Color.alphaBlend(
+                                        nb.pandan.withValues(alpha: 0.24),
+                                        nb.mist,
+                                      )
+                                    : nb.mist,
+                                border: nb.pandan.withValues(
                                   alpha: dark ? 0.55 : 0.25,
                                 ),
                               ),
@@ -267,6 +286,172 @@ class _FloatingNavState extends State<FloatingNav>
       ),
     );
   }
+}
+
+/// The chip's two ends, in slots along the bar (at rest on a tab: [start] = its slot, [end] = the next). Each has
+/// its own spring: the end facing the move is quick and leads, the other follows slower and wobbles a little as it
+/// lands, so the chip stretches towards the tab and its tail catches up, like a drop of water. Stepped on one
+/// ticker towards a target that may move every frame (a drag): a spring simulation restarted on each move would
+/// start again from its time 0 every frame and stand still under the finger.
+class _Flow extends ChangeNotifier {
+  _Flow(TickerProvider vsync, double slot)
+    : start = slot,
+      end = slot + 1,
+      _to = slot {
+    _ticker = vsync.createTicker(_tick);
+  }
+
+  late final Ticker _ticker;
+  double start, end;
+  double _vStart = 0, _vEnd = 0;
+  double _to;
+  bool _forward = true;
+  bool _held = false;
+  Duration? _last;
+
+  static const _lead = (stiffness: 700.0, ratio: 0.8);
+  static const _trail = (stiffness: 260.0, ratio: 0.68);
+
+  /// [held]: a finger drags the chip. The end facing the move stays at the finger (no lag under it) and only the
+  /// other end flows behind, as a drop pulled along. The end that leads is the one on the target's side of the
+  /// chip's middle: a finger's small step back never swaps them (they swap only once the chip has caught up).
+  void moveTo(double slot, {required bool still, bool held = false}) {
+    _forward = slot + 0.5 > (start + end) / 2;
+    _to = slot;
+    _held = held;
+    if (still) {
+      start = slot;
+      end = slot + 1;
+      _vStart = _vEnd = 0;
+      _ticker.stop();
+      notifyListeners();
+      return;
+    }
+    if (!_ticker.isActive) {
+      _last = null;
+      _ticker.start();
+    }
+  }
+
+  void _tick(Duration now) {
+    // A ticker's first tick says 0: count it as one frame. After a stall the springs catch up with the clock (a
+    // capped step would leave the chip behind), up to a second (back from the background).
+    final last = _last;
+    final dt = last == null
+        ? 1 / 60
+        : ((now - last).inMicroseconds / 1e6).clamp(0.0, 1.0);
+    _last = now;
+    if (dt == 0) return;
+    if (_held && _forward) {
+      _vEnd = (_to + 1 - end) / dt;
+      end = _to + 1;
+    } else {
+      final (x, v) = _step(end, _vEnd, _to + 1, _forward ? _lead : _trail, dt);
+      end = x;
+      _vEnd = v;
+    }
+    if (_held && !_forward) {
+      _vStart = (_to - start) / dt;
+      start = _to;
+    } else {
+      final (x, v) = _step(start, _vStart, _to, _forward ? _trail : _lead, dt);
+      start = x;
+      _vStart = v;
+    }
+    if ((start - _to).abs() < 1e-3 &&
+        (end - _to - 1).abs() < 1e-3 &&
+        _vStart.abs() < 1e-2 &&
+        _vEnd.abs() < 1e-2) {
+      start = _to;
+      end = _to + 1;
+      _vStart = _vEnd = 0;
+      _ticker.stop();
+    }
+    notifyListeners();
+  }
+
+  /// One spring (mass 1) moved on by [dt] seconds, in steps of at most 4 ms (semi-implicit Euler: stable and
+  /// close enough at these stiffnesses).
+  static (double, double) _step(
+    double x,
+    double v,
+    double to,
+    ({double stiffness, double ratio}) s,
+    double dt,
+  ) {
+    final damping = 2 * s.ratio * sqrt(s.stiffness);
+    for (var left = dt; left > 0; left -= 0.004) {
+      final h = left < 0.004 ? left : 0.004;
+      v += (s.stiffness * (to - x) - damping * v) * h;
+      x += v * h;
+    }
+    return (x, v);
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+}
+
+/// Paints [FloatingNav]'s chip from its two ends. Stretched it thins as a drop does (its width goes as
+/// 1 / sqrt(its length): at twice a tab's length, ~70% as thick); squeezed as its tail lands it keeps the bar's
+/// thickness; an overshoot past the bar's ends is not drawn.
+class _ChipPainter extends CustomPainter {
+  _ChipPainter(
+    this._flow, {
+    required this.slots,
+    required this.vertical,
+    required this.fill,
+    required this.border,
+  }) : super(repaint: _flow);
+
+  final _Flow _flow;
+  final int slots;
+  final bool vertical;
+  final Color fill;
+  final Color border;
+
+  /// Where the chip is in a canvas of [size] (the bar).
+  Rect rectIn(Size size) {
+    final w = (vertical ? size.height : size.width) / slots;
+    final cross = vertical ? size.width : size.height;
+    final from = _flow.start.clamp(0.0, slots - 0.5);
+    final length = (_flow.end.clamp(0.0, slots.toDouble()) - from).clamp(
+      0.5,
+      slots.toDouble(),
+    );
+    final thin = cross * (1 - 1 / sqrt(length.clamp(1.0, 2.0))) / 2;
+    return vertical
+        ? Rect.fromLTWH(thin, from * w, cross - 2 * thin, length * w)
+        : Rect.fromLTWH(from * w, thin, length * w, cross - 2 * thin);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = rectIn(size);
+    final pill = RRect.fromRectAndRadius(
+      r,
+      Radius.circular(r.shortestSide / 2),
+    );
+    canvas.drawRRect(pill, Paint()..color = fill);
+    canvas.drawRRect(
+      pill.deflate(0.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = border,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ChipPainter old) =>
+      old._flow != _flow ||
+      old.slots != slots ||
+      old.vertical != vertical ||
+      old.fill != fill ||
+      old.border != border;
 }
 
 class _Tab extends StatelessWidget {
@@ -363,3 +548,8 @@ class _AddButton extends StatelessWidget {
     );
   }
 }
+
+/// Where [FloatingNav]'s chip is drawn (its `nav-chip` CustomPaint's [painter] in a canvas of [size]).
+@visibleForTesting
+Rect navChipRect(CustomPainter painter, Size size) =>
+    (painter as _ChipPainter).rectIn(size);

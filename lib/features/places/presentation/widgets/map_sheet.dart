@@ -80,6 +80,7 @@ class MapSheet extends StatefulWidget {
 class _MapSheetState extends State<MapSheet>
     with SingleTickerProviderStateMixin {
   static const _handle = 36.0;
+  static const _corner = 20.0;
   double _height = 1;
 
   /// A content change, as Wolt's modal sheet pages: 350 ms; the old content slides 30% of the sheet's width away and
@@ -230,127 +231,165 @@ class _MapSheetState extends State<MapSheet>
     );
   }
 
+  /// How far (a share of the height) below full the top's paper starts to show.
+  static const _headerFrom = 0.1;
+
+  /// The top's paper: 0 until the sheet is [_headerFrom] below full, 1 at full.
+  double get _header => widget.controller.isAttached
+      ? ((widget.controller.size - (_max - _headerFrom)) / _headerFrom).clamp(
+          0.0,
+          1.0,
+        )
+      : 0;
+
   @override
   Widget build(BuildContext context) {
     final nb = Notebook.of(context);
     return LayoutBuilder(
       builder: (context, box) {
         _height = box.maxHeight;
-        return DraggableScrollableSheet(
-          controller: widget.controller,
-          initialChildSize: _min,
-          minChildSize: _min,
-          maxChildSize: _max,
-          snap: true,
-          snapSizes: const [MapSheet.half],
-          builder: (context, scroll) => DecoratedBox(
-            key: const ValueKey('map-sheet'),
-            decoration: BoxDecoration(
-              color: nb.paper,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 12,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Material(
-              type: MaterialType.transparency,
-              // A list that scrolls wins the drag (it moves the sheet first); the rest of the sheet drags it here.
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onVerticalDragUpdate: _drag,
-                onVerticalDragEnd: _settle,
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: _handle,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: nb.line,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          if (widget.showClose)
-                            Positioned(
-                              right: 4,
-                              top: 0,
-                              child: IconButton(
-                                key: const ValueKey('map-sheet-close'),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints.tightFor(
-                                  width: 40,
-                                  height: 36,
-                                ),
-                                tooltip: MaterialLocalizations.of(context)
-                                    .closeButtonTooltip,
-                                icon: Icon(Icons.close, color: nb.inkSoft),
-                                onPressed: () => widget.onClose(null),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    // Laid out as tall as the sheet goes, clipped to its height: a lowered sheet cuts its content
-                    // instead of squeezing it.
-                    Expanded(
-                      child: ClipRect(
-                        child: OverflowBox(
-                          alignment: Alignment.topCenter,
-                          minHeight: 0,
-                          maxHeight: _max * _height - _handle,
-                          child: PrimaryScrollController(
-                            controller: scroll,
-                            // Rebuilt as the sheet moves; only the contents that ask for the height follow it.
-                            child: ListenableBuilder(
-                              listenable: widget.controller,
-                              builder: (context, child) => MapSheetScope(
-                                close: widget.onClose,
-                                visible:
-                                    (widget.controller.isAttached
-                                            ? widget.controller.size
-                                            : _min) *
-                                        _height -
-                                    _handle,
-                                child: child!,
-                              ),
-                              child: AnimatedSwitcher(
-                                duration:
-                                    MediaQuery.disableAnimationsOf(context)
-                                    ? Duration.zero
-                                    : _page,
-                                layoutBuilder: (current, previous) => Stack(
-                                  alignment: Alignment.topCenter,
-                                  children: [...previous, ?current],
-                                ),
-                                // A new closure each build: the switcher re-runs the old content's transition too
-                                // (direction, who holds the scroll).
-                                transitionBuilder: (child, animation) =>
-                                    _transition(child, animation),
-                                child: widget.child,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Full: the map behind the search bar turns to the sheet's paper as the sheet arrives, so the bar and
+            // the sheet read as one page. Down to the sheet's top at full, and under its round corners.
+            Positioned(
+              key: const ValueKey('map-sheet-header'),
+              top: 0,
+              left: 0,
+              right: 0,
+              height: (1 - _max) * _height + _corner,
+              child: IgnorePointer(
+                child: ListenableBuilder(
+                  listenable: widget.controller,
+                  builder: (context, _) =>
+                      ColoredBox(color: nb.paper.withValues(alpha: _header)),
                 ),
               ),
             ),
-          ),
+            _sheet(nb),
+          ],
         );
       },
     );
   }
+
+  Widget _sheet(Notebook nb) => DraggableScrollableSheet(
+    controller: widget.controller,
+    initialChildSize: _min,
+    minChildSize: _min,
+    maxChildSize: _max,
+    snap: true,
+    snapSizes: const [MapSheet.half],
+    // Its round corners and shadow go with the top's paper: at full, the sheet and the top are one page.
+    builder: (context, scroll) => ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, child) => DecoratedBox(
+        key: const ValueKey('map-sheet'),
+        decoration: BoxDecoration(
+          color: nb.paper,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(_corner * (1 - _header)),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18 * (1 - _header)),
+              blurRadius: 12,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: child,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        // A list that scrolls wins the drag (it moves the sheet first); the rest of the sheet drags it here.
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onVerticalDragUpdate: _drag,
+          onVerticalDragEnd: _settle,
+          child: Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: _handle,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: nb.line,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    if (widget.showClose)
+                      Positioned(
+                        right: 4,
+                        top: 0,
+                        child: IconButton(
+                          key: const ValueKey('map-sheet-close'),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints.tightFor(
+                            width: 40,
+                            height: 36,
+                          ),
+                          tooltip: MaterialLocalizations.of(context)
+                              .closeButtonTooltip,
+                          icon: Icon(Icons.close, color: nb.inkSoft),
+                          onPressed: () => widget.onClose(null),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // Laid out as tall as the sheet goes, clipped to its height: a lowered sheet cuts its content
+              // instead of squeezing it.
+              Expanded(
+                child: ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.topCenter,
+                    minHeight: 0,
+                    maxHeight: _max * _height - _handle,
+                    child: PrimaryScrollController(
+                      controller: scroll,
+                      // Rebuilt as the sheet moves; only the contents that ask for the height follow it.
+                      child: ListenableBuilder(
+                        listenable: widget.controller,
+                        builder: (context, child) => MapSheetScope(
+                          close: widget.onClose,
+                          visible:
+                              (widget.controller.isAttached
+                                      ? widget.controller.size
+                                      : _min) *
+                                  _height -
+                              _handle,
+                          child: child!,
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : _page,
+                          layoutBuilder: (current, previous) => Stack(
+                            alignment: Alignment.topCenter,
+                            children: [...previous, ?current],
+                          ),
+                          // A new closure each build: the switcher re-runs the old content's transition too
+                          // (direction, who holds the scroll).
+                          transitionBuilder: (child, animation) =>
+                              _transition(child, animation),
+                          child: widget.child,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
