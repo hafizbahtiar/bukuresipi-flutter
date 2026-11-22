@@ -70,4 +70,6 @@ dependencies {
     // already ships: keep the versions equal. play-services-auth = passkeys on Android 9-13.
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+    // Google's live QR scanner for a receipt's e-invoice (MainActivity's "bukuresipi/qr"): runs in Play services.
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }

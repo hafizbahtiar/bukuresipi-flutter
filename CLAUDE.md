@@ -34,6 +34,11 @@ imports a feature. A widget used by several features stays in the feature whose 
 `Avatar`, `HalalStatus`, `NearbySheet`); it moves to `core/widgets/` only when it reads no feature data.
 No use-case classes, no DI container: a repository method is the use case, Provider is the container.
 
+Receipt e-invoice QR (`features/receipts/data/receipt_qr.dart`): the photo is read quietly with ML Kit at upload;
+missed = the receipt's Scan button opens Google's live code scanner (Play services, no camera permission; channel
+`bukuresipi/qr` in `MainActivity`), a phone without it takes a close-up photo. A link's site is shown before opening;
+http, short links and look-alike names ask first (`domain/einvoice_link.dart`).
+
 ## House components (`core/widgets/`; use them, never a native copy)
 
 `import '.../core/widgets/base.dart'` gives all of `base/`:

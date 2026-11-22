@@ -1,8 +1,9 @@
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../domain/einvoice_link.dart';
 import '../domain/receipt.dart';
 import 'receipt_qr.dart';
 import '../domain/receipts_repository.dart';
@@ -59,6 +60,10 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
           },
           done: done,
         ),
+        _ => null,
+      },
+      einvoiceBy: switch (j['einvoiceBy']) {
+        final String d => DateTime.parse(d),
         _ => null,
       },
     );
@@ -280,11 +285,30 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
   Future<bool> addEinvoiceFromPhoto(String id, String path) async {
     final url = await einvoiceLinkIn(path);
     if (url == null) return false;
-    await apiCall(
-      () => _dio.put<void>('/receipts/$id/einvoice/link', data: {'url': url}),
-    );
+    await _saveLink(id, url);
     return true;
   }
+
+  @override
+  Future<EinvoiceScan> scanEinvoice(String id) async {
+    final String? raw;
+    try {
+      raw = await scanQrLive();
+    } on PlatformException {
+      return EinvoiceScan.unavailable;
+    } on MissingPluginException {
+      return EinvoiceScan.unavailable;
+    }
+    if (raw == null) return EinvoiceScan.closed;
+    final url = qrWebLink(raw);
+    if (url == null) return EinvoiceScan.notALink;
+    await _saveLink(id, url);
+    return EinvoiceScan.saved;
+  }
+
+  Future<void> _saveLink(String id, String url) => apiCall(
+    () => _dio.put<void>('/receipts/$id/einvoice/link', data: {'url': url}),
+  );
 
   @override
   Future<Receipt> get(String id) => apiCall(

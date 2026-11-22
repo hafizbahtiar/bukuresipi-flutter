@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'einvoice_link.dart';
 import 'receipt.dart';
 
 /// Throws ApiException (codes: invalid_image, duplicate_receipt (confirm: `existingId` = the saved one; [update] then
@@ -14,6 +15,10 @@ abstract interface class ReceiptsRepository {
 
   /// Reads the e-invoice QR in a photo of it ([path]) and saves its link on the receipt. false = no QR link found.
   Future<bool> addEinvoiceFromPhoto(String id, String path);
+
+  /// Google's live QR scanner, then saves the link on the receipt. [EinvoiceScan.unavailable] = this phone has no
+  /// scanner: the caller falls back to a photo ([addEinvoiceFromPhoto]).
+  Future<EinvoiceScan> scanEinvoice(String id);
   Future<Receipt> get(String id);
 
   /// [place] = only the saved visits at that place (its id), up to [limit].

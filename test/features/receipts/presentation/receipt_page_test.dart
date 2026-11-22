@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_link.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_details.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
@@ -442,6 +443,92 @@ void main() {
     await pump(t, FakeReceipts()..answers = [receipt(status: 'saved')]);
     await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('einvoice-scan')), findsOneWidget);
+  });
+
+  testWidgets(
+    'offers an e-invoice, QR missed: its last day and Google\'s scanner',
+    (t) async {
+      final repo = FakeReceipts()
+        ..answers = [
+          receipt(status: 'saved', einvoiceBy: DateTime(2099, 11, 30)),
+          receipt(
+            status: 'saved',
+            einvoice: (
+              url: 'https://pos.example.com/r/1',
+              until: DateTime(2099, 11, 30),
+              done: false,
+            ),
+          ),
+        ]
+        ..liveScan = EinvoiceScan.saved;
+      await pump(t, repo);
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('receipt-einvoice-by')), findsOneWidget);
+      expect(find.textContaining('Scan its QR'), findsOneWidget);
+
+      await t.ensureVisible(find.byKey(const ValueKey('einvoice-scan')));
+      await t.tap(find.byKey(const ValueKey('einvoice-scan')));
+      await t.pumpAndSettle();
+      expect(repo.liveScans, 1);
+      expect(repo.qrPhotos, isEmpty);
+      expect(find.text('Opens pos.example.com'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a scanned QR that is no link says so; closing the scanner says nothing',
+    (t) async {
+      final repo = FakeReceipts()
+        ..answers = [receipt(status: 'saved')]
+        ..liveScan = EinvoiceScan.notALink;
+      await pump(t, repo);
+      await t.pumpAndSettle();
+      final scan = find.byKey(const ValueKey('einvoice-scan'));
+      await t.ensureVisible(scan);
+      await t.tap(scan);
+      await t.pump();
+      expect(find.textContaining("isn't a web link"), findsOneWidget);
+      await t.pumpAndSettle(); // shown
+      await t.pump(const Duration(seconds: 5)); // the message times out
+      await t.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+
+      repo.liveScan = EinvoiceScan.closed;
+      await t.tap(scan);
+      await t.pump();
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets('an http link asks first; Cancel stays on the receipt', (
+    t,
+  ) async {
+    final repo = FakeReceipts()
+      ..answers = [
+        receipt(
+          status: 'saved',
+          einvoice: (
+            url: 'http://pos.example.com/r/1',
+            until: null,
+            done: false,
+          ),
+        ),
+      ];
+    await pump(t, repo);
+    await t.pumpAndSettle();
+    final open = find.byKey(const ValueKey('einvoice-open'));
+    await t.ensureVisible(open);
+    await t.tap(open);
+    await t.pumpAndSettle();
+    expect(find.text('Check this link'), findsOneWidget);
+    expect(
+      find.textContaining('pos.example.com is not a secure link'),
+      findsOneWidget,
+    );
+    await t.tap(find.text('Cancel'));
+    await t.pumpAndSettle();
+    expect(find.text('Check this link'), findsNothing);
+    expect(open, findsOneWidget);
   });
 
   testWidgets('a line of 3 counts up to 3, no further', (t) async {
