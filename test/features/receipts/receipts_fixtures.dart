@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_details.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_link.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 
@@ -24,6 +25,7 @@ Receipt receipt({
   bool caloriesPending = false,
   bool hasSplit = false,
   ReceiptEinvoice? einvoice,
+  DateTime? einvoiceBy,
 }) => Receipt(
   id: id,
   status: status,
@@ -41,6 +43,7 @@ Receipt receipt({
   caloriesPending: caloriesPending,
   hasSplit: hasSplit,
   einvoice: einvoice,
+  einvoiceBy: einvoiceBy,
 );
 
 class FakeReceipts implements ReceiptsRepository {
@@ -72,6 +75,16 @@ class FakeReceipts implements ReceiptsRepository {
   Future<bool> addEinvoiceFromPhoto(String id, String path) async {
     qrPhotos.add(path);
     return qrLink != null;
+  }
+
+  /// What Google's live scanner answers.
+  EinvoiceScan liveScan = EinvoiceScan.closed;
+  int liveScans = 0;
+
+  @override
+  Future<EinvoiceScan> scanEinvoice(String id) async {
+    liveScans++;
+    return liveScan;
   }
 
   @override

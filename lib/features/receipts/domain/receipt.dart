@@ -19,6 +19,7 @@ class Receipt {
     this.caloriesPending = false,
     this.hasSplit = false,
     this.einvoice,
+    this.einvoiceBy,
   });
 
   final String id;
@@ -55,6 +56,9 @@ class Receipt {
 
   /// The receipt's "request your e-invoice" link (its QR); null = none.
   final ReceiptEinvoice? einvoice;
+
+  /// The receipt offers an e-invoice but its QR is not scanned yet: the last day to request it.
+  final DateTime? einvoiceBy;
 
   bool get notRestaurant => reason == 'not_restaurant';
   bool get reading => status == 'reading';

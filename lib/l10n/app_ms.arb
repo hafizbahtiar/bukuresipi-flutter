@@ -1252,6 +1252,14 @@
   "einvoiceAskYes": "Ya, sudah",
   "einvoiceScan": "Imbas QR e-invois",
   "einvoiceNoQr": "QR e-invois tidak dijumpai. Cuba lebih dekat, QR memenuhi foto.",
+  "einvoiceByScan": "Mohon sebelum {date}. Imbas QR untuk dapat peringatan.",
+  "einvoiceNotLink": "QR itu bukan pautan web. Imbas QR e-invois pada resit.",
+  "einvoiceOpens": "Buka {host}",
+  "einvoiceRiskOpen": "Buka",
+  "einvoiceRiskTitle": "Semak pautan ini",
+  "einvoiceRiskHttp": "{host} bukan pautan selamat. Jangan masukkan IC atau TIN kecuali anda mempercayainya.",
+  "einvoiceRiskShort": "{host} ialah pautan pendek yang menyembunyikan laman sebenar. Semak laman itu sebelum masukkan IC atau TIN.",
+  "einvoiceRiskName": "{host} guna huruf luar biasa dan mungkin meniru laman lain. Jangan masukkan IC atau TIN kecuali anda mempercayainya.",
   "einvoiceNameHelp": "Seperti dalam IC",
   "einvoiceTinHelp": "Nombor cukai anda daripada LHDN (MyTax)"
 }
