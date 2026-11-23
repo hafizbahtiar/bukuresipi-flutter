@@ -16,6 +16,7 @@ import '../../domain/place.dart';
 import '../../domain/report.dart';
 import '../places_controller.dart';
 import '../widgets/halal_status.dart';
+import '../widgets/market_days.dart';
 import 'branch_page.dart';
 import 'place_edit_page.dart';
 import '../widgets/notebook_rating.dart';
@@ -363,6 +364,13 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                         ),
                       ),
                   ],
+                ),
+              if (r.isMarket)
+                Padding(
+                  padding: const EdgeInsets.only(top: spaceM),
+                  child: MarketDaysList(
+                    schedule: place.savedBranch?.schedule ?? const [],
+                  ),
                 ),
               // Going there first: big, plain buttons instead of the ⋮ menu.
               if (actions.isNotEmpty)

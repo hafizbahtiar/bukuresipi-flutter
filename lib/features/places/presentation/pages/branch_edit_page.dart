@@ -15,11 +15,13 @@ import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../domain/market.dart';
 import '../../domain/place.dart';
 import 'pin_picker_page.dart';
 import '../places_controller.dart';
 import '../widgets/cover_picker_sheet.dart';
 import '../widgets/jakim_check.dart';
+import '../widgets/market_days_editor.dart';
 import '../widgets/owner_panel.dart';
 
 typedef BranchEdit = ({
@@ -101,6 +103,9 @@ class _BranchEditPageState extends State<BranchEditPage> {
   Map<String, String> _pinDefaults = const {};
   BranchSuggestion? _suggestion;
 
+  /// Owner: the Days tab shows once the server says this is a market, with what it has saved.
+  List<MarketDay>? _marketDays;
+
   /// A draft photo picked as the restaurant's cover: set when the branch is saved.
   String? _photo;
 
@@ -114,6 +119,19 @@ class _BranchEditPageState extends State<BranchEditPage> {
     if (widget.onSuggest != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadPinDefaults());
     }
+    if (widget.canEditShared) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadMarketDays());
+    }
+  }
+
+  /// Not answered = no tab: an editor that started empty could wipe the saved days.
+  Future<void> _loadMarketDays() async {
+    try {
+      final s = await context.read<PlacesController>().branchSchedule(
+        widget.branch.id,
+      );
+      if (mounted && s.market) setState(() => _marketDays = s.days);
+    } catch (_) {}
   }
 
   /// A convenience: on failure the box just starts empty (the search still uses the same defaults).
@@ -648,6 +666,16 @@ class _BranchEditPageState extends State<BranchEditPage> {
                 label: l.companyTab,
                 rows: [
                   tab([BranchCompanyPanel(branch: widget.branch)]),
+                ],
+              ),
+            if (_marketDays case final days?)
+              DetailSection(
+                id: 'branch-tab-days',
+                label: l.branchTabDays,
+                rows: [
+                  tab([
+                    MarketDaysEditor(branchId: widget.branch.id, initial: days),
+                  ]),
                 ],
               ),
           ],

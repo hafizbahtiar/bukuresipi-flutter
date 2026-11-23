@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bukuresipi_flutter/features/places/domain/market.dart';
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart';
 import 'package:bukuresipi_flutter/features/places/domain/places_repository.dart';
@@ -168,6 +169,32 @@ class FakePlaces implements PlacesRepository {
     nearbyCalls.add((lat, lng, km));
     if (nearbyError != null) throw nearbyError!;
     return nearbyResults;
+  }
+
+  List<Market> marketResults = const [];
+  Object? marketError;
+  ({bool market, List<MarketDay> days}) schedule = (
+    market: false,
+    days: const [],
+  );
+  Object? setScheduleError;
+  final setSchedules = <(String, List<MarketDay>)>[];
+
+  @override
+  Future<List<Market>> markets(double lat, double lng, double km) async {
+    if (marketError != null) throw marketError!;
+    return marketResults;
+  }
+
+  @override
+  Future<({bool market, List<MarketDay> days})> branchSchedule(
+    String branchId,
+  ) async => schedule;
+
+  @override
+  Future<void> setSchedule(String branchId, List<MarketDay> days) async {
+    if (setScheduleError != null) throw setScheduleError!;
+    setSchedules.add((branchId, days));
   }
 
   List<PlaceHit> searchHits = const [];

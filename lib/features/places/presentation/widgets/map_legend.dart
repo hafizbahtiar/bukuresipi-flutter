@@ -15,7 +15,8 @@ enum MapMark {
   otherWeb(radius: 5, strokeWidth: 1),
   otherHandPin(radius: 5, strokeWidth: 2),
   otherOwner(radius: 5, strokeWidth: 1),
-  here(radius: 6.5, strokeWidth: 2.5);
+  here(radius: 6.5, strokeWidth: 2.5),
+  market(radius: 6, strokeWidth: 2);
 
   const MapMark({required this.radius, required this.strokeWidth});
 
@@ -40,12 +41,18 @@ enum MapMark {
     otherHandPin => Colors.white,
     otherOwner => nb.ink,
     here => hereBlue,
+    market => nb.margin,
   };
 
   Color stroke(Notebook nb) => switch (this) {
     mineHandPin || otherHandPin => nb.kunyit,
     family => nb.pandan,
-    mine || otherMap || otherWeb || otherOwner || here => Colors.white,
+    mine ||
+    otherMap ||
+    otherWeb ||
+    otherOwner ||
+    here ||
+    market => Colors.white,
   };
 
   static const hereBlue = Color(0xFF1E88E5);
@@ -136,6 +143,7 @@ class _MapLegendState extends State<MapLegend> {
         (MapMark.otherHandPin, l.legendOtherHandPin, l.legendOtherHandPinHint),
         (MapMark.otherOwner, l.legendOtherOwner, l.legendOtherOwnerHint),
       ],
+      (MapMark.market, l.legendMarket, l.legendMarketHint),
       (MapMark.here, l.legendHere, l.legendHereHint),
     ];
     return ListView(

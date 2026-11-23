@@ -17,6 +17,7 @@ import '../../../../core/widgets/cover_app_bar.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../places/domain/market.dart';
 import '../../../places/domain/nearby_branch.dart';
 import '../../../places/domain/rating.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
@@ -30,6 +31,7 @@ import '../../../places/presentation/location.dart';
 import '../../../places/presentation/pages/place_detail_page.dart'
     show PlacePhotoFlight, placePhotoTag;
 import '../../../places/presentation/places_controller.dart';
+import '../../../places/presentation/widgets/markets_card.dart';
 import '../../../places/presentation/widgets/nearby_sheet.dart';
 import '../../../recipes/domain/recipe.dart';
 import '../../../recipes/presentation/pages/recipe_detail_page.dart';
@@ -78,6 +80,7 @@ class _FeedPageState extends State<FeedPage> {
 
   bool? _located; // null = asking
   List<NearbyBranch> _nearby = const [];
+  List<Market> _markets = const [];
 
   // Recipes: community pages first, then catalogue pages.
   List<Recipe> _community = const [];
@@ -171,6 +174,7 @@ class _FeedPageState extends State<FeedPage> {
     if (!mounted) return;
     setState(() => _located = here != null);
     if (here == null) return;
+    unawaited(_loadMarkets(here));
     setState(() => _nearbyBusy = true);
     try {
       final rows = await context.read<PlacesController>().nearby(
@@ -190,6 +194,18 @@ class _FeedPageState extends State<FeedPage> {
     } finally {
       if (mounted) setState(() => _nearbyBusy = false);
     }
+  }
+
+  /// Pasar within 10 km, for the Home card. A failure just shows no card.
+  Future<void> _loadMarkets(({double lat, double lng}) here) async {
+    try {
+      final rows = await context.read<PlacesController>().markets(
+        here.lat,
+        here.lng,
+        10,
+      );
+      if (mounted) setState(() => _markets = rows);
+    } catch (_) {}
   }
 
   /// From the first page, for the current query.
@@ -561,6 +577,11 @@ class _FeedPageState extends State<FeedPage> {
     );
 
     final restaurants = showRestaurants ? _restaurants : const <NearbyBranch>[];
+    // Filters and a search narrow the feed: the card would not be what was asked for.
+    final pasar =
+        showRestaurants && _query.isEmpty && !_halal && _cuisine == null
+        ? marketsOnToday(_markets, malaysiaNow()).take(3).toList()
+        : const <({Market market, MarketToday today})>[];
     final stream = showRecipes
         ? [..._community.map(recipe), ..._dishes.map(dish)]
         : const <Widget>[];
@@ -726,6 +747,18 @@ class _FeedPageState extends State<FeedPage> {
                   ),
                 ),
               ),
+              if (pasar.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: MarketsCard(
+                      items: pasar,
+                      onTap: (m) => context.push(
+                        '/map?lat=${m.lat}&lng=${m.lng}&market=${m.branchId}',
+                      ),
+                    ),
+                  ),
+                ),
               // "What can I cook?" says what it is, not just a kitchen icon: a card above the recipes.
               if (showRecipes)
                 SliverToBoxAdapter(

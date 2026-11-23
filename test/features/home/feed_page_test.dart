@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bukuresipi_flutter/features/home/presentation/pages/feed_page.dart';
 import 'package:bukuresipi_flutter/core/network/update_gate.dart';
 import 'package:bukuresipi_flutter/features/home/presentation/widgets/feed_card.dart';
+import 'package:bukuresipi_flutter/features/places/domain/market.dart';
 import 'package:bukuresipi_flutter/features/places/domain/place.dart'
     show HalalCert;
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
@@ -40,6 +41,7 @@ void main() {
     Completer<void>? dishesGate,
     ValueListenable<int>? toTop,
     HalalCert? cert, // on b-1
+    List<Market> markets = const [],
   }) async {
     t.view.physicalSize = const Size(
       2400,
@@ -62,6 +64,7 @@ void main() {
           rating: rating,
         ),
       ];
+    places.marketResults = markets;
     recipes = FakeRecipes()
       ..communityList = [
         recipe(id: 'c-1', name: 'Kek Batik Viral'),
@@ -95,7 +98,11 @@ void main() {
                 : Future.value(located ? (lat: 3.15, lng: 101.7) : null),
           ),
         ),
-        GoRoute(path: '/map', builder: (_, _) => const Text('the map')),
+        GoRoute(
+          path: '/map',
+          builder: (_, st) =>
+              Text('the map ${st.uri.queryParameters['market'] ?? ''}'.trim()),
+        ),
         GoRoute(
           path: '/shopping',
           builder: (_, _) => const Text('the shopping list'),
@@ -245,6 +252,69 @@ void main() {
       expect(find.text('KEDAI SEDERHANA'), findsOneWidget);
     },
   );
+
+  group('pasar card', () {
+    // Opens and closes at the same minute: on all day, whatever day the test runs.
+    final allDay = [
+      for (var d = 1; d <= 7; d++)
+        MarketDay(day: d, opens: '00:00', closes: '00:00'),
+    ];
+    Market market(String id, int distanceM, List<MarketDay> days) => Market(
+      placeId: 'p-$id',
+      branchId: id,
+      name: 'Pasar $id',
+      subcategory: 'pasar_malam',
+      lat: 3.1,
+      lng: 101.7,
+      distanceM: distanceM,
+      schedule: days,
+    );
+
+    testWidgets('three on today, nearest first; a tap opens it on the map', (
+      t,
+    ) async {
+      await pump(
+        t,
+        markets: [
+          market('d', 4000, allDay),
+          market('a', 100, allDay),
+          market('c', 900, allDay),
+          market('b', 500, allDay),
+          market('unknown', 50, const []),
+        ],
+      );
+      expect(find.text(l.marketsNearTitle), findsOneWidget);
+      expect(find.text('Pasar a'), findsOneWidget);
+      expect(find.text('Pasar c'), findsOneWidget);
+      expect(find.text('Pasar d'), findsNothing); // three at most
+      expect(find.text('Pasar unknown'), findsNothing); // never a guessed day
+
+      await t.tap(find.byKey(const ValueKey('feed-market-b')));
+      await t.pumpAndSettle();
+      expect(find.text('the map b'), findsOneWidget);
+    });
+
+    testWidgets('nothing on today: no card', (t) async {
+      await pump(t, markets: [market('a', 100, const [])]);
+      expect(find.byKey(const ValueKey('feed-markets')), findsNothing);
+    });
+
+    testWidgets('a filter on: no card', (t) async {
+      await pump(t, markets: [market('a', 100, allDay)]);
+      expect(find.byKey(const ValueKey('feed-markets')), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('feed-halal')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('feed-markets')), findsNothing);
+    });
+
+    testWidgets('a failed market call costs Home nothing', (t) async {
+      await pump(t, settle: false);
+      places.marketError = Exception('offline');
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('feed-markets')), findsNothing);
+      expect(find.text('Warung Pak Ali'), findsOneWidget);
+    });
+  });
 
   testWidgets('an expired JAKIM certificate is no JAKIM tag', (t) async {
     Finder inCard(String key, Finder f) =>

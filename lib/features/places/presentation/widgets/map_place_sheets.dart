@@ -19,6 +19,7 @@ import '../places_controller.dart';
 import '../pages/branch_edit_page.dart';
 import 'map_legend.dart';
 import 'map_sheet.dart';
+import 'market_days.dart';
 import 'notebook_rating.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 
@@ -304,6 +305,11 @@ class PinSheet extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        if (b != null && place.restaurant.isMarket)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceS),
+            child: MarketDaysList(schedule: b.schedule),
           ),
         if (place.note case final note? when note.isNotEmpty)
           ListTile(
