@@ -15,6 +15,7 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../owner/domain/owner.dart';
 import '../../../owner/domain/owner_repository.dart';
+import '../../domain/market.dart';
 import '../../domain/nearby_branch.dart';
 import '../../domain/nearby_math.dart';
 import '../../domain/place.dart';
@@ -24,6 +25,8 @@ import '../widgets/location_button.dart';
 import '../widgets/map_legend.dart';
 import '../widgets/map_place_sheets.dart';
 import '../widgets/map_sheet.dart';
+import '../widgets/market_layers.dart';
+import '../widgets/market_sheet.dart';
 import '../widgets/nearby_card.dart';
 import '../widgets/nearby_sheet.dart';
 import '../widgets/north_button.dart';
@@ -57,10 +60,18 @@ LatLngBounds? pinBounds(List<Place> places) {
 /// The Map tab: one pin per branch with coordinates (two fingers rotate and tilt for 3D; the north button turns
 /// it back). Places without a pin are listed from the slip at the bottom, each with "Find location" / "Set on map".
 class PlacesMapPage extends StatefulWidget {
-  const PlacesMapPage({super.key, this.active = true, this.focus});
+  const PlacesMapPage({
+    super.key,
+    this.active = true,
+    this.focus,
+    this.focusMarket,
+  });
 
   /// Open centred on this point (a place's pin, from its page) instead of the user's location or all pins.
   final LatLng? focus;
+
+  /// A market's branch (Home's card): its sheet opens once the markets around [focus] are in.
+  final String? focusMarket;
 
   /// The Map tab is visible. Location tracking runs only while this and the app are active.
   final bool active;
@@ -83,6 +94,13 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   final _faceLoading = <String>{};
   late final PlacesController _places = context.read<PlacesController>();
   List<NearbyBranch> _nearby = const [];
+
+  /// Pasar around the last camera position, for everyone (unlike other people's restaurants).
+  List<Market> _markets = const [];
+  LatLng? _marketsOrigin;
+  LatLng? _marketsNext;
+  bool _marketsLoading = false;
+  late String? _focusMarket = widget.focusMarket;
 
   /// Only the owner sees restaurants other users saved: every pinned one (GET /owner/places), switchable in the
   /// legend. Users see their own and their family's only (other users' places: later, to be designed).
@@ -354,6 +372,61 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     if (!mounted || camera == null) return;
     _setBearing(camera.bearing);
     _setTilt(camera.tilt);
+    // Zoomed out over the country a 15 km list would be a random corner of it.
+    final origin = _marketsOrigin;
+    if (camera.zoom >= 10 &&
+        (origin == null ||
+            distanceKm(
+                  origin.latitude,
+                  origin.longitude,
+                  camera.target.latitude,
+                  camera.target.longitude,
+                ) >=
+                _marketsKm / 2)) {
+      unawaited(_loadMarkets(camera.target));
+    }
+  }
+
+  static const _marketsKm = 15.0;
+
+  /// One request at a time; a move during it asks again for the latest point.
+  Future<void> _loadMarkets(LatLng centre) async {
+    if (!inMalaysia(centre.latitude, centre.longitude)) return;
+    if (_marketsLoading) {
+      _marketsNext = centre;
+      return;
+    }
+    _marketsLoading = true;
+    try {
+      final rows = await _places.markets(
+        centre.latitude,
+        centre.longitude,
+        _marketsKm,
+      );
+      if (!mounted) return;
+      _markets = rows;
+      _marketsOrigin = centre;
+      await _paintMarkets();
+      if (!mounted) return;
+      final focus = rows.where((m) => m.branchId == _focusMarket).firstOrNull;
+      if (focus != null) {
+        _focusMarket = null;
+        _show(focus, lat: focus.lat, lng: focus.lng);
+      }
+    } catch (_) {
+      // The map works without them; the next move asks again.
+    } finally {
+      _marketsLoading = false;
+      final next = _marketsNext;
+      _marketsNext = null;
+      if (next != null && mounted) unawaited(_loadMarkets(next));
+    }
+  }
+
+  Future<void> _paintMarkets() async {
+    final map = _map;
+    if (map == null || !_layers) return;
+    await quietMap(map.setGeoJsonSource(marketSource, marketGeoJson(_markets)));
   }
 
   void _setBearing(double bearing) {
@@ -462,6 +535,7 @@ class _PlacesMapPageState extends State<PlacesMapPage>
   /// merge into clusters with a count (green when one is in your book); between zoom 9 and 12 a dot grows from a
   /// small dot to full size; a family member's photo fades in over their dot from 10.5 to 11.5, the dot's size.
   Future<void> _addLayers(MapLibreMapController map, Notebook nb) async {
+    await addMarketLayers(map, _hex(MapMark.market.fill(nb)));
     await map.addSource(
       _source,
       const GeojsonSourceProperties(
@@ -620,6 +694,8 @@ class _PlacesMapPageState extends State<PlacesMapPage>
         _layers = false;
         return;
       }
+      if (!mounted) return;
+      await _paintMarkets();
       if (!mounted) return;
     }
     final nearby = [
@@ -802,6 +878,10 @@ class _PlacesMapPageState extends State<PlacesMapPage>
       );
     } else if (layer == _dotLayer || layer == _faceLayer) {
       _onTap(_features[id]);
+    } else if (marketLayers.contains(layer)) {
+      final branch = marketIdOf(id);
+      final market = _markets.where((m) => m.branchId == branch).firstOrNull;
+      if (market != null) _show(market, lat: market.lat, lng: market.lng);
     }
   }
 
@@ -1102,6 +1182,26 @@ class _PlacesMapPageState extends State<PlacesMapPage>
     final PlaceHit h => SearchHitSheet(hit: h, places: _places),
     final OwnerPlace o => OwnerPlaceSheet(place: o, onChanged: _loadAll),
     final MapLabel label => MapLabelSheet(label: label),
+    final Market m => MarketSheet(
+      market: m,
+      places: _places,
+      distanceM: _here == null
+          ? null
+          : (distanceKm(_here!.latitude, _here!.longitude, m.lat, m.lng) * 1000)
+                .round(),
+      onSaved: (placeId) {
+        if (!mounted) return;
+        setState(() {
+          _markets = [
+            for (final x in _markets)
+              x.branchId == m.branchId ? x.copyWith(savedPlaceId: placeId) : x,
+          ];
+          if (identical(_selected, m)) {
+            _selected = m.copyWith(savedPlaceId: placeId);
+          }
+        });
+      },
+    ),
     _ => const SizedBox.shrink(),
   };
 

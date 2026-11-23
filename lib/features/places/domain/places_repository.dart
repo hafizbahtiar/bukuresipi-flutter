@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'market.dart';
 import 'nearby_branch.dart';
 import 'place.dart';
 import 'rating.dart';
@@ -163,6 +164,15 @@ abstract interface class PlacesRepository {
 
   /// Pinned branches within [km] of a point (the phone's fix), nearest first.
   Future<List<NearbyBranch>> nearby(double lat, double lng, double km);
+
+  /// Pasar malam and pasar tani within [km] of a point, nearest first, with their days and shape.
+  Future<List<Market>> markets(double lat, double lng, double km);
+
+  /// Owner: a branch's saved days, and whether its place is a market.
+  Future<({bool market, List<MarketDay> days})> branchSchedule(String branchId);
+
+  /// Owner: replaces a market's weekly days ([] = not known).
+  Future<void> setSchedule(String branchId, List<MarketDay> days);
 
   /// Saves an existing branch's restaurant to this user's map.
   Future<Place> saveBranch(String branchId);

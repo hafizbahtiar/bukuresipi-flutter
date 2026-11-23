@@ -1007,6 +1007,34 @@
       }
     }
   },
+  "placeSubPasarMalam": "Pasar malam",
+  "placeSubPasarTani": "Pasar tani",
+  "marketsNearTitle": "Pasar near you today",
+  "marketOpenUntil": "Open now · until {time}",
+  "@marketOpenUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "marketNotToday": "Not on today",
+  "marketDaysTitle": "Market days",
+  "marketDaysUnknown": "Days not known yet.",
+  "marketDaysHelp": "The usual weekly days and hours, Malaysia time. Leave empty when not known.",
+  "marketDayField": "Day",
+  "marketOpens": "Opens",
+  "marketCloses": "Closes",
+  "marketPastMidnight": "Closes after midnight",
+  "marketAddDay": "Add day",
+  "marketSaveDays": "Save days",
+  "marketSavingDays": "Saving…",
+  "marketDaysSaved": "Market days saved.",
+  "marketDayTwice": "Two rows have the same day and opening time.",
+  "marketSameTime": "Opening and closing time can't be the same.",
+  "branchTabDays": "Days",
+  "legendMarket": "Pasar",
+  "legendMarketHint": "A pasar malam or pasar tani, drawn along its street or ground when known.",
   "ownerHidden": "Hidden content",
   "ownerHiddenEmpty": "Nothing is hidden.",
   "ownerHiddenRecipes": "Recipes",

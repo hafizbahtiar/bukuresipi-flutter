@@ -126,12 +126,13 @@ GoRouter buildRouter(
       // Opened from Home's map button (no longer a tab).
       _page(
         path: '/map',
-        // ?lat=&lng= (a place's pin): the map opens there.
+        // ?lat=&lng= (a place's pin): the map opens there; &market= (a branch) also opens that market's sheet.
         builder: (_, state) {
           final lat = double.tryParse(state.uri.queryParameters['lat'] ?? '');
           final lng = double.tryParse(state.uri.queryParameters['lng'] ?? '');
           return PlacesMapPage(
             focus: lat == null || lng == null ? null : LatLng(lat, lng),
+            focusMarket: state.uri.queryParameters['market'],
           );
         },
       ),

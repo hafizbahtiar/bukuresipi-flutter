@@ -39,6 +39,13 @@ missed = the receipt's Scan button opens Google's live code scanner (Play servic
 `bukuresipi/qr` in `MainActivity`), a phone without it takes a close-up photo. A link's site is shown before opening;
 http, short links and look-alike names ask first (`domain/einvoice_link.dart`).
 
+Pasar (`features/places/domain/market.dart`, `widgets/market_*.dart`, `markets_card.dart`): today and "open now" are
+computed here on Malaysia time (`malaysiaNow`, a phone abroad stays right), last night's opening past midnight counts;
+no days = "not known", never closed. Home's card = what is still on today within 10 km (no card under a search or
+filter); the map has its own `markets` source under the pins (street/ground + dot, for every user), reloaded when the
+camera moves 7.5 km; `?market=<branch>` opens that sheet. Owner: Edit branch > Days, shown only once the server says it
+is a market (a failed read = no tab, so an empty editor can never overwrite saved days).
+
 ## House components (`core/widgets/`; use them, never a native copy)
 
 `import '.../core/widgets/base.dart'` gives all of `base/`:

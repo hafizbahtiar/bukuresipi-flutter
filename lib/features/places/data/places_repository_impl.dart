@@ -6,6 +6,7 @@ import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
+import '../domain/market.dart';
 import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
 import '../domain/places_repository.dart';
@@ -305,6 +306,45 @@ class PlacesRepositoryImpl implements PlacesRepository {
             nearbyBranchFromJson(j),
         ];
       });
+
+  @override
+  Future<List<Market>> markets(double lat, double lng, double km) =>
+      apiCall(() async {
+        final data = (await _dio.get<Map<String, dynamic>>(
+          '/places/markets',
+          queryParameters: {'lat': lat, 'lng': lng, 'km': km},
+        )).data!;
+        return [
+          for (final j in (data['items'] as List).cast<Map<String, dynamic>>())
+            Market.fromJson(j),
+        ];
+      });
+
+  @override
+  Future<({bool market, List<MarketDay> days})> branchSchedule(
+    String branchId,
+  ) => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>(
+      '/places/branches/$branchId/schedule',
+    )).data!;
+    return (
+      market: data['market'] as bool,
+      days: [
+        for (final d in (data['days'] as List).cast<Map<String, dynamic>>())
+          MarketDay.fromJson(d),
+      ],
+    );
+  });
+
+  @override
+  Future<void> setSchedule(String branchId, List<MarketDay> days) => apiCall(
+    () => _dio.put<void>(
+      '/places/branches/$branchId/schedule',
+      data: {
+        'days': [for (final d in days) d.toJson()],
+      },
+    ),
+  );
 
   @override
   Future<RatingSummary> rateBranch(String branchId, int stars) =>
@@ -800,6 +840,12 @@ Place placeFromJson(Map<String, dynamic> j) {
           rating: ratingFromJson(b['rating']),
           halalCert: HalalCert.fromJson(b['halalCert']),
           cover: b['cover'] as String?,
+          schedule: [
+            for (final s
+                in ((b['schedule'] as List?) ?? const [])
+                    .cast<Map<String, dynamic>>())
+              MarketDay.fromJson(s),
+          ],
         ),
     ],
   );
