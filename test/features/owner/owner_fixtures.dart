@@ -198,6 +198,27 @@ class FakeOwner implements OwnerRepository {
   @override
   Future<void> hideRecipe(String recipeId) async => hiddenRecipes.add(recipeId);
 
+  var hiddenList = <HiddenRecipe>[];
+  var hiddenReviews = <HiddenReview>[];
+  final unhidden = <String>[];
+  Object? unhideError;
+
+  @override
+  Future<({List<HiddenRecipe> recipes, List<HiddenReview> reviews})>
+  hiddenContent() async => (recipes: hiddenList, reviews: hiddenReviews);
+
+  @override
+  Future<void> unhideRecipe(String recipeId) async {
+    if (unhideError case final e?) throw e;
+    unhidden.add(recipeId);
+  }
+
+  @override
+  Future<void> unhideReview(String reviewId) async {
+    if (unhideError case final e?) throw e;
+    unhidden.add(reviewId);
+  }
+
   @override
   Future<void> deleteRating(String ratingId) async {
     deletedRatings.add(ratingId);

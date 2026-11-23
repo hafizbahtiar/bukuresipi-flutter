@@ -1007,6 +1007,24 @@
       }
     }
   },
+  "ownerHidden": "Hidden content",
+  "ownerHiddenEmpty": "Nothing is hidden.",
+  "ownerHiddenRecipes": "Recipes",
+  "ownerHiddenReviews": "Reviews",
+  "ownerHiddenOn": "Hidden {date}",
+  "@ownerHiddenOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerHiddenNotPublic": "Not public now",
+  "ownerHiddenTextRemoved": "The author removed this text.",
+  "ownerUnhide": "Show again",
+  "ownerUnhiding": "Showing…",
+  "ownerUnhideRecipeConfirm": "Stop hiding this recipe? If it is still public, it returns to Community.",
+  "ownerUnhideReviewConfirm": "Stop hiding this person's review? Its current text, or what they write next, can be read by everyone.",
   "ownerReviewReportReasons": "Reasons: {reasons}",
   "@ownerReviewReportReasons": {
     "placeholders": {

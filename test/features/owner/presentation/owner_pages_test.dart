@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_hidden_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
@@ -54,6 +55,68 @@ void main() {
       expect(find.text('90 / 100 a month'), findsOneWidget);
     },
   );
+
+  group('hidden content', () {
+    final at = DateTime.utc(2026, 11, 20);
+
+    testWidgets('lists both kinds; Show again asks, then removes the row', (
+      t,
+    ) async {
+      repo.hiddenList = [
+        HiddenRecipe(
+          id: 'r1',
+          name: 'Rendang',
+          owner: 'Aina',
+          public: false,
+          hiddenAt: at,
+        ),
+      ];
+      repo.hiddenReviews = [
+        HiddenReview(
+          id: 'v1',
+          stars: 4,
+          author: 'Ben',
+          place: 'Warung Uji',
+          hiddenAt: at,
+        ),
+      ];
+      await pump(t, const OwnerHiddenPage());
+      expect(find.text('Rendang'), findsOneWidget);
+      expect(find.text('Not public now'), findsOneWidget);
+      expect(find.text('The author removed this text.'), findsOneWidget);
+
+      await t.tap(find.text('Show again').first);
+      await t.pumpAndSettle();
+      expect(repo.unhidden, isEmpty); // asked first
+      await t.tap(find.text('Show again').last);
+      await t.pumpAndSettle();
+      expect(repo.unhidden, ['r1']);
+      expect(find.text('Rendang'), findsNothing);
+      expect(find.text('Ben'), findsOneWidget);
+    });
+
+    testWidgets('a failed call keeps the row and can be tried again', (
+      t,
+    ) async {
+      repo.hiddenList = [
+        HiddenRecipe(id: 'r1', name: 'Rendang', public: true, hiddenAt: at),
+      ];
+      repo.unhideError = Exception('offline');
+      await pump(t, const OwnerHiddenPage());
+      await t.tap(find.text('Show again'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Show again').last);
+      await t.pumpAndSettle();
+      expect(find.text('Rendang'), findsOneWidget);
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.text('Show again'), findsOneWidget);
+    });
+
+    testWidgets('says when nothing is hidden', (t) async {
+      await pump(t, const OwnerHiddenPage());
+      expect(find.text('Nothing is hidden.'), findsOneWidget);
+    });
+  });
 
   testWidgets(
     'reports is a notebook page with an open and closed empty state',

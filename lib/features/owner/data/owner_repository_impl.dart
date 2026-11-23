@@ -182,6 +182,43 @@ class OwnerRepositoryImpl implements OwnerRepository {
   );
 
   @override
+  Future<({List<HiddenRecipe> recipes, List<HiddenReview> reviews})>
+  hiddenContent() => apiCall(() async {
+    final j = await _get('/owner/hidden');
+    return (
+      recipes: [
+        for (final r in (j['recipes'] as List).cast<Map<String, dynamic>>())
+          HiddenRecipe(
+            id: r['id'] as String,
+            name: r['name'] as String,
+            owner: r['owner'] as String?,
+            public: r['public'] as bool,
+            hiddenAt: dbTime(r['hiddenAt'] as String),
+          ),
+      ],
+      reviews: [
+        for (final r in (j['reviews'] as List).cast<Map<String, dynamic>>())
+          HiddenReview(
+            id: r['id'] as String,
+            stars: (r['stars'] as num).toInt(),
+            text: r['text'] as String?,
+            author: r['author'] as String,
+            place: r['place'] as String,
+            hiddenAt: dbTime(r['hiddenAt'] as String),
+          ),
+      ],
+    );
+  });
+
+  @override
+  Future<void> unhideRecipe(String recipeId) =>
+      apiCall(() => _dio.delete<void>('/owner/recipes/$recipeId/hidden'));
+
+  @override
+  Future<void> unhideReview(String reviewId) =>
+      apiCall(() => _dio.delete<void>('/owner/reviews/$reviewId/hidden'));
+
+  @override
   Future<({List<RecipeVariant> variants, bool complete})> findVariants(
     String recipeId,
   ) => apiCall(() async {
