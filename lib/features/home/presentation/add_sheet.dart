@@ -32,7 +32,7 @@ Future<void> showAddSheet(BuildContext context) async {
     case (kind: 'link', value: final String link):
       context.read<ShareIntake>().add(Incoming.text(link));
     case (kind: 'screenshot', value: _):
-      final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+      final image = await pickScreenshot();
       if (image != null && context.mounted) {
         context.read<ShareIntake>().add(Incoming.image(image.path));
       }

@@ -21,11 +21,18 @@ String linkHost(String url) => Uri.tryParse(url)?.host ?? url;
 
 LinkRisk linkRisk(String url) {
   final u = Uri.tryParse(url);
-  final host = u?.host.toLowerCase() ?? '';
-  // Punycode or non-ASCII letters: how a look-alike of a real site's name is written.
-  if (host.contains('xn--') || !RegExp(r'^[a-z0-9.-]+$').hasMatch(host)) {
+  // A trailing dot is the same site to a browser ("bit.ly." = bit.ly).
+  final host = (u?.host.toLowerCase() ?? '').replaceFirst(RegExp(r'\.$'), '');
+  // Look-alike letters, a bare IP, "real.site@other.site", or a short-link name with another site behind it.
+  if (host.contains('xn--') ||
+      !RegExp(r'^[a-z0-9.-]+$').hasMatch(host) ||
+      RegExp(r'^\d+(\.\d+){3}$').hasMatch(host) ||
+      u!.userInfo.isNotEmpty ||
+      _shortLinks.any((s) => host.startsWith('$s.'))) {
     return LinkRisk.oddName;
   }
-  if (_shortLinks.contains(host)) return LinkRisk.shortLink;
-  return u!.isScheme('https') ? LinkRisk.none : LinkRisk.notSecure;
+  if (_shortLinks.any((s) => host == s || host.endsWith('.$s'))) {
+    return LinkRisk.shortLink;
+  }
+  return u.isScheme('https') ? LinkRisk.none : LinkRisk.notSecure;
 }

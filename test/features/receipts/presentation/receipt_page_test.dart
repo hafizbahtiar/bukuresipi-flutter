@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/auth/presentation/auth_controller.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/places_controller.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_link.dart';
@@ -497,6 +499,40 @@ void main() {
       await t.tap(scan);
       await t.pump();
       expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets('a double tap on Scan opens one scanner', (t) async {
+    final gate = Completer<void>();
+    final repo = FakeReceipts()
+      ..answers = [receipt(status: 'saved')]
+      ..scanOpen = gate;
+    await pump(t, repo);
+    await t.pumpAndSettle();
+    final scan = find.byKey(const ValueKey('einvoice-scan'));
+    await t.ensureVisible(scan);
+    await t.tap(scan);
+    await t.tap(scan);
+    await t.pump();
+    expect(repo.liveScans, 1);
+    gate.complete();
+    await t.pumpAndSettle();
+    await t.tap(scan);
+    await t.pump();
+    expect(repo.liveScans, 2);
+  });
+
+  testWidgets(
+    'a moment offline while reading: the page stays and keeps looking',
+    (t) async {
+      final repo = FakeReceipts()
+        ..answers = [receipt(status: 'reading'), receipt(gaps: const [])];
+      await pump(t, repo);
+      expect(find.text('Reading the receipt…'), findsOneWidget);
+      repo.failNextGet = const ApiException(ApiException.network);
+      await t.pump(const Duration(milliseconds: 40));
+      await t.pump();
+      expect(find.text('Port Lepak Sentul'), findsOneWidget);
     },
   );
 

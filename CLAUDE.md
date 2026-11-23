@@ -23,7 +23,7 @@ website + email-link pages: `../bukuresipi-astro`. Setup, release, release notes
 - `lib/core/` - shared, knows no feature: `network/` (ApiClient, ApiException, 426 UpdateGate), `router/`,
   `settings/`, `storage/`, `env/`, `ads/`, `theme/` (`app_theme.dart` = `Notebook.of(context)` colours and fonts;
   `app_theme_constant.dart` = spacing `spaceXs/S/M/L`, `wideFrom` 600, `readableWidth`, `sidePanelWidth`,
-  `isWide(context)`), `utils/` (log, open a link, `formatTime`), `widgets/` (the house components, below).
+  `isWide(context)`), `utils/` (log, open a link, `formatTime`, `imageSubtype`), `widgets/` (the house components, below).
 - `lib/features/<feature>/` - `domain/` (entities + repository interface; no Flutter, no Dio), `data/` (API calls +
   repository impl, JSON -> entity), `presentation/` (ChangeNotifier controller, `pages/`, `widgets/`).
 - `lib/l10n/` - `app_ms.arb` (Malay, the default) + `app_en.arb`; generated into `lib/l10n/gen/`.

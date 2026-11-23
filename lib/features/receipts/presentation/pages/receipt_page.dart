@@ -69,6 +69,7 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
   EinvoiceDetails? _details;
   // Back from the shop's e-invoice page: ask once whether it was requested.
   bool _askOnReturn = false;
+  bool _scanning = false; // a double tap opens one scanner
 
   @override
   void initState() {
@@ -134,6 +135,8 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
 
   /// The photo's QR was not read: Google's live scanner; a phone without it takes a close-up photo of the QR.
   Future<void> _scanEinvoice() async {
+    if (_scanning) return;
+    _scanning = true;
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -158,6 +161,8 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
       return;
+    } finally {
+      _scanning = false;
     }
     _timer?.cancel();
     await _load();
@@ -194,7 +199,17 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
         _timer = Timer(_polls++ < 20 ? widget.poll : widget.poll * 5, _load);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e);
+      if (!mounted) return;
+      // A moment offline while it is being read: what's on screen stays, the next poll tries again.
+      final blip =
+          e is ApiException &&
+          (e.code == ApiException.network || (e.status ?? 0) >= 500);
+      if (blip && (_r?.reading == true || _r?.caloriesPending == true)) {
+        _timer?.cancel();
+        _timer = Timer(_polls++ < 20 ? widget.poll : widget.poll * 5, _load);
+        return;
+      }
+      setState(() => _error = e);
     }
   }
 

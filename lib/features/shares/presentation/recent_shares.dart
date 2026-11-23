@@ -22,6 +22,7 @@ class RecentShares extends ChangeNotifier {
   Timer? _next;
   int _generation = 0;
   String _logged = '';
+  int _polls = 0;
 
   List<Share> get reading => [
     for (final s in _shares)
@@ -73,7 +74,13 @@ class RecentShares extends ChangeNotifier {
       _unfresh = Timer(const Duration(seconds: 6), _fresh.clear);
       await onFinished();
     }
-    if (reading.isNotEmpty) _next = Timer(every, load);
+    // A read takes seconds. One still going after two minutes (waiting on a meter, the phone offline) is asked 6x less.
+    if (reading.any((s) => !wasReading.contains(s.id))) _polls = 0;
+    if (reading.isNotEmpty) {
+      _next = Timer(_polls++ < 24 ? every : every * 6, load);
+    } else {
+      _polls = 0;
+    }
   }
 
   /// Throws ApiException; the row shows it.
