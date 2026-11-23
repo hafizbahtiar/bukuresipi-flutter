@@ -34,6 +34,34 @@ void main() {
     recent.dispose();
   });
 
+  testWidgets(
+    'a share still reading after two minutes is asked 6x less; a new share goes back to quick',
+    (t) async {
+      final repo = FakeShares()..recentList = [s('a', 'pending')];
+      final recent = RecentShares(
+        repo,
+        onFinished: () async {},
+        every: const Duration(seconds: 5),
+      );
+      await recent.load();
+      for (var i = 0; i < 24; i++) {
+        await t.pump(const Duration(seconds: 5));
+      }
+      final quick = repo.recentReads;
+      await t.pump(const Duration(seconds: 25));
+      expect(repo.recentReads, quick);
+      await t.pump(const Duration(seconds: 5));
+      expect(repo.recentReads, quick + 1);
+
+      repo.recentList = [s('a', 'pending'), s('b', 'pending')];
+      await recent.load();
+      final fresh = repo.recentReads;
+      await t.pump(const Duration(seconds: 5));
+      expect(repo.recentReads, fresh + 1);
+      recent.dispose();
+    },
+  );
+
   test('a failed share can be retried and dismissed', () async {
     final repo = FakeShares()..recentList = [s('a', 'failed')];
     final recent = RecentShares(repo, onFinished: () async {});

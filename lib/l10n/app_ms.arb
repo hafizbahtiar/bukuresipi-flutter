@@ -1259,7 +1259,7 @@
   "einvoiceRiskTitle": "Semak pautan ini",
   "einvoiceRiskHttp": "{host} bukan pautan selamat. Jangan masukkan IC atau TIN kecuali anda mempercayainya.",
   "einvoiceRiskShort": "{host} ialah pautan pendek yang menyembunyikan laman sebenar. Semak laman itu sebelum masukkan IC atau TIN.",
-  "einvoiceRiskName": "{host} guna huruf luar biasa dan mungkin meniru laman lain. Jangan masukkan IC atau TIN kecuali anda mempercayainya.",
+  "einvoiceRiskName": "{host} nampak luar biasa dan mungkin meniru laman lain. Jangan masukkan IC atau TIN kecuali anda mempercayainya.",
   "einvoiceNameHelp": "Seperti dalam IC",
   "einvoiceTinHelp": "Nombor cukai anda daripada LHDN (MyTax)"
 }

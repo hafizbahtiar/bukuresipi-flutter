@@ -3420,7 +3420,7 @@
       }
     }
   },
-  "einvoiceRiskName": "{host} uses unusual letters and may imitate another site. Don't enter your IC or TIN unless you trust it.",
+  "einvoiceRiskName": "{host} looks unusual and may imitate another site. Don't enter your IC or TIN unless you trust it.",
   "@einvoiceRiskName": {
     "placeholders": {
       "host": {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
@@ -81,9 +83,13 @@ class FakeReceipts implements ReceiptsRepository {
   EinvoiceScan liveScan = EinvoiceScan.closed;
   int liveScans = 0;
 
+  /// Holds the scanner open until completed.
+  Completer<void>? scanOpen;
+
   @override
   Future<EinvoiceScan> scanEinvoice(String id) async {
     liveScans++;
+    await scanOpen?.future;
     return liveScan;
   }
 
@@ -98,8 +104,16 @@ class FakeReceipts implements ReceiptsRepository {
   }
 
   @override
-  Future<Receipt> get(String id) async =>
-      answers[(gets++).clamp(0, answers.length - 1)];
+  Future<Receipt> get(String id) async {
+    if (failNextGet case final e?) {
+      failNextGet = null;
+      throw e;
+    }
+    return answers[(gets++).clamp(0, answers.length - 1)];
+  }
+
+  /// The next [get] throws this once (a moment offline).
+  Object? failNextGet;
 
   @override
   Future<({List<Receipt> items, String? next})> list({

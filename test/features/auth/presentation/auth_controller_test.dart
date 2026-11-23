@@ -23,6 +23,7 @@ void main() {
       final repo = FakeAuthRepository()
         ..session = true
         ..cached = testUser
+        ..refreshRefused = true
         ..meResult = const ApiException('unauthorized', status: 401);
       final c = AuthController(repo);
       await c.restore();
@@ -30,6 +31,18 @@ void main() {
       expect(repo.clears, 1);
     },
   );
+
+  test('a 401 whose refresh failed (server error, timeout) keeps the session and the saved data', () async {
+    final repo = FakeAuthRepository()
+      ..session = true
+      ..cached = testUser
+      ..meResult = const ApiException('unauthorized', status: 401);
+    final c = AuthController(repo);
+    await c.restore();
+    expect(c.status, AuthStatus.signedIn);
+    expect(repo.clears, 0);
+    expect(repo.session, isTrue);
+  });
 
   test('offline at launch with a saved user -> stays signed in', () async {
     final c = AuthController(

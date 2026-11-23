@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/base.dart';
 
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -325,7 +324,7 @@ class _ShareProblemRowState extends State<ShareProblemRow> {
   /// The post as a screenshot instead: read as a new share, and this one goes.
   Future<void> _screenshot() async {
     final intake = context.read<ShareIntake>();
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final image = await pickScreenshot();
     if (image == null || !mounted) return;
     intake.add(Incoming.image(image.path));
     await _run((s) => s.dismiss(widget.share.id));

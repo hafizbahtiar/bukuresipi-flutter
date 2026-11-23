@@ -23,6 +23,15 @@ void main() {
     }
   });
 
+  test(
+    'the shown site is where the browser goes, even with a backslash trick',
+    () {
+      final link = qrWebLink(r'https://evil.example.com\@good.example.com/x')!;
+      // A browser reads a backslash as "/": the real site is the first name, and that is the one shown.
+      expect(linkHost(link), 'evil.example.com');
+    },
+  );
+
   test('a link is flagged when it is not secure, hides its site, or imitates a name', () {
     expect(linkRisk('https://einvoice.pos.example.com/r/1'), LinkRisk.none);
     expect(linkRisk('http://einvoice.pos.example.com/r/1'), LinkRisk.notSecure);
@@ -32,5 +41,23 @@ void main() {
       linkRisk('https://hаsil.example.com/r'),
       LinkRisk.oddName,
     ); // a Cyrillic "а"
+    for (final short in [
+      'https://www.bit.ly/x',
+      'https://bit.ly./x',
+      'https://BIT.LY/x',
+      'https://go.tinyurl.com/x',
+    ]) {
+      expect(linkRisk(short), LinkRisk.shortLink, reason: short);
+    }
+    for (final odd in [
+      'https://bit.ly.evil.com/x',
+      'https://192.168.0.1/x',
+      'http://[::1]/x',
+      'https://lhdn.gov.my@evil.example.com/x',
+    ]) {
+      expect(linkRisk(odd), LinkRisk.oddName, reason: odd);
+    }
+    // Only a whole name counts.
+    expect(linkRisk('https://orbit.ly.example.com/x'), LinkRisk.none);
   });
 }

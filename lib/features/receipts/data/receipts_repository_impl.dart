@@ -1,8 +1,8 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/utils/image_type.dart';
 import '../domain/einvoice_link.dart';
 import '../domain/receipt.dart';
 import 'receipt_qr.dart';
@@ -141,7 +141,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
     final form = FormData.fromMap({
       'image': await MultipartFile.fromFile(
         path,
-        contentType: DioMediaType('image', 'jpeg'),
+        contentType: DioMediaType('image', await imageSubtype(path) ?? 'jpeg'),
       ),
     });
     final j = (await _dio.post<Map<String, dynamic>>(
@@ -265,7 +265,7 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
     final form = FormData.fromMap({
       'image': await MultipartFile.fromFile(
         path,
-        contentType: DioMediaType('image', 'jpeg'),
+        contentType: DioMediaType('image', await imageSubtype(path) ?? 'jpeg'),
       ),
       'einvoiceUrl': ?einvoice,
     });
