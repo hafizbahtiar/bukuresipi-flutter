@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_details.dart';
+import 'package:bukuresipi_flutter/features/receipts/domain/einvoice_link.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipt.dart';
 import 'package:bukuresipi_flutter/features/receipts/domain/receipts_repository.dart';
 
@@ -24,6 +27,7 @@ Receipt receipt({
   bool caloriesPending = false,
   bool hasSplit = false,
   ReceiptEinvoice? einvoice,
+  DateTime? einvoiceBy,
 }) => Receipt(
   id: id,
   status: status,
@@ -41,6 +45,7 @@ Receipt receipt({
   caloriesPending: caloriesPending,
   hasSplit: hasSplit,
   einvoice: einvoice,
+  einvoiceBy: einvoiceBy,
 );
 
 class FakeReceipts implements ReceiptsRepository {
@@ -74,6 +79,20 @@ class FakeReceipts implements ReceiptsRepository {
     return qrLink != null;
   }
 
+  /// What Google's live scanner answers.
+  EinvoiceScan liveScan = EinvoiceScan.closed;
+  int liveScans = 0;
+
+  /// Holds the scanner open until completed.
+  Completer<void>? scanOpen;
+
+  @override
+  Future<EinvoiceScan> scanEinvoice(String id) async {
+    liveScans++;
+    await scanOpen?.future;
+    return liveScan;
+  }
+
   @override
   Future<void> setEinvoiceDone(String id, bool done) async =>
       einvoiceDone.add((id, done));
@@ -85,8 +104,16 @@ class FakeReceipts implements ReceiptsRepository {
   }
 
   @override
-  Future<Receipt> get(String id) async =>
-      answers[(gets++).clamp(0, answers.length - 1)];
+  Future<Receipt> get(String id) async {
+    if (failNextGet case final e?) {
+      failNextGet = null;
+      throw e;
+    }
+    return answers[(gets++).clamp(0, answers.length - 1)];
+  }
+
+  /// The next [get] throws this once (a moment offline).
+  Object? failNextGet;
 
   @override
   Future<({List<Receipt> items, String? next})> list({

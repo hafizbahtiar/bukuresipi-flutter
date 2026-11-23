@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../../../core/utils/image_type.dart';
 import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/disk_image_cache.dart';
@@ -42,7 +43,8 @@ class ShareRepositoryImpl implements ShareRepository {
 
   @override
   Future<String> submitImage(String path) async {
-    final subtype = _types[path.split('.').last.toLowerCase()];
+    final subtype =
+        await imageSubtype(path) ?? _types[path.split('.').last.toLowerCase()];
     if (subtype == null) throw const ApiException('invalid_image');
     final file = File(path);
     if (await file.length() > maxImageBytes) {

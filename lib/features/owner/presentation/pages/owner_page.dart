@@ -121,6 +121,10 @@ class _OwnerPageState extends State<OwnerPage> {
                         onTap: () => context.push('/owner/review-reports'),
                       ),
                       _Ledger(
+                        label: l.ownerHidden,
+                        onTap: () => context.push('/owner/hidden'),
+                      ),
+                      _Ledger(
                         label: l.ownerRatingBursts,
                         value: s.ratingBursts,
                         warn: s.ratingBursts > 0,
@@ -172,14 +176,14 @@ class _OwnerPageState extends State<OwnerPage> {
 class _Ledger extends StatelessWidget {
   const _Ledger({
     required this.label,
-    required this.value,
+    this.value,
     this.note,
     this.warn = false,
     this.onTap,
   });
 
   final String label;
-  final int value;
+  final int? value;
   final String? note;
   final bool warn;
   final VoidCallback? onTap;
@@ -193,13 +197,15 @@ class _Ledger extends StatelessWidget {
       mark: onTap == null
           ? null
           : Icon(Icons.arrow_outward, size: 16, color: nb.inkSoft),
-      trailing: Text(
-        '$value',
-        style: text.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: warn ? nb.margin : nb.ink,
-        ),
-      ),
+      trailing: value == null
+          ? null
+          : Text(
+              '$value',
+              style: text.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: warn ? nb.margin : nb.ink,
+              ),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

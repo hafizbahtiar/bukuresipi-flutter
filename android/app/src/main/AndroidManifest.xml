@@ -23,6 +23,8 @@
         android:icon="@mipmap/ic_launcher">
         <!-- Pushes without a channel of their own (e.g. a Firebase console test) land on "share_ready" (MainActivity). -->
         <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false"/>
+        <!-- Google's QR scanner module fetched with the app, so the first "Scan QR" does not have to wait for it. -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui"/>
         <!-- AdMob (Home ads, lib/core/ads/ads.dart). Public: it ships in every APK. -->
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1300180769466949~4313134076"/>
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="share_ready"/>

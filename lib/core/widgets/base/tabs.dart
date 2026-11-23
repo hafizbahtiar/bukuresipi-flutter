@@ -66,6 +66,21 @@ class _EditTabsState extends State<EditTabs> {
   String? _selected;
 
   @override
+  void didUpdateWidget(EditTabs old) {
+    super.didUpdateWidget(old);
+    if (widget.sections.length <= old.sections.length) return;
+    // A page added after the built ones does not lay the PageView out again: a tap on it would stop at the old end.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pages.hasClients) return;
+      final p = _pages.position;
+      p.applyContentDimensions(
+        0,
+        p.viewportDimension * (widget.sections.length - 1),
+      );
+    });
+  }
+
+  @override
   void dispose() {
     _pages.dispose();
     super.dispose();

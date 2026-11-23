@@ -27,6 +27,7 @@ import '../../features/credits/presentation/pages/credits_page.dart';
 import '../../features/family/presentation/pages/family_join_page.dart';
 import '../../features/family/presentation/pages/family_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/owner/presentation/pages/owner_hidden_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_rating_bursts_page.dart';
@@ -125,12 +126,13 @@ GoRouter buildRouter(
       // Opened from Home's map button (no longer a tab).
       _page(
         path: '/map',
-        // ?lat=&lng= (a place's pin): the map opens there.
+        // ?lat=&lng= (a place's pin): the map opens there; &market= (a branch) also opens that market's sheet.
         builder: (_, state) {
           final lat = double.tryParse(state.uri.queryParameters['lat'] ?? '');
           final lng = double.tryParse(state.uri.queryParameters['lng'] ?? '');
           return PlacesMapPage(
             focus: lat == null || lng == null ? null : LatLng(lat, lng),
+            focusMarket: state.uri.queryParameters['market'],
           );
         },
       ),
@@ -224,6 +226,7 @@ GoRouter buildRouter(
             path: 'review-reports',
             builder: (_, _) => const OwnerReviewReportsPage(),
           ),
+          _page(path: 'hidden', builder: (_, _) => const OwnerHiddenPage()),
           _page(
             path: 'rating-bursts',
             builder: (_, _) => const OwnerRatingBurstsPage(),

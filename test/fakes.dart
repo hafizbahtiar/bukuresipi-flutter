@@ -61,14 +61,20 @@ class FakeAuthRepository implements AuthRepository {
   int clears = 0;
   final registered = <String>[];
 
+  /// A 401 from [me] after the API refused the refresh: ApiClient has already dropped the tokens.
+  bool refreshRefused = false;
+
   @override
   bool get hasSession => session;
   @override
   User? get cachedUser => cached;
 
   @override
-  Future<User> me() async =>
-      meResult is ApiException ? throw meResult! : meResult as User;
+  Future<User> me() async {
+    if (refreshRefused) session = false;
+    return meResult is ApiException ? throw meResult! : meResult as User;
+  }
+
   final names = <String>[];
 
   final avatars = <String>[];

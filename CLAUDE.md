@@ -23,7 +23,7 @@ website + email-link pages: `../bukuresipi-astro`. Setup, release, release notes
 - `lib/core/` - shared, knows no feature: `network/` (ApiClient, ApiException, 426 UpdateGate), `router/`,
   `settings/`, `storage/`, `env/`, `ads/`, `theme/` (`app_theme.dart` = `Notebook.of(context)` colours and fonts;
   `app_theme_constant.dart` = spacing `spaceXs/S/M/L`, `wideFrom` 600, `readableWidth`, `sidePanelWidth`,
-  `isWide(context)`), `utils/` (log, open a link, `formatTime`), `widgets/` (the house components, below).
+  `isWide(context)`), `utils/` (log, open a link, `formatTime`, `imageSubtype`), `widgets/` (the house components, below).
 - `lib/features/<feature>/` - `domain/` (entities + repository interface; no Flutter, no Dio), `data/` (API calls +
   repository impl, JSON -> entity), `presentation/` (ChangeNotifier controller, `pages/`, `widgets/`).
 - `lib/l10n/` - `app_ms.arb` (Malay, the default) + `app_en.arb`; generated into `lib/l10n/gen/`.
@@ -34,11 +34,27 @@ imports a feature. A widget used by several features stays in the feature whose 
 `Avatar`, `HalalStatus`, `NearbySheet`); it moves to `core/widgets/` only when it reads no feature data.
 No use-case classes, no DI container: a repository method is the use case, Provider is the container.
 
+Receipt e-invoice QR (`features/receipts/data/receipt_qr.dart`): the photo is read quietly with ML Kit at upload;
+missed = the receipt's Scan button opens Google's live code scanner (Play services, no camera permission; channel
+`bukuresipi/qr` in `MainActivity`), a phone without it takes a close-up photo. A link's site is shown before opening;
+http, short links and look-alike names ask first (`domain/einvoice_link.dart`).
+
+Pasar (`features/places/domain/market.dart`, `widgets/market_*.dart`, `markets_card.dart`): today and "open now" are
+computed here on Malaysia time (`malaysiaNow`, a phone abroad stays right), last night's opening past midnight counts;
+no days = "not known", never closed. Home's card = what is still on today within 10 km (no card under a search or
+filter); the map has its own `markets` source under the pins (street/ground + dot, for every user), reloaded when the
+camera moves 7.5 km; `?market=<branch>` opens that sheet. Owner: Edit branch > Days, shown only once the server says it
+is a market (a failed read = no tab, so an empty editor can never overwrite saved days).
+
 ## House components (`core/widgets/`; use them, never a native copy)
 
 `import '.../core/widgets/base.dart'` gives all of `base/`:
 - `sheets.dart` - `showBaseSheet` (floating by default; it draws the handle and keeps itself above the keyboard,
-  so a sheet's content never pads for `viewInsets`), `showPhotoSourceSheet`. Never `showModalBottomSheet`.
+  so a sheet's content never pads for `viewInsets`; a change of its content's height moves its top edge),
+  `SheetSwitcher` (steps inside one sheet: a menu, then the picked row's next step; never close a sheet to open
+  the next one; `docs/motion.md` 5; each step's `SheetStepTitle` has Back to the step before, sliding the other
+  way), `PhotoSourceTiles` (camera or photos, as a step) and `showPhotoSourceSheet`
+  (the same as a sheet of its own). Never `showModalBottomSheet`.
 - `dialog.dart` - `showBaseDialog(message, tone: DialogTone.info|confirm|danger)`. Never `showDialog`/`AlertDialog`.
 - `picker.dart` - `showBasePicker`, `PickerField`. `menus.dart` - `MenuAction`, `MoreMenu`, `showActionSheet`
   (a ⋮ opens this, never a Material popup menu).

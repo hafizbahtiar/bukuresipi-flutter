@@ -1007,6 +1007,52 @@
       }
     }
   },
+  "placeSubPasarMalam": "Pasar malam",
+  "placeSubPasarTani": "Pasar tani",
+  "marketsNearTitle": "Pasar near you today",
+  "marketOpenUntil": "Open now · until {time}",
+  "@marketOpenUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "marketNotToday": "Not on today",
+  "marketDaysTitle": "Market days",
+  "marketDaysUnknown": "Days not known yet.",
+  "marketDaysHelp": "The usual weekly days and hours, Malaysia time. Leave empty when not known.",
+  "marketDayField": "Day",
+  "marketOpens": "Opens",
+  "marketCloses": "Closes",
+  "marketPastMidnight": "Closes after midnight",
+  "marketAddDay": "Add day",
+  "marketSaveDays": "Save days",
+  "marketSavingDays": "Saving…",
+  "marketDaysSaved": "Market days saved.",
+  "marketDayTwice": "Two rows have the same day and opening time.",
+  "marketSameTime": "Opening and closing time can't be the same.",
+  "branchTabDays": "Days",
+  "legendMarket": "Pasar",
+  "legendMarketHint": "A pasar malam or pasar tani, drawn along its street or ground when known.",
+  "ownerHidden": "Hidden content",
+  "ownerHiddenEmpty": "Nothing is hidden.",
+  "ownerHiddenRecipes": "Recipes",
+  "ownerHiddenReviews": "Reviews",
+  "ownerHiddenOn": "Hidden {date}",
+  "@ownerHiddenOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerHiddenNotPublic": "Not public now",
+  "ownerHiddenTextRemoved": "The author removed this text.",
+  "ownerUnhide": "Show again",
+  "ownerUnhiding": "Showing…",
+  "ownerUnhideRecipeConfirm": "Stop hiding this recipe? If it is still public, it returns to Community.",
+  "ownerUnhideReviewConfirm": "Stop hiding this person's review? Its current text, or what they write next, can be read by everyone.",
   "ownerReviewReportReasons": "Reasons: {reasons}",
   "@ownerReviewReportReasons": {
     "placeholders": {
@@ -3382,6 +3428,52 @@
   "@einvoiceScan": {},
   "einvoiceNoQr": "No e-invoice QR found. Try closer, with the QR filling the photo.",
   "@einvoiceNoQr": {},
+  "einvoiceByScan": "Request by {date}. Scan its QR to get a reminder.",
+  "@einvoiceByScan": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceNotLink": "That QR isn't a web link. Scan the e-invoice QR on the receipt.",
+  "@einvoiceNotLink": {},
+  "einvoiceOpens": "Opens {host}",
+  "@einvoiceOpens": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceRiskOpen": "Open",
+  "@einvoiceRiskOpen": {},
+  "einvoiceRiskTitle": "Check this link",
+  "@einvoiceRiskTitle": {},
+  "einvoiceRiskHttp": "{host} is not a secure link. Don't enter your IC or TIN unless you trust it.",
+  "@einvoiceRiskHttp": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceRiskShort": "{host} is a short link that hides the real site. Check the site before you enter your IC or TIN.",
+  "@einvoiceRiskShort": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "einvoiceRiskName": "{host} looks unusual and may imitate another site. Don't enter your IC or TIN unless you trust it.",
+  "@einvoiceRiskName": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "einvoiceNameHelp": "As on your IC",
   "@einvoiceNameHelp": {},
   "einvoiceTinHelp": "Your tax number from LHDN (MyTax)",

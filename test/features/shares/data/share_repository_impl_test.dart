@@ -58,6 +58,16 @@ void main() {
     expect(form.files.single.value.contentType.toString(), 'image/png');
   });
 
+  test('the type comes from the bytes: a resized HEIC is a JPEG under its old name', () async {
+    final file = File(
+      '${Directory.systemTemp.createTempSync().path}/scaled_a.heic',
+    )..writeAsBytesSync([0xff, 0xd8, 0xff, 0xe0, 1]);
+    final repo = make((_) => (202, {'id': 's-3', 'status': 'pending'}));
+    expect(await repo.submitImage(file.path), 's-3');
+    final form = adapter.requests.single.data as FormData;
+    expect(form.files.single.value.contentType.toString(), 'image/jpeg');
+  });
+
   test('HEIC or other formats are refused before uploading', () async {
     final repo = make((_) => (202, {}));
     await expectLater(

@@ -23,6 +23,7 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/places_controller.dart';
 import '../../domain/einvoice_details.dart';
+import '../../domain/einvoice_link.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipts_repository.dart';
 import '../widgets/split_bill.dart';
@@ -68,6 +69,7 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
   EinvoiceDetails? _details;
   // Back from the shop's e-invoice page: ask once whether it was requested.
   bool _askOnReturn = false;
+  bool _scanning = false; // a double tap opens one scanner
 
   @override
   void initState() {
@@ -104,12 +106,26 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
   }
 
   Future<void> _openEinvoice(String url) async {
+    final l = AppLocalizations.of(context);
+    final host = linkHost(url);
+    final risk = switch (linkRisk(url)) {
+      LinkRisk.none => null,
+      LinkRisk.notSecure => l.einvoiceRiskHttp(host),
+      LinkRisk.shortLink => l.einvoiceRiskShort(host),
+      LinkRisk.oddName => l.einvoiceRiskName(host),
+    };
+    if (risk != null) {
+      final go = await showBaseDialog(
+        context,
+        title: l.einvoiceRiskTitle,
+        message: risk,
+        tone: DialogTone.danger,
+        confirmLabel: l.einvoiceRiskOpen,
+      );
+      if (!go || !mounted) return;
+    }
     _askOnReturn = true;
-    await openLink(
-      context,
-      url,
-      failed: AppLocalizations.of(context).openFailed,
-    );
+    await openLink(context, url, failed: l.openFailed);
   }
 
   Future<void> _editDetails() async {
@@ -117,20 +133,36 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
     await _loadDetails();
   }
 
-  /// The photo's QR was not read: a close-up of the QR alone.
+  /// The photo's QR was not read: Google's live scanner; a phone without it takes a close-up photo of the QR.
   Future<void> _scanEinvoice() async {
+    if (_scanning) return;
+    _scanning = true;
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final picked = await ImagePicker().pickImage(source: ImageSource.camera);
-    if (picked == null) return;
     try {
-      final found = await _repo.addEinvoiceFromPhoto(widget.id, picked.path);
-      if (!found) {
-        messenger.showSnackBar(SnackBar(content: Text(l.einvoiceNoQr)));
-        return;
+      switch (await _repo.scanEinvoice(widget.id)) {
+        case EinvoiceScan.saved:
+          break;
+        case EinvoiceScan.closed:
+          return;
+        case EinvoiceScan.notALink:
+          messenger.showSnackBar(SnackBar(content: Text(l.einvoiceNotLink)));
+          return;
+        case EinvoiceScan.unavailable:
+          final picked = await ImagePicker().pickImage(
+            source: ImageSource.camera,
+          );
+          if (picked == null) return;
+          if (!await _repo.addEinvoiceFromPhoto(widget.id, picked.path)) {
+            messenger.showSnackBar(SnackBar(content: Text(l.einvoiceNoQr)));
+            return;
+          }
       }
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+      return;
+    } finally {
+      _scanning = false;
     }
     _timer?.cancel();
     await _load();
@@ -167,7 +199,17 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
         _timer = Timer(_polls++ < 20 ? widget.poll : widget.poll * 5, _load);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e);
+      if (!mounted) return;
+      // A moment offline while it is being read: what's on screen stays, the next poll tries again.
+      final blip =
+          e is ApiException &&
+          (e.code == ApiException.network || (e.status ?? 0) >= 500);
+      if (blip && (_r?.reading == true || _r?.caloriesPending == true)) {
+        _timer?.cancel();
+        _timer = Timer(_polls++ < 20 ? widget.poll : widget.poll * 5, _load);
+        return;
+      }
+      setState(() => _error = e);
     }
   }
 
@@ -216,6 +258,7 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
         caloriesPending: r.caloriesPending,
         hasSplit: r.hasSplit,
         einvoice: r.einvoice,
+        einvoiceBy: r.einvoiceBy,
       ),
     );
     try {
@@ -571,15 +614,7 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
             onDetails: _editDetails,
           )
         else
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              key: const ValueKey('einvoice-scan'),
-              onPressed: _scanEinvoice,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: Text(AppLocalizations.of(context).einvoiceScan),
-            ),
-          ),
+          _ScanEinvoice(by: r.einvoiceBy, onScan: _scanEinvoice),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -755,15 +790,7 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
             onDetails: _editDetails,
           )
         else
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              key: const ValueKey('einvoice-scan'),
-              onPressed: _scanEinvoice,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: Text(AppLocalizations.of(context).einvoiceScan),
-            ),
-          ),
+          _ScanEinvoice(by: r.einvoiceBy, onScan: _scanEinvoice),
         if (r.items.isNotEmpty || r.charges.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Items(receipt: r, onEaten: r.hasSplit ? null : _eat),
@@ -774,6 +801,84 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
 }
 
 enum _Tone { normal, problem }
+
+/// No e-invoice link yet: Scan. A receipt that offers one also shows its last day, so a missed QR never hides it.
+class _ScanEinvoice extends StatelessWidget {
+  const _ScanEinvoice({required this.by, required this.onScan});
+
+  final DateTime? by;
+  final VoidCallback onScan;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final until = by;
+    if (until == null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          key: const ValueKey('einvoice-scan'),
+          onPressed: onScan,
+          icon: const Icon(Icons.qr_code_scanner),
+          label: Text(l.einvoiceScan),
+        ),
+      );
+    }
+    final nb = Notebook.of(context);
+    final text = Theme.of(context).textTheme;
+    final now = DateTime.now();
+    final ended = until.isBefore(DateTime(now.year, now.month, now.day));
+    final date = MaterialLocalizations.of(context).formatMediumDate(until);
+    return _Card(
+      key: const ValueKey('receipt-einvoice-by'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.request_quote_outlined, color: nb.pandan),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.einvoiceTitle,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      ended ? l.einvoiceEnded(date) : l.einvoiceByScan(date),
+                      style: text.bodySmall?.copyWith(
+                        color: ended
+                            ? Theme.of(context).colorScheme.error
+                            : nb.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.tonalIcon(
+              key: const ValueKey('einvoice-scan'),
+              style: FilledButton.styleFrom(minimumSize: const Size(64, 40)),
+              onPressed: onScan,
+              icon: const Icon(Icons.qr_code_scanner, size: 18),
+              label: Text(l.einvoiceScan),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// The receipt's e-invoice request: the shop's page, its last day, then "I've requested it" (no reminder after).
 class _Einvoice extends StatelessWidget {
@@ -839,6 +944,16 @@ class _Einvoice extends StatelessWidget {
                             : nb.inkSoft,
                       ),
                     ),
+                    // The real site, before the user pastes an IC into it. Never cut short: the end of a name is
+                    // what tells a look-alike apart.
+                    if (!einvoice.done) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        l.einvoiceOpens(linkHost(einvoice.url)),
+                        key: const ValueKey('einvoice-host'),
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
+                    ],
                   ],
                 ),
               ),

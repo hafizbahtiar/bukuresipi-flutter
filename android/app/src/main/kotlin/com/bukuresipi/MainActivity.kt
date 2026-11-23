@@ -23,6 +23,9 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.credentials.exceptions.domerrors.InvalidStateError
 import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -40,6 +43,16 @@ class MainActivity : FlutterActivity() {
             val name = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1)
                 Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) else null
             result.success(mapOf("name" to (name?.takeIf { it.isNotBlank() } ?: model), "model" to model, "os" to "Android ${Build.VERSION.RELEASE}"))
+        }
+        // A receipt's e-invoice QR (lib/features/receipts/data/receipt_qr.dart): Google's scanner, in Play services, so
+        // this app needs no camera permission for it. null = the user closed it.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "bukuresipi/qr").setMethodCallHandler { call, result ->
+            if (call.method != "scan") return@setMethodCallHandler result.notImplemented()
+            val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).enableAutoZoom().build()
+            GmsBarcodeScanning.getClient(this, options).startScan()
+                .addOnSuccessListener { result.success(it.rawValue) }
+                .addOnCanceledListener { result.success(null) }
+                .addOnFailureListener { result.error("unavailable", it.message, null) }
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "bukuresipi/passkey").setMethodCallHandler { call, result ->
             val json = call.arguments as? String

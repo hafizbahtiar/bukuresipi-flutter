@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../domain/market.dart';
 import '../domain/nearby_branch.dart';
 import '../domain/place.dart';
 import '../domain/places_repository.dart';
@@ -312,6 +313,21 @@ class PlacesController extends ChangeNotifier {
   /// Throws ApiException; the map keeps its last result.
   Future<List<NearbyBranch>> nearby(double lat, double lng, double km) =>
       _repo.nearby(lat, lng, km);
+
+  /// Throws ApiException; Home and the map just show no markets.
+  Future<List<Market>> markets(double lat, double lng, double km) =>
+      _repo.markets(lat, lng, km);
+
+  /// Owner. Throws ApiException.
+  Future<({bool market, List<MarketDay> days})> branchSchedule(
+    String branchId,
+  ) => _repo.branchSchedule(branchId);
+
+  /// Owner: then reloads, so the place's page shows the new days.
+  Future<void> setSchedule(String branchId, List<MarketDay> days) async {
+    await _repo.setSchedule(branchId, days);
+    await _reload();
+  }
 
   /// Saves a branch's restaurant, then reloads the saved places for the map.
   Future<Place> saveBranch(String branchId) async {

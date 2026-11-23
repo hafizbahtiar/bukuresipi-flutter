@@ -1,12 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../domain/caption_reader.dart';
 import '../domain/share_repository.dart';
+
+/// A screenshot from the gallery, small enough to send (a full-size file can pass the 5 MB cap). Tall on purpose: a long
+/// capture squeezed into a square box would lose its text.
+Future<XFile?> pickScreenshot() => ImagePicker().pickImage(
+  source: ImageSource.gallery,
+  maxWidth: 2000,
+  maxHeight: 4000,
+  imageQuality: 88,
+);
 
 enum IncomingKind { text, image, url, unsupported }
 

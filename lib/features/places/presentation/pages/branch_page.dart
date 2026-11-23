@@ -16,6 +16,7 @@ import '../places_controller.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../widgets/cover_picker_sheet.dart';
 import '../widgets/halal_status.dart';
+import '../widgets/market_days.dart';
 import '../widgets/notebook_rating.dart';
 import '../widgets/unpinned_actions.dart';
 import 'branch_edit_page.dart';
@@ -307,6 +308,13 @@ class BranchPage extends StatelessWidget {
               '${l.branchLatitude}, ${l.branchLongitude}',
               '${branch.lat!.toStringAsFixed(6)}, ${branch.lng!.toStringAsFixed(6)}',
             ),
+          if (r.isMarket) ...[
+            SectionHeader(l.marketDaysTitle),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: spaceM),
+              child: MarketDaysList(schedule: branch.schedule, heading: false),
+            ),
+          ],
           // Halal (food only): this outlet's JAKIM certificate, else the brand's note, else nothing known.
           if (r.isFood) ...[
             SectionHeader(l.placeTabHalal),

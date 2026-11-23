@@ -18,70 +18,29 @@ import '../../recipes/presentation/pages/recipe_edit_page.dart';
 import '../../shares/presentation/share_intake.dart';
 import 'pages/home_page.dart';
 
-/// The bottom bar's "+": every way to add something, in one sheet. A link and a screenshot go through the same
-/// intake as the phone's share sheet; a receipt is uploaded and opened; a meal photo is estimated, and once saved
-/// the day's calories show; a typed recipe opens the editor.
+/// The bottom bar's "+": every way to add something, in one sheet. Paste a link, Receipt and Meal go on to their next
+/// step in that same sheet ([SheetSwitcher]), never a second one. A link and a screenshot go through the same intake
+/// as the phone's share sheet; a receipt is uploaded and opened; a meal photo is estimated, and once saved the day's
+/// calories show; a typed recipe opens the editor.
 Future<void> showAddSheet(BuildContext context) async {
-  final l = AppLocalizations.of(context);
-  final pick = await showBaseSheet<String>(
+  final pick = await showBaseSheet<_Pick>(
     context,
-    builder: (context) => ListView(
-      shrinkWrap: true, // as tall as its rows; scrolls on a small screen
-      padding: EdgeInsets.zero,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: spaceXs),
-          child: Center(
-            child: Text(
-              l.addTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-        ),
-        for (final (key, icon, title, hint) in [
-          ('link', Icons.link, l.addLink, l.addLinkHint),
-          (
-            'screenshot',
-            Icons.image_outlined,
-            l.addScreenshot,
-            l.addScreenshotHint,
-          ),
-          (
-            'receipt',
-            Icons.receipt_long_outlined,
-            l.addReceipt,
-            l.addReceiptHint,
-          ),
-          ('meal', Icons.restaurant_outlined, l.addMeal, l.addMealHint),
-          ('recipe', Icons.edit_note, l.addRecipe, l.addRecipeHint),
-        ])
-          ListTile(
-            key: ValueKey('add-$key'),
-            leading: Icon(icon),
-            title: Text(title),
-            subtitle: Text(hint),
-            onTap: () => Navigator.pop(context, key),
-          ),
-      ],
-    ),
+    builder: (_) => const _AddSheet(),
   );
   if (pick == null || !context.mounted) return;
   switch (pick) {
-    case 'link':
-      final link = await _askLink(context);
-      if (link != null && context.mounted) {
-        context.read<ShareIntake>().add(Incoming.text(link));
-      }
-    case 'screenshot':
-      final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    case (kind: 'link', value: final String link):
+      context.read<ShareIntake>().add(Incoming.text(link));
+    case (kind: 'screenshot', value: _):
+      final image = await pickScreenshot();
       if (image != null && context.mounted) {
         context.read<ShareIntake>().add(Incoming.image(image.path));
       }
-    case 'receipt':
-      await _addReceipt(context);
-    case 'meal':
-      await _addMeal(context);
-    case 'recipe':
+    case (kind: 'receipt', value: final ImageSource source):
+      await _addReceipt(context, source);
+    case (kind: 'meal', value: final ImageSource source):
+      await _addMeal(context, source);
+    case (kind: 'recipe', value: _):
       final saved = await Navigator.of(context).push<RecipeDetail>(
         MaterialPageRoute(builder: (_) => const RecipeEditPage()),
       );
@@ -91,18 +50,29 @@ Future<void> showAddSheet(BuildContext context) async {
   }
 }
 
-Future<String?> _askLink(BuildContext context) =>
-    showBaseSheet<String>(context, builder: (_) => const _LinkSheet());
+/// What the sheet closed with: the row, and its link or photo source.
+typedef _Pick = ({String kind, Object? value});
 
-/// One link to add. The sheet owns its field, so the field lives until the sheet has finished closing.
-class _LinkSheet extends StatefulWidget {
-  const _LinkSheet();
+/// The menu, then (in the same sheet) the link field or camera/photos. The sheet owns the link field, so it lives
+/// until the sheet has finished closing.
+class _AddSheet extends StatefulWidget {
+  const _AddSheet();
 
   @override
-  State<_LinkSheet> createState() => _LinkSheetState();
+  State<_AddSheet> createState() => _AddSheetState();
 }
 
-class _LinkSheetState extends State<_LinkSheet> {
+class _AddSheetState extends State<_AddSheet> {
+  /// null = the menu; 'link', 'receipt' or 'meal' = that row's next step.
+  String? _step;
+
+  /// false = Back to the menu (the steps slide the other way).
+  bool _forward = true;
+
+  void _go(String? step) => setState(() {
+    _forward = step != null;
+    _step = step;
+  });
   final _field = TextEditingController();
 
   @override
@@ -111,6 +81,9 @@ class _LinkSheetState extends State<_LinkSheet> {
     super.dispose();
   }
 
+  void _close(String kind, [Object? value]) =>
+      Navigator.pop<_Pick>(context, (kind: kind, value: value));
+
   Future<void> _paste() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
     if (text != null && text.isNotEmpty && mounted) {
@@ -118,77 +91,144 @@ class _LinkSheetState extends State<_LinkSheet> {
     }
   }
 
-  void _add() {
+  void _addLink() {
     final link = _field.text.trim();
-    if (link.isNotEmpty) Navigator.pop(context, link);
+    if (link.isNotEmpty) _close('link', link);
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final material = MaterialLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(spaceM, 0, spaceM, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l.addLink,
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            key: const ValueKey('add-link-field'),
-            controller: _field,
-            autofocus: true,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.go,
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _add(),
-            decoration: InputDecoration(
-              labelText: l.linkFieldLabel,
-              helperText: l.addLinkHint,
-              helperMaxLines: 2,
-              prefixIcon: const Icon(Icons.link, size: 20),
-              suffixIcon: TextButton.icon(
-                key: const ValueKey('add-link-paste'),
-                onPressed: _paste,
-                icon: const Icon(Icons.content_paste, size: 18),
-                label: Text(material.pasteButtonLabel),
-              ),
+    return SheetSwitcher(
+      forward: _forward,
+      child: switch (_step) {
+        null => _menu(l),
+        'link' => _link(l),
+        final step => Column(
+          key: ValueKey('add-step-$step'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SheetStepTitle(
+              title: step == 'meal' ? l.addMeal : l.addReceipt,
+              onBack: () => _go(null),
             ),
+            PhotoSourceTiles(
+              camera: step == 'meal' ? l.mealSnap : l.receiptSnap,
+              onPick: (source) => _close(step, source),
+            ),
+          ],
+        ),
+      },
+    );
+  }
+
+  Widget _menu(AppLocalizations l) => ListView(
+    key: const ValueKey('add-step-menu'),
+    shrinkWrap: true, // as tall as its rows; scrolls on a small screen
+    padding: EdgeInsets.zero,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: spaceXs),
+        child: Center(
+          child: Text(
+            l.addTitle,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 20),
-          Row(
+        ),
+      ),
+      for (final (key, icon, title, hint, next) in [
+        ('link', Icons.link, l.addLink, l.addLinkHint, true),
+        (
+          'screenshot',
+          Icons.image_outlined,
+          l.addScreenshot,
+          l.addScreenshotHint,
+          false,
+        ),
+        (
+          'receipt',
+          Icons.receipt_long_outlined,
+          l.addReceipt,
+          l.addReceiptHint,
+          true,
+        ),
+        ('meal', Icons.restaurant_outlined, l.addMeal, l.addMealHint, true),
+        ('recipe', Icons.edit_note, l.addRecipe, l.addRecipeHint, false),
+      ])
+        ListTile(
+          key: ValueKey('add-$key'),
+          leading: Icon(icon),
+          title: Text(title),
+          subtitle: Text(hint),
+          onTap: () => next ? _go(key) : _close(key),
+        ),
+    ],
+  );
+
+  Widget _link(AppLocalizations l) {
+    final material = MaterialLocalizations.of(context);
+    return Column(
+      key: const ValueKey('add-step-link'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SheetStepTitle(title: l.addLink, onBack: () => _go(null)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(material.cancelButtonLabel),
+              TextField(
+                key: const ValueKey('add-link-field'),
+                controller: _field,
+                autofocus: true,
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.go,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _addLink(),
+                decoration: InputDecoration(
+                  labelText: l.linkFieldLabel,
+                  helperText: l.addLinkHint,
+                  helperMaxLines: 2,
+                  prefixIcon: const Icon(Icons.link, size: 20),
+                  suffixIcon: TextButton.icon(
+                    key: const ValueKey('add-link-paste'),
+                    onPressed: _paste,
+                    icon: const Icon(Icons.content_paste, size: 18),
+                    label: Text(material.pasteButtonLabel),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  key: const ValueKey('add-link-submit'),
-                  onPressed: _field.text.trim().isEmpty ? null : _add,
-                  child: Text(l.linkAdd),
-                ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(material.cancelButtonLabel),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      key: const ValueKey('add-link-submit'),
+                      onPressed: _field.text.trim().isEmpty ? null : _addLink,
+                      child: Text(l.linkAdd),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-Future<void> _addReceipt(BuildContext context) async {
+Future<void> _addReceipt(BuildContext context, ImageSource source) async {
   final l = AppLocalizations.of(context);
-  final source = await showPhotoSourceSheet(context, camera: l.receiptSnap);
-  if (source == null || !context.mounted) return;
   final repo = context.read<ReceiptsRepository>();
   final messenger = ScaffoldMessenger.of(context);
   final router = GoRouter.of(context);
@@ -204,11 +244,8 @@ Future<void> _addReceipt(BuildContext context) async {
   }
 }
 
-/// Camera or photos, then the estimate page; a saved meal lands on the Calories side, reloaded.
-Future<void> _addMeal(BuildContext context) async {
-  final l = AppLocalizations.of(context);
-  final source = await showPhotoSourceSheet(context, camera: l.mealSnap);
-  if (source == null || !context.mounted) return;
+/// The estimate page for the photo; a saved meal lands on the Calories side, reloaded.
+Future<void> _addMeal(BuildContext context, ImageSource source) async {
   // 1600 px is plenty to tell dishes apart and keeps the upload small.
   final picked = await ImagePicker().pickImage(
     source: source,

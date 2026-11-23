@@ -32,7 +32,9 @@ class AuthController extends ChangeNotifier {
     try {
       _set(AuthStatus.signedIn, await _repo.me());
     } on ApiException catch (e) {
-      if (e.status == 401) {
+      // ApiClient drops the tokens when the API refuses the refresh. Still holding them = the refresh itself failed
+      // (a server error, a timeout): the session is fine, so nothing is wiped.
+      if (e.status == 401 && !_repo.hasSession) {
         await _repo.clearLocal();
         _set(AuthStatus.signedOut, null);
       } else if (cached == null) {

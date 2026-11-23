@@ -1,3 +1,4 @@
+import 'market.dart';
 import 'rating.dart';
 
 /// Whether a branch edit is private to the caller or changes the shared branch (owner only).
@@ -327,7 +328,7 @@ class PlaceRestaurant {
       'restaurant', 'cafe', 'stall', 'mamak', 'kopitiam', //
       'food_court', 'bakery', 'dessert', 'fast_food',
     ],
-    'shop': ['grocery', 'market', 'mall'],
+    'shop': ['grocery', 'market', 'pasar_malam', 'pasar_tani', 'mall'],
     'attraction': ['museum', 'theme_park', 'landmark'],
     'stay': ['hotel', 'homestay', 'resort'],
     'outdoor': ['park', 'beach', 'waterfall', 'hiking'],
@@ -336,6 +337,9 @@ class PlaceRestaurant {
 
   /// Cuisine and halal only mean something for food.
   bool get isFood => category == 'food';
+
+  /// A pasar malam or pasar tani: it has weekly days.
+  bool get isMarket => marketKinds.contains(subcategory);
 }
 
 /// A branch's row in JAKIM's halal directory (halal.gov.my), found by the server's monthly check.
@@ -383,6 +387,7 @@ class Branch {
     this.rating = const RatingSummary(),
     this.halalCert,
     this.cover,
+    this.schedule = const [],
   });
 
   final String id;
@@ -408,6 +413,9 @@ class Branch {
   /// This outlet's own cover id (the owner's photo of it); null = none: the place's shows.
   final String? cover;
 
+  /// A market's weekly days; [] = not known yet.
+  final List<MarketDay> schedule;
+
   Branch copyWith({RatingSummary? rating}) => Branch(
     id: id,
     label: label,
@@ -420,6 +428,8 @@ class Branch {
     closed: closed,
     rating: rating ?? this.rating,
     halalCert: halalCert,
+    cover: cover,
+    schedule: schedule,
   );
 
   /// Set by hand in the app: shown, but not verified yet.
