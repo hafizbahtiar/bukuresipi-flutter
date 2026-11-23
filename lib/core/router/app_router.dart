@@ -27,6 +27,7 @@ import '../../features/credits/presentation/pages/credits_page.dart';
 import '../../features/family/presentation/pages/family_join_page.dart';
 import '../../features/family/presentation/pages/family_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/owner/presentation/pages/owner_hidden_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
 import '../../features/owner/presentation/pages/owner_reports_page.dart';
 import '../../features/owner/presentation/pages/owner_rating_bursts_page.dart';
@@ -224,6 +225,7 @@ GoRouter buildRouter(
             path: 'review-reports',
             builder: (_, _) => const OwnerReviewReportsPage(),
           ),
+          _page(path: 'hidden', builder: (_, _) => const OwnerHiddenPage()),
           _page(
             path: 'rating-bursts',
             builder: (_, _) => const OwnerRatingBurstsPage(),

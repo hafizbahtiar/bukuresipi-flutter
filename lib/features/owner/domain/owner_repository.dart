@@ -74,6 +74,14 @@ abstract interface class OwnerRepository {
   /// Takes a public recipe off Community (its open reports close as hidden). The author still sees it.
   Future<void> hideRecipe(String recipeId);
 
+  /// What the owner hid, last hidden first (the newest 100 of each).
+  Future<({List<HiddenRecipe> recipes, List<HiddenReview> reviews})>
+  hiddenContent();
+
+  Future<void> unhideRecipe(String recipeId);
+
+  Future<void> unhideReview(String reviewId);
+
   /// Searches the web for a catalogue dish's variants (metered) and replaces the stored list.
   /// complete = false: a usage cap stopped part of it.
   Future<({List<RecipeVariant> variants, bool complete})> findVariants(

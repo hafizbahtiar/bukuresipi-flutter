@@ -108,6 +108,42 @@ class BurstRating {
   final bool emailVerified;
 }
 
+/// A recipe the owner hid from Community. [public] false = its author has since made it private or family only.
+class HiddenRecipe {
+  const HiddenRecipe({
+    required this.id,
+    required this.name,
+    this.owner,
+    required this.public,
+    required this.hiddenAt,
+  });
+
+  final String id;
+  final String name;
+  final String? owner;
+  final bool public;
+  final DateTime hiddenAt;
+}
+
+/// A review the owner hid. [text] null = its author removed it; the hide still applies to their next one.
+class HiddenReview {
+  const HiddenReview({
+    required this.id,
+    required this.stars,
+    this.text,
+    required this.author,
+    required this.place,
+    required this.hiddenAt,
+  });
+
+  final String id;
+  final int stars;
+  final String? text;
+  final String author;
+  final String place;
+  final DateTime hiddenAt;
+}
+
 class ReviewReportGroup {
   const ReviewReportGroup({
     required this.reviewId,
