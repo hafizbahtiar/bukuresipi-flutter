@@ -399,6 +399,8 @@ class PlacesController extends ChangeNotifier {
   }
 
   /// Owner only: the company behind a branch's certificate ([refresh]: read again now). Throws ApiException.
+  Future<List<MenuPrice>> prices(String placeId) => _repo.prices(placeId);
+
   Future<PlaceCompanies> placeCompanies(String placeId) =>
       _repo.placeCompanies(placeId);
 

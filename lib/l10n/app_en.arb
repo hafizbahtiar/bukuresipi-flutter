@@ -1008,8 +1008,11 @@
     }
   },
   "placeSubPasarMalam": "Pasar malam",
+  "@placeSubPasarMalam": {},
   "placeSubPasarTani": "Pasar tani",
+  "@placeSubPasarTani": {},
   "marketsNearTitle": "Pasar near you today",
+  "@marketsNearTitle": {},
   "marketOpenUntil": "Open now · until {time}",
   "@marketOpenUntil": {
     "placeholders": {
@@ -1019,26 +1022,47 @@
     }
   },
   "marketNotToday": "Not on today",
+  "@marketNotToday": {},
   "marketDaysTitle": "Market days",
+  "@marketDaysTitle": {},
   "marketDaysUnknown": "Days not known yet.",
+  "@marketDaysUnknown": {},
   "marketDaysHelp": "The usual weekly days and hours, Malaysia time. Leave empty when not known.",
+  "@marketDaysHelp": {},
   "marketDayField": "Day",
+  "@marketDayField": {},
   "marketOpens": "Opens",
+  "@marketOpens": {},
   "marketCloses": "Closes",
+  "@marketCloses": {},
   "marketPastMidnight": "Closes after midnight",
+  "@marketPastMidnight": {},
   "marketAddDay": "Add day",
+  "@marketAddDay": {},
   "marketSaveDays": "Save days",
+  "@marketSaveDays": {},
   "marketSavingDays": "Saving…",
+  "@marketSavingDays": {},
   "marketDaysSaved": "Market days saved.",
+  "@marketDaysSaved": {},
   "marketDayTwice": "Two rows have the same day and opening time.",
+  "@marketDayTwice": {},
   "marketSameTime": "Opening and closing time can't be the same.",
+  "@marketSameTime": {},
   "branchTabDays": "Days",
+  "@branchTabDays": {},
   "legendMarket": "Pasar",
+  "@legendMarket": {},
   "legendMarketHint": "A pasar malam or pasar tani, drawn along its street or ground when known.",
+  "@legendMarketHint": {},
   "ownerHidden": "Hidden content",
+  "@ownerHidden": {},
   "ownerHiddenEmpty": "Nothing is hidden.",
+  "@ownerHiddenEmpty": {},
   "ownerHiddenRecipes": "Recipes",
+  "@ownerHiddenRecipes": {},
   "ownerHiddenReviews": "Reviews",
+  "@ownerHiddenReviews": {},
   "ownerHiddenOn": "Hidden {date}",
   "@ownerHiddenOn": {
     "placeholders": {
@@ -1048,11 +1072,17 @@
     }
   },
   "ownerHiddenNotPublic": "Not public now",
+  "@ownerHiddenNotPublic": {},
   "ownerHiddenTextRemoved": "The author removed this text.",
+  "@ownerHiddenTextRemoved": {},
   "ownerUnhide": "Show again",
+  "@ownerUnhide": {},
   "ownerUnhiding": "Showing…",
+  "@ownerUnhiding": {},
   "ownerUnhideRecipeConfirm": "Stop hiding this recipe? If it is still public, it returns to Community.",
+  "@ownerUnhideRecipeConfirm": {},
   "ownerUnhideReviewConfirm": "Stop hiding this person's review? Its current text, or what they write next, can be read by everyone.",
+  "@ownerUnhideReviewConfirm": {},
   "ownerReviewReportReasons": "Reasons: {reasons}",
   "@ownerReviewReportReasons": {
     "placeholders": {
@@ -3288,6 +3318,18 @@
       }
     }
   },
+  "pricesTitle": "Prices",
+  "@pricesTitle": {},
+  "pricesPeople": "{count} people paid this",
+  "@pricesPeople": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pricesNote": "From receipts people confirmed in the last 12 months, the middle price of one piece. Prices may have changed.",
+  "@pricesNote": {},
   "shareSendScreenshot": "Send a screenshot",
   "@shareSendScreenshot": {},
   "spendingBudget": "Monthly food budget",

@@ -65,6 +65,9 @@ class BranchSuggestion {
 /// Owner, Edit branch > Halal: the company behind the branch's JAKIM certificate. [status] only after a refresh:
 /// ok | unavailable (JAKIM down, the stored info kept) | none (no certificate or company).
 /// Owner, Edit place > Company: each certified branch with its company (each refreshed with its branch's call).
+/// A dish's price at a place: the median of one piece from [people]'s confirmed receipts (3+, last 12 months).
+typedef MenuPrice = ({String name, int priceSen, int people});
+
 typedef PlaceCompanies =
     List<({String branchId, String? label, BranchCompany info})>;
 

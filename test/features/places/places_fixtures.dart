@@ -276,6 +276,12 @@ class FakePlaces implements PlacesRepository {
   /// `get:ID` / `refresh:ID` per company call.
   final companyCalls = <String>[];
 
+  /// What [prices] answers.
+  List<MenuPrice> pricesList = const [];
+
+  @override
+  Future<List<MenuPrice>> prices(String placeId) async => pricesList;
+
   /// What [placeCompanies] answers.
   PlaceCompanies placeCompaniesList = const [];
 

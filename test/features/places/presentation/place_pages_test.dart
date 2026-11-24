@@ -320,6 +320,32 @@ void main() {
     expect(more, findsNothing);
   });
 
+  testWidgets('prices from receipts: a section only when the server has some', (
+    t,
+  ) async {
+    repo = FakePlaces()..places = [place(id: 'a')];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('place-tab-prices')), findsNothing);
+
+    await t.pumpWidget(const SizedBox()); // a fresh page, not the same state
+    repo = FakePlaces()
+      ..places = [place(id: 'a')]
+      ..pricesList = [
+        (name: 'TEH AIS', priceSen: 350, people: 3),
+        (
+          name: 'Nasi Lemak Ayam Goreng Berempah Special',
+          priceSen: 1250,
+          people: 12,
+        ),
+      ];
+    await pump(t, const PlaceDetailPage(id: 'a'));
+    await t.pumpAndSettle();
+    await tapKey(t, 'place-tab-prices');
+    expect(find.text('RM 3.50'), findsOneWidget);
+    expect(find.text('3 people paid this'), findsOneWidget);
+  });
+
   testWidgets('make this my branch: another branch of a saved place', (
     t,
   ) async {
