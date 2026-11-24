@@ -10,6 +10,21 @@ import '../places_fixtures.dart';
 
 void main() {
   _signOutDuringLoad();
+  test('a load asked for while one runs: one more after it, and its caller waits for the newer list', () async {
+    final held = Completer<void>();
+    final repo = FakePlaces()
+      ..places = [place(id: 'a')]
+      ..hold = held;
+    final places = PlacesController(repo);
+    unawaited(places.load()); // reads the list before the save below
+    repo.places = [place(id: 'a'), place(id: 'b')]; // saved meanwhile
+    final after = places.load();
+    unawaited(places.load()); // several asks = one more load, not several
+    held.complete();
+    await after;
+    expect(places.places.map((p) => p.id), ['a', 'b']);
+    expect(repo.lists, 2);
+  });
   test('load fills the list; a failed load keeps what was there and shows the error', () async {
     final repo = FakePlaces()
       ..places = [place(id: 'a'), place(id: 'b', lat: null)];

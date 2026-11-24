@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/features/places/domain/market.dart';
@@ -158,10 +160,20 @@ class FakePlaces implements PlacesRepository {
   final reports = <ReportDraft>[];
   Object? reportError;
 
+  /// How many times [list] was asked; [hold] keeps the next answer waiting until completed.
+  int lists = 0;
+  Completer<void>? hold;
+
   @override
   Future<List<Place>> list() async {
+    lists++;
+    final snapshot = places;
+    if (hold case final h?) {
+      hold = null;
+      await h.future;
+    }
     if (error != null) throw error!;
-    return places;
+    return snapshot;
   }
 
   @override

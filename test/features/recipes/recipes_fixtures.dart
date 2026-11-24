@@ -157,9 +157,20 @@ class FakeRecipes implements RecipesRepository {
 
   @override
   Future<List<Recipe>> list({bool family = false}) async {
+    if (!family) lists++;
+    final snapshot = family ? this.family : recipes;
+    final h = family ? null : hold;
+    if (h != null) {
+      hold = null;
+      await h.future;
+    }
     if (error != null) throw error!;
-    return family ? this.family : recipes;
+    return snapshot;
   }
+
+  /// How many times the user's own list was asked; [hold] keeps its next answer waiting until completed.
+  int lists = 0;
+  Completer<void>? hold;
 
   @override
   Future<({List<Recipe> recipes, String? next})> community({

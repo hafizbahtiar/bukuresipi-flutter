@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../../../core/utils/image_fit.dart';
 import '../../../core/utils/image_type.dart';
 import '../../../core/utils/log.dart';
 import '../../../core/network/api_exception.dart';
@@ -42,7 +43,9 @@ class ShareRepositoryImpl implements ShareRepository {
       });
 
   @override
-  Future<String> submitImage(String path) async {
+  Future<String> submitImage(String shared) async {
+    // An image from another app's share sheet comes full size: shrunk like the app's own picks (the AI reads it).
+    final path = await fitImage(shared, maxBytes: maxImageBytes);
     final subtype =
         await imageSubtype(path) ?? _types[path.split('.').last.toLowerCase()];
     if (subtype == null) throw const ApiException('invalid_image');

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/recipes/presentation/recipes_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +7,22 @@ import 'package:flutter_test/flutter_test.dart';
 import '../recipes_fixtures.dart';
 
 void main() {
+  test('a load asked for while one runs: one more after it, and its caller waits for the newer list', () async {
+    final held = Completer<void>();
+    final repo = FakeRecipes()
+      ..recipes = [recipe(id: 'a')]
+      ..hold = held;
+    final recipes = RecipesController(repo);
+    unawaited(recipes.load()); // reads the list before the save below
+    repo.recipes = [recipe(id: 'a'), recipe(id: 'b')]; // saved meanwhile
+    final after = recipes.load();
+    unawaited(recipes.load());
+    held.complete();
+    await after;
+    expect(recipes.recipes.map((r) => r.id), ['a', 'b']);
+    expect(repo.lists, 2);
+  });
+
   test('load keeps the recipes and marks the list loaded', () async {
     final repo = FakeRecipes()..recipes = [recipe(id: 'a'), recipe(id: 'b')];
     final controller = RecipesController(repo);

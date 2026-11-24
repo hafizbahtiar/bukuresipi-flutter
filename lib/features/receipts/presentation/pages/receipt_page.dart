@@ -55,6 +55,17 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
   Object? _error;
   Timer? _timer;
   int _polls = 0;
+
+  /// [poll] for the first minute (a read takes seconds), then 5x slower to ~5 minutes. Past that a read still going
+  /// is checked once a minute; calories alone stop (the cron may take up to a day): they show on the next open.
+  Duration? _nextPoll({required bool reading, required bool calories}) {
+    if (!reading && !calories) return null;
+    final n = _polls++;
+    if (n < 20) return widget.poll;
+    if (n < 36) return widget.poll * 5;
+    return reading ? widget.poll * 20 : null;
+  }
+
   final _total = TextEditingController();
   DateTime? _at;
   String? _branchId; // a place picked by the user, when the read found none
@@ -194,9 +205,9 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
         }
       });
       _timer?.cancel(); // one poll at a time (a segment switch also reloads)
-      // [poll] for the first minute (a read takes seconds), then 5x slower: calories can wait on the cron for long.
-      if (r.reading || r.caloriesPending) {
-        _timer = Timer(_polls++ < 20 ? widget.poll : widget.poll * 5, _load);
+      if (_nextPoll(reading: r.reading, calories: r.caloriesPending)
+          case final wait?) {
+        _timer = Timer(wait, _load);
       }
     } catch (e) {
       if (!mounted) return;
@@ -204,9 +215,13 @@ class _ReceiptPageState extends State<ReceiptPage> with WidgetsBindingObserver {
       final blip =
           e is ApiException &&
           (e.code == ApiException.network || (e.status ?? 0) >= 500);
-      if (blip && (_r?.reading == true || _r?.caloriesPending == true)) {
+      final wait = _nextPoll(
+        reading: _r?.reading == true,
+        calories: _r?.caloriesPending == true,
+      );
+      if (blip && wait != null) {
         _timer?.cancel();
-        _timer = Timer(_polls++ < 20 ? widget.poll : widget.poll * 5, _load);
+        _timer = Timer(wait, _load);
         return;
       }
       setState(() => _error = e);

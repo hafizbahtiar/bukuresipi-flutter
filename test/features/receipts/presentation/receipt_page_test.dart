@@ -57,6 +57,22 @@ void main() {
     await t.pump();
   }
 
+  testWidgets(
+    'calories still pending: checked for ~5 minutes, then left for the next open',
+    (t) async {
+      final repo = FakeReceipts()
+        ..answers = [receipt(status: 'saved', caloriesPending: true)];
+      await pump(t, repo);
+      // 20 polls at 10 ms, then 16 at 50 ms (the test's [poll]), then none.
+      for (var i = 0; i < 60; i++) {
+        await t.pump(const Duration(milliseconds: 50));
+      }
+      expect(repo.gets, 37);
+      await t.pump(const Duration(seconds: 10));
+      expect(repo.gets, 37);
+    },
+  );
+
   testWidgets('waits while reading, then the user checks the total and saves', (
     t,
   ) async {

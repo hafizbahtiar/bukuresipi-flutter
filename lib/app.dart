@@ -10,6 +10,7 @@ import 'core/router/app_router.dart';
 import 'core/settings/locale_controller.dart';
 import 'core/settings/theme_controller.dart';
 import 'core/theme/app_theme.dart';
+import 'features/family/presentation/family_controller.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/auth/presentation/auth_controller.dart';
 import 'features/places/presentation/places_controller.dart';
@@ -19,6 +20,7 @@ import 'features/recipes/presentation/recipes_controller.dart';
 import 'features/shares/domain/share_repository.dart';
 import 'features/shares/presentation/recent_shares.dart';
 import 'features/shares/presentation/share_intake.dart';
+import 'features/shopping/presentation/shopping_controller.dart';
 import 'l10n/gen/app_localizations.dart';
 
 class BukuresipiApp extends StatefulWidget {
@@ -69,7 +71,14 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
 
   /// Android shows no system notification while the app is open, so the app says it itself.
   void _foreground(ForegroundPush push) {
-    _reload();
+    // Only a share read or a family change changes the lists; a badge or a reminder doesn't.
+    if (push.data['shareId'] != null) _reload();
+    if (push.data['type'] == 'family') {
+      // Joined, removed or made owner: the family, its shared list, places and recipes.
+      this.context.read<FamilyController?>()?.load();
+      this.context.read<ShoppingController>().load();
+      _reload();
+    }
     final title = push.title;
     final context = _messenger.currentContext;
     if (title == null || context == null) return;
