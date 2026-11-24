@@ -589,6 +589,21 @@ class PlacesRepositoryImpl implements PlacesRepository {
       });
 
   @override
+  Future<List<MenuPrice>> prices(String placeId) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/places/restaurants/$placeId/prices',
+    )).data!;
+    return [
+      for (final i in (j['items'] as List).cast<Map<String, dynamic>>())
+        (
+          name: i['name'] as String,
+          priceSen: i['priceSen'] as int,
+          people: i['people'] as int,
+        ),
+    ];
+  });
+
+  @override
   Future<PlaceCompanies> placeCompanies(String placeId) => apiCall(() async {
     final j = (await _dio.get<Map<String, dynamic>>(
       '/places/restaurants/$placeId/halal-companies',

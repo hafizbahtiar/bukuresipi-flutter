@@ -120,6 +120,9 @@ abstract interface class PlacesRepository {
   /// Owner: every certified branch of a place with its company.
   Future<PlaceCompanies> placeCompanies(String placeId);
 
+  /// Menu prices from people's confirmed receipts; empty until 3 people paid for a dish.
+  Future<List<MenuPrice>> prices(String placeId);
+
   Future<BranchCompany> branchCompany(String branchId, {bool refresh = false});
 
   /// Owner: "Same company as…": [branchId] (certified) takes branch [from]'s company (same place).
