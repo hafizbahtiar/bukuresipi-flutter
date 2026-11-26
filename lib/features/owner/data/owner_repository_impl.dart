@@ -393,6 +393,43 @@ class OwnerRepositoryImpl implements OwnerRepository {
   );
 
   @override
+  Future<List<CatalogueSuggestion>> catalogueSuggestions() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/owner/catalogue/suggestions',
+    )).data!;
+    return [
+      for (final s in (j['suggestions'] as List).cast<Map<String, dynamic>>())
+        (
+          name: s['name'] as String,
+          ingredient: s['ingredient'] as String?,
+          recipes: s['recipes'] as int,
+          sample: s['sample'] as String,
+        ),
+    ];
+  });
+
+  @override
+  Future<int> resolveSuggestion(String name, PickRef target) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/owner/catalogue/suggestions/resolve',
+          data: {
+            'name': name,
+            target.kind == 'brand' ? 'brandId' : 'productId': target.id,
+          },
+        )).data!;
+        return j['linked'] as int;
+      });
+
+  @override
+  Future<void> dismissSuggestion(String name) => apiCall(
+    () => _dio.post<void>(
+      '/owner/catalogue/suggestions/dismiss',
+      data: {'name': name},
+    ),
+  );
+
+  @override
   Future<({int saved, int linked})> addAliases(
     List<({String ingredient, String alias})> items,
   ) => apiCall(() async {

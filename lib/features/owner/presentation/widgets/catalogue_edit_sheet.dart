@@ -40,7 +40,17 @@ class CatalogueEditSheet extends StatefulWidget {
     this.row,
     this.countries = const [],
     this.units = const [],
+    this.initialName,
+    this.initialIngredient,
+    this.onSaved,
   });
+
+  /// A new row's name (and a product's ingredient and fill), e.g. from a recipe author's suggestion.
+  final String? initialName;
+  final String? initialIngredient;
+
+  /// The name as saved, just before the sheet closes with 'saved'.
+  final void Function(String name)? onSaved;
 
   final CatalogueKind kind;
 
@@ -82,6 +92,11 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   void initState() {
     super.initState();
     _show(widget.row);
+    if (widget.row == null) {
+      _name.text = widget.initialName ?? '';
+      _fillFrom.text = widget.initialName ?? '';
+      _ingredient.text = widget.initialIngredient ?? '';
+    }
     _loadPickers();
     // "New brand: X. Added when you save." shows only while no brand is picked.
     _brand.addListener(() => setState(() {}));
@@ -307,6 +322,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             unit: _orNull(_unit),
           );
       }
+      widget.onSaved?.call(name);
       if (mounted) Navigator.of(context).pop('saved');
     } on ApiException catch (e) {
       if (!mounted) return;

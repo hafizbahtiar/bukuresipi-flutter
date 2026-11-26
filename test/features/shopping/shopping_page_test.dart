@@ -3,6 +3,7 @@ import 'package:bukuresipi_flutter/features/shopping/domain/shopping.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/pages/shopping_page.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/shopping_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -170,6 +171,43 @@ void main() {
     await pump(t);
     expect(find.text('Your brand: Jati'), findsOneWidget);
   });
+
+  testWidgets(
+    "a picked line says what the recipe uses and the reader's brand under it",
+    (t) async {
+      repo.items = const [
+        ShoppingItem(
+          id: 'i1',
+          text: '200 ml santan',
+          done: false,
+          ingredient: 'Santan',
+          recipes: [(id: 'r-1', name: 'Lemak')],
+          pick: LinePick(
+            kind: 'product',
+            id: 7,
+            name: 'Kara UHT 200ml',
+            brand: 'Kara',
+            avoided: true,
+          ),
+          products: [
+            ShoppingProduct(
+              name: 'Ayam Brand Santan',
+              brand: 'Ayam Brand',
+              mine: true,
+            ),
+          ],
+        ),
+      ];
+      await pump(t);
+      expect(find.textContaining('Recipe uses Kara UHT 200ml'), findsOneWidget);
+      expect(
+        find.textContaining('Ayam Brand Santan'),
+        findsNothing,
+      ); // the pick replaces the e.g. hint
+      expect(find.text('Avoided'), findsOneWidget);
+      expect(find.text('Your brand: Ayam Brand'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'typing 2+ letters suggests catalogue names; tapping one adds it',

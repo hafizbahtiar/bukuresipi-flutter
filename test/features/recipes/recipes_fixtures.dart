@@ -281,6 +281,31 @@ class FakeRecipes implements RecipesRepository {
   /// The optional switches sent with each create/edit, in order.
   final optionals = <Map<int, bool>>[];
 
+  /// The picks sent with each create/edit, in order.
+  final picksSent = <Map<int, PickRef?>>[];
+
+  /// The picker's answer, and each (ingredient, query) asked.
+  PickChoices pickAnswer = (products: const [], brands: const []);
+  final picksAsked = <(String?, String?)>[];
+  Object? picksError;
+
+  @override
+  Future<PickChoices> picks({String? ingredient, String? query}) async {
+    picksAsked.add((ingredient, query));
+    if (picksError case final e?) throw e;
+    return pickAnswer;
+  }
+
+  /// (recipe id, line, name) per suggestion sent.
+  final suggestions = <(String, String, String)>[];
+  Object? suggestError;
+
+  @override
+  Future<void> suggestPick(String id, String line, String name) async {
+    if (suggestError case final e?) throw e;
+    suggestions.add((id, line, name));
+  }
+
   final created = <(String, List<String>, List<String>)>[];
 
   final servingsSent = <int?>[];
@@ -291,8 +316,10 @@ class FakeRecipes implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
+    picksSent.add(picks);
     created.add((name, ingredients, steps));
     servingsSent.add(servings);
     optionals.add(optional);
@@ -306,8 +333,10 @@ class FakeRecipes implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
+    picksSent.add(picks);
     edited.add((id, name, ingredients, steps));
     servingsSent.add(servings);
     optionals.add(optional);

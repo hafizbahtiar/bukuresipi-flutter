@@ -314,6 +314,29 @@ class FakeOwner implements OwnerRepository {
   }
 
   @override
+  Future<List<CatalogueSuggestion>> catalogueSuggestions() async =>
+      suggestionList;
+
+  List<CatalogueSuggestion> suggestionList = const [];
+  final resolvedSuggestions = <(String, PickRef)>[];
+  final dismissed = <String>[];
+
+  @override
+  Future<int> resolveSuggestion(String name, PickRef target) async {
+    resolvedSuggestions.add((name, target));
+    final linked =
+        suggestionList.where((s) => s.name == name).firstOrNull?.recipes ?? 0;
+    suggestionList = [...suggestionList.where((s) => s.name != name)];
+    return linked;
+  }
+
+  @override
+  Future<void> dismissSuggestion(String name) async {
+    dismissed.add(name);
+    suggestionList = [...suggestionList.where((s) => s.name != name)];
+  }
+
+  @override
   Future<({int saved, int linked})> addAliases(
     List<({String ingredient, String alias})> items,
   ) async {

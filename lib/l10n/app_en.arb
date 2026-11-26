@@ -3839,5 +3839,87 @@
   "brandsFindIngredient": "Ingredient",
   "@brandsFindIngredient": {},
   "brandsNoProducts": "No products for this ingredient yet.",
-  "@brandsNoProducts": {}
+  "@brandsNoProducts": {},
+  "recipePickNone": "Brand: none",
+  "@recipePickNone": {},
+  "recipePickAny": "Any {brand}",
+  "@recipePickAny": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "recipePickTitle": "Which product or brand?",
+  "@recipePickTitle": {},
+  "recipePickSearch": "Find a brand",
+  "@recipePickSearch": {},
+  "recipePickSuggest": "Not listed? Suggest it",
+  "@recipePickSuggest": {},
+  "recipePickSuggestHint": "We add it to the catalogue, then this line gets it. Only you and us see what you send.",
+  "@recipePickSuggestHint": {},
+  "recipePickSuggestName": "Brand or product name",
+  "@recipePickSuggestName": {},
+  "recipePickSend": "Send",
+  "@recipePickSend": {},
+  "recipePickSuggested": "Suggested: {name}",
+  "@recipePickSuggested": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errPickMismatch": "That product is for another ingredient. Pick again on the changed line.",
+  "@errPickMismatch": {},
+  "errPickUnknown": "That product or brand is gone from the catalogue. Pick another.",
+  "@errPickUnknown": {},
+  "errSuggestionFull": "You have 20 suggestions waiting already. Try again once some are added.",
+  "@errSuggestionFull": {},
+  "shoppingPicked": "Recipe uses {name}",
+  "@shoppingPicked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogueSuggested": "Suggested by recipe authors",
+  "@catalogueSuggested": {},
+  "catalogueSuggestedRecipes": "{count, plural, =1{1 recipe} other{{count} recipes}}",
+  "@catalogueSuggestedRecipes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueSuggestedEmpty": "No suggestions waiting.",
+  "@catalogueSuggestedEmpty": {},
+  "catalogueAddAsBrand": "Add as a brand",
+  "@catalogueAddAsBrand": {},
+  "catalogueAddAsProduct": "Add as a product",
+  "@catalogueAddAsProduct": {},
+  "catalogueLinkExisting": "Link to one in the catalogue",
+  "@catalogueLinkExisting": {},
+  "catalogueDismiss": "Dismiss",
+  "@catalogueDismiss": {},
+  "catalogueLinked": "{count, plural, =0{No line still needed it} =1{Linked to 1 line} other{Linked to {count} lines}}",
+  "@catalogueLinked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipePickSaveFirst": "Save the recipe first to suggest a brand that is not listed.",
+  "@recipePickSaveFirst": {},
+  "catalogueSuggestedWaiting": "{count, plural, =1{1 suggestion from recipes} other{{count} suggestions from recipes}}",
+  "@catalogueSuggestedWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

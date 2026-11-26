@@ -168,6 +168,7 @@ class RecipesController extends ChangeNotifier {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
     final saved = await _repo.create(
@@ -175,6 +176,7 @@ class RecipesController extends ChangeNotifier {
       ingredients: ingredients,
       steps: steps,
       optional: optional,
+      picks: picks,
       servings: servings,
     );
     unawaited(load());
@@ -187,6 +189,7 @@ class RecipesController extends ChangeNotifier {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
     final saved = await _repo.edit(
@@ -195,11 +198,20 @@ class RecipesController extends ChangeNotifier {
       ingredients: ingredients,
       steps: steps,
       optional: optional,
+      picks: picks,
       servings: servings,
     );
     unawaited(load());
     return saved;
   }
+
+  /// The recipe editor's picker. Throws ApiException.
+  Future<PickChoices> picks({String? ingredient, String? query}) =>
+      _repo.picks(ingredient: ingredient, query: query);
+
+  /// Throws ApiException.
+  Future<void> suggestPick(String id, String line, String name) =>
+      _repo.suggestPick(id, line, name);
 
   /// Throws ApiException.
   Future<({List<Recipe> recipes, String? next})> community({

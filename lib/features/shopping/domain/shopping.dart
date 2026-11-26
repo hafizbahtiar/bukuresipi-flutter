@@ -1,3 +1,5 @@
+import '../../recipes/domain/recipe.dart';
+
 /// One line on the user's shopping checklist.
 class ShoppingItem {
   const ShoppingItem({
@@ -8,7 +10,11 @@ class ShoppingItem {
     this.category,
     this.recipes = const [],
     this.products = const [],
+    this.pick,
   });
+
+  /// The recipe line's product or brand, copied when the recipe was added; null = none.
+  final LinePick? pick;
 
   final String id;
   final String text;

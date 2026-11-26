@@ -127,6 +127,15 @@ abstract interface class OwnerRepository {
     List<({String ingredient, String alias})> items,
   );
 
+  /// Open suggestions from recipe lines, most recipes first.
+  Future<List<CatalogueSuggestion>> catalogueSuggestions();
+
+  /// [name] is now in the catalogue as [target]: each suggesting line still worded so and without a pick gets it.
+  /// Returns how many lines were linked; all of the name's suggestions are closed.
+  Future<int> resolveSuggestion(String name, PickRef target);
+
+  Future<void> dismissSuggestion(String name);
+
   /// A new catalogue ingredient; every unlinked line is matched again: how many it linked. Throws 'name_taken'.
   Future<int> addIngredient(String name, String category);
 
