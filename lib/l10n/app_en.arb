@@ -3791,9 +3791,9 @@
       }
     }
   },
-  "catalogueFillFrom": "Barcode or store link",
+  "catalogueFillFrom": "Barcode, store link or product name",
   "@catalogueFillFrom": {},
-  "catalogueFillHint": "Fills the form from Open Food Facts or the store's page. Check it, then save.",
+  "catalogueFillHint": "Fills the form from Open Food Facts, the store's page, or a web search for the name. Check it, then save.",
   "@catalogueFillHint": {},
   "catalogueFill": "Fill",
   "@catalogueFill": {},
@@ -3805,7 +3805,7 @@
       }
     }
   },
-  "catalogueFillNotFound": "No product with that barcode on Open Food Facts.",
+  "catalogueFillNotFound": "No product found for that.",
   "@catalogueFillNotFound": {},
   "catalogueFillUnreadable": "No product found on that page.",
   "@catalogueFillUnreadable": {},
@@ -3818,5 +3818,16 @@
     }
   },
   "catalogueAddBrand": "Add brand",
-  "@catalogueAddBrand": {}
+  "@catalogueAddBrand": {},
+  "catalogueMadeBy": "Made by {maker} (from {site})",
+  "@catalogueMadeBy": {
+    "placeholders": {
+      "maker": {
+        "type": "String"
+      },
+      "site": {
+        "type": "String"
+      }
+    }
+  }
 }

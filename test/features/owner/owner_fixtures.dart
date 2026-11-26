@@ -273,11 +273,20 @@ class FakeOwner implements OwnerRepository {
     ingredient: 'Santan',
     aiIngredient: true,
     source: 'https://www.jayagrocer.com/products/kara-uht-coconut-cream-200ml',
+    maker: (
+      name: 'PT Kara Santan Pertama',
+      country: 'Indonesia',
+      source: 'https://kara.test/about',
+    ),
   );
 
   @override
-  Future<ProductFill> fillProduct({String? barcode, String? url}) async {
-    fills.add(barcode ?? url!);
+  Future<ProductFill> fillProduct({
+    String? barcode,
+    String? url,
+    String? name,
+  }) async {
+    fills.add(barcode ?? url ?? name!);
     if (barcode == '0000000000000') {
       throw const ApiException('not_found', status: 404);
     }
@@ -381,6 +390,12 @@ class FakeOwner implements OwnerRepository {
       throw const ApiException('name_taken', status: 409);
     }
     savedRows.add(('makers', id, {'name': name}));
+    if (id == null) {
+      makerList = [
+        ...makerList,
+        CatalogueMaker(id: 800 + makerList.length, name: name),
+      ];
+    }
   }
 
   @override

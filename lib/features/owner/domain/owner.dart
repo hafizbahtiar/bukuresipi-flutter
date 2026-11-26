@@ -411,8 +411,9 @@ typedef CataloguePage<T> = ({List<T> items, int? next});
 /// An alias the AI proposed for a catalogue [ingredient]; [lines] = unlinked lines it would link now.
 typedef AliasSuggestion = ({String ingredient, String alias, int lines});
 
-/// A product form filled from a barcode or store link (nothing saved). [brandIsNew]: the catalogue has no such
-/// brand yet; [aiIngredient]: the AI named the ingredient; [source]: the page the fields came from.
+/// A product form filled from a barcode, a store link or a name (nothing saved). [brandIsNew]: the catalogue has no
+/// such brand yet; [aiIngredient]: the AI named the ingredient; [source]: the page the fields came from; [maker]: a
+/// new brand's maker as a page names it (its country when the page says), null = not found.
 typedef ProductFill = ({
   String name,
   String? brand,
@@ -422,4 +423,5 @@ typedef ProductFill = ({
   String? ingredient,
   bool aiIngredient,
   String source,
+  ({String name, String? country, String source})? maker,
 });

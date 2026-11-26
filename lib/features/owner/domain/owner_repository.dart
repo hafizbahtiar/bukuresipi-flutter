@@ -160,9 +160,10 @@ abstract interface class OwnerRepository {
     String? country,
   });
 
-  /// Fills a product form from a [barcode] (Open Food Facts) or a store [url]; one of the two. Nothing saved.
-  /// Throws 'not_found' (an unknown barcode), 'unreadable' (no product on that page).
-  Future<ProductFill> fillProduct({String? barcode, String? url});
+  /// Fills a product form from a [barcode] (Open Food Facts), a store [url] or a product [name] (web search); one
+  /// of the three. Nothing saved. Throws 'not_found' (an unknown barcode, no store page for the name),
+  /// 'unreadable' (no product on that page), 'ai_unavailable' (no search left).
+  Future<ProductFill> fillProduct({String? barcode, String? url, String? name});
 
   Future<void> saveProduct({
     int? id,

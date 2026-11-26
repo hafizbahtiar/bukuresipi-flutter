@@ -731,12 +731,27 @@ void main() {
         expect(find.byType(AiBadge), findsOneWidget); // on the ingredient
         expect(repo.savedRows, isEmpty); // nothing saved by the fill
 
+        expect(
+          find.text(
+            'Made by PT Kara Santan Pertama, Indonesia (from kara.test)',
+          ),
+          findsOneWidget,
+        );
         await t.tap(find.byKey(const ValueKey('catalogue-add-brand')));
         await t.pumpAndSettle();
         expect(find.text('New brand: Kara'), findsNothing);
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
-        expect(repo.savedRows.map((r) => r.$1), ['brands', 'products']);
+        expect(repo.savedRows.map((r) => r.$1), [
+          'makers',
+          'brands',
+          'products',
+        ]);
+        expect(repo.savedRows[1].$3, {
+          'name': 'Kara',
+          'makerId': 801,
+          'country': 'Indonesia',
+        });
         expect(repo.savedRows.last.$3, {
           'name': 'Kara UHT Coconut Cream 200ml',
           'ingredient': 'Santan',
@@ -755,10 +770,7 @@ void main() {
         );
         await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
         await t.pumpAndSettle();
-        expect(
-          find.text('No product with that barcode on Open Food Facts.'),
-          findsOneWidget,
-        );
+        expect(find.text('No product found for that.'), findsOneWidget);
       },
     );
 

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/ai_button.dart';
 import '../../../../core/widgets/base.dart';
@@ -122,10 +123,13 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     if (from.isEmpty) return;
     setState(() => _filling = true);
     try {
+      // Digits = a barcode; a link = its page; anything else = a product name to search for.
       final barcode = RegExp(r'^\d{8,14}$').hasMatch(from);
+      final link = from.startsWith(RegExp('https?://'));
       final f = await _repo.fillProduct(
         barcode: barcode ? from : null,
-        url: barcode ? null : from,
+        url: link ? from : null,
+        name: barcode || link ? null : from,
       );
       if (!mounted) return;
       setState(() {
@@ -160,13 +164,32 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     }
   }
 
-  /// The filled product's brand is new: add it by its name (maker and country are filled in Brands), then pick it.
+  /// The filled product's brand is new: add it (with the maker and country a page named, else by its name only:
+  /// they are filled in Brands), then pick it.
   Future<void> _addBrand(String name) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final maker = _fill?.maker;
     setState(() => _busy = true);
     try {
-      await _repo.saveBrand(name: name);
+      int? makerId;
+      if (maker != null) {
+        Future<int?> find() async =>
+            (await _repo.makers(query: maker.name)).items
+                .where((m) => m.name.toLowerCase() == maker.name.toLowerCase())
+                .firstOrNull
+                ?.id;
+        makerId = await find();
+        if (makerId == null) {
+          await _repo.saveMaker(name: maker.name);
+          makerId = await find();
+        }
+      }
+      await _repo.saveBrand(
+        name: name,
+        makerId: makerId,
+        country: maker?.country,
+      );
     } on ApiException catch (e) {
       // Added meanwhile: pick it all the same.
       if (e.code != 'name_taken') {
@@ -389,7 +412,26 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
               gap,
               Row(
                 children: [
-                  Expanded(child: Text(l.catalogueNewBrand(f.brand!))),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l.catalogueNewBrand(f.brand!)),
+                        if (f.maker case final m?)
+                          Text(
+                            l.catalogueMadeBy(
+                              m.country == null
+                                  ? m.name
+                                  : '${m.name}, ${m.country}',
+                              Uri.tryParse(m.source)?.host ?? m.source,
+                            ),
+                            style: text.bodySmall?.copyWith(
+                              color: Notebook.of(context).inkSoft,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   TextButton(
                     key: const ValueKey('catalogue-add-brand'),
                     onPressed: _busy ? null : () => _addBrand(f.brand!),
