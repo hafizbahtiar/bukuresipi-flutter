@@ -3839,5 +3839,41 @@
   "brandsFindIngredient": "Ingredient",
   "@brandsFindIngredient": {},
   "brandsNoProducts": "No products for this ingredient yet.",
-  "@brandsNoProducts": {}
+  "@brandsNoProducts": {},
+  "recipePickNone": "Brand: none",
+  "@recipePickNone": {},
+  "recipePickAny": "Any {brand}",
+  "@recipePickAny": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "recipePickTitle": "Which product or brand?",
+  "@recipePickTitle": {},
+  "recipePickSearch": "Find a brand",
+  "@recipePickSearch": {},
+  "recipePickSuggest": "Not listed? Suggest it",
+  "@recipePickSuggest": {},
+  "recipePickSuggestHint": "We add it to the catalogue, then this line gets it. Only you and us see what you send.",
+  "@recipePickSuggestHint": {},
+  "recipePickSuggestName": "Brand or product name",
+  "@recipePickSuggestName": {},
+  "recipePickSend": "Send",
+  "@recipePickSend": {},
+  "recipePickSuggested": "Suggested: {name}",
+  "@recipePickSuggested": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errPickMismatch": "That product is for another ingredient. Pick again on the changed line.",
+  "@errPickMismatch": {},
+  "errPickUnknown": "That product or brand is gone from the catalogue. Pick another.",
+  "@errPickUnknown": {},
+  "errSuggestionFull": "You have 20 suggestions waiting already. Try again once some are added.",
+  "@errSuggestionFull": {}
 }

@@ -1380,5 +1380,17 @@
   "brandsAdd": "Pilih jenama",
   "brandsAddHint": "Taip bahan, kemudian pilih jenamanya.",
   "brandsFindIngredient": "Bahan",
-  "brandsNoProducts": "Belum ada produk untuk bahan ini."
+  "brandsNoProducts": "Belum ada produk untuk bahan ini.",
+  "recipePickNone": "Jenama: tiada",
+  "recipePickAny": "Mana-mana {brand}",
+  "recipePickTitle": "Produk atau jenama apa?",
+  "recipePickSearch": "Cari jenama",
+  "recipePickSuggest": "Tiada dalam senarai? Cadangkan",
+  "recipePickSuggestHint": "Kami tambah ke katalog, kemudian baris ini mendapatnya. Hanya anda dan kami nampak apa yang anda hantar.",
+  "recipePickSuggestName": "Nama jenama atau produk",
+  "recipePickSend": "Hantar",
+  "recipePickSuggested": "Dicadang: {name}",
+  "errPickMismatch": "Produk itu untuk bahan lain. Pilih semula pada baris yang diubah.",
+  "errPickUnknown": "Produk atau jenama itu sudah tiada dalam katalog. Pilih yang lain.",
+  "errSuggestionFull": "Anda sudah ada 20 cadangan yang menunggu. Cuba lagi selepas sebahagian ditambah."
 }
