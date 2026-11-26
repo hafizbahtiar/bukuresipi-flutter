@@ -4,6 +4,7 @@ import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_hidden_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredients_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
@@ -495,4 +496,101 @@ void main() {
       expect(find.text('Invite sent.'), findsOneWidget);
     },
   );
+
+  group('ingredient gaps', () {
+    const minyak = IngredientGap(
+      key: 'minyak',
+      sample: 'sedikit minyak untuk menggoreng',
+      recipeLines: 2,
+      shoppingLines: 1,
+    );
+
+    testWidgets(
+      'a gap: pick the ingredient, see what the name links, save; taken names are said',
+      (t) async {
+        repo.gaps = [minyak];
+        await pump(t, const OwnerIngredientsPage());
+        expect(
+          find.text(
+            'Recipes 2 · Shopping lists 1\nsedikit minyak untuk menggoreng',
+          ),
+          findsOneWidget,
+        );
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.byKey(const ValueKey('gap-ingredient-Minyak masak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.text('Links 3 lines'), findsOneWidget);
+
+        await t.enterText(find.byKey(const ValueKey('gap-alias')), 'garam');
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(
+          find.text('That name is already an ingredient or another name.'),
+          findsOneWidget,
+        );
+        expect(
+          t
+              .widget<FilledButton>(find.byKey(const ValueKey('gap-save')))
+              .onPressed,
+          isNull,
+        );
+
+        await t.enterText(find.byKey(const ValueKey('gap-alias')), 'minyak');
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        await t.tap(find.byKey(const ValueKey('gap-save')));
+        await t.pumpAndSettle();
+        expect(repo.aliases, [('Minyak masak', 'minyak')]);
+        expect(find.text('Saved. 3 lines linked.'), findsOneWidget);
+        expect(find.text('Every line has an ingredient.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('a new ingredient: name and category, then saved', (t) async {
+      repo.gaps = [
+        const IngredientGap(
+          key: 'daun salam',
+          sample: '2 lembar daun salam',
+          recipeLines: 1,
+          shoppingLines: 0,
+        ),
+      ];
+      await pump(t, const OwnerIngredientsPage());
+      await t.tap(find.byKey(const ValueKey('gap-daun salam')));
+      await t.pumpAndSettle(const Duration(milliseconds: 300));
+      await t.tap(find.byKey(const ValueKey('gap-new')));
+      await t.pumpAndSettle();
+      expect(find.text('Daun salam'), findsOneWidget); // the name, capitalised
+      await t.tap(find.text('Category'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Rempah'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('gap-save')));
+      await t.pumpAndSettle();
+      expect(repo.newIngredients, [('Daun salam', 'Rempah')]);
+    });
+
+    testWidgets('the menu relinks every line and shows the rows for docs', (
+      t,
+    ) async {
+      repo.gaps = [minyak];
+      await pump(t, const OwnerIngredientsPage());
+      await t.tap(find.byKey(const ValueKey('gaps-more')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Relink all lines'));
+      await t.pumpAndSettle();
+      expect(repo.relinks, 1);
+      expect(find.text('2 of 5 lines linked.'), findsOneWidget);
+
+      await t.tap(find.byKey(const ValueKey('gaps-more')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Copy rows for docs'));
+      await t.pumpAndSettle();
+      expect(find.text('ingredient.md'), findsOneWidget);
+      expect(find.text('ingredient_alias.md'), findsNothing); // none added
+      expect(
+        find.text('| 289 | Daun salam | Rempah | — | — | — |'),
+        findsOneWidget,
+      );
+    });
+  });
 }

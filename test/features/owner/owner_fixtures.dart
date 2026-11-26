@@ -1,3 +1,5 @@
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
+
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
@@ -226,4 +228,53 @@ class FakeOwner implements OwnerRepository {
       b.ratings.removeWhere((r) => r.id == ratingId);
     }
   }
+
+  List<IngredientGap> gaps = const [];
+  List<String> catalogue = const ['Minyak masak', 'Minyak zaitun', 'Garam'];
+  final aliases = <(String, String)>[];
+  final newIngredients = <(String, String)>[];
+  int relinks = 0;
+
+  @override
+  Future<({List<IngredientGap> gaps, List<String> categories})>
+  ingredientGaps() async => (gaps: gaps, categories: const ['Lain', 'Rempah']);
+
+  @override
+  Future<List<String>> searchIngredients(String query) async => [
+    for (final c in catalogue)
+      if (c.toLowerCase().contains(query.toLowerCase())) c,
+  ];
+
+  @override
+  Future<({int lines, List<String> sample})> previewAlias(
+    String ingredient,
+    String alias,
+  ) async {
+    if (alias == 'garam') throw const ApiException('name_taken', status: 409);
+    return (lines: 3, sample: const ['sedikit minyak', '2 sudu minyak']);
+  }
+
+  @override
+  Future<int> addAlias(String ingredient, String alias) async {
+    aliases.add((ingredient, alias));
+    gaps = const [];
+    return 3;
+  }
+
+  @override
+  Future<int> addIngredient(String name, String category) async {
+    newIngredients.add((name, category));
+    gaps = const [];
+    return 1;
+  }
+
+  @override
+  Future<({int checked, int linked})> relinkIngredients() async {
+    relinks++;
+    return (checked: 5, linked: 2);
+  }
+
+  @override
+  Future<({String ingredients, String aliases})> addedIngredientRows() async =>
+      (ingredients: '| 289 | Daun salam | Rempah | — | — | — |', aliases: '');
 }

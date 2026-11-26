@@ -3521,5 +3521,85 @@
   "einvoiceNameHelp": "As on your IC",
   "@einvoiceNameHelp": {},
   "einvoiceTinHelp": "Your tax number from LHDN (MyTax)",
-  "@einvoiceTinHelp": {}
+  "@einvoiceTinHelp": {},
+  "ownerIngredientGaps": "Ingredient gaps",
+  "@ownerIngredientGaps": {},
+  "ownerIngredientGapsHint": "Recipe and shopping lines that match no ingredient. Tap one to add the name we lack: every line it names is linked.",
+  "@ownerIngredientGapsHint": {},
+  "ownerNoGaps": "Every line has an ingredient.",
+  "@ownerNoGaps": {},
+  "ownerGapCount": "Recipes {recipes} · Shopping lists {shopping}",
+  "@ownerGapCount": {
+    "placeholders": {
+      "recipes": {
+        "type": "int"
+      },
+      "shopping": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerGapPick": "Which ingredient is “{key}”?",
+  "@ownerGapPick": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapSearch": "Search ingredients",
+  "@ownerGapSearch": {},
+  "ownerGapNew": "New ingredient",
+  "@ownerGapNew": {},
+  "ownerGapAlias": "Another name for {ingredient}",
+  "@ownerGapAlias": {
+    "placeholders": {
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapName": "Name",
+  "@ownerGapName": {},
+  "ownerGapLinks": "Links {count} lines",
+  "@ownerGapLinks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerGapTaken": "That name is already an ingredient or another name.",
+  "@ownerGapTaken": {},
+  "ownerGapCategory": "Category",
+  "@ownerGapCategory": {},
+  "ownerGapSaved": "Saved. {count} lines linked.",
+  "@ownerGapSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerRelink": "Relink all lines",
+  "@ownerRelink": {},
+  "ownerRelinked": "{linked} of {checked} lines linked.",
+  "@ownerRelinked": {
+    "placeholders": {
+      "linked": {
+        "type": "int"
+      },
+      "checked": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerCopyRows": "Copy rows for docs",
+  "@ownerCopyRows": {},
+  "ownerCopyRowsHint": "Paste at the end of the tables in docs/plans/, then run bun run db:build-seed.",
+  "@ownerCopyRowsHint": {},
+  "ownerCopyRowsNone": "Nothing added in the app yet.",
+  "@ownerCopyRowsNone": {},
+  "ownerCopied": "Copied",
+  "@ownerCopied": {}
 }

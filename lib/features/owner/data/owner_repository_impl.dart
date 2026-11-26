@@ -337,6 +337,88 @@ class OwnerRepositoryImpl implements OwnerRepository {
         ),
     ];
   });
+
+  @override
+  Future<({List<IngredientGap> gaps, List<String> categories})>
+  ingredientGaps() => apiCall(() async {
+    final j = await _get('/owner/ingredients/gaps');
+    return (
+      gaps: [
+        for (final g in (j['gaps'] as List).cast<Map<String, dynamic>>())
+          IngredientGap(
+            key: g['key'] as String,
+            sample: g['sample'] as String,
+            recipeLines: g['recipeLines'] as int,
+            shoppingLines: g['shoppingLines'] as int,
+          ),
+      ],
+      categories: (j['categories'] as List).cast<String>(),
+    );
+  });
+
+  @override
+  Future<List<String>> searchIngredients(String query) => apiCall(() async {
+    final j = await _get('/recipes/ingredients', {'q': query});
+    return [
+      for (final i in (j['ingredients'] as List).cast<Map<String, dynamic>>())
+        i['name'] as String,
+    ];
+  });
+
+  Future<Map<String, dynamic>> _alias(
+    String ingredient,
+    String alias, {
+    required bool preview,
+  }) async => (await _dio.post<Map<String, dynamic>>(
+    '/owner/ingredients/aliases',
+    data: {'ingredient': ingredient, 'alias': alias, 'preview': preview},
+  )).data!;
+
+  @override
+  Future<({int lines, List<String> sample})> previewAlias(
+    String ingredient,
+    String alias,
+  ) => apiCall(() async {
+    final j = await _alias(ingredient, alias, preview: true);
+    return (
+      lines: j['lines'] as int,
+      sample: (j['sample'] as List).cast<String>(),
+    );
+  });
+
+  @override
+  Future<int> addAlias(String ingredient, String alias) => apiCall(
+    () async =>
+        (await _alias(ingredient, alias, preview: false))['relinked'] as int,
+  );
+
+  @override
+  Future<int> addIngredient(String name, String category) => apiCall(
+    () async =>
+        (await _dio.post<Map<String, dynamic>>(
+              '/owner/ingredients',
+              data: {'name': name, 'category': category},
+            )).data!['relinked']
+            as int,
+  );
+
+  @override
+  Future<({int checked, int linked})> relinkIngredients() => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/ingredients/relink',
+    )).data!;
+    return (checked: j['checked'] as int, linked: j['linked'] as int);
+  });
+
+  @override
+  Future<({String ingredients, String aliases})> addedIngredientRows() =>
+      apiCall(() async {
+        final j = await _get('/owner/ingredients/added');
+        return (
+          ingredients: j['ingredients'] as String,
+          aliases: j['aliases'] as String,
+        );
+      });
 }
 
 ReviewReportGroup _reviewReport(Map<String, dynamic> j) {

@@ -103,4 +103,30 @@ abstract interface class OwnerRepository {
 
   /// Website tester signups, oldest first.
   Future<List<Tester>> testers();
+
+  /// Unlinked lines grouped, most first (100), and the catalogue's categories for a new ingredient.
+  Future<({List<IngredientGap> gaps, List<String> categories})>
+  ingredientGaps();
+
+  /// Catalogue ingredient names for what the owner types (2+ characters).
+  Future<List<String>> searchIngredients(String query);
+
+  /// How many unlinked lines [alias] would link to [ingredient] (a catalogue name), and some of them; nothing is
+  /// saved. Throws 'name_taken' (already a name or an alias) or 'not_found'.
+  Future<({int lines, List<String> sample})> previewAlias(
+    String ingredient,
+    String alias,
+  );
+
+  /// Saves the alias and relinks every unlinked line: how many it linked. Throws as [previewAlias].
+  Future<int> addAlias(String ingredient, String alias);
+
+  /// A new catalogue ingredient; every unlinked line is matched again: how many it linked. Throws 'name_taken'.
+  Future<int> addIngredient(String name, String category);
+
+  /// Matches every unlinked line again (after a migration added names by hand).
+  Future<({int checked, int linked})> relinkIngredients();
+
+  /// What was added in the app, as markdown rows for docs/plans/ingredient.md and ingredient_alias.md.
+  Future<({String ingredients, String aliases})> addedIngredientRows();
 }

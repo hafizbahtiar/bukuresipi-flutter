@@ -339,3 +339,19 @@ class OwnerPlace {
     pinSource: pinSource,
   );
 }
+
+/// Owner > Ingredient gaps: recipe and shopping lines no catalogue name or alias matched, grouped by what they name
+/// ([key], amount and unit off); [sample] = one line as written.
+class IngredientGap {
+  const IngredientGap({
+    required this.key,
+    required this.sample,
+    required this.recipeLines,
+    required this.shoppingLines,
+  });
+
+  final String key;
+  final String sample;
+  final int recipeLines;
+  final int shoppingLines;
+}
