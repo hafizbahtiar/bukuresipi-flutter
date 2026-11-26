@@ -813,13 +813,46 @@ void main() {
         await t.pumpAndSettle();
         await t.tap(find.byKey(const ValueKey('catalogue-similar-1')));
         await t.pumpAndSettle();
-        expect(find.byKey(const ValueKey('catalogue-fill')), findsNothing);
+        expect(find.text('Add: Products'), findsNothing); // now editing it
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
         expect(repo.savedRows.single.$1, 'products');
         expect(repo.savedRows.single.$2, 1); // the existing row, not a new one
       },
     );
+
+    testWidgets('fill on an existing product fills only its empty fields', (
+      t,
+    ) async {
+      repo.productList = const [
+        CatalogueProduct(
+          id: 7,
+          name: 'Santan Kara Saya',
+          brandId: 1,
+          brand: 'Faiza',
+        ),
+      ];
+      await pump(t, const OwnerCataloguePage());
+      await t.tap(find.byKey(const ValueKey('catalogue-row-Santan Kara Saya')));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byKey(const ValueKey('catalogue-fill')),
+        '8992736000000',
+      );
+      await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('catalogue-save')));
+      await t.pumpAndSettle();
+      expect(repo.savedRows.single.$1, 'products');
+      expect(repo.savedRows.single.$2, 7);
+      expect(repo.savedRows.single.$3, {
+        'name': 'Santan Kara Saya', // kept
+        'ingredient': 'Santan', // was empty: filled
+        'brandId': 1, // kept; the fill's new brand is not added
+        'size': 200.0,
+        'unit': 'ml',
+      });
+    });
 
     testWidgets(
       'a new product: brand from the list, ingredient from the suggestions, size and unit',

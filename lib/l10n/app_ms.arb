@@ -1350,7 +1350,7 @@
   "brandsMine": "Jenama anda",
   "brandsAvoided": "Dielak",
   "brandsWholeMaker": "Semua buatan pengeluar ini",
-  "brandsNone": "Belum ada. Dalam senarai belian, tekan Lihat semua pada satu baris, kemudian satu jenama.",
+  "brandsNone": "Belum ada. Pilih di bawah, atau tekan Lihat semua pada baris senarai belanja.",
   "brandsRemove": "Buang",
   "errMakerAvoided": "Anda mengelak pengeluar jenama ini. Buang dahulu di Akaun > Jenama.",
   "errAvoidFull": "Anda sudah mengelak 100 jenama dan pengeluar. Buang sebahagian di Akaun > Jenama.",
@@ -1376,5 +1376,9 @@
   "catalogueMadeBy": "Dibuat oleh {maker} (dari {site})",
   "catalogueSimilar": "Ini mungkin sudah ada dalam katalog. Tekan untuk menyuntingnya.",
   "ownerAliasAiTickAll": "Tanda semua",
-  "ownerAliasAiTickNone": "Nyahtanda semua"
+  "ownerAliasAiTickNone": "Nyahtanda semua",
+  "brandsAdd": "Pilih jenama",
+  "brandsAddHint": "Taip bahan, kemudian pilih jenamanya.",
+  "brandsFindIngredient": "Bahan",
+  "brandsNoProducts": "Belum ada produk untuk bahan ini."
 }

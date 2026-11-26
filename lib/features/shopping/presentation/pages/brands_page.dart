@@ -11,6 +11,7 @@ import '../../../auth/presentation/auth_text.dart';
 import '../../domain/shopping.dart';
 import '../../domain/shopping_repository.dart';
 import '../shopping_controller.dart';
+import '../widgets/brand_add_sheet.dart';
 
 /// Account > Brands: how the shopping list's product hints are ordered for this user (only they see it): their
 /// brand per ingredient, brands and makers avoided (both chosen on a line's See all), Malaysian brands first.
@@ -140,6 +141,20 @@ class _BrandsPageState extends State<BrandsPage> {
                     style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                   ),
                 ),
+              NotebookRow(
+                key: const ValueKey('brands-add'),
+                mark: mark(Icons.add),
+                onTap: _saving
+                    ? null
+                    : () => showBrandAddSheet(context, onChanged: _load),
+                child: Text(
+                  l.brandsAdd,
+                  style: TextStyle(
+                    color: nb.pandanDeep,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
               for (final m in c.mine)
                 NotebookRow(
                   key: ValueKey('brands-mine-${m.ingredient}'),

@@ -151,6 +151,26 @@ void main() {
     },
   );
 
+  testWidgets('a line whose products include my brand says so', (t) async {
+    repo.items = const [
+      ShoppingItem(
+        id: 'i1',
+        text: '2 cawan beras putih',
+        done: false,
+        ingredient: 'Beras putih',
+        products: [
+          ShoppingProduct(
+            name: 'Beras Super Special Tempatan Jati 5kg',
+            brand: 'Jati',
+            mine: true,
+          ),
+        ],
+      ),
+    ];
+    await pump(t);
+    expect(find.text('Your brand: Jati'), findsOneWidget);
+  });
+
   testWidgets(
     'typing 2+ letters suggests catalogue names; tapping one adds it',
     (t) async {

@@ -25,10 +25,18 @@ Future<void> showProductsSheet(
 );
 
 class ProductsSheet extends StatefulWidget {
-  const ProductsSheet({super.key, required this.ingredient, this.onChanged});
+  const ProductsSheet({
+    super.key,
+    required this.ingredient,
+    this.onChanged,
+    this.onBack,
+  });
 
   final String ingredient;
   final VoidCallback? onChanged;
+
+  /// Shown as a step of another sheet (Account > Brands > +): its title gets Back to that sheet's step before.
+  final VoidCallback? onBack;
 
   @override
   State<ProductsSheet> createState() => _ProductsSheetState();
@@ -77,14 +85,20 @@ class _ProductsSheetState extends State<ProductsSheet> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.only(bottom: spaceM),
                 children: [
-                  NotebookRow(
-                    child: Text(
-                      l.shoppingProductsTitle(widget.ingredient),
-                      style: text.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                  if (widget.onBack case final back?)
+                    SheetStepTitle(
+                      title: l.shoppingProductsTitle(widget.ingredient),
+                      onBack: back,
+                    )
+                  else
+                    NotebookRow(
+                      child: Text(
+                        l.shoppingProductsTitle(widget.ingredient),
+                        style: text.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
                   if (s.hasError)
                     NotebookRow(child: Text(errorText(l, s.error!)))
                   else if (s.connectionState != ConnectionState.done)
@@ -92,6 +106,13 @@ class _ProductsSheetState extends State<ProductsSheet> {
                       padding: EdgeInsets.all(spaceL),
                       child: Center(
                         child: CircularProgressIndicator.adaptive(),
+                      ),
+                    )
+                  else if (s.data!.isEmpty)
+                    NotebookRow(
+                      child: Text(
+                        l.brandsNoProducts,
+                        style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                       ),
                     )
                   else
