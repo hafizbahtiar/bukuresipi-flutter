@@ -129,4 +129,40 @@ abstract interface class OwnerRepository {
 
   /// What was added in the app, as markdown rows for docs/plans/ingredient.md and ingredient_alias.md.
   Future<({String ingredients, String aliases})> addedIngredientRows();
+
+  /// Owner > Catalogue lists, 50 a page, by name ([query] also matches a brand's maker, a product's brand and
+  /// ingredient).
+  Future<CataloguePage<CatalogueMaker>> makers({String? query, int offset = 0});
+  Future<(CataloguePage<CatalogueBrand>, List<String> countries)> brands({
+    String? query,
+    int offset = 0,
+  });
+  Future<(CataloguePage<CatalogueProduct>, List<String> units)> products({
+    String? query,
+    int offset = 0,
+  });
+
+  /// New when [id] is null. Throws 'name_taken' (makers and brands, ignoring case) or 'not_found' (a link that is
+  /// gone, or a product's ingredient name the catalogue does not have).
+  Future<void> saveMaker({int? id, required String name});
+  Future<void> saveBrand({
+    int? id,
+    required String name,
+    int? makerId,
+    String? country,
+  });
+  Future<void> saveProduct({
+    int? id,
+    required String name,
+    String? ingredient,
+    int? brandId,
+    double? size,
+    String? unit,
+  });
+
+  /// [kind] is 'makers', 'brands' or 'products'. What used it stays, without it.
+  Future<void> deleteCatalogueRow(String kind, int id);
+
+  /// Added and changed rows, as markdown for docs/plans/manufacturer.md, brand.md and product.md.
+  Future<({String makers, String brands, String products})> catalogueRows();
 }

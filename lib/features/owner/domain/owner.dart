@@ -355,3 +355,55 @@ class IngredientGap {
   final int recipeLines;
   final int shoppingLines;
 }
+
+/// Owner > Catalogue rows. [id]s are the server's internal ones (owner only).
+class CatalogueMaker {
+  const CatalogueMaker({required this.id, required this.name, this.brands = 0});
+
+  final int id;
+  final String name;
+  final int brands;
+}
+
+class CatalogueBrand {
+  const CatalogueBrand({
+    required this.id,
+    required this.name,
+    this.makerId,
+    this.maker,
+    this.country,
+    this.products = 0,
+  });
+
+  final int id;
+  final String name;
+  final int? makerId;
+  final String? maker;
+  final String? country;
+  final int products;
+}
+
+class CatalogueProduct {
+  const CatalogueProduct({
+    required this.id,
+    required this.name,
+    this.ingredient,
+    this.brandId,
+    this.brand,
+    this.size,
+    this.unit,
+  });
+
+  final int id;
+  final String name;
+
+  /// A catalogue ingredient name.
+  final String? ingredient;
+  final int? brandId;
+  final String? brand;
+  final double? size;
+  final String? unit;
+}
+
+/// One page of a catalogue list; [next] = the offset of the next page, null at the end.
+typedef CataloguePage<T> = ({List<T> items, int? next});

@@ -27,6 +27,7 @@ import '../../features/credits/presentation/pages/credits_page.dart';
 import '../../features/family/presentation/pages/family_join_page.dart';
 import '../../features/family/presentation/pages/family_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/owner/presentation/pages/owner_catalogue_page.dart';
 import '../../features/owner/presentation/pages/owner_hidden_page.dart';
 import '../../features/owner/presentation/pages/owner_ingredients_page.dart';
 import '../../features/owner/presentation/pages/owner_page.dart';
@@ -236,6 +237,10 @@ GoRouter buildRouter(
           _page(
             path: 'ingredients',
             builder: (_, _) => const OwnerIngredientsPage(),
+          ),
+          _page(
+            path: 'catalogue',
+            builder: (_, _) => const OwnerCataloguePage(),
           ),
         ],
       ),

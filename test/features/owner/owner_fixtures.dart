@@ -277,4 +277,108 @@ class FakeOwner implements OwnerRepository {
   @override
   Future<({String ingredients, String aliases})> addedIngredientRows() async =>
       (ingredients: '| 289 | Daun salam | Rempah | — | — | — |', aliases: '');
+
+  List<CatalogueMaker> makerList = const [
+    CatalogueMaker(id: 1, name: 'Faiza Marketing', brands: 1),
+  ];
+  List<CatalogueBrand> brandList = const [
+    CatalogueBrand(
+      id: 1,
+      name: 'Faiza',
+      makerId: 1,
+      maker: 'Faiza Marketing',
+      country: 'Malaysia',
+      products: 3,
+    ),
+  ];
+  List<CatalogueProduct> productList = const [
+    CatalogueProduct(
+      id: 1,
+      name: 'Beras Faiza 5kg',
+      ingredient: 'Beras putih',
+      brandId: 1,
+      brand: 'Faiza',
+      size: 5,
+      unit: 'kg',
+    ),
+  ];
+  final catalogueQueries = <(String, String?)>[];
+  final savedRows = <(String, int?, Map<String, Object?>)>[];
+  final deletedRows = <(String, int)>[];
+
+  @override
+  Future<CataloguePage<CatalogueMaker>> makers({
+    String? query,
+    int offset = 0,
+  }) async {
+    catalogueQueries.add(('makers', query));
+    return (items: makerList, next: null);
+  }
+
+  @override
+  Future<(CataloguePage<CatalogueBrand>, List<String>)> brands({
+    String? query,
+    int offset = 0,
+  }) async {
+    catalogueQueries.add(('brands', query));
+    return ((items: brandList, next: null), const ['Malaysia', 'Thailand']);
+  }
+
+  @override
+  Future<(CataloguePage<CatalogueProduct>, List<String>)> products({
+    String? query,
+    int offset = 0,
+  }) async {
+    catalogueQueries.add(('products', query));
+    return ((items: productList, next: null), const ['kg', 'L']);
+  }
+
+  @override
+  Future<void> saveMaker({int? id, required String name}) async {
+    if (name.toLowerCase() == 'taken') {
+      throw const ApiException('name_taken', status: 409);
+    }
+    savedRows.add(('makers', id, {'name': name}));
+  }
+
+  @override
+  Future<void> saveBrand({
+    int? id,
+    required String name,
+    int? makerId,
+    String? country,
+  }) async => savedRows.add((
+    'brands',
+    id,
+    {'name': name, 'makerId': makerId, 'country': country},
+  ));
+
+  @override
+  Future<void> saveProduct({
+    int? id,
+    required String name,
+    String? ingredient,
+    int? brandId,
+    double? size,
+    String? unit,
+  }) async => savedRows.add((
+    'products',
+    id,
+    {
+      'name': name,
+      'ingredient': ingredient,
+      'brandId': brandId,
+      'size': size,
+      'unit': unit,
+    },
+  ));
+
+  @override
+  Future<void> deleteCatalogueRow(String kind, int id) async =>
+      deletedRows.add((kind, id));
+
+  @override
+  Future<({String makers, String brands, String products})>
+  catalogueRows() async =>
+      (makers: '| 122 | Kilang Baru |', brands: '', products: '');
 }

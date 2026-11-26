@@ -419,6 +419,139 @@ class OwnerRepositoryImpl implements OwnerRepository {
           aliases: j['aliases'] as String,
         );
       });
+
+  Future<Map<String, dynamic>> _catalogue(
+    String kind,
+    String? query,
+    int offset,
+  ) => _get('/owner/catalogue/$kind', {
+    if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+    'offset': offset,
+  });
+
+  @override
+  Future<CataloguePage<CatalogueMaker>> makers({
+    String? query,
+    int offset = 0,
+  }) => apiCall(() async {
+    final j = await _catalogue('makers', query, offset);
+    return (
+      items: [
+        for (final m in (j['items'] as List).cast<Map<String, dynamic>>())
+          CatalogueMaker(
+            id: m['id'] as int,
+            name: m['name'] as String,
+            brands: m['brands'] as int,
+          ),
+      ],
+      next: j['next'] as int?,
+    );
+  });
+
+  @override
+  Future<(CataloguePage<CatalogueBrand>, List<String>)> brands({
+    String? query,
+    int offset = 0,
+  }) => apiCall(() async {
+    final j = await _catalogue('brands', query, offset);
+    return (
+      (
+        items: [
+          for (final b in (j['items'] as List).cast<Map<String, dynamic>>())
+            CatalogueBrand(
+              id: b['id'] as int,
+              name: b['name'] as String,
+              makerId: b['makerId'] as int?,
+              maker: b['maker'] as String?,
+              country: b['country'] as String?,
+              products: b['products'] as int,
+            ),
+        ],
+        next: j['next'] as int?,
+      ),
+      (j['countries'] as List).cast<String>(),
+    );
+  });
+
+  @override
+  Future<(CataloguePage<CatalogueProduct>, List<String>)> products({
+    String? query,
+    int offset = 0,
+  }) => apiCall(() async {
+    final j = await _catalogue('products', query, offset);
+    return (
+      (
+        items: [
+          for (final p in (j['items'] as List).cast<Map<String, dynamic>>())
+            CatalogueProduct(
+              id: p['id'] as int,
+              name: p['name'] as String,
+              ingredient: p['ingredient'] as String?,
+              brandId: p['brandId'] as int?,
+              brand: p['brand'] as String?,
+              size: (p['size'] as num?)?.toDouble(),
+              unit: p['unit'] as String?,
+            ),
+        ],
+        next: j['next'] as int?,
+      ),
+      (j['units'] as List).cast<String>(),
+    );
+  });
+
+  Future<void> _saveRow(String kind, int? id, Map<String, dynamic> body) =>
+      apiCall(
+        () => id == null
+            ? _dio.post<void>('/owner/catalogue/$kind', data: body)
+            : _dio.patch<void>('/owner/catalogue/$kind/$id', data: body),
+      );
+
+  @override
+  Future<void> saveMaker({int? id, required String name}) =>
+      _saveRow('makers', id, {'name': name});
+
+  @override
+  Future<void> saveBrand({
+    int? id,
+    required String name,
+    int? makerId,
+    String? country,
+  }) => _saveRow('brands', id, {
+    'name': name,
+    'makerId': makerId,
+    'country': country,
+  });
+
+  @override
+  Future<void> saveProduct({
+    int? id,
+    required String name,
+    String? ingredient,
+    int? brandId,
+    double? size,
+    String? unit,
+  }) => _saveRow('products', id, {
+    'name': name,
+    'ingredient': ingredient,
+    'brandId': brandId,
+    'size': size,
+    'unit': unit,
+  });
+
+  @override
+  Future<void> deleteCatalogueRow(String kind, int id) =>
+      apiCall(() => _dio.delete<void>('/owner/catalogue/$kind/$id'));
+
+  @override
+  Future<({String makers, String brands, String products})> catalogueRows() =>
+      apiCall(() async {
+        final j = await _get('/owner/catalogue/added');
+        return (
+          makers: j['makers'] as String,
+          brands: j['brands'] as String,
+          products: j['products'] as String,
+        );
+      });
 }
 
 ReviewReportGroup _reviewReport(Map<String, dynamic> j) {

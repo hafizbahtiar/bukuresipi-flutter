@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_catalogue_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_hidden_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredients_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
@@ -591,6 +592,133 @@ void main() {
         find.text('| 289 | Daun salam | Rempah | — | — | — |'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('catalogue', () {
+    testWidgets(
+      'products, brands and makers each list, with what they link to',
+      (t) async {
+        await pump(t, const OwnerCataloguePage());
+        expect(find.text('Beras Faiza 5kg'), findsOneWidget);
+        expect(find.text('Faiza · Beras putih · 5 kg'), findsOneWidget);
+        await t.tap(find.text('Brands'));
+        await t.pumpAndSettle();
+        expect(
+          find.text('Faiza Marketing · Malaysia · 3 products'),
+          findsOneWidget,
+        );
+        await t.tap(find.text('Makers'));
+        await t.pumpAndSettle();
+        expect(find.text('1 brands'), findsOneWidget);
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-search')),
+          'faiza',
+        );
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(repo.catalogueQueries.last, ('makers', 'faiza'));
+      },
+    );
+
+    testWidgets(
+      'a brand is edited: its maker kept by id; a taken maker name is said',
+      (t) async {
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.text('Brands'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-row-Faiza')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Country'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Thailand'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.single.$1, 'brands');
+        expect(repo.savedRows.single.$2, 1);
+        expect(repo.savedRows.single.$3, {
+          'name': 'Faiza',
+          'makerId': 1,
+          'country': 'Thailand',
+        });
+        expect(find.text('Saved'), findsOneWidget);
+        await t.pump(const Duration(seconds: 5)); // the snackbar leaves
+        await t.pumpAndSettle();
+
+        await t.tap(find.text('Makers'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-name')),
+          'Taken',
+        );
+        await t.pump();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(find.text('That name is already used.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a new product: brand from the list, ingredient from the suggestions, size and unit',
+      (t) async {
+        repo.catalogue = const ['Kicap'];
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-name')),
+          'Kicap Faiza 1L',
+        );
+        await t.tap(find.text('Brand'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Faiza').last);
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-ingredient')),
+          'kic',
+        );
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.widgetWithText(ActionChip, 'Kicap'));
+        await t.enterText(find.byKey(const ValueKey('catalogue-size')), '1');
+        await t.tap(find.text('Unit'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('L'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.single.$1, 'products');
+        expect(repo.savedRows.single.$2, null);
+        expect(repo.savedRows.single.$3, {
+          'name': 'Kicap Faiza 1L',
+          'ingredient': 'Kicap',
+          'brandId': 1,
+          'size': 1.0,
+          'unit': 'L',
+        });
+      },
+    );
+
+    testWidgets('delete asks first; the rows for docs are shown', (t) async {
+      await pump(t, const OwnerCataloguePage());
+      await t.tap(find.byKey(const ValueKey('catalogue-row-Beras Faiza 5kg')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('catalogue-delete')));
+      await t.pumpAndSettle();
+      expect(repo.deletedRows, isEmpty);
+      await t.tap(find.text('Delete').last);
+      await t.pumpAndSettle();
+      expect(repo.deletedRows, [('products', 1)]);
+      expect(find.text('Deleted'), findsOneWidget);
+
+      await t.tap(find.byKey(const ValueKey('catalogue-more')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Copy rows for docs'));
+      await t.pumpAndSettle();
+      expect(find.text('manufacturer.md'), findsOneWidget);
+      expect(find.text('brand.md'), findsNothing);
+      expect(find.text('| 122 | Kilang Baru |'), findsOneWidget);
     });
   });
 }

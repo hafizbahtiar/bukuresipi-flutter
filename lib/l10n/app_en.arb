@@ -3601,5 +3601,69 @@
   "ownerCopyRowsNone": "Nothing added in the app yet.",
   "@ownerCopyRowsNone": {},
   "ownerCopied": "Copied",
-  "@ownerCopied": {}
+  "@ownerCopied": {},
+  "ownerCatalogue": "Catalogue",
+  "@ownerCatalogue": {},
+  "catalogueProducts": "Products",
+  "@catalogueProducts": {},
+  "catalogueBrands": "Brands",
+  "@catalogueBrands": {},
+  "catalogueMakers": "Makers",
+  "@catalogueMakers": {},
+  "catalogueSearch": "Search",
+  "@catalogueSearch": {},
+  "catalogueAdd": "Add",
+  "@catalogueAdd": {},
+  "catalogueEmpty": "Nothing here.",
+  "@catalogueEmpty": {},
+  "catalogueBrandCount": "{count} brands",
+  "@catalogueBrandCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueProductCount": "{count} products",
+  "@catalogueProductCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueName": "Name",
+  "@catalogueName": {},
+  "catalogueMaker": "Maker",
+  "@catalogueMaker": {},
+  "catalogueCountry": "Country",
+  "@catalogueCountry": {},
+  "catalogueBrand": "Brand",
+  "@catalogueBrand": {},
+  "catalogueIngredient": "Ingredient",
+  "@catalogueIngredient": {},
+  "catalogueSize": "Size",
+  "@catalogueSize": {},
+  "catalogueUnit": "Unit",
+  "@catalogueUnit": {},
+  "catalogueNone": "None",
+  "@catalogueNone": {},
+  "catalogueTaken": "That name is already used.",
+  "@catalogueTaken": {},
+  "catalogueUnknown": "Not found. Pick an ingredient from the suggestions, or reload: it may have been deleted.",
+  "@catalogueUnknown": {},
+  "catalogueDeleteAsk": "Delete {name}? What uses it stays, without it. Remove its row from docs/plans by hand too.",
+  "@catalogueDeleteAsk": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogueSaved": "Saved",
+  "@catalogueSaved": {},
+  "catalogueDeleted": "Deleted",
+  "@catalogueDeleted": {},
+  "catalogueRowsHint": "Paste into docs/plans/: a changed row replaces the row with its id, a new one goes at the end. Deletes are not here: remove those rows by hand.",
+  "@catalogueRowsHint": {}
 }
