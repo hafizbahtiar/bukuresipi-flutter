@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../recipes/domain/recipe.dart';
 import '../domain/shopping.dart';
 import '../domain/shopping_repository.dart';
 
@@ -171,6 +172,10 @@ ShoppingItem shoppingItemFromJson(Map<String, dynamic> j) {
     done: j['done'] as bool,
     ingredient: j['ingredient'] as String?,
     category: j['category'] as String?,
+    pick: switch (j['pick']) {
+      final Map<String, dynamic> p => LinePick.fromJson(p),
+      _ => null,
+    },
     recipes: [
       for (final r
           in (j['recipes'] as List? ?? const []).cast<Map<String, dynamic>>())
