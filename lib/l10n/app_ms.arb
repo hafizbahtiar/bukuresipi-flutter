@@ -1341,5 +1341,18 @@
   "catalogueRowsHint": "Tampal ke docs/plans/: baris yang diubah menggantikan baris dengan id yang sama, yang baharu di hujung. Padam tiada di sini: buang baris itu secara manual.",
   "brandsTitle": "Jenama",
   "brandsLocalFirst": "Jenama Malaysia dahulu",
-  "brandsLocalFirstHint": "Cadangan produk dalam senarai belian anda menunjukkan jenama dari Malaysia dahulu. Hanya anda yang nampak pilihan ini."
+  "brandsLocalFirstHint": "Cadangan produk dalam senarai belian anda menunjukkan jenama dari Malaysia dahulu. Hanya anda yang nampak pilihan ini.",
+  "brandsSaved": "Disimpan: cadangan belian anda mengikutnya",
+  "brandsYours": "Jenama anda",
+  "brandsUse": "Guna {brand} untuk {ingredient}",
+  "brandsStopUsing": "Berhenti guna {brand} untuk {ingredient}",
+  "brandsAvoid": "Elak {brand}",
+  "brandsAvoidMaker": "Elak semua dari {maker}",
+  "brandsMine": "Jenama anda",
+  "brandsAvoided": "Dielak",
+  "brandsWholeMaker": "Semua buatan pengeluar ini",
+  "brandsNone": "Belum ada. Dalam senarai belian, tekan Lihat semua pada satu baris, kemudian satu jenama.",
+  "brandsRemove": "Buang",
+  "errMakerAvoided": "Anda mengelak pengeluar jenama ini. Buang dahulu di Akaun > Jenama.",
+  "errAvoidFull": "Anda sudah mengelak 100 jenama dan pengeluar. Buang sebahagian di Akaun > Jenama."
 }

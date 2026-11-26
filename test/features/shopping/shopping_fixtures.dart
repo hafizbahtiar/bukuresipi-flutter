@@ -122,4 +122,48 @@ class FakeShopping implements ShoppingRepository {
       brand: 'Jati',
     ),
   ];
+
+  BrandChoices choices = (mine: const [], avoid: const []);
+  final brandCalls = <String>[];
+
+  @override
+  Future<BrandChoices> brandChoices() async => choices;
+
+  @override
+  Future<void> setMyBrand(String ingredient, String brand) async {
+    brandCalls.add('mine $ingredient $brand');
+    choices = (
+      mine: [
+        ...choices.mine.where((m) => m.ingredient != ingredient),
+        (ingredient: ingredient, brand: brand),
+      ],
+      avoid: choices.avoid.where((a) => a.brand != brand).toList(),
+    );
+  }
+
+  @override
+  Future<void> clearMyBrand(String ingredient) async {
+    brandCalls.add('clear $ingredient');
+    choices = (
+      mine: choices.mine.where((m) => m.ingredient != ingredient).toList(),
+      avoid: choices.avoid,
+    );
+  }
+
+  @override
+  Future<void> avoid(AvoidTarget target) async {
+    brandCalls.add('avoid ${target.brand ?? target.maker}');
+    choices = (mine: choices.mine, avoid: [...choices.avoid, target]);
+  }
+
+  @override
+  Future<void> unavoid(AvoidTarget target) async {
+    brandCalls.add('unavoid ${target.brand ?? target.maker}');
+    choices = (
+      mine: choices.mine,
+      avoid: choices.avoid
+          .where((a) => a.brand != target.brand || a.maker != target.maker)
+          .toList(),
+    );
+  }
 }

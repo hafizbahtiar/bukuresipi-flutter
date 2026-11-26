@@ -3671,5 +3671,61 @@
   "brandsLocalFirst": "Malaysian brands first",
   "@brandsLocalFirst": {},
   "brandsLocalFirstHint": "Product hints on your shopping list show brands from Malaysia before others. Only you see this choice.",
-  "@brandsLocalFirstHint": {}
+  "@brandsLocalFirstHint": {},
+  "brandsSaved": "Saved: your shopping hints follow it",
+  "@brandsSaved": {},
+  "brandsYours": "Your brand",
+  "@brandsYours": {},
+  "brandsUse": "Use {brand} for {ingredient}",
+  "@brandsUse": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      },
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsStopUsing": "Stop using {brand} for {ingredient}",
+  "@brandsStopUsing": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      },
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsAvoid": "Avoid {brand}",
+  "@brandsAvoid": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsAvoidMaker": "Avoid everything from {maker}",
+  "@brandsAvoidMaker": {
+    "placeholders": {
+      "maker": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsMine": "Your brands",
+  "@brandsMine": {},
+  "brandsAvoided": "Avoided",
+  "@brandsAvoided": {},
+  "brandsWholeMaker": "Everything this maker makes",
+  "@brandsWholeMaker": {},
+  "brandsNone": "None yet. On your shopping list, tap See all on a line, then a brand.",
+  "@brandsNone": {},
+  "brandsRemove": "Remove",
+  "@brandsRemove": {},
+  "errMakerAvoided": "You avoid this brand's maker. Remove it from Account > Brands first.",
+  "@errMakerAvoided": {},
+  "errAvoidFull": "You avoid 100 brands and makers already. Remove some in Account > Brands.",
+  "@errAvoidFull": {}
 }

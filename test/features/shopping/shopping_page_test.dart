@@ -124,6 +124,32 @@ void main() {
   );
 
   testWidgets(
+    'a product\'s brand, as the next step: use it for the ingredient, avoid it or its maker',
+    (t) async {
+      await shopping.addRecipe('r-1');
+      await pump(t);
+      await t.tap(find.textContaining('See all'));
+      await t.pumpAndSettle();
+      await t.tap(
+        find.byKey(
+          const ValueKey('product-Beras Super Special Tempatan Jati 5kg'),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.text('Use Jati for Beras putih'), findsOneWidget);
+      expect(find.text('Avoid Jati'), findsOneWidget);
+      expect(
+        find.text('Avoid everything from Serba Wangi Sdn Bhd'),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('brand-mine')));
+      await t.pumpAndSettle();
+      expect(repo.brandCalls, ['mine Beras putih Jati']);
+      expect(find.text('Saved: your shopping hints follow it'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'typing 2+ letters suggests catalogue names; tapping one adds it',
     (t) async {
       await pump(t);

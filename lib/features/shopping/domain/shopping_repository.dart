@@ -28,6 +28,17 @@ abstract interface class ShoppingRepository {
   /// Removes every bought line of that list.
   Future<void> clearDone({bool family = false});
 
-  /// Catalogue products of one ingredient (branded first, up to 50).
+  /// Catalogue products of one ingredient in the user's order (their brand first, avoided left out; up to 50).
   Future<List<ShoppingProduct>> products(String ingredient);
+
+  Future<BrandChoices> brandChoices();
+
+  /// [brand] becomes the user's for [ingredient] (off the avoid list if it was there). Throws ApiException
+  /// (maker_avoided when the user avoids its whole maker).
+  Future<void> setMyBrand(String ingredient, String brand);
+  Future<void> clearMyBrand(String ingredient);
+
+  /// Drops the user's brand choices it covers. Throws ApiException (avoid_full at 100).
+  Future<void> avoid(AvoidTarget target);
+  Future<void> unavoid(AvoidTarget target);
 }

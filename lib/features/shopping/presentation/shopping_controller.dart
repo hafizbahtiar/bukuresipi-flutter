@@ -219,6 +219,17 @@ class ShoppingController extends ChangeNotifier {
   Future<List<ShoppingProduct>> products(String ingredient) =>
       _repo.products(ingredient);
 
+  /// Throws ApiException.
+  Future<BrandChoices> brandChoices() => _repo.brandChoices();
+
+  /// A brand choice ([change]), then the list again: its hints follow the user's choices. Throws ApiException.
+  Future<void> changeBrands(
+    Future<void> Function(ShoppingRepository r) change,
+  ) async {
+    await change(_repo);
+    await load();
+  }
+
   Future<void> clearDone() async {
     final done = _items.where((i) => i.done).toList();
     _items = _items.where((i) => !i.done).toList();

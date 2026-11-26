@@ -44,4 +44,43 @@ void main() {
       expect(controller.user!.localFirst, isTrue);
     },
   );
+
+  testWidgets('lists my brands and what I avoid; a remove takes it off', (
+    t,
+  ) async {
+    final controller = AuthController(
+      FakeAuthRepository()
+        ..session = true
+        ..meResult = testUser,
+    );
+    await controller.restore();
+    final repo = FakeShopping()
+      ..choices = (
+        mine: const [(ingredient: 'Beras putih', brand: 'Jati')],
+        avoid: const [(brand: null, maker: 'Syarikat X')],
+      );
+    await t.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: controller),
+          ChangeNotifierProvider.value(value: ShoppingController(repo)),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: BrandsPage(),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('Jati'), findsOneWidget);
+    expect(find.text('Everything this maker makes'), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('brands-unavoid-Syarikat X')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('brands-mine-remove-Beras putih')));
+    await t.pumpAndSettle();
+    expect(repo.brandCalls, ['unavoid Syarikat X', 'clear Beras putih']);
+    expect(find.textContaining('None yet'), findsOneWidget);
+  });
 }

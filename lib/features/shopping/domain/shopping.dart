@@ -33,6 +33,7 @@ class ShoppingProduct {
     this.brand,
     this.manufacturer,
     this.country,
+    this.mine = false,
   });
 
   final String name;
@@ -41,4 +42,17 @@ class ShoppingProduct {
 
   /// Where the brand is from ("Malaysia").
   final String? country;
+
+  /// The user's own brand for this ingredient (Account > Brands).
+  final bool mine;
 }
+
+/// The user's brand choices: their brand per ingredient, and brands or whole makers they avoid (one of the two
+/// set). Private to them, also on a family list.
+typedef BrandChoices = ({
+  List<({String ingredient, String brand})> mine,
+  List<({String? brand, String? maker})> avoid,
+});
+
+/// What to avoid: a [brand], or everything from a [maker].
+typedef AvoidTarget = ({String? brand, String? maker});
