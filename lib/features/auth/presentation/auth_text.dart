@@ -66,6 +66,8 @@ String errorText(
     'suggest_limit' => l.errSuggestLimit,
     'not_food' => l.errNotFood,
     'ai_unavailable' => l.errAiUnavailable,
+    'ai_unknown_model' => l.errAiUnknownModel,
+    'ai_no_images' => l.errAiNoImages,
     'place_required' => l.errPlaceRequired,
     'not_ready' => l.errReceiptNotReady,
     'no_pin' => l.errMapsNoPin,

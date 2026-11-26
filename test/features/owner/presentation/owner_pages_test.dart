@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ai_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_catalogue_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_hidden_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredients_page.dart';
@@ -212,6 +213,8 @@ void main() {
     t,
   ) async {
     await pump(t, const OwnerPage());
+    await t.ensureVisible(find.text('Nominatim')); // below the owner's rows
+    await t.pumpAndSettle();
     await t.tap(find.text('Nominatim'));
     await t.pumpAndSettle();
     expect(find.text('Cap applies per'), findsOneWidget);
@@ -964,4 +967,53 @@ void main() {
       expect(find.text('Santan Desa'), findsNothing);
     },
   );
+
+  group('Owner > AI', () {
+    testWidgets(
+      'the default and every use are listed, an override shows its own line',
+      (t) async {
+        await pump(t, const OwnerAiPage());
+        expect(find.text('Default'), findsWidgets);
+        expect(
+          find.text('DeepSeek v4.1 Flash · Off'),
+          findsOneWidget,
+        ); // the default row
+        expect(find.text('Share: read a place post'), findsOneWidget);
+        expect(find.text('Draft a place'), findsOneWidget);
+        expect(find.text('DeepSeek v4.1 Flash · High'), findsOneWidget);
+        expect(find.text('Read a receipt'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a budget use above Off warns; it is saved; Use default clears another',
+      (t) async {
+        await pump(t, const OwnerAiPage());
+        await t.tap(find.text('Share: read a place post'));
+        await t.pumpAndSettle();
+        expect(find.textContaining('can make it fail'), findsNothing);
+        await t.tap(find.text('High'));
+        await t.pumpAndSettle();
+        expect(find.textContaining('can make it fail'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('ai-save')));
+        await t.pumpAndSettle();
+        expect(repo.aiSaved.single, (
+          'share_extract',
+          (
+            provider: 'commandcode',
+            model: 'deepseek/deepseek-v4.1-flash',
+            reasoning: 'high',
+          ),
+        ));
+        expect(find.text('DeepSeek v4.1 Flash · High'), findsNWidgets(2));
+
+        await t.tap(find.text('Draft a place'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Use default'));
+        await t.pumpAndSettle();
+        expect(repo.aiCleared, ['place_draft']);
+        expect(find.text('DeepSeek v4.1 Flash · High'), findsOneWidget);
+      },
+    );
+  });
 }
