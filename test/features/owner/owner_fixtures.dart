@@ -254,6 +254,27 @@ class FakeOwner implements OwnerRepository {
     return (lines: 3, sample: const ['sedikit minyak', '2 sudu minyak']);
   }
 
+  ({String? name, String? ingredient}) gapAnswer = (
+    name: 'minyak masak',
+    ingredient: 'Minyak masak',
+  );
+  List<AliasSuggestion> aliasAnswer = const [
+    (ingredient: 'Bawang putih', alias: 'garlic', lines: 12),
+    (ingredient: 'Bawang putih', alias: 'garlics', lines: 0),
+  ];
+
+  @override
+  Future<({String? name, String? ingredient})> suggestGap(String line) async =>
+      gapAnswer;
+
+  @override
+  Future<({List<AliasSuggestion> items, int? next})> suggestAliases(
+    int offset,
+  ) async => (
+    items: offset == 0 ? aliasAnswer : const <AliasSuggestion>[],
+    next: null,
+  );
+
   @override
   Future<int> addAlias(String ingredient, String alias) async {
     aliases.add((ingredient, alias));

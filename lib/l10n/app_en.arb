@@ -3737,5 +3737,58 @@
         "type": "String"
       }
     }
+  },
+  "ownerGapAiSuggest": "Suggest with AI",
+  "@ownerGapAiSuggest": {},
+  "ownerGapAiSame": "Same as {ingredient}",
+  "@ownerGapAiSame": {
+    "placeholders": {
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapAiNew": "New ingredient: {name}",
+  "@ownerGapAiNew": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapAiNone": "AI could not tell what this is",
+  "@ownerGapAiNone": {},
+  "ownerAliasAiTitle": "Suggest aliases with AI",
+  "@ownerAliasAiTitle": {},
+  "ownerAliasAiHint": "Other names for ingredients with the fewest. Untick any that is wrong: a wrong alias links lines (and their allergens) to the wrong ingredient.",
+  "@ownerAliasAiHint": {},
+  "ownerAliasAiLines": "{count, plural, =0{Links no line yet} =1{Links 1 line now} other{Links {count} lines now}}",
+  "@ownerAliasAiLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAliasAiNone": "No new aliases for these.",
+  "@ownerAliasAiNone": {},
+  "ownerAliasAiSave": "{count, plural, =0{Save} other{Save {count}}}",
+  "@ownerAliasAiSave": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAliasAiSaved": "{aliases, plural, =1{1 alias saved} other{{aliases} aliases saved}}, {lines} lines linked",
+  "@ownerAliasAiSaved": {
+    "placeholders": {
+      "aliases": {
+        "type": "int"
+      },
+      "lines": {
+        "type": "int"
+      }
+    }
   }
 }

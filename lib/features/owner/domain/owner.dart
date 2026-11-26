@@ -407,3 +407,6 @@ class CatalogueProduct {
 
 /// One page of a catalogue list; [next] = the offset of the next page, null at the end.
 typedef CataloguePage<T> = ({List<T> items, int? next});
+
+/// An alias the AI proposed for a catalogue [ingredient]; [lines] = unlinked lines it would link now.
+typedef AliasSuggestion = ({String ingredient, String alias, int lines});

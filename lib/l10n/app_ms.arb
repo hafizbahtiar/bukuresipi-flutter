@@ -1356,5 +1356,15 @@
   "errMakerAvoided": "Anda mengelak pengeluar jenama ini. Buang dahulu di Akaun > Jenama.",
   "errAvoidFull": "Anda sudah mengelak 100 jenama dan pengeluar. Buang sebahagian di Akaun > Jenama.",
   "recipeProducts": "Produk",
-  "recipeMyBrand": "Jenama anda: {brand}"
+  "recipeMyBrand": "Jenama anda: {brand}",
+  "ownerGapAiSuggest": "Cadang dengan AI",
+  "ownerGapAiSame": "Sama dengan {ingredient}",
+  "ownerGapAiNew": "Bahan baru: {name}",
+  "ownerGapAiNone": "AI tidak pasti apa ini",
+  "ownerAliasAiTitle": "Cadang nama lain dengan AI",
+  "ownerAliasAiHint": "Nama lain untuk bahan yang paling sedikit. Nyahtanda yang salah: nama lain yang salah memautkan baris (dan alergennya) kepada bahan yang salah.",
+  "ownerAliasAiLines": "{count, plural, =0{Belum memautkan baris} other{Memautkan {count} baris sekarang}}",
+  "ownerAliasAiNone": "Tiada nama lain baharu untuk bahan ini.",
+  "ownerAliasAiSave": "{count, plural, =0{Simpan} other{Simpan {count}}}",
+  "ownerAliasAiSaved": "{aliases} nama lain disimpan, {lines} baris dipautkan"
 }

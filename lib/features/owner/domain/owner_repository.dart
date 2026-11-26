@@ -124,6 +124,14 @@ abstract interface class OwnerRepository {
   /// A new catalogue ingredient; every unlinked line is matched again: how many it linked. Throws 'name_taken'.
   Future<int> addIngredient(String name, String category);
 
+  /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
+  /// Throws 'ai_unavailable'.
+  Future<({String? name, String? ingredient})> suggestGap(String line);
+
+  /// AI: aliases for 20 ingredients (fewest aliases first) from [offset], each with the lines it would link;
+  /// next = null at the end. Nothing saved (save with [addAlias]). Throws 'ai_unavailable'.
+  Future<({List<AliasSuggestion> items, int? next})> suggestAliases(int offset);
+
   /// Matches every unlinked line again (after a migration added names by hand).
   Future<({int checked, int linked})> relinkIngredients();
 

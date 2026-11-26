@@ -12,6 +12,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../widgets/alias_suggest_sheet.dart';
 import '../widgets/ingredient_gap_sheet.dart';
 
 /// Owner > Ingredient gaps: lines no catalogue name matched; a tap adds the alias or ingredient we lack and every
@@ -79,6 +80,18 @@ class _OwnerIngredientsPageState extends State<OwnerIngredientsPage> {
     }
   }
 
+  Future<void> _suggestAliases() async {
+    final l = AppLocalizations.of(context);
+    final done = await showBaseSheet<(int, int)>(
+      context,
+      floating: false, // a long list to tick
+      builder: (_) => const AliasSuggestSheet(),
+    );
+    if (done == null || !mounted) return;
+    _snack(l.ownerAliasAiSaved(done.$1, done.$2));
+    _load();
+  }
+
   Future<void> _copyRows() async {
     final l = AppLocalizations.of(context);
     try {
@@ -108,6 +121,11 @@ class _OwnerIngredientsPageState extends State<OwnerIngredientsPage> {
             onPressed: () => showActionSheet(
               context,
               actions: [
+                MenuAction(
+                  icon: Icons.auto_awesome,
+                  label: l.ownerAliasAiTitle,
+                  onTap: _suggestAliases,
+                ),
                 MenuAction(
                   icon: Icons.link,
                   label: l.ownerRelink,

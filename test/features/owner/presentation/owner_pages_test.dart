@@ -546,6 +546,53 @@ void main() {
       },
     );
 
+    testWidgets(
+      'Suggest with AI: the catalogue match opens its alias step; a name it lacks opens the new ingredient',
+      (t) async {
+        repo.gaps = [minyak];
+        await pump(t, const OwnerIngredientsPage());
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.byKey(const ValueKey('gap-ai')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Same as Minyak masak'));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.text('Links 3 lines'), findsOneWidget);
+        expect(repo.aliases, isEmpty); // nothing saved by the AI
+
+        Navigator.of(t.element(find.text('Links 3 lines'))).pop();
+        await t.pumpAndSettle();
+        repo.gapAnswer = (name: 'daun salam', ingredient: null);
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.byKey(const ValueKey('gap-ai')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('New ingredient: daun salam'));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.widgetWithText(TextField, 'Daun salam'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Suggest aliases with AI: untick the wrong one, save the rest',
+      (t) async {
+        repo.gaps = [minyak];
+        await pump(t, const OwnerIngredientsPage());
+        await t.tap(find.byKey(const ValueKey('gaps-more')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Suggest aliases with AI'));
+        await t.pumpAndSettle();
+        expect(find.text('Links 12 lines now'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('alias-ai-garlics')));
+        await t.pump();
+        expect(find.text('Save 1'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('alias-ai-save')));
+        await t.pumpAndSettle();
+        expect(repo.aliases, [('Bawang putih', 'garlic')]);
+        expect(find.text('1 alias saved, 3 lines linked'), findsOneWidget);
+      },
+    );
+
     testWidgets('a new ingredient: name and category, then saved', (t) async {
       repo.gaps = [
         const IngredientGap(

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/ai_button.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -46,6 +47,8 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
   ({int lines, List<String> sample})? _preview;
   bool _taken = false;
   bool _busy = false;
+  ({String? name, String? ingredient})? _ai;
+  bool _aiBusy = false;
   Timer? _debounce;
   int _asked = 0;
 
@@ -89,6 +92,27 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
     _ingredient = ingredient;
     _go(_Step.alias);
     _check(_alias.text);
+  }
+
+  /// AI: what the gap's sample line names, and the catalogue ingredient that is. A suggestion: nothing saved.
+  Future<void> _suggest() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _aiBusy = true);
+    try {
+      final ai = await _repo.suggestGap(widget.gap.sample);
+      if (mounted) setState(() => _ai = ai);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _aiBusy = false);
+    }
+  }
+
+  /// The AI's name as a new ingredient: the create step, its name filled.
+  void _createFromAi(String name) {
+    _name.text = name[0].toUpperCase() + name.substring(1);
+    _go(_Step.create);
   }
 
   /// How many lines the alias would link (nothing saved), or that the name is taken.
@@ -169,6 +193,42 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
                 style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AiButton(
+                  key: const ValueKey('gap-ai'),
+                  label: l.ownerGapAiSuggest,
+                  busy: _aiBusy,
+                  onPressed: _suggest,
+                ),
+              ),
+            ),
+            if (_ai case final ai?)
+              switch (ai) {
+                (name: _, ingredient: final String ingredient) => ListTile(
+                  key: const ValueKey('gap-ai-same'),
+                  leading: const AiBadge(),
+                  title: Text(l.ownerGapAiSame(ingredient)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _pick(ingredient),
+                ),
+                (name: final String name, ingredient: null) => ListTile(
+                  key: const ValueKey('gap-ai-new'),
+                  leading: const AiBadge(),
+                  title: Text(l.ownerGapAiNew(name)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _createFromAi(name),
+                ),
+                _ => ListTile(
+                  leading: const AiBadge(),
+                  title: Text(
+                    l.ownerGapAiNone,
+                    style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                  ),
+                ),
+              },
             Padding(
               padding: const EdgeInsets.all(spaceM),
               child: TextField(
