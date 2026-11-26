@@ -34,9 +34,12 @@ void main() {
       expect(await diskCached('cover-abc', fetch), [1, 2, 3]);
       expect(fetched, 1);
 
-      expect(await diskCached('../../etc/passwd', fetch), [1, 2, 3]);
+      // As a path it would land at <tmp>/escaped: a file that exists only if the name check failed (on Linux,
+      // <tmp>/../../etc/passwd is the real /etc/passwd, so that probe always "existed").
+      expect(await diskCached('../escaped', fetch), [1, 2, 3]);
       expect(fetched, 2); // fetched, never stored as a path
-      expect(File('${tmp.path}/../../etc/passwd').existsSync(), isFalse);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(File('${tmp.path}/escaped').existsSync(), isFalse);
     },
   );
 }
