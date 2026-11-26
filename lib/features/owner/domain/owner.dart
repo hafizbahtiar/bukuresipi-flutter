@@ -437,3 +437,32 @@ typedef CatalogueSuggestion = ({
   int recipes,
   String sample,
 });
+
+/// Owner > AI: which provider, model and reasoning level ('off' | 'low' | 'medium' | 'high' | 'max') a use gets.
+typedef AiSetting = ({String provider, String model, String reasoning});
+
+/// A model the server offers, the levels it takes, and whether it reads photos.
+typedef AiModel = ({
+  String id,
+  String name,
+  List<String> reasoning,
+  bool images,
+});
+
+/// [configured] = its key is set on the server.
+typedef AiProvider = ({
+  String id,
+  String name,
+  bool configured,
+  List<AiModel> models,
+});
+
+/// One AI use: [budget] = runs inside a share or receipt run (thinking can make it fail), [images] = sends photos,
+/// [setting] null = it follows the default.
+typedef AiUse = ({String id, bool budget, bool images, AiSetting? setting});
+
+typedef AiSettings = ({
+  List<AiProvider> providers,
+  AiSetting defaults,
+  List<AiUse> uses,
+});
