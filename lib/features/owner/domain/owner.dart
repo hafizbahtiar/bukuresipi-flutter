@@ -413,7 +413,8 @@ typedef AliasSuggestion = ({String ingredient, String alias, int lines});
 
 /// A product form filled from a barcode, a store link or a name (nothing saved). [brandIsNew]: the catalogue has no
 /// such brand yet; [aiIngredient]: the AI named the ingredient; [source]: the page the fields came from; [maker]: a
-/// new brand's maker as a page names it (its country when the page says), null = not found.
+/// new brand's maker as a page names it (its country when the page says), null = not found; [similar] = may be
+/// this product already.
 typedef ProductFill = ({
   String name,
   String? brand,
@@ -424,4 +425,7 @@ typedef ProductFill = ({
   bool aiIngredient,
   String source,
   ({String name, String? country, String source})? maker,
+
+  /// Catalogue products that may be this one: edit one of them rather than add it again.
+  List<CatalogueProduct> similar,
 });

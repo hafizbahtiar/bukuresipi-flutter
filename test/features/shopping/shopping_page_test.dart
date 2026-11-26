@@ -145,7 +145,9 @@ void main() {
       await t.tap(find.byKey(const ValueKey('brand-mine')));
       await t.pumpAndSettle();
       expect(repo.brandCalls, ['mine Beras putih Jati']);
-      expect(find.text('Saved: your shopping hints follow it'), findsOneWidget);
+      // Back on the list, still open, reloaded with the new tag.
+      expect(find.text('Use Jati for Beras putih'), findsNothing);
+      expect(find.text('Your brand'), findsNWidgets(2));
     },
   );
 

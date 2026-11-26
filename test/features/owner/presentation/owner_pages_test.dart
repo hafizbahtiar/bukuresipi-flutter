@@ -575,7 +575,7 @@ void main() {
     );
 
     testWidgets(
-      'Suggest aliases with AI: untick the wrong one, save the rest',
+      'Suggest aliases with AI: none ticked, the one that links lines first; tick and save',
       (t) async {
         repo.gaps = [minyak];
         await pump(t, const OwnerIngredientsPage());
@@ -584,12 +584,23 @@ void main() {
         await t.tap(find.text('Suggest aliases with AI'));
         await t.pumpAndSettle();
         expect(find.text('Links 12 lines now'), findsOneWidget);
+        expect(find.text('Save'), findsOneWidget);
+        expect(
+          t.getTopLeft(find.byKey(const ValueKey('alias-ai-garlic'))).dy,
+          lessThan(
+            t.getTopLeft(find.byKey(const ValueKey('alias-ai-garlics'))).dy,
+          ),
+        );
+        await t.tap(find.byKey(const ValueKey('alias-ai-all')));
+        await t.pump();
+        expect(find.text('Save 2'), findsOneWidget);
         await t.tap(find.byKey(const ValueKey('alias-ai-garlics')));
         await t.pump();
         expect(find.text('Save 1'), findsOneWidget);
         await t.tap(find.byKey(const ValueKey('alias-ai-save')));
         await t.pumpAndSettle();
         expect(repo.aliases, [('Bawang putih', 'garlic')]);
+        expect(repo.aliasBatches, 1);
         expect(find.text('1 alias saved, 3 lines linked'), findsOneWidget);
       },
     );
@@ -737,9 +748,11 @@ void main() {
           ),
           findsOneWidget,
         );
-        await t.tap(find.byKey(const ValueKey('catalogue-add-brand')));
-        await t.pumpAndSettle();
-        expect(find.text('New brand: Kara'), findsNothing);
+        expect(
+          find.text('New brand: Kara. Added when you save.'),
+          findsOneWidget,
+        );
+        // One Save: the maker, the brand, then the product.
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
         expect(repo.savedRows.map((r) => r.$1), [
@@ -771,6 +784,40 @@ void main() {
         await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
         await t.pumpAndSettle();
         expect(find.text('No product found for that.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a fill that finds the product already: edit it instead of adding it again',
+      (t) async {
+        repo.fillAnswer = (
+          name: 'Beras Faiza 5kg',
+          brand: 'Faiza',
+          brandIsNew: false,
+          size: 5,
+          unit: 'kg',
+          ingredient: 'Beras putih',
+          aiIngredient: false,
+          source: 'https://world.openfoodfacts.org/product/9555035703828',
+          maker: null,
+          similar: [repo.productList.single],
+        );
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-fill')),
+          '9555035703828',
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-similar-1')));
+        await t.pumpAndSettle();
+        expect(find.byKey(const ValueKey('catalogue-fill')), findsNothing);
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.single.$1, 'products');
+        expect(repo.savedRows.single.$2, 1); // the existing row, not a new one
       },
     );
 

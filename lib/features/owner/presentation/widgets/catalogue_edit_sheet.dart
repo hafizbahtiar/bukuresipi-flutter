@@ -68,6 +68,9 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   ProductFill? _fill;
   bool _filling = false;
   bool _brandAdded = false;
+
+  /// The row being edited: [CatalogueEditSheet.row], or a product a fill found already in the catalogue.
+  late Object? _row = widget.row;
   Timer? _debounce;
   bool _busy = false;
   bool _taken = false;
@@ -78,7 +81,19 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   @override
   void initState() {
     super.initState();
-    switch (widget.row) {
+    _show(widget.row);
+    _loadPickers();
+  }
+
+  static String _sizeText(double? size) => size == null
+      ? ''
+      : size % 1 == 0
+      ? size.toInt().toString()
+      : '$size';
+
+  /// [row]'s values in the fields.
+  void _show(Object? row) {
+    switch (row) {
       case CatalogueMaker m:
         _name.text = m.name;
       case CatalogueBrand b:
@@ -89,15 +104,20 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
         _name.text = p.name;
         _brand.text = p.brand ?? '';
         _ingredient.text = p.ingredient ?? '';
-        _size.text = p.size == null
-            ? ''
-            : p.size! % 1 == 0
-            ? p.size!.toInt().toString()
-            : '${p.size}';
+        _size.text = _sizeText(p.size);
         _unit.text = p.unit ?? '';
     }
-    _loadPickers();
   }
+
+  /// A fill found this product already: edit it in this sheet instead of adding it again.
+  void _editInstead(CatalogueProduct p) => setState(() {
+    _row = p;
+    _fill = null;
+    _fillFrom.clear();
+    _taken = false;
+    _unknown = false;
+    _show(p);
+  });
 
   Future<void> _loadPickers() async {
     try {
@@ -138,11 +158,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
         _name.text = f.name;
         _brand.text = f.brandIsNew ? '' : (f.brand ?? '');
         _ingredient.text = f.ingredient ?? '';
-        _size.text = f.size == null
-            ? ''
-            : f.size! % 1 == 0
-            ? f.size!.toInt().toString()
-            : '${f.size}';
+        _size.text = _sizeText(f.size);
         _unit.text = f.unit ?? '';
         _taken = false;
         _unknown = false;
@@ -164,13 +180,10 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     }
   }
 
-  /// The filled product's brand is new: add it (with the maker and country a page named, else by its name only:
-  /// they are filled in Brands), then pick it.
-  Future<void> _addBrand(String name) async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+  /// Save of a fill whose brand is new and no brand picked: the brand first (with the maker and country a page
+  /// named, else by its name only: they are filled in Brands), then picked. A name taken meanwhile is picked.
+  Future<void> _addNewBrand(String name) async {
     final maker = _fill?.maker;
-    setState(() => _busy = true);
     try {
       int? makerId;
       if (maker != null) {
@@ -191,20 +204,11 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
         country: maker?.country,
       );
     } on ApiException catch (e) {
-      // Added meanwhile: pick it all the same.
-      if (e.code != 'name_taken') {
-        messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-        if (mounted) setState(() => _busy = false);
-        return;
-      }
+      if (e.code != 'name_taken') rethrow;
     }
     await _loadPickers();
-    if (!mounted) return;
-    setState(() {
-      _brandAdded = true;
-      _brand.text = name;
-      _busy = false;
-    });
+    _brandAdded = true;
+    _brand.text = name;
   }
 
   @override
@@ -251,7 +255,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final id = switch (widget.row) {
+    final id = switch (_row) {
       CatalogueMaker m => m.id,
       CatalogueBrand b => b.id,
       CatalogueProduct p => p.id,
@@ -271,10 +275,14 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             makerId: maker == null
                 ? null
                 : _makers.where((m) => m.name == maker).firstOrNull?.id ??
-                      (widget.row as CatalogueBrand?)?.makerId,
+                      (_row as CatalogueBrand?)?.makerId,
             country: _orNull(_country),
           );
         case CatalogueKind.products:
+          if (_fill case final f?
+              when f.brandIsNew && !_brandAdded && _orNull(_brand) == null) {
+            await _addNewBrand(f.brand!);
+          }
           final brand = _orNull(_brand);
           await _repo.saveProduct(
             id: id,
@@ -283,7 +291,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             brandId: brand == null
                 ? null
                 : _brands.where((b) => b.name == brand).firstOrNull?.id ??
-                      (widget.row as CatalogueProduct?)?.brandId,
+                      (_row as CatalogueProduct?)?.brandId,
             size: double.tryParse(_size.text.trim().replaceAll(',', '.')),
             unit: _orNull(_unit),
           );
@@ -309,7 +317,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   Future<void> _delete() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final (id, name) = switch (widget.row) {
+    final (id, name) = switch (_row) {
       CatalogueMaker m => (m.id, m.name),
       CatalogueBrand b => (b.id, b.name),
       CatalogueProduct p => (p.id, p.name),
@@ -350,10 +358,10 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            widget.row == null ? '${l.catalogueAdd}: $title' : title,
+            _row == null ? '${l.catalogueAdd}: $title' : title,
             style: text.titleMedium,
           ),
-          if (widget.kind == CatalogueKind.products && widget.row == null) ...[
+          if (widget.kind == CatalogueKind.products && _row == null) ...[
             gap,
             TextField(
               key: const ValueKey('catalogue-fill'),
@@ -380,6 +388,24 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
                 onPressed: _fillProduct,
               ),
             ),
+            if (_fill?.similar case final similar? when similar.isNotEmpty) ...[
+              gap,
+              Text(l.catalogueSimilar),
+              for (final p in similar)
+                BaseTile(
+                  key: ValueKey('catalogue-similar-${p.id}'),
+                  style: TileStyle.plain,
+                  dense: true,
+                  title: p.name,
+                  subtitle: [
+                    ?p.brand,
+                    if (p.size != null)
+                      '${_sizeText(p.size)} ${p.unit ?? ''}'.trim(),
+                  ].join(' · '),
+                  trailing: const Icon(Icons.edit_outlined),
+                  onTap: () => _editInstead(p),
+                ),
+            ],
           ],
           gap,
           TextField(
@@ -408,37 +434,20 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             ),
           ],
           if (widget.kind == CatalogueKind.products) ...[
+            // Added with the product on Save, unless the owner picks another brand.
             if (_fill case final f? when f.brandIsNew && !_brandAdded) ...[
               gap,
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l.catalogueNewBrand(f.brand!)),
-                        if (f.maker case final m?)
-                          Text(
-                            l.catalogueMadeBy(
-                              m.country == null
-                                  ? m.name
-                                  : '${m.name}, ${m.country}',
-                              Uri.tryParse(m.source)?.host ?? m.source,
-                            ),
-                            style: text.bodySmall?.copyWith(
-                              color: Notebook.of(context).inkSoft,
-                            ),
-                          ),
-                      ],
-                    ),
+              Text(l.catalogueNewBrand(f.brand!)),
+              if (f.maker case final m?)
+                Text(
+                  l.catalogueMadeBy(
+                    m.country == null ? m.name : '${m.name}, ${m.country}',
+                    Uri.tryParse(m.source)?.host ?? m.source,
                   ),
-                  TextButton(
-                    key: const ValueKey('catalogue-add-brand'),
-                    onPressed: _busy ? null : () => _addBrand(f.brand!),
-                    child: Text(l.catalogueAddBrand),
+                  style: text.bodySmall?.copyWith(
+                    color: Notebook.of(context).inkSoft,
                   ),
-                ],
-              ),
+                ),
             ],
             gap,
             PickerField(
@@ -513,7 +522,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
           // Negative left, positive right (owner panels).
           Row(
             children: [
-              if (widget.row != null)
+              if (_row != null)
                 TextButton(
                   key: const ValueKey('catalogue-delete'),
                   style: TextButton.styleFrom(

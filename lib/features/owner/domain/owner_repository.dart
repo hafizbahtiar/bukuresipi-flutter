@@ -121,6 +121,12 @@ abstract interface class OwnerRepository {
   /// Saves the alias and relinks every unlinked line: how many it linked. Throws as [previewAlias].
   Future<int> addAlias(String ingredient, String alias);
 
+  /// Several aliases, then one relink of every unlinked line (one pass, not one per alias); taken names and
+  /// unknown ingredients are skipped. Returns how many were saved and how many lines they linked.
+  Future<({int saved, int linked})> addAliases(
+    List<({String ingredient, String alias})> items,
+  );
+
   /// A new catalogue ingredient; every unlinked line is matched again: how many it linked. Throws 'name_taken'.
   Future<int> addIngredient(String name, String category);
 
@@ -129,7 +135,7 @@ abstract interface class OwnerRepository {
   Future<({String? name, String? ingredient})> suggestGap(String line);
 
   /// AI: aliases for 20 ingredients (fewest aliases first) from [offset], each with the lines it would link;
-  /// next = null at the end. Nothing saved (save with [addAlias]). Throws 'ai_unavailable'.
+  /// next = null at the end. Nothing saved (save with [addAliases]). Throws 'ai_unavailable'.
   Future<({List<AliasSuggestion> items, int? next})> suggestAliases(int offset);
 
   /// Matches every unlinked line again (after a migration added names by hand).

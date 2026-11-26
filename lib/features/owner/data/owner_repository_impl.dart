@@ -393,6 +393,21 @@ class OwnerRepositoryImpl implements OwnerRepository {
   );
 
   @override
+  Future<({int saved, int linked})> addAliases(
+    List<({String ingredient, String alias})> items,
+  ) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/ingredients/aliases/batch',
+      data: {
+        'items': [
+          for (final i in items) {'ingredient': i.ingredient, 'alias': i.alias},
+        ],
+      },
+    )).data!;
+    return (saved: j['saved'] as int, linked: j['relinked'] as int);
+  });
+
+  @override
   Future<ProductFill> fillProduct({
     String? barcode,
     String? url,
@@ -423,6 +438,11 @@ class OwnerRepositoryImpl implements OwnerRepository {
               country: m['country'] as String?,
               source: m['source'] as String,
             ),
+      similar: [
+        for (final p
+            in (j['similar'] as List? ?? const []).cast<Map<String, dynamic>>())
+          _catalogueProduct(p),
+      ],
     );
   });
 
@@ -551,15 +571,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
       (
         items: [
           for (final p in (j['items'] as List).cast<Map<String, dynamic>>())
-            CatalogueProduct(
-              id: p['id'] as int,
-              name: p['name'] as String,
-              ingredient: p['ingredient'] as String?,
-              brandId: p['brandId'] as int?,
-              brand: p['brand'] as String?,
-              size: (p['size'] as num?)?.toDouble(),
-              unit: p['unit'] as String?,
-            ),
+            _catalogueProduct(p),
         ],
         next: j['next'] as int?,
       ),
@@ -699,3 +711,13 @@ RatingBurst _burst(Map<String, dynamic> j) {
     ],
   );
 }
+
+CatalogueProduct _catalogueProduct(Map<String, dynamic> p) => CatalogueProduct(
+  id: p['id'] as int,
+  name: p['name'] as String,
+  ingredient: p['ingredient'] as String?,
+  brandId: p['brandId'] as int?,
+  brand: p['brand'] as String?,
+  size: (p['size'] as num?)?.toDouble(),
+  unit: p['unit'] as String?,
+);

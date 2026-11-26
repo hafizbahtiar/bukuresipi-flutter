@@ -278,6 +278,7 @@ class FakeOwner implements OwnerRepository {
       country: 'Indonesia',
       source: 'https://kara.test/about',
     ),
+    similar: const [],
   );
 
   @override
@@ -311,6 +312,20 @@ class FakeOwner implements OwnerRepository {
     gaps = const [];
     return 3;
   }
+
+  @override
+  Future<({int saved, int linked})> addAliases(
+    List<({String ingredient, String alias})> items,
+  ) async {
+    aliasBatches++;
+    for (final i in items) {
+      aliases.add((i.ingredient, i.alias));
+    }
+    gaps = const [];
+    return (saved: items.length, linked: 3);
+  }
+
+  int aliasBatches = 0;
 
   @override
   Future<int> addIngredient(String name, String category) async {

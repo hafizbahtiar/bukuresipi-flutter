@@ -13,6 +13,7 @@ import '../shopping_controller.dart';
 
 /// Every catalogue product of [ingredient] in the user's order (their brand first, avoided left out), as buying
 /// hints; a branded row's next step: use it as their brand for [ingredient], or avoid it or its maker.
+/// A choice is saved, then the sheet slides back to the list, reloaded (the new order and tags say it worked).
 /// [onChanged]: after a choice is saved (the shopping list reloads itself).
 Future<void> showProductsSheet(
   BuildContext context,
@@ -34,7 +35,7 @@ class ProductsSheet extends StatefulWidget {
 }
 
 class _ProductsSheetState extends State<ProductsSheet> {
-  late final Future<List<ShoppingProduct>> _products = context
+  late Future<List<ShoppingProduct>> _products = context
       .read<ShoppingController>()
       .products(widget.ingredient);
   ShoppingProduct? _picked; // null = the list; else its choices step
@@ -45,22 +46,19 @@ class _ProductsSheetState extends State<ProductsSheet> {
     _picked = p;
   });
 
-  /// Closes the sheet; the list reloads with the new order. An error is told on the page.
-  Future<void> _change(
-    Future<void> Function(ShoppingRepository r) change,
-  ) async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+  /// Back to the list, which waits for the change and then reloads; a failed change shows there.
+  void _change(Future<void> Function(ShoppingRepository r) change) {
     final shopping = context.read<ShoppingController>();
     final onChanged = widget.onChanged;
-    Navigator.pop(context);
-    try {
-      await shopping.changeBrands(change);
-      onChanged?.call();
-      messenger.showSnackBar(SnackBar(content: Text(l.brandsSaved)));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-    }
+    setState(() {
+      _products = () async {
+        await shopping.changeBrands(change);
+        onChanged?.call();
+        return shopping.products(widget.ingredient);
+      }();
+      _forward = false;
+      _picked = null;
+    });
   }
 
   @override
@@ -89,7 +87,7 @@ class _ProductsSheetState extends State<ProductsSheet> {
                   ),
                   if (s.hasError)
                     NotebookRow(child: Text(errorText(l, s.error!)))
-                  else if (!s.hasData)
+                  else if (s.connectionState != ConnectionState.done)
                     const Padding(
                       padding: EdgeInsets.all(spaceL),
                       child: Center(
@@ -138,41 +136,43 @@ class _ProductsSheetState extends State<ProductsSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SheetStepTitle(title: p.brand!, onBack: () => _pick(null)),
-                ListTile(
+                NotebookRow(
                   key: const ValueKey('brand-mine'),
-                  leading: Icon(p.mine ? Icons.star : Icons.star_outline),
-                  title: Text(
-                    p.mine
-                        ? l.brandsStopUsing(p.brand!, widget.ingredient)
-                        : l.brandsUse(p.brand!, widget.ingredient),
-                  ),
+                  minHeight: 56,
+                  mark: Icon(p.mine ? Icons.star : Icons.star_outline),
                   onTap: () => _change(
                     (r) => p.mine
                         ? r.clearMyBrand(widget.ingredient)
                         : r.setMyBrand(widget.ingredient, p.brand!),
                   ),
+                  child: Text(
+                    p.mine
+                        ? l.brandsStopUsing(p.brand!, widget.ingredient)
+                        : l.brandsUse(p.brand!, widget.ingredient),
+                  ),
                 ),
-                const Divider(height: spaceS),
-                ListTile(
+                NotebookRow(
                   key: const ValueKey('brand-avoid'),
-                  leading: Icon(Icons.block, color: nb.margin),
-                  title: Text(
+                  minHeight: 56,
+                  mark: Icon(Icons.block, color: nb.margin),
+                  onTap: () =>
+                      _change((r) => r.avoid((brand: p.brand, maker: null))),
+                  child: Text(
                     l.brandsAvoid(p.brand!),
                     style: TextStyle(color: nb.margin),
                   ),
-                  onTap: () =>
-                      _change((r) => r.avoid((brand: p.brand, maker: null))),
                 ),
                 if (p.manufacturer != null)
-                  ListTile(
+                  NotebookRow(
                     key: const ValueKey('maker-avoid'),
-                    leading: Icon(Icons.domain_disabled, color: nb.margin),
-                    title: Text(
-                      l.brandsAvoidMaker(p.manufacturer!),
-                      style: TextStyle(color: nb.margin),
-                    ),
+                    minHeight: 56,
+                    mark: Icon(Icons.domain_disabled, color: nb.margin),
                     onTap: () => _change(
                       (r) => r.avoid((brand: null, maker: p.manufacturer)),
+                    ),
+                    child: Text(
+                      l.brandsAvoidMaker(p.manufacturer!),
+                      style: TextStyle(color: nb.margin),
                     ),
                   ),
                 const SizedBox(height: spaceS),

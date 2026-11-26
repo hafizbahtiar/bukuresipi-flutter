@@ -3672,8 +3672,6 @@
   "@brandsLocalFirst": {},
   "brandsLocalFirstHint": "Product hints on your shopping list show brands from Malaysia before others. Only you see this choice.",
   "@brandsLocalFirstHint": {},
-  "brandsSaved": "Saved: your shopping hints follow it",
-  "@brandsSaved": {},
   "brandsYours": "Your brand",
   "@brandsYours": {},
   "brandsUse": "Use {brand} for {ingredient}",
@@ -3760,7 +3758,7 @@
   "@ownerGapAiNone": {},
   "ownerAliasAiTitle": "Suggest aliases with AI",
   "@ownerAliasAiTitle": {},
-  "ownerAliasAiHint": "Other names for ingredients with the fewest. Untick any that is wrong: a wrong alias links lines (and their allergens) to the wrong ingredient.",
+  "ownerAliasAiHint": "Other names for ingredients with the fewest. Tick the right ones: a wrong alias links lines (and their allergens) to the wrong ingredient.",
   "@ownerAliasAiHint": {},
   "ownerAliasAiLines": "{count, plural, =0{Links no line yet} =1{Links 1 line now} other{Links {count} lines now}}",
   "@ownerAliasAiLines": {
@@ -3809,7 +3807,7 @@
   "@catalogueFillNotFound": {},
   "catalogueFillUnreadable": "No product found on that page.",
   "@catalogueFillUnreadable": {},
-  "catalogueNewBrand": "New brand: {brand}",
+  "catalogueNewBrand": "New brand: {brand}. Added when you save.",
   "@catalogueNewBrand": {
     "placeholders": {
       "brand": {
@@ -3817,8 +3815,6 @@
       }
     }
   },
-  "catalogueAddBrand": "Add brand",
-  "@catalogueAddBrand": {},
   "catalogueMadeBy": "Made by {maker} (from {site})",
   "@catalogueMadeBy": {
     "placeholders": {
@@ -3829,5 +3825,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "catalogueSimilar": "This may be in the catalogue already. Tap it to edit it instead.",
+  "@catalogueSimilar": {},
+  "ownerAliasAiTickAll": "Tick all",
+  "@ownerAliasAiTickAll": {},
+  "ownerAliasAiTickNone": "Untick all",
+  "@ownerAliasAiTickNone": {}
 }

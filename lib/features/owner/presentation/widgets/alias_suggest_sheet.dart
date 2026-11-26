@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/ai_button.dart';
+import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/widgets/owner_panel.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 
-/// Owner > Ingredient gaps > ⋮ > Suggest aliases with AI: the AI's aliases, each ticked; the owner unticks the wrong
-/// ones and saves the rest (as by hand: relinked, in Copy rows). Pops with (aliases saved, lines linked).
+/// Owner > Ingredient gaps > ⋮ > Suggest aliases with AI: the AI's aliases, none ticked (a wrong alias links
+/// allergens, so each is a choice), the ones that link lines now first; the owner ticks the right ones and saves them (as by hand: relinked, in Copy rows). Pops with (aliases saved, lines linked).
 /// Server: bukuresipi-hono docs/superpowers/specs/2026-11-26-catalogue-ai-ingredients-design.md.
 class AliasSuggestSheet extends StatefulWidget {
   const AliasSuggestSheet({super.key});
@@ -23,7 +23,7 @@ class AliasSuggestSheet extends StatefulWidget {
 
 class _AliasSuggestSheetState extends State<AliasSuggestSheet> {
   List<AliasSuggestion> _items = const [];
-  final _off = <AliasSuggestion>{};
+  final _on = <AliasSuggestion>{};
   int? _next = 0;
   Object? _error;
   bool _loading = false;
@@ -47,7 +47,11 @@ class _AliasSuggestSheetState extends State<AliasSuggestSheet> {
       final r = await _repo.suggestAliases(_next!);
       if (mounted) {
         setState(() {
-          _items = [..._items, ...r.items];
+          // The ones that link lines now first; earlier rows stay where the owner saw them.
+          _items = [
+            ..._items,
+            ...[...r.items]..sort((a, b) => b.lines.compareTo(a.lines)),
+          ];
           _next = r.next;
         });
       }
@@ -58,35 +62,31 @@ class _AliasSuggestSheetState extends State<AliasSuggestSheet> {
     }
   }
 
-  /// One at a time, through the same path as by hand; a name taken meanwhile is skipped.
+  /// All ticked rows in one call (one relink on the server); taken names are skipped there.
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
-    var saved = 0, linked = 0;
     try {
-      for (final s in _items.where((s) => !_off.contains(s))) {
-        try {
-          linked += await _repo.addAlias(s.ingredient, s.alias);
-          saved++;
-        } on ApiException catch (e) {
-          if (e.code != 'name_taken') rethrow;
-        }
-      }
-      if (mounted) Navigator.of(context).pop((saved, linked));
+      final r = await _repo.addAliases([
+        for (final s in _on) (ingredient: s.ingredient, alias: s.alias),
+      ]);
+      if (mounted) Navigator.of(context).pop((r.saved, r.linked));
     } catch (e) {
-      // Some may be saved already: the page reloads either way.
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
-      if (mounted) Navigator.of(context).pop((saved, linked));
+      if (mounted) setState(() => _saving = false);
     }
   }
+
+  void _toggle(AliasSuggestion s) =>
+      setState(() => _on.contains(s) ? _on.remove(s) : _on.add(s));
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    final ticked = _items.length - _off.length;
+    final ticked = _on.length;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,20 +109,51 @@ class _AliasSuggestSheetState extends State<AliasSuggestSheet> {
             style: text.bodySmall?.copyWith(color: nb.inkSoft),
           ),
         ),
+        if (_items.isNotEmpty)
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: spaceS),
+              child: TextButton(
+                key: const ValueKey('alias-ai-all'),
+                onPressed: _saving
+                    ? null
+                    : () => setState(
+                        () => ticked == _items.length
+                            ? _on.clear()
+                            : _on.addAll(_items),
+                      ),
+                child: Text(
+                  ticked == _items.length
+                      ? l.ownerAliasAiTickNone
+                      : l.ownerAliasAiTickAll,
+                ),
+              ),
+            ),
+          ),
         Flexible(
           child: ListView(
             shrinkWrap: true,
             children: [
               for (final s in _items)
-                CheckboxListTile(
+                NotebookRow(
                   key: ValueKey('alias-ai-${s.alias}'),
-                  value: !_off.contains(s),
-                  onChanged: _saving
-                      ? null
-                      : (on) =>
-                            setState(() => on! ? _off.remove(s) : _off.add(s)),
-                  title: Text('${s.alias}  →  ${s.ingredient}'),
-                  subtitle: Text(l.ownerAliasAiLines(s.lines)),
+                  onTap: _saving ? null : () => _toggle(s),
+                  mark: Checkbox(
+                    value: _on.contains(s),
+                    onChanged: _saving ? null : (_) => _toggle(s),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${s.alias}  →  ${s.ingredient}'),
+                      Text(
+                        l.ownerAliasAiLines(s.lines),
+                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                      ),
+                    ],
+                  ),
                 ),
               if (_loading)
                 const Padding(
