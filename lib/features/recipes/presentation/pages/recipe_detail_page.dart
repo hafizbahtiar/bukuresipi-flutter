@@ -22,6 +22,7 @@ import '../../../shopping/presentation/shopping_controller.dart';
 import '../../../shopping/presentation/widgets/products_sheet.dart';
 import '../recipes_controller.dart';
 import '../widgets/ingredient_picker.dart';
+import '../widgets/line_pick.dart';
 import '../widgets/recipe_variants.dart';
 import 'pantry_page.dart' show pantryIngredients;
 import 'recipe_edit_page.dart';
@@ -696,18 +697,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ],
             ),
           ),
-          subtitle: i.optional || i.myBrand != null
+          subtitle: i.optional || i.myBrand != null || i.pick != null
               ? Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Wrap(
-                    spacing: spaceXs,
-                    runSpacing: spaceXs,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (i.optional) TagChip(TileTag(l.recipeOptional)),
-                      if (i.myBrand case final brand?)
-                        TagChip(
-                          TileTag(l.recipeMyBrand(brand), tone: TagTone.good),
+                      if (i.pick case final p?) ...pickLines(context, p),
+                      Wrap(
+                        spacing: spaceXs,
+                        runSpacing: spaceXs,
+                        children: pickTags(
+                          context,
+                          i.pick,
+                          i.myBrand,
+                          optional: i.optional,
                         ),
+                      ),
                     ],
                   ),
                 )

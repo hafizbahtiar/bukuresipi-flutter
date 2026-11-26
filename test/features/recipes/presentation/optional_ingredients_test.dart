@@ -188,4 +188,51 @@ void main() {
       expect(repo.detailCalls, reads + 1);
     },
   );
+
+  testWidgets(
+    'a picked line shows its product; Avoided when avoided; Your brand only when different',
+    (t) async {
+      await pump(
+        t,
+        recipeDetail(
+          ingredients: const [
+            RecipeIngredient(
+              name: 'Santan',
+              rawText: '200 ml santan',
+              myBrand: 'Ayam Brand',
+              pick: LinePick(
+                kind: 'product',
+                id: 7,
+                name: 'Kara UHT 200ml',
+                brand: 'Kara',
+                maker: 'Kara Marketing',
+                country: 'Malaysia',
+                avoided: true,
+              ),
+            ),
+            RecipeIngredient(
+              name: 'Kicap',
+              rawText: 'kicap',
+              myBrand: 'Adabi',
+              pick: LinePick(
+                kind: 'brand',
+                id: 3,
+                name: 'Adabi',
+                brand: 'Adabi',
+              ),
+            ),
+          ],
+        ),
+      );
+      expect(find.text('Kara UHT 200ml'), findsOneWidget);
+      expect(find.text('Kara · Kara Marketing · Malaysia'), findsOneWidget);
+      expect(find.text('Avoided'), findsOneWidget);
+      expect(find.text('Your brand: Ayam Brand'), findsOneWidget);
+      expect(find.text('Any Adabi'), findsOneWidget);
+      expect(
+        find.text('Your brand: Adabi'),
+        findsNothing,
+      ); // the pick is theirs already
+    },
+  );
 }

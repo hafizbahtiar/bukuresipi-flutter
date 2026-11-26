@@ -3875,5 +3875,13 @@
   "errPickUnknown": "That product or brand is gone from the catalogue. Pick another.",
   "@errPickUnknown": {},
   "errSuggestionFull": "You have 20 suggestions waiting already. Try again once some are added.",
-  "@errSuggestionFull": {}
+  "@errSuggestionFull": {},
+  "shoppingPicked": "Recipe uses {name}",
+  "@shoppingPicked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

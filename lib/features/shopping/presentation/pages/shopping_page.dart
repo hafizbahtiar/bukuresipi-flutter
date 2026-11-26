@@ -14,6 +14,7 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../family/presentation/family_controller.dart';
+import '../../../recipes/presentation/widgets/line_pick.dart';
 import '../../domain/shopping.dart';
 import '../shopping_controller.dart';
 import '../widgets/products_sheet.dart';
@@ -371,7 +372,7 @@ class _ItemRow extends StatelessWidget {
                 style: small,
               ),
             ),
-          if (products.isNotEmpty && !item.done)
+          if ((products.isNotEmpty || item.pick != null) && !item.done)
             InkWell(
               onTap: item.ingredient == null
                   ? null
@@ -379,7 +380,12 @@ class _ItemRow extends StatelessWidget {
               child: Text.rich(
                 TextSpan(
                   children: [
-                    TextSpan(text: l.shoppingProducts(products)),
+                    TextSpan(
+                      text: switch (item.pick) {
+                        final p? => l.shoppingPicked(pickLabel(l, p)),
+                        null => l.shoppingProducts(products),
+                      },
+                    ),
                     if (item.ingredient != null)
                       TextSpan(
                         text: '  ${l.shoppingSeeAllProducts}',
@@ -393,13 +399,19 @@ class _ItemRow extends StatelessWidget {
                 style: small,
               ),
             ),
-          // The user's own brand for this ingredient, as on a recipe line.
-          if (item.products.where((p) => p.mine).firstOrNull?.brand
-              case final brand? when !item.done)
+          // Avoided (the recipe's pick) and the user's own brand for this ingredient, as on a recipe line.
+          if (pickTags(
+                context,
+                item.pick,
+                item.products.where((p) => p.mine).firstOrNull?.brand,
+              )
+              case final tags when tags.isNotEmpty && !item.done)
             Padding(
               padding: const EdgeInsets.only(top: spaceXs),
-              child: TagChip(
-                TileTag(l.recipeMyBrand(brand), tone: TagTone.good),
+              child: Wrap(
+                spacing: spaceXs,
+                runSpacing: spaceXs,
+                children: tags,
               ),
             ),
         ],
