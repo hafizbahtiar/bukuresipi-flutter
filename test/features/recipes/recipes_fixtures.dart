@@ -98,6 +98,7 @@ RecipeDetail recipeDetail({
 
 class FakeRecipes implements RecipesRepository {
   List<PantryMatch> pantryAnswer = const [];
+  List<String> pantryUnrecognised = const [];
   final pantryAsked = <(List<String>, bool)>[];
   List<DishSuggestion> dishAnswer = const [];
   Object? dishError;
@@ -111,12 +112,12 @@ class FakeRecipes implements RecipesRepository {
   }
 
   @override
-  Future<List<PantryMatch>> fromPantry(
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   }) async {
     pantryAsked.add((ingredients, staples));
-    return pantryAnswer;
+    return (items: pantryAnswer, unrecognised: pantryUnrecognised);
   }
 
   final covers = <(String, String)>[];
@@ -233,8 +234,10 @@ class FakeRecipes implements RecipesRepository {
   /// While set and not completed, the recipe detail waits for it (the page still loading).
   Completer<void>? detailGate;
 
+  int detailCalls = 0;
   @override
   Future<RecipeDetail> get(String id) async {
+    detailCalls++;
     await detailGate?.future;
     if (detailError != null) throw detailError!;
     return detailResult!;

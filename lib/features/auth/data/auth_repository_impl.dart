@@ -61,6 +61,13 @@ class AuthRepositoryImpl implements AuthRepository {
   );
 
   @override
+  Future<User> setLocalFirst(bool on) => apiCall(
+    () async => _remember(
+      (await _api.patchMe({'localFirst': on}))['user'] as Map<String, dynamic>,
+    ),
+  );
+
+  @override
   Future<User> setFoodBudget(int? sen) => apiCall(
     () async => _remember(
       (await _api.patchMe({'foodBudgetSen': sen}))['user']
@@ -215,4 +222,5 @@ User userFromJson(Map<String, dynamic> j) => User(
   avatar: j['avatar'] as String?,
   kcalTarget: j['kcalTarget'] as int?,
   foodBudgetSen: j['foodBudgetSen'] as int?,
+  localFirst: j['localFirst'] as bool? ?? false, // a cached user from before
 );

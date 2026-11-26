@@ -52,6 +52,8 @@ String errorText(
     'email_unverified' => l.errEmailUnverified,
     'owner_account' => l.errOwnerAccount,
     'list_full' => l.errShoppingListFull,
+    'maker_avoided' => l.errMakerAvoided,
+    'avoid_full' => l.errAvoidFull,
     'not_maps_link' => l.errNotMapsLink,
     'source_off' => l.errSourceOff,
     'branch_label_taken' => l.errBranchLabelTaken,

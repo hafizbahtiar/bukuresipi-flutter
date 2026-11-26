@@ -223,7 +223,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
       });
 
   @override
-  Future<List<PantryMatch>> fromPantry(
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   }) => apiCall(() async {
@@ -231,16 +231,21 @@ class RecipesRepositoryImpl implements RecipesRepository {
       '/recipes/from-pantry',
       data: {'ingredients': ingredients, 'staples': staples},
     )).data!;
-    return [
-      for (final m in (data['items'] as List).cast<Map<String, dynamic>>())
-        (
-          recipe: recipeFromJson(m['recipe'] as Map<String, dynamic>),
-          have: m['have'] as int,
-          required: m['required'] as int,
-          missing: (m['missing'] as List).cast<String>(),
-          unknown: (m['unknown'] as List).cast<String>(),
-        ),
-    ];
+    return (
+      items: [
+        for (final m in (data['items'] as List).cast<Map<String, dynamic>>())
+          (
+            recipe: recipeFromJson(m['recipe'] as Map<String, dynamic>),
+            have: m['have'] as int,
+            required: m['required'] as int,
+            missing: (m['missing'] as List).cast<String>(),
+            unknown: (m['unknown'] as List).cast<String>(),
+          ),
+      ],
+      // An older server sends no list.
+      unrecognised: ((data['unrecognised'] as List?) ?? const [])
+          .cast<String>(),
+    );
   });
 
   @override
@@ -377,6 +382,8 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
         quantity: i['quantity'] as String?,
         unit: i['unit'] as String?,
         optional: i['optional'] == true,
+        hasProducts: i['hasProducts'] == true,
+        myBrand: i['myBrand'] as String?,
       ),
   ],
   steps: [

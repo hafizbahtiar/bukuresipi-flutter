@@ -53,7 +53,7 @@ void main() {
       expect(find.text('For Nasi Lemak Ayam'), findsOneWidget);
       expect(
         find.textContaining(
-          'e.g. Beras Super Special Tempatan Jati 5kg (Jati)',
+          'e.g. Beras Super Special Tempatan Jati 5kg (Jati, Malaysia)',
           findRichText: true,
         ),
         findsOneWidget,
@@ -116,7 +116,38 @@ void main() {
         find.text('Jati Signature Super Special Rice 10kg'),
         findsOneWidget,
       );
-      expect(find.text('Jati · Serba Wangi Sdn Bhd'), findsOneWidget);
+      expect(
+        find.text('Jati · Serba Wangi Sdn Bhd · Malaysia'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'a product\'s brand, as the next step: use it for the ingredient, avoid it or its maker',
+    (t) async {
+      await shopping.addRecipe('r-1');
+      await pump(t);
+      await t.tap(find.textContaining('See all'));
+      await t.pumpAndSettle();
+      await t.tap(
+        find.byKey(
+          const ValueKey('product-Beras Super Special Tempatan Jati 5kg'),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.text('Use Jati for Beras putih'), findsOneWidget);
+      expect(find.text('Avoid Jati'), findsOneWidget);
+      expect(
+        find.text('Avoid everything from Serba Wangi Sdn Bhd'),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('brand-mine')));
+      await t.pumpAndSettle();
+      expect(repo.brandCalls, ['mine Beras putih Jati']);
+      // Back on the list, still open, reloaded with the new tag.
+      expect(find.text('Use Jati for Beras putih'), findsNothing);
+      expect(find.text('Your brand'), findsNWidgets(2));
     },
   );
 

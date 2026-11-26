@@ -103,4 +103,86 @@ abstract interface class OwnerRepository {
 
   /// Website tester signups, oldest first.
   Future<List<Tester>> testers();
+
+  /// Unlinked lines grouped, most first (100), and the catalogue's categories for a new ingredient.
+  Future<({List<IngredientGap> gaps, List<String> categories})>
+  ingredientGaps();
+
+  /// Catalogue ingredient names for what the owner types (2+ characters).
+  Future<List<String>> searchIngredients(String query);
+
+  /// How many unlinked lines [alias] would link to [ingredient] (a catalogue name), and some of them; nothing is
+  /// saved. Throws 'name_taken' (already a name or an alias) or 'not_found'.
+  Future<({int lines, List<String> sample})> previewAlias(
+    String ingredient,
+    String alias,
+  );
+
+  /// Saves the alias and relinks every unlinked line: how many it linked. Throws as [previewAlias].
+  Future<int> addAlias(String ingredient, String alias);
+
+  /// Several aliases, then one relink of every unlinked line (one pass, not one per alias); taken names and
+  /// unknown ingredients are skipped. Returns how many were saved and how many lines they linked.
+  Future<({int saved, int linked})> addAliases(
+    List<({String ingredient, String alias})> items,
+  );
+
+  /// A new catalogue ingredient; every unlinked line is matched again: how many it linked. Throws 'name_taken'.
+  Future<int> addIngredient(String name, String category);
+
+  /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
+  /// Throws 'ai_unavailable'.
+  Future<({String? name, String? ingredient})> suggestGap(String line);
+
+  /// AI: aliases for 20 ingredients (fewest aliases first) from [offset], each with the lines it would link;
+  /// next = null at the end. Nothing saved (save with [addAliases]). Throws 'ai_unavailable'.
+  Future<({List<AliasSuggestion> items, int? next})> suggestAliases(int offset);
+
+  /// Matches every unlinked line again (after a migration added names by hand).
+  Future<({int checked, int linked})> relinkIngredients();
+
+  /// What was added in the app, as markdown rows for docs/plans/ingredient.md and ingredient_alias.md.
+  Future<({String ingredients, String aliases})> addedIngredientRows();
+
+  /// Owner > Catalogue lists, 50 a page, by name ([query] also matches a brand's maker, a product's brand and
+  /// ingredient).
+  Future<CataloguePage<CatalogueMaker>> makers({String? query, int offset = 0});
+  Future<(CataloguePage<CatalogueBrand>, List<String> countries)> brands({
+    String? query,
+    int offset = 0,
+  });
+  Future<(CataloguePage<CatalogueProduct>, List<String> units)> products({
+    String? query,
+    int offset = 0,
+  });
+
+  /// New when [id] is null. Throws 'name_taken' (makers and brands, ignoring case) or 'not_found' (a link that is
+  /// gone, or a product's ingredient name the catalogue does not have).
+  Future<void> saveMaker({int? id, required String name});
+  Future<void> saveBrand({
+    int? id,
+    required String name,
+    int? makerId,
+    String? country,
+  });
+
+  /// Fills a product form from a [barcode] (Open Food Facts), a store [url] or a product [name] (web search); one
+  /// of the three. Nothing saved. Throws 'not_found' (an unknown barcode, no store page for the name),
+  /// 'unreadable' (no product on that page), 'ai_unavailable' (no search left).
+  Future<ProductFill> fillProduct({String? barcode, String? url, String? name});
+
+  Future<void> saveProduct({
+    int? id,
+    required String name,
+    String? ingredient,
+    int? brandId,
+    double? size,
+    String? unit,
+  });
+
+  /// [kind] is 'makers', 'brands' or 'products'. What used it stays, without it.
+  Future<void> deleteCatalogueRow(String kind, int id);
+
+  /// Added and changed rows, as markdown for docs/plans/manufacturer.md, brand.md and product.md.
+  Future<({String makers, String brands, String products})> catalogueRows();
 }

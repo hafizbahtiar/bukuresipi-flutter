@@ -143,7 +143,7 @@ class RecipesController extends ChangeNotifier {
       _repo.searchIngredients(query);
 
   /// Throws ApiException.
-  Future<List<PantryMatch>> fromPantry(
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   }) => _repo.fromPantry(ingredients, staples: staples);

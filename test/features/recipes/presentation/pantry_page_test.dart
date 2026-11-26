@@ -76,7 +76,9 @@ void main() {
         ['Telur', 'Bawang merah'],
       );
 
-      await t.tap(find.text('Salt, sugar and cooking oil are in my kitchen'));
+      await t.tap(
+        find.text('Salt, sugar, cooking oil and water are in my kitchen'),
+      );
       await t.tap(find.byKey(const ValueKey('pantry-find')));
       await t.pumpAndSettle();
       final (asked, staples) = recipes.pantryAsked.single;
@@ -87,8 +89,17 @@ void main() {
       expect(find.text('Check: daun pandan'), findsOneWidget);
       await t.tap(find.byTooltip('Add missing to shopping list'));
       await t.pumpAndSettle();
-      expect(find.text('Added to your shopping list'), findsOneWidget);
-      expect(shoppingRepo.items.map((i) => i.text), ['Kicap']);
+      // The recipe's own lines less what the kitchen has, by the server's rule (not one bare name each).
+      expect(shoppingRepo.recipesAdded, ['r-2']);
+      expect(shoppingRepo.haves.single, ['Telur', 'Bawang merah']);
+      expect(shoppingRepo.staplesAsked.single, isFalse);
+      expect(shoppingRepo.skippedOptional.single, isTrue);
+      expect(find.textContaining('shopping list'), findsWidgets);
+
+      // A change to the list clears the old answer.
+      await t.tap(find.byTooltip('Delete').first);
+      await t.pumpAndSettle();
+      expect(find.text('Telur Dadar'), findsNothing);
     },
   );
 
@@ -198,6 +209,56 @@ void main() {
         find.text('Telur'),
         findsOneWidget,
       ); // still in the field, not added
+    },
+  );
+
+  testWidgets(
+    'lines to check are no "cook now"; names the catalogue does not know are marked',
+    (t) async {
+      SharedPreferences.setMockInitialValues({
+        'pantry.ingredients': ['Telur', 'Serbuk ajaib'],
+      });
+      final recipes = FakeRecipes()
+        ..pantryUnrecognised = ['serbuk ajaib']
+        ..pantryAnswer = [
+          (
+            recipe: Recipe(
+              id: 'r-1',
+              name: 'Telur Misteri',
+              createdAt: DateTime(2026),
+            ),
+            have: 1,
+            required: 2,
+            missing: const [],
+            unknown: const ['rempah rahsia'],
+          ),
+        ];
+      await t.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => RecipesController(recipes)),
+            ChangeNotifierProvider(
+              create: (_) => ShoppingController(FakeShopping()),
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PantryPage(),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('pantry-unrecognised')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('pantry-find')));
+      await t.pumpAndSettle();
+      expect(find.text('Telur Misteri'), findsOneWidget);
+      expect(find.text('Cook now'), findsNothing);
+      expect(find.text('Check: rempah rahsia'), findsOneWidget);
+      expect(find.byTooltip('Add missing to shopping list'), findsNothing);
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
+      expect(find.byKey(const ValueKey('pantry-unrecognised')), findsOneWidget);
     },
   );
 }

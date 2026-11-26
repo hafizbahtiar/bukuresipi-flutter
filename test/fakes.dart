@@ -114,6 +114,21 @@ class FakeAuthRepository implements AuthRepository {
   final kcalTargets = <int?>[];
   final budgets = <int?>[];
 
+  final localFirsts = <bool>[];
+  @override
+  Future<User> setLocalFirst(bool on) async {
+    localFirsts.add(on);
+    return User(
+      id: testUser.id,
+      email: testUser.email,
+      name: testUser.name,
+      role: testUser.role,
+      lang: testUser.lang,
+      emailVerified: testUser.emailVerified,
+      localFirst: on,
+    );
+  }
+
   @override
   Future<User> setFoodBudget(int? sen) async {
     budgets.add(sen);
