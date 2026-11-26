@@ -237,7 +237,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       skipOptional = skip;
     }
     // What can I cook? list on this phone: asked only when it has something.
-    var have = await pantryIngredients();
+    var (:have, :staples) = await pantryIngredients();
     if (have.isNotEmpty) {
       if (!mounted) return;
       final skip = await showBasePicker<bool>(
@@ -257,6 +257,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         family: family,
         skipOptional: skipOptional,
         have: have,
+        staples: staples,
         // Only a changed "Serves N": the list then has the amounts the page shows.
         servings: _people == recipe.servings ? null : _people,
       );

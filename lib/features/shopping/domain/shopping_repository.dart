@@ -15,6 +15,7 @@ abstract interface class ShoppingRepository {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    bool staples = false,
     int? servings,
   });
 

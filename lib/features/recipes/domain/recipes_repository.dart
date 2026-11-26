@@ -40,8 +40,8 @@ abstract interface class RecipesRepository {
   Future<void> delete(String id);
 
   /// Readable recipes ranked by what the user still lacks, from what they have (cook now first, then 1-3 missing).
-  /// [staples] = salt, sugar and cooking oil count as owned.
-  Future<List<PantryMatch>> fromPantry(
+  /// [staples] = salt, sugar, cooking oil and water count as owned.
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   });

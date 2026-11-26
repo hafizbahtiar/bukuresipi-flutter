@@ -46,6 +46,7 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    bool staples = false,
     int? servings,
   }) => apiCall(
     () => _items(
@@ -62,6 +63,7 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
               for (final h in have.map((h) => h.trim()))
                 if (h.isNotEmpty && h.length <= 60) h,
             ].take(50).toList(),
+          if (have.isNotEmpty && staples) 'staples': true,
         },
       ),
     ),

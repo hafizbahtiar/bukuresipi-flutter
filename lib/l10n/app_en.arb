@@ -3042,8 +3042,12 @@
   "@pantryAdd": {},
   "pantryFull": "Up to 30 ingredients. Remove one to add another.",
   "@pantryFull": {},
-  "pantryStaples": "Salt, sugar and cooking oil are in my kitchen",
+  "pantryStaples": "Salt, sugar, cooking oil and water are in my kitchen",
   "@pantryStaples": {},
+  "pantryUnrecognised": "Marked ? = not in our ingredient list: only recipes that use the same word count it. Pick a suggestion as you type for a better match.",
+  "@pantryUnrecognised": {
+    "description": "Under the ingredient chips after a search: chips marked with a ? icon matched nothing in the ingredient catalogue."
+  },
   "pantryFind": "Find recipes",
   "@pantryFind": {},
   "pantryCookNow": "Cook now",
@@ -3068,8 +3072,6 @@
   "@pantryNone": {},
   "pantryAddMissing": "Add missing to shopping list",
   "@pantryAddMissing": {},
-  "pantryAdded": "Added to your shopping list",
-  "@pantryAdded": {},
   "pantrySuggest": "Suggest a dish",
   "@pantrySuggest": {},
   "pantrySuggestNote": "AI names a dish you could make with these. Tap one to look for a recipe online.",

@@ -98,6 +98,7 @@ RecipeDetail recipeDetail({
 
 class FakeRecipes implements RecipesRepository {
   List<PantryMatch> pantryAnswer = const [];
+  List<String> pantryUnrecognised = const [];
   final pantryAsked = <(List<String>, bool)>[];
   List<DishSuggestion> dishAnswer = const [];
   Object? dishError;
@@ -111,12 +112,12 @@ class FakeRecipes implements RecipesRepository {
   }
 
   @override
-  Future<List<PantryMatch>> fromPantry(
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   }) async {
     pantryAsked.add((ingredients, staples));
-    return pantryAnswer;
+    return (items: pantryAnswer, unrecognised: pantryUnrecognised);
   }
 
   final covers = <(String, String)>[];

@@ -217,6 +217,10 @@ typedef PantryMatch = ({
   List<String> unknown,
 });
 
+/// What can I cook?'s answer: [unrecognised] = the user's names the catalogue does not know (matched only word for
+/// word to lines with no catalogue link).
+typedef PantryResult = ({List<PantryMatch> items, List<String> unrecognised});
+
 /// A dish AI named for ingredients no recipe fits: a name only; [uses] = the user's own ingredients it takes.
 typedef DishSuggestion = ({String name, List<String> uses});
 
