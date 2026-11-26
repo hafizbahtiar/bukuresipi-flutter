@@ -429,3 +429,11 @@ typedef ProductFill = ({
   /// Catalogue products that may be this one: edit one of them rather than add it again.
   List<CatalogueProduct> similar,
 });
+
+/// A brand or product authors asked for from recipe lines, grouped by name (Owner > Catalogue > Suggested).
+typedef CatalogueSuggestion = ({
+  String name,
+  String? ingredient,
+  int recipes,
+  String sample,
+});

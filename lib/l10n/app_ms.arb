@@ -1393,5 +1393,13 @@
   "errPickMismatch": "Produk itu untuk bahan lain. Pilih semula pada baris yang diubah.",
   "errPickUnknown": "Produk atau jenama itu sudah tiada dalam katalog. Pilih yang lain.",
   "errSuggestionFull": "Anda sudah ada 20 cadangan yang menunggu. Cuba lagi selepas sebahagian ditambah.",
-  "shoppingPicked": "Resipi guna {name}"
+  "shoppingPicked": "Resipi guna {name}",
+  "catalogueSuggested": "Dicadang",
+  "catalogueSuggestedRecipes": "{count} resipi",
+  "catalogueSuggestedEmpty": "Tiada cadangan menunggu.",
+  "catalogueAddAsBrand": "Tambah sebagai jenama",
+  "catalogueAddAsProduct": "Tambah sebagai produk",
+  "catalogueLinkExisting": "Pautkan ke yang ada dalam katalog",
+  "catalogueDismiss": "Abaikan",
+  "catalogueLinked": "{count, plural, =0{Tiada baris yang masih perlukannya} other{Dipautkan ke {count} baris}}"
 }

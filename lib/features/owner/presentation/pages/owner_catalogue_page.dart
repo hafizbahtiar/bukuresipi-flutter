@@ -12,11 +12,14 @@ import '../../../../core/widgets/notebook.dart';
 import '../../../../core/widgets/wide_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
+import '../../../recipes/domain/recipe.dart';
+import '../../../recipes/presentation/widgets/line_pick_sheet.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../widgets/catalogue_edit_sheet.dart';
 
-/// Owner > Catalogue: products, brands and makers, searched, added, edited, deleted. Server design:
+/// Owner > Catalogue: products, brands and makers, searched, added, edited, deleted; Suggested = brands recipe
+/// authors asked for (spec 2026-11-26-recipe-line-picks-design.md), added or linked here. Server design:
 /// bukuresipi-hono docs/superpowers/specs/2026-11-26-brands-design.md; keeping docs/plans in step: docs/catalogue.md.
 class OwnerCataloguePage extends StatefulWidget {
   const OwnerCataloguePage({super.key});
@@ -27,7 +30,7 @@ class OwnerCataloguePage extends StatefulWidget {
 
 class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
   final _search = TextEditingController();
-  CatalogueKind _kind = CatalogueKind.products;
+  CatalogueKind? _kind = CatalogueKind.products; // null = Suggested
   List<Object> _rows = const [];
   int? _next;
   List<String> _countries = const [];
@@ -56,6 +59,8 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
   Future<(List<Object>, int?)> _page(int offset) async {
     final q = _search.text;
     switch (_kind) {
+      case null:
+        return (await _repo.catalogueSuggestions(), null);
       case CatalogueKind.makers:
         final p = await _repo.makers(query: q, offset: offset);
         return (p.items, p.next);
@@ -121,7 +126,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
     final done = await showBaseSheet<String>(
       context,
       builder: (_) => CatalogueEditSheet(
-        kind: _kind,
+        kind: _kind!,
         row: row,
         countries: _countries,
         units: _units,
@@ -130,6 +135,98 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
     if (done == null || !mounted) return;
     _snack(done == 'deleted' ? l.catalogueDeleted : l.catalogueSaved);
     _load();
+  }
+
+  Future<void> _suggestionActions(CatalogueSuggestion s) {
+    final l = AppLocalizations.of(context);
+    return showActionSheet(
+      context,
+      actions: [
+        MenuAction(
+          icon: Icons.sell_outlined,
+          label: l.catalogueAddAsBrand,
+          onTap: () => _addFor(s, CatalogueKind.brands),
+        ),
+        MenuAction(
+          icon: Icons.inventory_2_outlined,
+          label: l.catalogueAddAsProduct,
+          onTap: () => _addFor(s, CatalogueKind.products),
+        ),
+        MenuAction(
+          icon: Icons.link,
+          label: l.catalogueLinkExisting,
+          onTap: () async {
+            final r = await showLinePickSheet(
+              context,
+              ingredient: s.ingredient,
+              line: s.sample,
+            );
+            if (r case Picked(:final pick)) await _resolve(s, pick.ref);
+          },
+        ),
+        MenuAction(
+          icon: Icons.close,
+          label: l.catalogueDismiss,
+          danger: true,
+          onTap: () async {
+            try {
+              await _repo.dismissSuggestion(s.name);
+              _load();
+            } catch (e) {
+              if (mounted) _snack(errorText(l, e));
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  /// The form prefilled with the suggested name; once saved, the new row is found by its name and linked.
+  Future<void> _addFor(CatalogueSuggestion s, CatalogueKind kind) async {
+    final l = AppLocalizations.of(context);
+    String? saved;
+    final done = await showBaseSheet<String>(
+      context,
+      builder: (_) => CatalogueEditSheet(
+        kind: kind,
+        initialName: s.name,
+        initialIngredient: s.ingredient,
+        countries: _countries,
+        units: _units,
+        onSaved: (name) => saved = name,
+      ),
+    );
+    final name = saved?.toLowerCase();
+    if (done != 'saved' || name == null || !mounted) return;
+    try {
+      final id = kind == CatalogueKind.brands
+          ? (await _repo.brands(query: name)).$1.items
+                .where((b) => b.name.toLowerCase() == name)
+                .firstOrNull
+                ?.id
+          : (await _repo.products(query: name)).$1.items
+                .where((p) => p.name.toLowerCase() == name)
+                .firstOrNull
+                ?.id;
+      if (id == null) return await _load();
+      await _resolve(s, (
+        kind: kind == CatalogueKind.brands ? 'brand' : 'product',
+        id: id,
+      ));
+    } catch (e) {
+      if (mounted) _snack(errorText(l, e));
+    }
+  }
+
+  Future<void> _resolve(CatalogueSuggestion s, PickRef target) async {
+    final l = AppLocalizations.of(context);
+    try {
+      final linked = await _repo.resolveSuggestion(s.name, target);
+      if (mounted) _snack(l.catalogueLinked(linked));
+    } catch (e) {
+      if (mounted) _snack(errorText(l, e));
+    }
+    if (mounted) _load();
   }
 
   Future<void> _copyRows() async {
@@ -170,6 +267,10 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                 .trim(),
         ]),
       ),
+      final CatalogueSuggestion s => (
+        title: s.name,
+        subtitle: join([s.ingredient, l.catalogueSuggestedRecipes(s.recipes)]),
+      ),
       _ => (title: '$row', subtitle: ''),
     };
   }
@@ -184,12 +285,13 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
         toolbarHeight: 76,
         title: NotebookTitle(l.ownerCatalogue),
         actions: [
-          IconButton(
-            key: const ValueKey('catalogue-add'),
-            tooltip: l.catalogueAdd,
-            icon: const Icon(Icons.add),
-            onPressed: () => _edit(),
-          ),
+          if (_kind != null)
+            IconButton(
+              key: const ValueKey('catalogue-add'),
+              tooltip: l.catalogueAdd,
+              icon: const Icon(Icons.add),
+              onPressed: () => _edit(),
+            ),
           IconButton(
             key: const ValueKey('catalogue-more'),
             tooltip: MaterialLocalizations.of(context).showMenuTooltip,
@@ -212,7 +314,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: spaceM),
-              child: NotebookSegmented<CatalogueKind>(
+              child: NotebookSegmented<CatalogueKind?>(
                 segments: [
                   NotebookSegment(
                     value: CatalogueKind.products,
@@ -226,6 +328,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                     value: CatalogueKind.makers,
                     label: l.catalogueMakers,
                   ),
+                  NotebookSegment(value: null, label: l.catalogueSuggested),
                 ],
                 selected: _kind,
                 onChanged: (k) {
@@ -237,18 +340,19 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(spaceM, spaceXs, spaceM, 0),
-              child: TextField(
-                key: const ValueKey('catalogue-search'),
-                controller: _search,
-                decoration: InputDecoration(
-                  labelText: l.catalogueSearch,
-                  prefixIcon: const Icon(Icons.search),
+            if (_kind != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(spaceM, spaceXs, spaceM, 0),
+                child: TextField(
+                  key: const ValueKey('catalogue-search'),
+                  controller: _search,
+                  decoration: InputDecoration(
+                    labelText: l.catalogueSearch,
+                    prefixIcon: const Icon(Icons.search),
+                  ),
+                  onChanged: _searchChanged,
                 ),
-                onChanged: _searchChanged,
               ),
-            ),
             Expanded(
               child: LoadView(
                 loading: _loading && _rows.isEmpty,
@@ -262,7 +366,9 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                                 Padding(
                                   padding: const EdgeInsets.all(spaceL),
                                   child: Text(
-                                    l.catalogueEmpty,
+                                    _kind == null
+                                        ? l.catalogueSuggestedEmpty
+                                        : l.catalogueEmpty,
                                     textAlign: TextAlign.center,
                                     style: text.bodyMedium?.copyWith(
                                       color: nb.inkSoft,
@@ -296,7 +402,11 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                               title: d.title,
                               subtitle: d.subtitle,
                               dense: true,
-                              onTap: () => _edit(row),
+                              onTap: () => switch (row) {
+                                final CatalogueSuggestion s =>
+                                  _suggestionActions(s),
+                                _ => _edit(row),
+                              },
                             ),
                           );
                         },

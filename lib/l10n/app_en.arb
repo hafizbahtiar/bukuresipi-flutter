@@ -3883,5 +3883,33 @@
         "type": "String"
       }
     }
+  },
+  "catalogueSuggested": "Suggested",
+  "@catalogueSuggested": {},
+  "catalogueSuggestedRecipes": "{count, plural, =1{1 recipe} other{{count} recipes}}",
+  "@catalogueSuggestedRecipes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueSuggestedEmpty": "No suggestions waiting.",
+  "@catalogueSuggestedEmpty": {},
+  "catalogueAddAsBrand": "Add as a brand",
+  "@catalogueAddAsBrand": {},
+  "catalogueAddAsProduct": "Add as a product",
+  "@catalogueAddAsProduct": {},
+  "catalogueLinkExisting": "Link to one in the catalogue",
+  "@catalogueLinkExisting": {},
+  "catalogueDismiss": "Dismiss",
+  "@catalogueDismiss": {},
+  "catalogueLinked": "{count, plural, =0{No line still needed it} =1{Linked to 1 line} other{Linked to {count} lines}}",
+  "@catalogueLinked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -915,4 +915,49 @@ void main() {
       expect(find.text('| 122 | Kilang Baru |'), findsOneWidget);
     });
   });
+
+  testWidgets(
+    'a suggestion: added as a brand links it; dismiss removes the row',
+    (t) async {
+      repo.suggestionList = [
+        (
+          name: 'Kicap Mak Cik',
+          ingredient: 'Kicap',
+          recipes: 2,
+          sample: '2 sudu kicap',
+        ),
+        (name: 'Santan Desa', ingredient: null, recipes: 1, sample: 'santan'),
+      ];
+      await pump(t, const OwnerCataloguePage());
+      await t.tap(find.text('Suggested'));
+      await t.pumpAndSettle();
+      expect(find.text('Kicap · 2 recipes'), findsOneWidget);
+
+      await t.tap(find.text('Kicap Mak Cik'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Add as a brand'));
+      await t.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Kicap Mak Cik'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('catalogue-save')));
+      await t.pumpAndSettle();
+      final added = repo.brandList.last;
+      expect(added.name, 'Kicap Mak Cik');
+      expect(repo.resolvedSuggestions.single, (
+        'Kicap Mak Cik',
+        (kind: 'brand', id: added.id),
+      ));
+      expect(find.text('Linked to 2 lines'), findsOneWidget);
+      expect(
+        find.text('Kicap Mak Cik'),
+        findsNothing,
+      ); // resolved: gone from the tab
+
+      await t.tap(find.text('Santan Desa'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Dismiss'));
+      await t.pumpAndSettle();
+      expect(repo.dismissed, ['Santan Desa']);
+      expect(find.text('Santan Desa'), findsNothing);
+    },
+  );
 }
