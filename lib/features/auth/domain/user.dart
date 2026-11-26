@@ -12,6 +12,7 @@ class User {
     this.avatar,
     this.kcalTarget,
     this.foodBudgetSen,
+    this.localFirst = false,
   });
 
   final String id;
@@ -35,6 +36,9 @@ class User {
 
   /// The monthly food budget the user set (Spending), in sen; null = none.
   final int? foodBudgetSen;
+
+  /// Shopping product hints: brands from Malaysia first (Account > Brands).
+  final bool localFirst;
 
   bool get isOwner => role == 'owner';
 }

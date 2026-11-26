@@ -28,9 +28,17 @@ class ShoppingItem {
 }
 
 class ShoppingProduct {
-  const ShoppingProduct({required this.name, this.brand, this.manufacturer});
+  const ShoppingProduct({
+    required this.name,
+    this.brand,
+    this.manufacturer,
+    this.country,
+  });
 
   final String name;
   final String? brand;
   final String? manufacturer;
+
+  /// Where the brand is from ("Malaysia").
+  final String? country;
 }

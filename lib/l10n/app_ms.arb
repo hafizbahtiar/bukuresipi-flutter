@@ -1338,5 +1338,8 @@
   "catalogueDeleteAsk": "Padam {name}? Yang menggunakannya kekal, tanpanya. Buang barisnya dari docs/plans secara manual juga.",
   "catalogueSaved": "Disimpan",
   "catalogueDeleted": "Dipadam",
-  "catalogueRowsHint": "Tampal ke docs/plans/: baris yang diubah menggantikan baris dengan id yang sama, yang baharu di hujung. Padam tiada di sini: buang baris itu secara manual."
+  "catalogueRowsHint": "Tampal ke docs/plans/: baris yang diubah menggantikan baris dengan id yang sama, yang baharu di hujung. Padam tiada di sini: buang baris itu secara manual.",
+  "brandsTitle": "Jenama",
+  "brandsLocalFirst": "Jenama Malaysia dahulu",
+  "brandsLocalFirstHint": "Cadangan produk dalam senarai belian anda menunjukkan jenama dari Malaysia dahulu. Hanya anda yang nampak pilihan ini."
 }

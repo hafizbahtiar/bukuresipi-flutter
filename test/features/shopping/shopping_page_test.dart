@@ -53,7 +53,7 @@ void main() {
       expect(find.text('For Nasi Lemak Ayam'), findsOneWidget);
       expect(
         find.textContaining(
-          'e.g. Beras Super Special Tempatan Jati 5kg (Jati)',
+          'e.g. Beras Super Special Tempatan Jati 5kg (Jati, Malaysia)',
           findRichText: true,
         ),
         findsOneWidget,
@@ -116,7 +116,10 @@ void main() {
         find.text('Jati Signature Super Special Rice 10kg'),
         findsOneWidget,
       );
-      expect(find.text('Jati · Serba Wangi Sdn Bhd'), findsOneWidget);
+      expect(
+        find.text('Jati · Serba Wangi Sdn Bhd · Malaysia'),
+        findsOneWidget,
+      );
     },
   );
 

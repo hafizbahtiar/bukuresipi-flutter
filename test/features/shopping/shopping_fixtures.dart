@@ -75,6 +75,7 @@ class FakeShopping implements ShoppingRepository {
         ShoppingProduct(
           name: 'Beras Super Special Tempatan Jati 5kg',
           brand: 'Jati',
+          country: 'Malaysia',
         ),
       ],
     );
@@ -114,6 +115,7 @@ class FakeShopping implements ShoppingRepository {
       name: 'Beras Super Special Tempatan Jati 5kg',
       brand: 'Jati',
       manufacturer: 'Serba Wangi Sdn Bhd',
+      country: 'Malaysia',
     ),
     ShoppingProduct(
       name: 'Jati Signature Super Special Rice 10kg',

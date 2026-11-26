@@ -3665,5 +3665,11 @@
   "catalogueDeleted": "Deleted",
   "@catalogueDeleted": {},
   "catalogueRowsHint": "Paste into docs/plans/: a changed row replaces the row with its id, a new one goes at the end. Deletes are not here: remove those rows by hand.",
-  "@catalogueRowsHint": {}
+  "@catalogueRowsHint": {},
+  "brandsTitle": "Brands",
+  "@brandsTitle": {},
+  "brandsLocalFirst": "Malaysian brands first",
+  "@brandsLocalFirst": {},
+  "brandsLocalFirstHint": "Product hints on your shopping list show brands from Malaysia before others. Only you see this choice.",
+  "@brandsLocalFirstHint": {}
 }

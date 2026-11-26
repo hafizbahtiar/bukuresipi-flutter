@@ -324,7 +324,11 @@ class _ItemRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final small = text.bodySmall?.copyWith(color: nb.inkSoft);
     final products = item.products
-        .map((p) => p.brand == null ? p.name : '${p.name} (${p.brand})')
+        .map(
+          (p) => p.brand == null
+              ? p.name
+              : '${p.name} (${[p.brand, ?p.country].join(', ')})',
+        )
         .join(', ');
     final row = NotebookRow(
       onTap: saving ? null : onToggle,
@@ -436,7 +440,7 @@ Future<void> _showProducts(BuildContext context, String ingredient) {
                       Text(p.name),
                       if (p.brand != null)
                         Text(
-                          [p.brand, ?p.manufacturer].join(' · '),
+                          [p.brand, ?p.manufacturer, ?p.country].join(' · '),
                           style: text.bodySmall?.copyWith(color: nb.inkSoft),
                         ),
                     ],

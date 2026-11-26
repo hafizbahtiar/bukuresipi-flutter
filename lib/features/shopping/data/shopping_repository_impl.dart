@@ -143,4 +143,5 @@ ShoppingProduct _product(Map<String, dynamic> p) => ShoppingProduct(
   name: p['name'] as String,
   brand: p['brand'] as String?,
   manufacturer: p['manufacturer'] as String?,
+  country: p['country'] as String?,
 );

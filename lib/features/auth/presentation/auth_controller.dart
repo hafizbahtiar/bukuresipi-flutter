@@ -83,6 +83,10 @@ class AuthController extends ChangeNotifier {
   Future<void> setKcalTarget(int? kcal) async =>
       _set(AuthStatus.signedIn, await _repo.setKcalTarget(kcal));
 
+  /// Shopping product hints: brands from Malaysia first. Throws ApiException.
+  Future<void> setLocalFirst(bool on) async =>
+      _set(AuthStatus.signedIn, await _repo.setLocalFirst(on));
+
   /// Throws ApiException (invalid_input outside RM 10 to RM 100,000).
   Future<void> setFoodBudget(int? sen) async =>
       _set(AuthStatus.signedIn, await _repo.setFoodBudget(sen));
