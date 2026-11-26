@@ -153,15 +153,23 @@ class _AliasSuggestSheetState extends State<AliasSuggestSheet> {
           child: PanelActions(
             children: [
               if (_next != null)
-                OutlinedButton(
+                BusyButton(
                   key: const ValueKey('alias-ai-more'),
+                  icon: Icons.expand_more,
+                  label: l.loadMore,
+                  busyLabel: l.loadMore,
+                  busy: _loading && _items.isNotEmpty,
+                  kind: BusyButtonKind.outlined,
                   onPressed: _loading || _saving ? null : _more,
-                  child: Text(l.loadMore),
                 ),
-              FilledButton(
+              BusyButton(
                 key: const ValueKey('alias-ai-save'),
+                icon: Icons.check,
+                label: l.ownerAliasAiSave(ticked),
+                busyLabel: l.ownerSaving,
+                busy: _saving,
+                kind: BusyButtonKind.filled,
                 onPressed: ticked == 0 || _saving || _loading ? null : _save,
-                child: Text(l.ownerAliasAiSave(ticked)),
               ),
             ],
           ),

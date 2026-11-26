@@ -36,11 +36,11 @@ void main() {
       );
       await t.pumpAndSettle();
       final toggle = find.byKey(const ValueKey('brands-local-first'));
-      expect(t.widget<SwitchListTile>(toggle).value, isFalse);
+      expect(t.widget<Switch>(toggle).value, isFalse);
       await t.tap(toggle);
       await t.pumpAndSettle();
       expect(auth.localFirsts, [true]);
-      expect(t.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(t.widget<Switch>(toggle).value, isTrue);
       expect(controller.user!.localFirst, isTrue);
     },
   );

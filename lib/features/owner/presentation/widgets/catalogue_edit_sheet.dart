@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/ai_button.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -62,6 +63,10 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   List<CatalogueMaker> _makers = const [];
   List<CatalogueBrand> _brands = const [];
   List<String> _suggested = const [];
+  final _fillFrom = TextEditingController();
+  ProductFill? _fill;
+  bool _filling = false;
+  bool _brandAdded = false;
   Timer? _debounce;
   bool _busy = false;
   bool _taken = false;
@@ -109,9 +114,80 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     }
   }
 
+  /// A barcode or a store link fills the form (nothing saved); the owner checks it and saves.
+  Future<void> _fillProduct() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final from = _fillFrom.text.trim();
+    if (from.isEmpty) return;
+    setState(() => _filling = true);
+    try {
+      final barcode = RegExp(r'^\d{8,14}$').hasMatch(from);
+      final f = await _repo.fillProduct(
+        barcode: barcode ? from : null,
+        url: barcode ? null : from,
+      );
+      if (!mounted) return;
+      setState(() {
+        _fill = f;
+        _brandAdded = false;
+        _name.text = f.name;
+        _brand.text = f.brandIsNew ? '' : (f.brand ?? '');
+        _ingredient.text = f.ingredient ?? '';
+        _size.text = f.size == null
+            ? ''
+            : f.size! % 1 == 0
+            ? f.size!.toInt().toString()
+            : '${f.size}';
+        _unit.text = f.unit ?? '';
+        _taken = false;
+        _unknown = false;
+      });
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(switch (e.code) {
+            'not_found' => l.catalogueFillNotFound,
+            'unreadable' => l.catalogueFillUnreadable,
+            _ => errorText(l, e),
+          }),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _filling = false);
+    }
+  }
+
+  /// The filled product's brand is new: add it by its name (maker and country are filled in Brands), then pick it.
+  Future<void> _addBrand(String name) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await _repo.saveBrand(name: name);
+    } on ApiException catch (e) {
+      // Added meanwhile: pick it all the same.
+      if (e.code != 'name_taken') {
+        messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+        if (mounted) setState(() => _busy = false);
+        return;
+      }
+    }
+    await _loadPickers();
+    if (!mounted) return;
+    setState(() {
+      _brandAdded = true;
+      _brand.text = name;
+      _busy = false;
+    });
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
+    _fillFrom.dispose();
     for (final c in [
       _name,
       _maker,
@@ -254,6 +330,34 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             widget.row == null ? '${l.catalogueAdd}: $title' : title,
             style: text.titleMedium,
           ),
+          if (widget.kind == CatalogueKind.products && widget.row == null) ...[
+            gap,
+            TextField(
+              key: const ValueKey('catalogue-fill'),
+              controller: _fillFrom,
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(
+                labelText: l.catalogueFillFrom,
+                helperText: _fill == null
+                    ? l.catalogueFillHint
+                    : l.catalogueFillSource(
+                        Uri.tryParse(_fill!.source)?.host ?? _fill!.source,
+                      ),
+                helperMaxLines: 2,
+              ),
+              onSubmitted: (_) => _fillProduct(),
+            ),
+            const SizedBox(height: spaceXs),
+            Align(
+              alignment: Alignment.centerRight,
+              child: AiButton(
+                key: const ValueKey('catalogue-fill-go'),
+                label: l.catalogueFill,
+                busy: _filling,
+                onPressed: _fillProduct,
+              ),
+            ),
+          ],
           gap,
           TextField(
             key: const ValueKey('catalogue-name'),
@@ -281,6 +385,19 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             ),
           ],
           if (widget.kind == CatalogueKind.products) ...[
+            if (_fill case final f? when f.brandIsNew && !_brandAdded) ...[
+              gap,
+              Row(
+                children: [
+                  Expanded(child: Text(l.catalogueNewBrand(f.brand!))),
+                  TextButton(
+                    key: const ValueKey('catalogue-add-brand'),
+                    onPressed: _busy ? null : () => _addBrand(f.brand!),
+                    child: Text(l.catalogueAddBrand),
+                  ),
+                ],
+              ),
+            ],
             gap,
             PickerField(
               controller: _brand,
@@ -294,6 +411,15 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
               decoration: InputDecoration(
                 labelText: l.catalogueIngredient,
                 errorText: _unknown ? l.catalogueUnknown : null,
+                // The AI named it; the owner can still change it.
+                suffixIcon:
+                    _fill?.aiIngredient == true &&
+                        _ingredient.text == _fill!.ingredient
+                    ? const Padding(
+                        padding: EdgeInsets.all(spaceS),
+                        child: AiBadge(),
+                      )
+                    : null,
                 errorMaxLines: 3,
               ),
               onChanged: _findIngredient,

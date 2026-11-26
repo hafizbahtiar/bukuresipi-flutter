@@ -393,6 +393,25 @@ class OwnerRepositoryImpl implements OwnerRepository {
   );
 
   @override
+  Future<ProductFill> fillProduct({String? barcode, String? url}) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/owner/catalogue/products/fill',
+          data: barcode != null ? {'barcode': barcode} : {'url': url},
+        )).data!;
+        return (
+          name: j['name'] as String,
+          brand: j['brand'] as String?,
+          brandIsNew: j['brandIsNew'] == true,
+          size: (j['size'] as num?)?.toDouble(),
+          unit: j['unit'] as String?,
+          ingredient: j['ingredient'] as String?,
+          aiIngredient: j['aiIngredient'] == true,
+          source: j['source'] as String,
+        );
+      });
+
+  @override
   Future<({String? name, String? ingredient})> suggestGap(String line) =>
       apiCall(() async {
         final j = (await _dio.post<Map<String, dynamic>>(

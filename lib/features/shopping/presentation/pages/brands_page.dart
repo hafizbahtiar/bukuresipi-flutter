@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
-import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/load_view.dart';
-import '../../../../core/widgets/notebook.dart' show NotebookTitle;
-import '../../../../core/widgets/wide_page.dart';
+import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -87,82 +85,89 @@ class _BrandsPageState extends State<BrandsPage> {
     final text = Theme.of(context).textTheme;
     final user = context.watch<AuthController>().user;
     final c = _choices;
+    Icon mark(IconData icon) => Icon(icon, size: 20, color: nb.inkSoft);
+    Widget lines(String title, String? hint) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title),
+        if (hint != null)
+          Text(hint, style: text.bodySmall?.copyWith(color: nb.inkSoft)),
+      ],
+    );
     Widget remove(
       String key,
       Future<void> Function(ShoppingRepository r) change,
     ) => IconButton(
       key: ValueKey(key),
       tooltip: l.brandsRemove,
-      icon: const Icon(Icons.close),
+      icon: Icon(Icons.close, color: nb.inkSoft),
       onPressed: _saving ? null : () => _remove(change),
     );
+    final on = user?.localFirst ?? false;
+    final canSwitch = !_saving && user != null;
     return Scaffold(
       appBar: AppBar(toolbarHeight: 76, title: NotebookTitle(l.brandsTitle)),
-      body: WidePage(
-        // Its own Material: WidePage's page colour would hide the switch row's ink.
-        child: Material(
-          type: MaterialType.transparency,
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: spaceL),
-            children: [
-              SwitchListTile(
+      body: NotebookPage(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: spaceL),
+          children: [
+            NotebookRow(
+              mark: mark(Icons.flag_outlined),
+              onTap: canSwitch ? () => _setLocalFirst(!on) : null,
+              trailing: Switch(
                 key: const ValueKey('brands-local-first'),
-                value: user?.localFirst ?? false,
-                title: Text(l.brandsLocalFirst),
-                subtitle: Text(
-                  l.brandsLocalFirstHint,
-                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                ),
-                onChanged: _saving || user == null ? null : _setLocalFirst,
+                value: on,
+                onChanged: canSwitch ? _setLocalFirst : null,
               ),
-              if (c == null)
-                SizedBox(
-                  height: 160,
-                  child: LoadView(
-                    loading: _error == null,
-                    error: _error,
-                    onReload: _load,
-                    child: null,
+              child: lines(l.brandsLocalFirst, l.brandsLocalFirstHint),
+            ),
+            if (c == null)
+              SizedBox(
+                height: 160,
+                child: LoadView(
+                  loading: _error == null,
+                  error: _error,
+                  onReload: _load,
+                  child: null,
+                ),
+              )
+            else ...[
+              NotebookHeading(l.brandsMine),
+              if (c.mine.isEmpty && c.avoid.isEmpty)
+                NotebookRow(
+                  child: Text(
+                    l.brandsNone,
+                    style: text.bodyMedium?.copyWith(color: nb.inkSoft),
                   ),
-                )
-              else ...[
-                SectionHeader(l.brandsMine),
-                if (c.mine.isEmpty && c.avoid.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: spaceM),
-                    child: Text(
-                      l.brandsNone,
-                      style: text.bodyMedium?.copyWith(color: nb.inkSoft),
-                    ),
+                ),
+              for (final m in c.mine)
+                NotebookRow(
+                  key: ValueKey('brands-mine-${m.ingredient}'),
+                  mark: mark(Icons.star_outline),
+                  trailing: remove(
+                    'brands-mine-remove-${m.ingredient}',
+                    (r) => r.clearMyBrand(m.ingredient),
                   ),
-                for (final m in c.mine)
-                  BaseTile(
-                    key: ValueKey('brands-mine-${m.ingredient}'),
-                    dense: true,
-                    title: m.brand,
-                    subtitle: m.ingredient,
+                  child: lines(m.brand, m.ingredient),
+                ),
+              if (c.avoid.isNotEmpty) ...[
+                NotebookHeading(l.brandsAvoided),
+                for (final a in c.avoid)
+                  NotebookRow(
+                    key: ValueKey('brands-avoid-${a.brand ?? a.maker}'),
+                    mark: mark(Icons.block),
                     trailing: remove(
-                      'brands-mine-remove-${m.ingredient}',
-                      (r) => r.clearMyBrand(m.ingredient),
+                      'brands-unavoid-${a.brand ?? a.maker}',
+                      (r) => r.unavoid(a),
+                    ),
+                    child: lines(
+                      a.brand ?? a.maker!,
+                      a.brand == null ? l.brandsWholeMaker : null,
                     ),
                   ),
-                if (c.avoid.isNotEmpty) ...[
-                  SectionHeader(l.brandsAvoided),
-                  for (final a in c.avoid)
-                    BaseTile(
-                      key: ValueKey('brands-avoid-${a.brand ?? a.maker}'),
-                      dense: true,
-                      title: a.brand ?? a.maker!,
-                      subtitle: a.brand == null ? l.brandsWholeMaker : null,
-                      trailing: remove(
-                        'brands-unavoid-${a.brand ?? a.maker}',
-                        (r) => r.unavoid(a),
-                      ),
-                    ),
-                ],
               ],
             ],
-          ),
+          ],
         ),
       ),
     );

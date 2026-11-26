@@ -1366,5 +1366,13 @@
   "ownerAliasAiLines": "{count, plural, =0{Belum memautkan baris} other{Memautkan {count} baris sekarang}}",
   "ownerAliasAiNone": "Tiada nama lain baharu untuk bahan ini.",
   "ownerAliasAiSave": "{count, plural, =0{Simpan} other{Simpan {count}}}",
-  "ownerAliasAiSaved": "{aliases} nama lain disimpan, {lines} baris dipautkan"
+  "ownerAliasAiSaved": "{aliases} nama lain disimpan, {lines} baris dipautkan",
+  "catalogueFillFrom": "Kod bar atau pautan kedai",
+  "catalogueFillHint": "Mengisi borang dari Open Food Facts atau halaman kedai. Semak, kemudian simpan.",
+  "catalogueFill": "Isi",
+  "catalogueFillSource": "Dari {site}. Semak, kemudian simpan.",
+  "catalogueFillNotFound": "Tiada produk dengan kod bar itu di Open Food Facts.",
+  "catalogueFillUnreadable": "Tiada produk dijumpai di halaman itu.",
+  "catalogueNewBrand": "Jenama baru: {brand}",
+  "catalogueAddBrand": "Tambah jenama"
 }

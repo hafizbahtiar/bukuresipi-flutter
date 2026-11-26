@@ -13,6 +13,7 @@ import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_teste
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_review_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
+import 'package:bukuresipi_flutter/core/widgets/ai_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -704,6 +705,60 @@ void main() {
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
         expect(find.text('That name is already used.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a new product filled from a store link: checked, its new brand added, then saved',
+      (t) async {
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-fill')),
+          'https://www.jayagrocer.com/products/kara-uht-coconut-cream-200ml',
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+        await t.pumpAndSettle();
+        expect(
+          find.widgetWithText(TextField, 'Kara UHT Coconut Cream 200ml'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('From www.jayagrocer.com. Check it, then save.'),
+          findsOneWidget,
+        );
+        expect(find.byType(AiBadge), findsOneWidget); // on the ingredient
+        expect(repo.savedRows, isEmpty); // nothing saved by the fill
+
+        await t.tap(find.byKey(const ValueKey('catalogue-add-brand')));
+        await t.pumpAndSettle();
+        expect(find.text('New brand: Kara'), findsNothing);
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.map((r) => r.$1), ['brands', 'products']);
+        expect(repo.savedRows.last.$3, {
+          'name': 'Kara UHT Coconut Cream 200ml',
+          'ingredient': 'Santan',
+          'brandId': 901,
+          'size': 200.0,
+          'unit': 'ml',
+        });
+        await t.pump(const Duration(seconds: 5)); // "Saved" leaves
+        await t.pumpAndSettle();
+
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-fill')),
+          '0000000000000',
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+        await t.pumpAndSettle();
+        expect(
+          find.text('No product with that barcode on Open Food Facts.'),
+          findsOneWidget,
+        );
       },
     );
 

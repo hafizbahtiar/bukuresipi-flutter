@@ -263,6 +263,27 @@ class FakeOwner implements OwnerRepository {
     (ingredient: 'Bawang putih', alias: 'garlics', lines: 0),
   ];
 
+  final fills = <String>[];
+  ProductFill fillAnswer = (
+    name: 'Kara UHT Coconut Cream 200ml',
+    brand: 'Kara',
+    brandIsNew: true,
+    size: 200,
+    unit: 'ml',
+    ingredient: 'Santan',
+    aiIngredient: true,
+    source: 'https://www.jayagrocer.com/products/kara-uht-coconut-cream-200ml',
+  );
+
+  @override
+  Future<ProductFill> fillProduct({String? barcode, String? url}) async {
+    fills.add(barcode ?? url!);
+    if (barcode == '0000000000000') {
+      throw const ApiException('not_found', status: 404);
+    }
+    return fillAnswer;
+  }
+
   @override
   Future<({String? name, String? ingredient})> suggestGap(String line) async =>
       gapAnswer;
@@ -368,11 +389,19 @@ class FakeOwner implements OwnerRepository {
     required String name,
     int? makerId,
     String? country,
-  }) async => savedRows.add((
-    'brands',
-    id,
-    {'name': name, 'makerId': makerId, 'country': country},
-  ));
+  }) async {
+    savedRows.add((
+      'brands',
+      id,
+      {'name': name, 'makerId': makerId, 'country': country},
+    ));
+    if (id == null) {
+      brandList = [
+        ...brandList,
+        CatalogueBrand(id: 900 + brandList.length, name: name),
+      ];
+    }
+  }
 
   @override
   Future<void> saveProduct({
