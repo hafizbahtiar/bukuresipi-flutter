@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
+import 'package:bukuresipi_flutter/features/owner/data/owner_repository_impl.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 
@@ -30,6 +31,44 @@ OwnerUser ownerUser(
   shares: shares,
   ban: ban,
 );
+
+/// GET /owner/ai as the server sends it: one provider, the default, three of the uses (one overridden).
+const aiSettingsJson = {
+  'providers': [
+    {
+      'id': 'commandcode',
+      'name': 'Command Code',
+      'configured': true,
+      'models': [
+        {
+          'id': 'deepseek/deepseek-v4.1-flash',
+          'name': 'DeepSeek v4.1 Flash',
+          'reasoning': ['off', 'low', 'high', 'max'],
+          'images': true,
+        },
+      ],
+    },
+  ],
+  'default': {
+    'provider': 'commandcode',
+    'model': 'deepseek/deepseek-v4.1-flash',
+    'reasoning': 'off',
+  },
+  'uses': [
+    {'id': 'share_extract', 'budget': true, 'images': false, 'setting': null},
+    {
+      'id': 'place_draft',
+      'budget': false,
+      'images': false,
+      'setting': {
+        'provider': 'commandcode',
+        'model': 'deepseek/deepseek-v4.1-flash',
+        'reasoning': 'high',
+      },
+    },
+    {'id': 'receipt_read', 'budget': true, 'images': true, 'setting': null},
+  ],
+};
 
 class FakeOwner implements OwnerRepository {
   OwnerStats stats = OwnerStats(
@@ -311,6 +350,55 @@ class FakeOwner implements OwnerRepository {
     aliases.add((ingredient, alias));
     gaps = const [];
     return 3;
+  }
+
+  /// Owner > AI: the settings as the server holds them; saves and clears change them as the server would.
+  AiSettings aiAnswer = aiSettingsFromJson(aiSettingsJson);
+  final aiSaved = <(String, AiSetting)>[];
+  final aiCleared = <String>[];
+
+  @override
+  Future<AiSettings> aiSettings() async => aiAnswer;
+
+  @override
+  Future<AiSettings> saveAiSetting(String use, AiSetting setting) async {
+    aiSaved.add((use, setting));
+    return aiAnswer = use == 'default'
+        ? (
+            providers: aiAnswer.providers,
+            defaults: setting,
+            uses: aiAnswer.uses,
+          )
+        : (
+            providers: aiAnswer.providers,
+            defaults: aiAnswer.defaults,
+            uses: [
+              for (final u in aiAnswer.uses)
+                u.id == use
+                    ? (
+                        id: u.id,
+                        budget: u.budget,
+                        images: u.images,
+                        setting: setting,
+                      )
+                    : u,
+            ],
+          );
+  }
+
+  @override
+  Future<AiSettings> clearAiSetting(String use) async {
+    aiCleared.add(use);
+    return aiAnswer = (
+      providers: aiAnswer.providers,
+      defaults: aiAnswer.defaults,
+      uses: [
+        for (final u in aiAnswer.uses)
+          u.id == use
+              ? (id: u.id, budget: u.budget, images: u.images, setting: null)
+              : u,
+      ],
+    );
   }
 
   @override

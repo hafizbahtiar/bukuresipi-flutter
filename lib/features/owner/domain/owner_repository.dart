@@ -127,6 +127,15 @@ abstract interface class OwnerRepository {
     List<({String ingredient, String alias})> items,
   );
 
+  /// Owner > AI: the providers and models offered, the default and every use.
+  Future<AiSettings> aiSettings();
+
+  /// [use] = 'default' or a use id. Throws 'ai_unknown_model' / 'ai_no_images'.
+  Future<AiSettings> saveAiSetting(String use, AiSetting setting);
+
+  /// The use follows the default again.
+  Future<AiSettings> clearAiSetting(String use);
+
   /// Open suggestions from recipe lines, most recipes first.
   Future<List<CatalogueSuggestion>> catalogueSuggestions();
 

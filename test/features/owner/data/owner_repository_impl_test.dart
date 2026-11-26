@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../fakes.dart';
+import '../owner_fixtures.dart';
 
 void main() {
   late FakeAdapter adapter;
@@ -118,5 +119,44 @@ void main() {
     final shares = await repo.failedShares();
     expect(shares.single.gaps, ['unreadable']);
     expect(shares.single.createdAt.isUtc, isTrue);
+  });
+
+  test('aiSettings reads providers, the default and uses', () async {
+    final repo = make((_) => (200, aiSettingsJson));
+    final ai = await repo.aiSettings();
+    expect(adapter.requests.single.path, '/owner/ai');
+    final model = ai.providers.single.models.single;
+    expect(model.name, 'DeepSeek v4.1 Flash');
+    expect(model.reasoning, ['off', 'low', 'high', 'max']);
+    expect(ai.providers.single.configured, isTrue);
+    expect(ai.defaults.reasoning, 'off');
+    expect(ai.uses.map((u) => u.id), [
+      'share_extract',
+      'place_draft',
+      'receipt_read',
+    ]);
+    expect(ai.uses.first.budget, isTrue);
+    expect(ai.uses.first.setting, isNull);
+    expect(ai.uses[1].setting?.reasoning, 'high');
+    expect(ai.uses.last.images, isTrue);
+  });
+
+  test('saveAiSetting PUTs /owner/ai/<use>; clearAiSetting DELETEs', () async {
+    final repo = make((_) => (200, aiSettingsJson));
+    await repo.saveAiSetting('place_draft', (
+      provider: 'commandcode',
+      model: 'deepseek/deepseek-v4.1-flash',
+      reasoning: 'max',
+    ));
+    expect(adapter.requests.last.method, 'PUT');
+    expect(adapter.requests.last.path, '/owner/ai/place_draft');
+    expect(adapter.requests.last.data, {
+      'provider': 'commandcode',
+      'model': 'deepseek/deepseek-v4.1-flash',
+      'reasoning': 'max',
+    });
+    await repo.clearAiSetting('place_draft');
+    expect(adapter.requests.last.method, 'DELETE');
+    expect(adapter.requests.last.path, '/owner/ai/place_draft');
   });
 }

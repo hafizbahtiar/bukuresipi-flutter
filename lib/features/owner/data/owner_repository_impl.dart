@@ -393,6 +393,34 @@ class OwnerRepositoryImpl implements OwnerRepository {
   );
 
   @override
+  Future<AiSettings> aiSettings() => apiCall(
+    () async => aiSettingsFromJson(
+      (await _dio.get<Map<String, dynamic>>('/owner/ai')).data!,
+    ),
+  );
+
+  @override
+  Future<AiSettings> saveAiSetting(String use, AiSetting setting) => apiCall(
+    () async => aiSettingsFromJson(
+      (await _dio.put<Map<String, dynamic>>(
+        '/owner/ai/$use',
+        data: {
+          'provider': setting.provider,
+          'model': setting.model,
+          'reasoning': setting.reasoning,
+        },
+      )).data!,
+    ),
+  );
+
+  @override
+  Future<AiSettings> clearAiSetting(String use) => apiCall(
+    () async => aiSettingsFromJson(
+      (await _dio.delete<Map<String, dynamic>>('/owner/ai/$use')).data!,
+    ),
+  );
+
+  @override
   Future<List<CatalogueSuggestion>> catalogueSuggestions() => apiCall(() async {
     final j = (await _dio.get<Map<String, dynamic>>(
       '/owner/catalogue/suggestions',
@@ -757,4 +785,44 @@ CatalogueProduct _catalogueProduct(Map<String, dynamic> p) => CatalogueProduct(
   brand: p['brand'] as String?,
   size: (p['size'] as num?)?.toDouble(),
   unit: p['unit'] as String?,
+);
+
+AiSetting _aiSetting(Map<String, dynamic> j) => (
+  provider: j['provider'] as String,
+  model: j['model'] as String,
+  reasoning: j['reasoning'] as String,
+);
+
+/// GET /owner/ai's body (also what PUT and DELETE return).
+AiSettings aiSettingsFromJson(Map<String, dynamic> j) => (
+  providers: [
+    for (final p in (j['providers'] as List).cast<Map<String, dynamic>>())
+      (
+        id: p['id'] as String,
+        name: p['name'] as String,
+        configured: p['configured'] == true,
+        models: [
+          for (final m in (p['models'] as List).cast<Map<String, dynamic>>())
+            (
+              id: m['id'] as String,
+              name: m['name'] as String,
+              reasoning: (m['reasoning'] as List).cast<String>(),
+              images: m['images'] == true,
+            ),
+        ],
+      ),
+  ],
+  defaults: _aiSetting(j['default'] as Map<String, dynamic>),
+  uses: [
+    for (final u in (j['uses'] as List).cast<Map<String, dynamic>>())
+      (
+        id: u['id'] as String,
+        budget: u['budget'] == true,
+        images: u['images'] == true,
+        setting: switch (u['setting']) {
+          final Map<String, dynamic> s => _aiSetting(s),
+          _ => null,
+        },
+      ),
+  ],
 );
