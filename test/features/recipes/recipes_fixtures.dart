@@ -287,10 +287,12 @@ class FakeRecipes implements RecipesRepository {
   /// The picker's answer, and each (ingredient, query) asked.
   PickChoices pickAnswer = (products: const [], brands: const []);
   final picksAsked = <(String?, String?)>[];
+  Object? picksError;
 
   @override
   Future<PickChoices> picks({String? ingredient, String? query}) async {
     picksAsked.add((ingredient, query));
+    if (picksError case final e?) throw e;
     return pickAnswer;
   }
 

@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -108,4 +109,39 @@ void main() {
       expect(find.text('Suggested: Kicap Mak Cik'), findsOneWidget);
     },
   );
+
+  testWidgets('a failed product load shows in the list, not under Suggest', (
+    t,
+  ) async {
+    final fake = await pumpEditor(t, recipe: withSantan());
+    fake.picksError = const ApiException('server_error', status: 500);
+    await editTab(t, 'ingredients');
+    await t.tap(pickChip(0));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('pick-load-error')), findsOneWidget);
+    await t.tap(find.text('Not listed? Suggest it'));
+    await t.pumpAndSettle();
+    final field = t.widget<TextField>(
+      find.byKey(const ValueKey('pick-suggest-name')),
+    );
+    expect(field.decoration!.errorText, isNull);
+  });
+
+  testWidgets('a reworded line says to save first instead of Suggest', (
+    t,
+  ) async {
+    await pumpEditor(t, recipe: withSantan());
+    await editTab(t, 'ingredients');
+    await t.enterText(
+      find.byKey(const ValueKey('ingredient-name-1')),
+      'kicap manis',
+    );
+    await t.tap(pickChip(1));
+    await t.pumpAndSettle();
+    expect(find.text('Not listed? Suggest it'), findsNothing);
+    expect(
+      find.text('Save the recipe first to suggest a brand that is not listed.'),
+      findsOneWidget,
+    );
+  });
 }

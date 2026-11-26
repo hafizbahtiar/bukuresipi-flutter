@@ -63,7 +63,8 @@ class _LinePickSheetState extends State<LinePickSheet> {
   List<LinePick> _brands = const [];
   bool _suggesting = false;
   bool _busy = false;
-  Object? _error;
+  Object? _error; // the suggestion's send
+  Object? _loadError; // the products' load
 
   @override
   void initState() {
@@ -76,7 +77,7 @@ class _LinePickSheetState extends State<LinePickSheet> {
             if (mounted) setState(() => _products = c.products);
           })
           .catchError((Object e) {
-            if (mounted) setState(() => _error = e);
+            if (mounted) setState(() => _loadError = e);
           });
     }
   }
@@ -224,6 +225,14 @@ class _LinePickSheetState extends State<LinePickSheet> {
                     ),
                   ),
                 ),
+                if (_loadError case final e?)
+                  NotebookRow(
+                    key: const ValueKey('pick-load-error'),
+                    child: Text(
+                      errorText(l, e),
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                  ),
                 for (final p in _products) _row(p, p.name),
                 NotebookRow(
                   mark: Icon(Icons.search, size: 20, color: nb.inkSoft),
@@ -237,7 +246,15 @@ class _LinePickSheetState extends State<LinePickSheet> {
                   ),
                 ),
                 for (final b in _brands) _row(b, l.recipePickAny(b.name)),
-                if (widget.recipeId != null)
+                if (widget.recipeId == null)
+                  NotebookRow(
+                    key: const ValueKey('pick-save-first'),
+                    child: Text(
+                      l.recipePickSaveFirst,
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                  )
+                else
                   NotebookRow(
                     key: const ValueKey('pick-suggest'),
                     mark: Icon(

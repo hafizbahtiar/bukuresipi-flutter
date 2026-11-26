@@ -3911,5 +3911,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "recipePickSaveFirst": "Save the recipe first to suggest a brand that is not listed.",
+  "@recipePickSaveFirst": {}
 }
