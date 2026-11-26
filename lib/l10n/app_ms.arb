@@ -1354,5 +1354,7 @@
   "brandsNone": "Belum ada. Dalam senarai belian, tekan Lihat semua pada satu baris, kemudian satu jenama.",
   "brandsRemove": "Buang",
   "errMakerAvoided": "Anda mengelak pengeluar jenama ini. Buang dahulu di Akaun > Jenama.",
-  "errAvoidFull": "Anda sudah mengelak 100 jenama dan pengeluar. Buang sebahagian di Akaun > Jenama."
+  "errAvoidFull": "Anda sudah mengelak 100 jenama dan pengeluar. Buang sebahagian di Akaun > Jenama.",
+  "recipeProducts": "Produk",
+  "recipeMyBrand": "Jenama anda: {brand}"
 }

@@ -3727,5 +3727,15 @@
   "errMakerAvoided": "You avoid this brand's maker. Remove it from Account > Brands first.",
   "@errMakerAvoided": {},
   "errAvoidFull": "You avoid 100 brands and makers already. Remove some in Account > Brands.",
-  "@errAvoidFull": {}
+  "@errAvoidFull": {},
+  "recipeProducts": "Products",
+  "@recipeProducts": {},
+  "recipeMyBrand": "Your brand: {brand}",
+  "@recipeMyBrand": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  }
 }

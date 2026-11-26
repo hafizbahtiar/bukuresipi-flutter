@@ -382,6 +382,8 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
         quantity: i['quantity'] as String?,
         unit: i['unit'] as String?,
         optional: i['optional'] == true,
+        hasProducts: i['hasProducts'] == true,
+        myBrand: i['myBrand'] as String?,
       ),
   ],
   steps: [

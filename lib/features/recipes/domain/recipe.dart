@@ -177,7 +177,15 @@ class RecipeIngredient {
     this.quantity,
     this.unit,
     this.optional = false,
+    this.hasProducts = false,
+    this.myBrand,
   });
+
+  /// The catalogue has products of [name] the user has not avoided (the shopping list's See all).
+  final bool hasProducts;
+
+  /// The user's own brand for [name] (Account > Brands); null = none.
+  final String? myBrand;
 
   /// "If you like": the dish is still the dish without it (the post said so, or the owner marked it).
   final bool optional;

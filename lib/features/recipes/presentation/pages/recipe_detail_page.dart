@@ -19,6 +19,7 @@ import '../../../family/presentation/family_controller.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../../../shopping/presentation/shopping_controller.dart';
+import '../../../shopping/presentation/widgets/products_sheet.dart';
 import '../recipes_controller.dart';
 import '../widgets/ingredient_picker.dart';
 import '../widgets/recipe_variants.dart';
@@ -665,6 +666,14 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   triggerMode: TooltipTriggerMode.tap,
                   child: Icon(Icons.help_outline, size: 18, color: nb.inkSoft),
                 )
+              : i.hasProducts
+              ? IconButton(
+                  key: ValueKey('recipe-products-$index'),
+                  tooltip: l.recipeProducts,
+                  icon: Icon(Icons.storefront_outlined, color: nb.inkSoft),
+                  onPressed: () =>
+                      showProductsSheet(context, i.name!, onChanged: _load),
+                )
               : null,
           minLeadingWidth: 0,
           leading: Container(
@@ -687,12 +696,19 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ],
             ),
           ),
-          subtitle: i.optional
-              ? Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: TagChip(TileTag(l.recipeOptional)),
+          subtitle: i.optional || i.myBrand != null
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Wrap(
+                    spacing: spaceXs,
+                    runSpacing: spaceXs,
+                    children: [
+                      if (i.optional) TagChip(TileTag(l.recipeOptional)),
+                      if (i.myBrand case final brand?)
+                        TagChip(
+                          TileTag(l.recipeMyBrand(brand), tone: TagTone.good),
+                        ),
+                    ],
                   ),
                 )
               : null,

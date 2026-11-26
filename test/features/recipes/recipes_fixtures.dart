@@ -234,8 +234,10 @@ class FakeRecipes implements RecipesRepository {
   /// While set and not completed, the recipe detail waits for it (the page still loading).
   Completer<void>? detailGate;
 
+  int detailCalls = 0;
   @override
   Future<RecipeDetail> get(String id) async {
+    detailCalls++;
     await detailGate?.future;
     if (detailError != null) throw detailError!;
     return detailResult!;

@@ -13,16 +13,21 @@ import '../shopping_controller.dart';
 
 /// Every catalogue product of [ingredient] in the user's order (their brand first, avoided left out), as buying
 /// hints; a branded row's next step: use it as their brand for [ingredient], or avoid it or its maker.
-Future<void> showProductsSheet(BuildContext context, String ingredient) =>
-    showBaseSheet<void>(
-      context,
-      builder: (_) => ProductsSheet(ingredient: ingredient),
-    );
+/// [onChanged]: after a choice is saved (the shopping list reloads itself).
+Future<void> showProductsSheet(
+  BuildContext context,
+  String ingredient, {
+  VoidCallback? onChanged,
+}) => showBaseSheet<void>(
+  context,
+  builder: (_) => ProductsSheet(ingredient: ingredient, onChanged: onChanged),
+);
 
 class ProductsSheet extends StatefulWidget {
-  const ProductsSheet({super.key, required this.ingredient});
+  const ProductsSheet({super.key, required this.ingredient, this.onChanged});
 
   final String ingredient;
+  final VoidCallback? onChanged;
 
   @override
   State<ProductsSheet> createState() => _ProductsSheetState();
@@ -47,9 +52,11 @@ class _ProductsSheetState extends State<ProductsSheet> {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final shopping = context.read<ShoppingController>();
+    final onChanged = widget.onChanged;
     Navigator.pop(context);
     try {
       await shopping.changeBrands(change);
+      onChanged?.call();
       messenger.showSnackBar(SnackBar(content: Text(l.brandsSaved)));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
