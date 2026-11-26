@@ -1394,7 +1394,7 @@
   "errPickUnknown": "Produk atau jenama itu sudah tiada dalam katalog. Pilih yang lain.",
   "errSuggestionFull": "Anda sudah ada 20 cadangan yang menunggu. Cuba lagi selepas sebahagian ditambah.",
   "shoppingPicked": "Resipi guna {name}",
-  "catalogueSuggested": "Dicadang",
+  "catalogueSuggested": "Dicadang oleh penulis resipi",
   "catalogueSuggestedRecipes": "{count} resipi",
   "catalogueSuggestedEmpty": "Tiada cadangan menunggu.",
   "catalogueAddAsBrand": "Tambah sebagai jenama",
@@ -1402,5 +1402,6 @@
   "catalogueLinkExisting": "Pautkan ke yang ada dalam katalog",
   "catalogueDismiss": "Abaikan",
   "catalogueLinked": "{count, plural, =0{Tiada baris yang masih perlukannya} other{Dipautkan ke {count} baris}}",
-  "recipePickSaveFirst": "Simpan resipi dahulu untuk mencadangkan jenama yang tiada dalam senarai."
+  "recipePickSaveFirst": "Simpan resipi dahulu untuk mencadangkan jenama yang tiada dalam senarai.",
+  "catalogueSuggestedWaiting": "{count} cadangan daripada resipi"
 }

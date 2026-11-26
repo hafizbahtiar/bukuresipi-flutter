@@ -3884,7 +3884,7 @@
       }
     }
   },
-  "catalogueSuggested": "Suggested",
+  "catalogueSuggested": "Suggested by recipe authors",
   "@catalogueSuggested": {},
   "catalogueSuggestedRecipes": "{count, plural, =1{1 recipe} other{{count} recipes}}",
   "@catalogueSuggestedRecipes": {
@@ -3913,5 +3913,13 @@
     }
   },
   "recipePickSaveFirst": "Save the recipe first to suggest a brand that is not listed.",
-  "@recipePickSaveFirst": {}
+  "@recipePickSaveFirst": {},
+  "catalogueSuggestedWaiting": "{count, plural, =1{1 suggestion from recipes} other{{count} suggestions from recipes}}",
+  "@catalogueSuggestedWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

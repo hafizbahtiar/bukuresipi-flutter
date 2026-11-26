@@ -30,7 +30,9 @@ class OwnerCataloguePage extends StatefulWidget {
 
 class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
   final _search = TextEditingController();
-  CatalogueKind? _kind = CatalogueKind.products; // null = Suggested
+  CatalogueKind? _kind = CatalogueKind
+      .products; // null = Suggested (opened from the Products tab's row)
+  int _waiting = 0; // open suggestions
   List<Object> _rows = const [];
   int? _next;
   List<String> _countries = const [];
@@ -60,7 +62,9 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
     final q = _search.text;
     switch (_kind) {
       case null:
-        return (await _repo.catalogueSuggestions(), null);
+        final open = await _repo.catalogueSuggestions();
+        _waiting = open.length;
+        return (open, null);
       case CatalogueKind.makers:
         final p = await _repo.makers(query: q, offset: offset);
         return (p.items, p.next);
@@ -69,6 +73,10 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
         _countries = countries;
         return (p.items, p.next);
       case CatalogueKind.products:
+        if (offset == 0) {
+          // shortcut: a second call per Products load; a count field on /products if this list grows slow
+          _waiting = (await _repo.catalogueSuggestions()).length;
+        }
         final (p, units) = await _repo.products(query: q, offset: offset);
         _units = units;
         return (p.items, p.next);
@@ -328,7 +336,6 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                     value: CatalogueKind.makers,
                     label: l.catalogueMakers,
                   ),
-                  NotebookSegment(value: null, label: l.catalogueSuggested),
                 ],
                 selected: _kind,
                 onChanged: (k) {
@@ -351,6 +358,31 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                     prefixIcon: const Icon(Icons.search),
                   ),
                   onChanged: _searchChanged,
+                ),
+              ),
+            if (_kind == CatalogueKind.products && _waiting > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: spaceS),
+                child: BaseTile(
+                  key: const ValueKey('catalogue-suggested'),
+                  title: l.catalogueSuggestedWaiting(_waiting),
+                  dense: true,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    setState(() {
+                      _kind = null;
+                      _rows = const [];
+                    });
+                    _load();
+                  },
+                ),
+              ),
+            if (_kind == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(l.catalogueSuggested, style: text.titleMedium),
                 ),
               ),
             Expanded(

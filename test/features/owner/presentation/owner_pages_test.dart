@@ -929,7 +929,11 @@ void main() {
         (name: 'Santan Desa', ingredient: null, recipes: 1, sample: 'santan'),
       ];
       await pump(t, const OwnerCataloguePage());
-      await t.tap(find.text('Suggested'));
+      expect(
+        find.text('Suggested'),
+        findsNothing,
+      ); // not a 4th tab: 3 fit a phone
+      await t.tap(find.text('2 suggestions from recipes'));
       await t.pumpAndSettle();
       expect(find.text('Kicap · 2 recipes'), findsOneWidget);
 
