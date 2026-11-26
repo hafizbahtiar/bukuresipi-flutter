@@ -83,6 +83,8 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     super.initState();
     _show(widget.row);
     _loadPickers();
+    // "New brand: X. Added when you save." shows only while no brand is picked.
+    _brand.addListener(() => setState(() {}));
   }
 
   static String _sizeText(double? size) => size == null
@@ -152,14 +154,23 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
         name: barcode || link ? null : from,
       );
       if (!mounted) return;
+      // A new product takes everything; an existing one only fills what is still empty.
+      final editing = _row != null;
+      void put(TextEditingController c, String v) {
+        if (!editing || c.text.trim().isEmpty) c.text = v;
+      }
+
       setState(() {
         _fill = f;
         _brandAdded = false;
-        _name.text = f.name;
-        _brand.text = f.brandIsNew ? '' : (f.brand ?? '');
-        _ingredient.text = f.ingredient ?? '';
-        _size.text = _sizeText(f.size);
-        _unit.text = f.unit ?? '';
+        put(_name, f.name);
+        put(_brand, f.brandIsNew ? '' : (f.brand ?? ''));
+        put(_ingredient, f.ingredient ?? '');
+        if (!editing ||
+            (_size.text.trim().isEmpty && _unit.text.trim().isEmpty)) {
+          _size.text = _sizeText(f.size);
+          _unit.text = f.unit ?? '';
+        }
         _taken = false;
         _unknown = false;
       });
@@ -361,7 +372,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             _row == null ? '${l.catalogueAdd}: $title' : title,
             style: text.titleMedium,
           ),
-          if (widget.kind == CatalogueKind.products && _row == null) ...[
+          if (widget.kind == CatalogueKind.products) ...[
             gap,
             TextField(
               key: const ValueKey('catalogue-fill'),
@@ -388,7 +399,10 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
                 onPressed: _fillProduct,
               ),
             ),
-            if (_fill?.similar case final similar? when similar.isNotEmpty) ...[
+            if (_fill?.similar
+                    .where((p) => p.id != (_row as CatalogueProduct?)?.id)
+                    .toList()
+                case final similar? when similar.isNotEmpty) ...[
               gap,
               Text(l.catalogueSimilar),
               for (final p in similar)
@@ -435,7 +449,10 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
           ],
           if (widget.kind == CatalogueKind.products) ...[
             // Added with the product on Save, unless the owner picks another brand.
-            if (_fill case final f? when f.brandIsNew && !_brandAdded) ...[
+            if (_fill case final f?
+                when f.brandIsNew &&
+                    !_brandAdded &&
+                    _orNull(_brand) == null) ...[
               gap,
               Text(l.catalogueNewBrand(f.brand!)),
               if (f.maker case final m?)

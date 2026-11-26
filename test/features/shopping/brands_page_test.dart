@@ -83,4 +83,60 @@ void main() {
     expect(repo.brandCalls, ['unavoid Syarikat X', 'clear Beras putih']);
     expect(find.textContaining('None yet'), findsOneWidget);
   });
+
+  testWidgets(
+    'Choose a brand: find the ingredient, pick its brand, back on the page with it listed',
+    (t) async {
+      final controller = AuthController(
+        FakeAuthRepository()
+          ..session = true
+          ..meResult = testUser,
+      );
+      await controller.restore();
+      final repo = FakeShopping()..suggestions = const ['Beras putih'];
+      await t.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: controller),
+            ChangeNotifierProvider.value(value: ShoppingController(repo)),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BrandsPage(),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('brands-add')));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byKey(const ValueKey('brands-add-query')),
+        'beras',
+      );
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('brands-add-Beras putih')));
+      await t.pumpAndSettle();
+      expect(find.text('Products: Beras putih'), findsOneWidget);
+      await t.tap(
+        find.byKey(
+          const ValueKey('product-Beras Super Special Tempatan Jati 5kg'),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('brand-mine')));
+      await t.pumpAndSettle();
+      expect(repo.brandCalls, ['mine Beras putih Jati']);
+      // Back to the brands' list, still in the sheet; the page behind lists it.
+      expect(find.text('Products: Beras putih'), findsOneWidget);
+      await t.tapAt(const Offset(10, 10)); // close the sheet
+      await t.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('brands-mine-Beras putih')),
+        findsOneWidget,
+      );
+    },
+  );
 }

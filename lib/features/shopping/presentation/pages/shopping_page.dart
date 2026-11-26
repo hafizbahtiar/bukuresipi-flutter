@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -390,6 +391,15 @@ class _ItemRow extends StatelessWidget {
                   ],
                 ),
                 style: small,
+              ),
+            ),
+          // The user's own brand for this ingredient, as on a recipe line.
+          if (item.products.where((p) => p.mine).firstOrNull?.brand
+              case final brand? when !item.done)
+            Padding(
+              padding: const EdgeInsets.only(top: spaceXs),
+              child: TagChip(
+                TileTag(l.recipeMyBrand(brand), tone: TagTone.good),
               ),
             ),
         ],
