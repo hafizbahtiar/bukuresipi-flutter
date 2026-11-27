@@ -1436,5 +1436,12 @@
   "errAiUnknownModel": "Model atau tahap itu tidak ditawarkan.",
   "errAiNoImages": "Model ini tidak boleh membaca foto, dan kegunaan ini menghantarnya.",
   "catalogueScan": "Imbas kod bar",
-  "catalogueScanUnavailable": "Telefon ini tidak boleh mengimbas kod."
+  "catalogueScanUnavailable": "Telefon ini tidak boleh mengimbas kod.",
+  "hoursTitle": "Waktu buka",
+  "hoursHelp": "Waktu biasa setiap minggu, waktu Malaysia. Rehat = dua baris untuk hari itu (11:00–15:00, kemudian 17:00–22:00). Biarkan kosong jika tidak tahu.",
+  "hoursUnknown": "Waktu buka belum diketahui.",
+  "hoursSaved": "Waktu buka disimpan.",
+  "branchTabHours": "Waktu",
+  "hoursBreakUntil": "Rehat hingga {time}",
+  "hoursOpensAt": "Buka {time}"
 }

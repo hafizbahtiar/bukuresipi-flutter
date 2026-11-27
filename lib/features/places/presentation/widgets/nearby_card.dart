@@ -5,6 +5,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/nearby_branch.dart';
 import '../../domain/rating.dart';
+import 'market_days.dart';
 
 /// One nearby restaurant: cover, name, distance, branch or address, stars, cuisine, a quoted halal claim. The map sheet's list.
 class NearbyCard extends StatelessWidget {
@@ -13,11 +14,15 @@ class NearbyCard extends StatelessWidget {
       MediaQuery.textScalerOf(context).scale(96);
 
   const NearbyCard({
+    this.now,
     super.key,
     required this.place,
     this.selected = false,
     required this.onTap,
   });
+
+  /// Malaysia time for today's hours; null = the clock.
+  final DateTime? now;
 
   final NearbyBranch place;
   final bool selected;
@@ -31,9 +36,12 @@ class NearbyCard extends StatelessWidget {
     final label = place.label?.trim();
     final address = place.address?.trim();
     // One line under the name: the branch when it says more than the name, else the address.
-    final under = label != null && label.isNotEmpty && label != place.name
+    final where = label != null && label.isNotEmpty && label != place.name
         ? label
         : (address != null && address.isNotEmpty ? address : null);
+    // Today's hours first on the same line: the card keeps its height.
+    final today = hoursTodayText(context, place.schedule, now);
+    final under = [?today, ?where].join(' · ');
     final cuisine = place.cuisine?.trim();
     // A quoted claim from the post, never "certified" (as the Home feed).
     final saysHalal =
@@ -108,7 +116,7 @@ class NearbyCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (under != null)
+                    if (under.isNotEmpty)
                       Text(
                         under,
                         maxLines: 1,

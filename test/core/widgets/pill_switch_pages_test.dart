@@ -107,7 +107,10 @@ void main() {
     final s = await _pump(t);
     // Half a segment is half a page: past it (here 5/8 of a segment), the pill settles on Two.
     final segment = t.getSize(find.byKey(const ValueKey('pill'))).width / 2;
-    await t.drag(find.byKey(const ValueKey('pill')), Offset(segment * 5 / 8, 0));
+    await t.drag(
+      find.byKey(const ValueKey('pill')),
+      Offset(segment * 5 / 8, 0),
+    );
     await t.pumpAndSettle();
     expect(s.value, 1);
     expect(find.text('page two'), findsOneWidget);

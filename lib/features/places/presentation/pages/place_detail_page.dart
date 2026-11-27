@@ -377,11 +377,13 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                       ),
                   ],
                 ),
-              if (r.isMarket)
+              if (r.isMarket ||
+                  (place.savedBranch?.schedule.isNotEmpty ?? false))
                 Padding(
                   padding: const EdgeInsets.only(top: spaceM),
                   child: MarketDaysList(
                     schedule: place.savedBranch?.schedule ?? const [],
+                    market: r.isMarket,
                   ),
                 ),
               // Going there first: big, plain buttons instead of the ⋮ menu.

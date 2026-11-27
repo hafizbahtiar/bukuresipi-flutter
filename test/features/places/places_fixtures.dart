@@ -126,6 +126,7 @@ NearbyBranch nearbyBranch({
   RatingSummary? rating,
   HalalCert? cert,
   String? cuisine = 'Melayu',
+  List<MarketDay> schedule = const [],
 }) => NearbyBranch(
   branchId: branchId,
   placeId: 'r-1',
@@ -139,6 +140,7 @@ NearbyBranch nearbyBranch({
   halalClaim: 'says_halal',
   halalQuote: 'Halal ya',
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',
+  schedule: schedule,
   saved: saved,
   savedPlaceId: savedPlaceId,
   cover: cover,
