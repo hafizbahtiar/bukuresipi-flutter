@@ -599,7 +599,11 @@ void main() {
 
         Navigator.of(t.element(find.text('Links 3 lines'))).pop();
         await t.pumpAndSettle();
-        repo.gapAnswer = (name: 'daun salam', ingredient: null);
+        repo.gapAnswer = (
+          name: 'daun salam',
+          ingredient: null,
+          category: 'Rempah',
+        );
         await t.tap(find.byKey(const ValueKey('gap-minyak')));
         await t.pumpAndSettle(const Duration(milliseconds: 300));
         await t.tap(find.byKey(const ValueKey('gap-ai')));
@@ -607,6 +611,14 @@ void main() {
         await t.tap(find.text('New ingredient: daun salam'));
         await t.pumpAndSettle(const Duration(milliseconds: 400));
         expect(find.widgetWithText(TextField, 'Daun salam'), findsOneWidget);
+        // Its category from the AI, one of ours: ready to save.
+        expect(find.text('Rempah'), findsOneWidget);
+        expect(
+          t
+              .widget<BusyButton>(find.byKey(const ValueKey('gap-save')))
+              .onPressed,
+          isNotNull,
+        );
       },
     );
 

@@ -48,7 +48,7 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
   ({int lines, List<String> sample})? _preview;
   bool _taken = false;
   bool _busy = false;
-  ({String? name, String? ingredient})? _ai;
+  ({String? name, String? ingredient, String? category})? _ai;
   bool _aiBusy = false;
   Timer? _debounce;
   int _asked = 0;
@@ -110,9 +110,12 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
     }
   }
 
-  /// The AI's name as a new ingredient: the create step, its name filled.
-  void _createFromAi(String name) {
+  /// The AI's name as a new ingredient: the create step, its name (and category, one of ours) filled.
+  void _createFromAi(String name, String? category) {
     _name.text = name[0].toUpperCase() + name.substring(1);
+    if (category != null && widget.categories.contains(category)) {
+      _category.text = category;
+    }
     _go(_Step.create);
   }
 
@@ -221,26 +224,32 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
               ),
               if (_ai case final ai?)
                 switch (ai) {
-                  (name: _, ingredient: final String ingredient) => row(
-                    BaseTile(
-                      key: const ValueKey('gap-ai-same'),
-                      leading: const AiBadge(),
-                      title: l.ownerGapAiSame(ingredient),
-                      dense: true,
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _pick(ingredient),
+                  (name: _, ingredient: final String ingredient, category: _) =>
+                    row(
+                      BaseTile(
+                        key: const ValueKey('gap-ai-same'),
+                        leading: const AiBadge(),
+                        title: l.ownerGapAiSame(ingredient),
+                        dense: true,
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _pick(ingredient),
+                      ),
                     ),
-                  ),
-                  (name: final String name, ingredient: null) => row(
-                    BaseTile(
-                      key: const ValueKey('gap-ai-new'),
-                      leading: const AiBadge(),
-                      title: l.ownerGapAiNew(name),
-                      dense: true,
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _createFromAi(name),
+                  (
+                    name: final String name,
+                    ingredient: null,
+                    :final category,
+                  ) =>
+                    row(
+                      BaseTile(
+                        key: const ValueKey('gap-ai-new'),
+                        leading: const AiBadge(),
+                        title: l.ownerGapAiNew(name),
+                        dense: true,
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _createFromAi(name, category),
+                      ),
                     ),
-                  ),
                   _ => Padding(
                     padding: const EdgeInsets.fromLTRB(
                       spaceM,

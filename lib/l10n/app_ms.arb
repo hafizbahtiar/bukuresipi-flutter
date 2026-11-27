@@ -1426,6 +1426,7 @@
   "aiUsePlaceDraft": "Draf tempat",
   "aiUseDishDraft": "Draf menu",
   "aiUseIngredientName": "Namakan bahan",
+  "aiUseIngredientGap": "Bahan tak dikenali: nama dan kategori",
   "aiUseBrandMaker": "Cari pengeluar jenama",
   "aiUseIngredientAliases": "Nama lain bahan",
   "aiUseReceiptRead": "Baca resit",
