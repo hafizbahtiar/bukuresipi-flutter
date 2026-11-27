@@ -10,6 +10,7 @@ import '../../../../core/utils/time_format.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
+import '../../../../core/widgets/system_pages.dart';
 import '../../../../core/widgets/wide_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -63,6 +64,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   void _open(InboxItem n) {
+    if (n.data['type'] == 'update') {
+      updateApp(context);
+      return;
+    }
     if (n.data['shareId'] case final id?) {
       return context.read<PushController?>()?.onTap?.call(id);
     }
@@ -124,7 +129,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       itemBuilder: (context, i) {
                         final n = r.items[i];
                         final tappable =
-                            n.data['shareId'] != null || _path(n) != null;
+                            n.data['shareId'] != null ||
+                            n.data['type'] == 'update' ||
+                            _path(n) != null;
                         return BaseTile(
                           key: ValueKey('inbox-$i'),
                           dense: true,

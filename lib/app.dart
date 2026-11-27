@@ -17,6 +17,7 @@ import 'features/places/presentation/places_controller.dart';
 import 'features/push/push_controller.dart';
 import 'features/push/push_messaging.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
+import 'core/widgets/system_pages.dart';
 import 'features/notifications/presentation/widgets/inbox_bell.dart';
 import 'features/push/push_routes.dart';
 import 'features/shares/domain/share_repository.dart';
@@ -57,6 +58,12 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
         // A new sign-in opens the device list (sign that one out); a family change opens the family; a badge, Badges;
         // an e-invoice reminder, its receipt; a market open tonight, its place.
         ..onTypeTap = (type, data) {
+          // The owner's "new version" message: Play's update, as Home's chip.
+          final context = _router.routerDelegate.navigatorKey.currentContext;
+          if (type == 'update' && context != null) {
+            updateApp(context);
+            return;
+          }
           if (pushPath(type, data) case final path?) _router.push(path);
         }
         ..start();
@@ -94,6 +101,10 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
             (final String id, _) => SnackBarAction(
               label: AppLocalizations.of(context).openPlace,
               onPressed: () => _openShare(id),
+            ),
+            _ when push.data['type'] == 'update' => SnackBarAction(
+              label: AppLocalizations.of(context).updateAvailable,
+              onPressed: () => updateApp(context),
             ),
             (_, final String path) => SnackBarAction(
               label: AppLocalizations.of(context).openPlace,

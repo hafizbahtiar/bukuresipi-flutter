@@ -180,10 +180,12 @@ abstract interface class OwnerRepository {
   Future<int> addIngredient(String name, String category);
 
   /// A message to one user ([to] = their id) or everyone ([to] null): in the inbox and pushed to their phones.
+  /// [kind] 'update' = a tap opens the Play update, not the inbox.
   Future<void> sendMessage({
     required String title,
     required String body,
     String? to,
+    String kind = 'message',
   });
 
   /// What the owner sent, newest first.

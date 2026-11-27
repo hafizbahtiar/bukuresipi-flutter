@@ -276,6 +276,8 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('user-message')));
     await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('tpl-blank')));
+    await t.pumpAndSettle();
     expect(find.text('To ali@b.c'), findsOneWidget);
     final send = find.byKey(const ValueKey('message-send'));
     expect(t.widget<BusyButton>(send).onPressed, isNull); // nothing written yet
@@ -288,7 +290,7 @@ void main() {
     await t.tap(send);
     await t.pumpAndSettle();
     expect(repo.messages, [
-      (title: 'Hai', body: 'Resipi baharu.', to: 'u-ali@b.c'),
+      (title: 'Hai', body: 'Resipi baharu.', to: 'u-ali@b.c', kind: 'message'),
     ]);
     expect(find.text('Sent'), findsOneWidget);
   });
@@ -314,6 +316,8 @@ void main() {
       expect(find.text('40 of 42 phones'), findsOneWidget);
       await t.tap(find.byKey(const ValueKey('messages-new')));
       await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('tpl-blank')));
+      await t.pumpAndSettle();
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('message-to')),
@@ -331,7 +335,34 @@ void main() {
       await t.pump();
       await t.tap(find.byKey(const ValueKey('message-send')));
       await t.pumpAndSettle();
-      expect(repo.messages, [(title: 'Hai', body: 'x', to: 'u-siti@b.c')]);
+      expect(repo.messages, [
+        (title: 'Hai', body: 'x', to: 'u-siti@b.c', kind: 'message'),
+      ]);
+    },
+  );
+
+  testWidgets(
+    'a template fills the message; the update one is sent as an update (a tap opens Play); Back picks another',
+    (t) async {
+      await pump(t, const OwnerMessagesPage());
+      await t.tap(find.byKey(const ValueKey('messages-new')));
+      await t.pumpAndSettle();
+      expect(find.text('Pick a template'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('tpl-6')));
+      await t.pumpAndSettle();
+      expect(
+        find.text('New recipes this week'),
+        findsOneWidget,
+      ); // the title field
+      await t.tap(find.byKey(const ValueKey('sheet-back')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('tpl-1')));
+      await t.pumpAndSettle();
+      expect(find.text('A new Bukuresipi is here!'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('message-send')));
+      await t.pumpAndSettle();
+      expect(repo.messages.single.kind, 'update');
+      expect(repo.messages.single.title, 'A new Bukuresipi is here!');
     },
   );
 
