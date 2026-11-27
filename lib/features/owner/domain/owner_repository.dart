@@ -118,6 +118,37 @@ abstract interface class OwnerRepository {
     String alias,
   );
 
+  /// Every catalogue ingredient, A-Z.
+  Future<List<IngredientRow>> listIngredients();
+
+  /// One ingredient's page. Throws 'not_found'.
+  Future<IngredientDetail> ingredientDetail(int id);
+
+  /// A new name and/or category; the old name stays as another name. Throws 'name_taken'.
+  Future<IngredientDetail> updateIngredient(
+    int id, {
+    String? name,
+    String? category,
+  });
+
+  /// How many lines only [alias] matched (they go back to the gaps), and some of them. Nothing saved.
+  Future<({int lines, List<String> sample})> previewRemoveAlias(
+    int id,
+    String alias,
+  );
+
+  /// Removes [alias] from ingredient [id]: how many lines it unlinked (or moved to another match).
+  Future<int> removeAlias(int id, String alias);
+
+  /// How many lines say [alias] and would move if it became its own ingredient. Nothing saved.
+  Future<({int lines, List<String> sample})> previewSplitAlias(
+    int id,
+    String alias,
+  );
+
+  /// [alias] of ingredient [id] becomes its own ingredient (same category); the lines that say it move there.
+  Future<({int id, String name, int moved})> splitAlias(int id, String alias);
+
   /// Saves the alias and relinks every unlinked line: how many it linked. Throws as [previewAlias].
   Future<int> addAlias(String ingredient, String alias);
 

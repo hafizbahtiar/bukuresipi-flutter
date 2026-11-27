@@ -4066,5 +4066,85 @@
   "ownerMessagesNone": "Nothing sent yet.",
   "@ownerMessagesNone": {},
   "ownerSendMessage": "Send a notification",
-  "@ownerSendMessage": {}
+  "@ownerSendMessage": {},
+  "ownerIngredientList": "Ingredients and other names",
+  "@ownerIngredientList": {},
+  "ownerIngredientRowSub": "{category} · {count} other names",
+  "@ownerIngredientRowSub": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientAliases": "Other names",
+  "@ownerIngredientAliases": {},
+  "ownerIngredientAliasesHint": "A line that says one of these is this ingredient. A kind of it (\"limau nipis\" on Limau) is another food: make it its own ingredient.",
+  "@ownerIngredientAliasesHint": {},
+  "ownerIngredientNoAliases": "No other names yet.",
+  "@ownerIngredientNoAliases": {},
+  "ownerIngredientAddAlias": "Add another name",
+  "@ownerIngredientAddAlias": {},
+  "ownerIngredientRemoveAlias": "Remove this name",
+  "@ownerIngredientRemoveAlias": {},
+  "ownerIngredientSplitAlias": "Make it its own ingredient",
+  "@ownerIngredientSplitAlias": {},
+  "ownerIngredientRemoveAsk": "Remove \"{alias}\"? {count} lines that only this name matched go back to Ingredient gaps.",
+  "@ownerIngredientRemoveAsk": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientSplitAsk": "Make \"{alias}\" its own ingredient, in the same category? {count} lines that say it move there.",
+  "@ownerIngredientSplitAsk": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientRemoved": "Removed. {count} lines unlinked.",
+  "@ownerIngredientRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientSplitDone": "{name} added. {count} lines moved.",
+  "@ownerIngredientSplitDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientSimilar": "Ingredients that may be the same",
+  "@ownerIngredientSimilar": {},
+  "ownerIngredientNoSimilar": "None found.",
+  "@ownerIngredientNoSimilar": {},
+  "ownerIngredientEdit": "Edit ingredient",
+  "@ownerIngredientEdit": {},
+  "ownerIngredientName": "Name",
+  "@ownerIngredientName": {},
+  "ownerIngredientRenameNote": "The old name stays as another name, so no line loses its link.",
+  "@ownerIngredientRenameNote": {},
+  "ownerIngredientNoCategory": "No category",
+  "@ownerIngredientNoCategory": {},
+  "ownerIngredientsShort": "All ingredients",
+  "@ownerIngredientsShort": {}
 }
