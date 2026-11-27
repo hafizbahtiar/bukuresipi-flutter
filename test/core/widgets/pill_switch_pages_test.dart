@@ -80,10 +80,11 @@ void main() {
     (t) async {
       final s = await _pump(t);
       final one = _chip(t);
+      final w = t.getSize(find.byKey(const ValueKey('pages'))).width;
       final g = await t.startGesture(
         t.getCenter(find.byKey(const ValueKey('pages'))),
       );
-      await g.moveBy(const Offset(-200, 0));
+      await g.moveBy(Offset(-w / 4, 0));
       await t.pump();
       expect(
         find.text('page two'),
@@ -91,7 +92,7 @@ void main() {
       ); // the next page shows mid-swipe
       final mid = _chip(t);
       expect(mid.left, greaterThan(one.left));
-      await g.moveBy(const Offset(-200, 0));
+      await g.moveBy(Offset(-w / 3, 0)); // past half a page at any screen width
       await g.up();
       await t.pumpAndSettle();
       expect(s.value, 1);
@@ -104,8 +105,9 @@ void main() {
     t,
   ) async {
     final s = await _pump(t);
-    // Half a segment (~200 px here) is half a page: past it, the pill settles on Two.
-    await t.drag(find.byKey(const ValueKey('pill')), const Offset(250, 0));
+    // Half a segment is half a page: past it (here 5/8 of a segment), the pill settles on Two.
+    final segment = t.getSize(find.byKey(const ValueKey('pill'))).width / 2;
+    await t.drag(find.byKey(const ValueKey('pill')), Offset(segment * 5 / 8, 0));
     await t.pumpAndSettle();
     expect(s.value, 1);
     expect(find.text('page two'), findsOneWidget);

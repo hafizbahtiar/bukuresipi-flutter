@@ -713,7 +713,17 @@ void main() {
       expect(repo.savedSplits.last.portions, [
         (position: 0, person: 1, quantity: 1.0),
       ]);
-      expect(find.text('RM 22.75'), findsOneWidget);
+      // Ali's share (the Teh Ais line also costs RM 22.75: on a wide screen both are built).
+      final aliShare = find.byKey(const ValueKey('split-share-1'));
+      await t.scrollUntilVisible(aliShare, 200, scrollable: _vertical);
+      await t.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('split-share-1')),
+          matching: find.text('RM 22.75'),
+        ),
+        findsOneWidget,
+      );
 
       final shareButton = find.byKey(const ValueKey('split-share-button'));
       await t.scrollUntilVisible(shareButton, 200, scrollable: _vertical);
