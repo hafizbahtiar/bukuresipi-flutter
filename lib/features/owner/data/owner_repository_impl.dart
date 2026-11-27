@@ -654,6 +654,8 @@ class OwnerRepositoryImpl implements OwnerRepository {
           pushSent: m['pushSent'] as int,
           pushTotal: m['pushTotal'] as int,
           pending: m['pending'] as bool,
+          kind: m['kind'] as String? ?? 'message', // a server before 2026-11
+          image: m['image'] as String?,
           createdAt: dbTime(m['createdAt'] as String).toLocal(),
         ),
     ];

@@ -317,6 +317,8 @@ void main() {
           pushSent: 40,
           pushTotal: 42,
           pending: false,
+          kind: 'message',
+          image: null,
           createdAt: DateTime(2026, 11, 20, 9),
         ),
       ];
@@ -440,6 +442,8 @@ void main() {
           pushSent: 3,
           pushTotal: 3,
           pending: false,
+          kind: 'message',
+          image: null,
           createdAt: DateTime(2026, 11, 20, 8),
         ),
       ];
@@ -457,6 +461,48 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a tap opens the sent message in a sheet: its photo, whole text, kind and Delete',
+    (t) async {
+      repo.sent = [
+        (
+          id: 5,
+          title: 'Versi baharu',
+          body: 'Kemas kini sekarang.',
+          to: null,
+          pushSent: 2,
+          pushTotal: 2,
+          pending: false,
+          kind: 'update',
+          image: 'https://api.test/api/v1/notifications/image/x',
+          createdAt: DateTime(2026, 11, 20, 8),
+        ),
+      ];
+      await pump(t, const OwnerMessagesPage());
+      expect(find.byKey(const ValueKey('sent-image')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('sent-0')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('sent-image')), findsOneWidget);
+      expect(
+        find.text('App update'),
+        findsNWidgets(2),
+      ); // the row and the sheet
+      expect(
+        find.text('2 of 2 phones'),
+        findsNWidgets(2),
+      ); // the row and the sheet
+      await t.tap(find.byKey(const ValueKey('sent-delete')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Delete').last); // the dialog's button
+      await t.pumpAndSettle();
+      expect(repo.deletedMessages, [5]);
+      expect(
+        find.text('Versi baharu'),
+        findsNothing,
+      ); // sheet closed, list read again
+    },
+  );
+
   testWidgets('a message still pushing is read again until it is done', (
     t,
   ) async {
@@ -470,6 +516,8 @@ void main() {
         pushSent: 0,
         pushTotal: 2,
         pending: true,
+        kind: 'message',
+        image: null,
         createdAt: DateTime(2026, 11, 20, 8),
       ),
     ];
@@ -485,6 +533,8 @@ void main() {
         pushSent: 2,
         pushTotal: 2,
         pending: false,
+        kind: 'message',
+        image: null,
         createdAt: DateTime(2026, 11, 20, 8),
       ),
     ];

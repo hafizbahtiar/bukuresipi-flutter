@@ -14,10 +14,12 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../../../places/presentation/widgets/owner_panel.dart';
 import '../widgets/message_sheet.dart';
 
 /// Owner > Send notifications: a message to everyone or one user (also Users > a user), and what was sent, with how
-/// many phones its push reached so far (read again every few seconds while one is still pushing).
+/// many phones its push reached so far (read again every few seconds while one is still pushing). A tap opens one in a
+/// sheet: its photo, whole text, kind and Delete (the count as it was when opened).
 class OwnerMessagesPage extends StatefulWidget {
   const OwnerMessagesPage({super.key});
 
@@ -94,11 +96,84 @@ class _OwnerMessagesPageState extends State<OwnerMessagesPage> {
     await _load(quiet: true);
   }
 
+  String _when(SentMessage m) =>
+      '${MaterialLocalizations.of(context).formatMediumDate(m.createdAt)}, ${formatTime(context, m.createdAt)}';
+
+  List<TileTag> _tags(SentMessage m, AppLocalizations l) => [
+    TileTag(m.to ?? l.ownerMessageEveryone),
+    if (m.kind == 'update') TileTag(l.msgTpl1Label),
+    if (m.pending)
+      TileTag(l.ownerMessagePending, tone: TagTone.warn)
+    else if (m.pushTotal == 0)
+      TileTag(l.ownerMessageInboxOnly)
+    else
+      TileTag(
+        l.ownerMessagePhones(m.pushSent, m.pushTotal),
+        tone: TagTone.good,
+      ),
+  ];
+
+  Future<void> _open(SentMessage m) async {
+    final delete = await showBaseSheet<bool>(
+      context,
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        final nb = Notebook.of(context);
+        final text = Theme.of(context).textTheme;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(spaceM, 0, spaceM, spaceM),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: spaceS,
+            children: [
+              if (m.image case final url?)
+                ClipRRect(
+                  key: const ValueKey('sent-image'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    url,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+              Text(
+                m.title,
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              Text(_when(m), style: TextStyle(color: nb.inkSoft)),
+              Wrap(
+                spacing: spaceXs,
+                runSpacing: spaceXs,
+                children: [for (final t in _tags(m, l)) TagChip(t)],
+              ),
+              SelectableText(m.body, style: TextStyle(color: nb.ink)),
+              PanelActions(
+                children: [
+                  TextButton.icon(
+                    key: const ValueKey('sent-delete'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(l.delete),
+                    onPressed: () => Navigator.pop(context, true),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (delete == true && mounted) await _delete(m);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
-    final loc = MaterialLocalizations.of(context);
     final sent = _sent;
     return Scaffold(
       appBar: AppBar(
@@ -140,10 +215,14 @@ class _OwnerMessagesPageState extends State<OwnerMessagesPage> {
                           key: ValueKey('sent-$i'),
                           dense: true,
                           title: m.title,
-                          subtitle:
-                              '${loc.formatMediumDate(m.createdAt)}, ${formatTime(context, m.createdAt)}',
-                          // The whole text: the tile's subtitle stops at 2 lines.
-                          footer: Text(m.body, style: TextStyle(color: nb.ink)),
+                          subtitle: _when(m),
+                          footer: Text(
+                            m.body,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: nb.ink),
+                          ),
+                          onTap: () => _open(m),
                           actions: [
                             MenuAction(
                               icon: Icons.delete_outline,
@@ -152,18 +231,7 @@ class _OwnerMessagesPageState extends State<OwnerMessagesPage> {
                               onTap: () => _delete(m),
                             ),
                           ],
-                          tags: [
-                            TileTag(m.to ?? l.ownerMessageEveryone),
-                            if (m.pending)
-                              TileTag(l.ownerMessagePending, tone: TagTone.warn)
-                            else if (m.pushTotal == 0)
-                              TileTag(l.ownerMessageInboxOnly)
-                            else
-                              TileTag(
-                                l.ownerMessagePhones(m.pushSent, m.pushTotal),
-                                tone: TagTone.good,
-                              ),
-                          ],
+                          tags: _tags(m, l),
                         ),
                     ],
                   ),
