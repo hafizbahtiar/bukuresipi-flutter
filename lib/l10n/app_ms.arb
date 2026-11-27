@@ -1434,5 +1434,7 @@
   "aiUseCoverPick": "Pilih foto muka",
   "aiUsePantrySuggest": "Cadangkan hidangan daripada bahan sedia ada",
   "errAiUnknownModel": "Model atau tahap itu tidak ditawarkan.",
-  "errAiNoImages": "Model ini tidak boleh membaca foto, dan kegunaan ini menghantarnya."
+  "errAiNoImages": "Model ini tidak boleh membaca foto, dan kegunaan ini menghantarnya.",
+  "catalogueScan": "Imbas kod bar",
+  "catalogueScanUnavailable": "Telefon ini tidak boleh mengimbas kod."
 }

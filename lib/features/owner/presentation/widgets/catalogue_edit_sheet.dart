@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/utils/live_scanner.dart';
 import '../../../../core/widgets/ai_button.dart';
 import '../../../../core/widgets/base.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -150,6 +151,24 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     } catch (_) {
       // The picker stays empty; the field keeps its value and Save still works.
     }
+  }
+
+  /// A product's barcode from the live scanner, then the fill as if typed.
+  Future<void> _scan() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final String? code;
+    try {
+      code = await scanCodeLive(product: true);
+    } on Exception {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.catalogueScanUnavailable)),
+      );
+      return;
+    }
+    if (code == null || !mounted) return;
+    _fillFrom.text = code;
+    await _fillProduct();
   }
 
   /// A barcode or a store link fills the form (nothing saved); the owner checks it and saves.
@@ -396,6 +415,12 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
               keyboardType: TextInputType.url,
               decoration: InputDecoration(
                 labelText: l.catalogueFillFrom,
+                suffixIcon: IconButton(
+                  key: const ValueKey('catalogue-scan'),
+                  tooltip: l.catalogueScan,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: _filling ? null : _scan,
+                ),
                 helperText: _fill == null
                     ? l.catalogueFillHint
                     : l.catalogueFillSource(

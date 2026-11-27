@@ -3983,5 +3983,9 @@
   "errAiUnknownModel": "That model or level is not offered.",
   "@errAiUnknownModel": {},
   "errAiNoImages": "This model can't read photos, and this use sends them.",
-  "@errAiNoImages": {}
+  "@errAiNoImages": {},
+  "catalogueScan": "Scan a barcode",
+  "@catalogueScan": {},
+  "catalogueScanUnavailable": "This phone can't scan codes.",
+  "@catalogueScanUnavailable": {}
 }
