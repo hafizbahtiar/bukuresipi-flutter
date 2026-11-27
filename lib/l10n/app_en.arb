@@ -3551,7 +3551,13 @@
   "@ownerGapSearch": {},
   "ownerGapNew": "New ingredient",
   "ownerGapTypes": "AI: kinds of {word}",
-  "@ownerGapTypes": {"placeholders": {"word": {"type": "String"}}},
+  "@ownerGapTypes": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "ownerGapTypeNew": "New",
   "@ownerGapTypeNew": {},
   "ownerGapTypesNone": "The AI knows no kinds of this.",
@@ -4023,5 +4029,54 @@
         "type": "String"
       }
     }
-  }
+  },
+  "inboxTitle": "Notifications",
+  "@inboxTitle": {},
+  "inboxEmpty": "Nothing yet. What the app tells you shows here.",
+  "@inboxEmpty": {},
+  "ownerMessages": "Send notifications",
+  "@ownerMessages": {},
+  "ownerMessageNew": "New notification",
+  "@ownerMessageNew": {},
+  "ownerMessageTo": "To {email}",
+  "@ownerMessageTo": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerMessageEveryone": "Everyone",
+  "@ownerMessageEveryone": {},
+  "ownerMessageTitle": "Title",
+  "@ownerMessageTitle": {},
+  "ownerMessageBody": "Message",
+  "@ownerMessageBody": {},
+  "ownerMessagePush": "Push to their phones too",
+  "@ownerMessagePush": {},
+  "ownerMessageSend": "Send",
+  "@ownerMessageSend": {},
+  "ownerMessageSending": "Sending…",
+  "@ownerMessageSending": {},
+  "ownerMessageSent": "Sent",
+  "@ownerMessageSent": {},
+  "ownerMessagePhones": "{sent} of {total} phones",
+  "@ownerMessagePhones": {
+    "placeholders": {
+      "sent": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerMessageInboxOnly": "Inbox only",
+  "@ownerMessageInboxOnly": {},
+  "ownerMessagePending": "Pushing…",
+  "@ownerMessagePending": {},
+  "ownerMessagesNone": "Nothing sent yet.",
+  "@ownerMessagesNone": {},
+  "ownerSendMessage": "Send a notification",
+  "@ownerSendMessage": {}
 }

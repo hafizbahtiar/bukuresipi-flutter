@@ -46,6 +46,12 @@ filter); the map has its own `markets` source under the pins (street/ground + do
 camera moves 7.5 km; `?market=<branch>` opens that sheet. Owner: Edit branch > Days, shown only once the server says it
 is a market (a failed read = no tab, so an empty editor can never overwrite saved days).
 
+Notifications (`features/notifications/`): Home's bell (`InboxBell`, a dot while something is new) opens the inbox:
+every push a phone got plus the owner's messages; opening it marks all read. A row opens what its push opens
+(`push/push_routes.dart` `pushPath`, shared with `app.dart`; a share push goes to `PushController.onTap`). Owner:
+Owner > Send notifications (to everyone) or Users > a user > Send a notification (`MessageSheet`); the server pushes
+them from its cron, so "Sedang dihantar" until done.
+
 ## House components (`core/widgets/`; use them, never a native copy)
 
 `import '.../core/widgets/base.dart'` gives all of `base/`:

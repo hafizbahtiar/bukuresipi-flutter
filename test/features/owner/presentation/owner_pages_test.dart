@@ -6,6 +6,7 @@ import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ai_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_catalogue_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_hidden_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_messages_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredients_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
@@ -64,6 +65,10 @@ void main() {
     (t) async {
       await pump(t, const OwnerPage());
       expect(find.text('12'), findsOneWidget);
+      await t.scrollUntilVisible(
+        find.text('Nominatim'),
+        200,
+      ); // below the owner's rows
       expect(find.text('Nominatim'), findsOneWidget);
       expect(find.text('90 / 100 a month'), findsOneWidget);
     },
@@ -222,7 +227,10 @@ void main() {
     t,
   ) async {
     await pump(t, const OwnerPage());
-    await t.ensureVisible(find.text('Nominatim')); // below the owner's rows
+    await t.scrollUntilVisible(
+      find.text('Nominatim'),
+      200,
+    ); // below the owner's rows
     await t.pumpAndSettle();
     await t.tap(find.text('Nominatim'));
     await t.pumpAndSettle();
@@ -260,6 +268,75 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.loggedOut, ['u-ali@b.c']);
   });
+
+  testWidgets('the owner sends one user a notification, push on', (t) async {
+    repo.users = [ownerUser('ali@b.c')];
+    await pump(t, const OwnerUsersPage());
+    await t.tap(find.text('ali@b.c'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('user-message')));
+    await t.pumpAndSettle();
+    expect(find.text('To ali@b.c'), findsOneWidget);
+    final send = find.byKey(const ValueKey('message-send'));
+    expect(t.widget<BusyButton>(send).onPressed, isNull); // nothing written yet
+    await t.enterText(find.byKey(const ValueKey('message-title')), 'Hai');
+    await t.enterText(
+      find.byKey(const ValueKey('message-body')),
+      'Resipi baharu.',
+    );
+    await t.pump();
+    await t.tap(send);
+    await t.pumpAndSettle();
+    expect(repo.messages, [
+      (title: 'Hai', body: 'Resipi baharu.', to: 'u-ali@b.c', push: true),
+    ]);
+    expect(find.text('Sent'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Send notifications: what was sent, and a message to everyone, inbox only',
+    (t) async {
+      repo.sent = [
+        (
+          title: 'Kemas kini',
+          body: 'Versi baharu.',
+          to: null,
+          pushSent: 40,
+          pushTotal: 42,
+          pending: false,
+          createdAt: DateTime(2026, 11, 20, 9),
+        ),
+        (
+          title: 'Hai',
+          body: 'x',
+          to: 'ali@b.c',
+          pushSent: 0,
+          pushTotal: 2,
+          pending: true,
+          createdAt: DateTime(2026, 11, 20, 8),
+        ),
+      ];
+      await pump(t, const OwnerMessagesPage());
+      expect(find.text('40 of 42 phones'), findsOneWidget);
+      expect(find.text('Pushing…'), findsOneWidget);
+      expect(find.text('ali@b.c'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('messages-new')));
+      await t.pumpAndSettle();
+      expect(find.text('To Everyone'), findsOneWidget);
+      await t.enterText(find.byKey(const ValueKey('message-title')), 'Senyap');
+      await t.enterText(
+        find.byKey(const ValueKey('message-body')),
+        'Tiada push.',
+      );
+      await t.tap(find.byKey(const ValueKey('message-push')));
+      await t.pump();
+      await t.tap(find.byKey(const ValueKey('message-send')));
+      await t.pumpAndSettle();
+      expect(repo.messages, [
+        (title: 'Senyap', body: 'Tiada push.', to: null, push: false),
+      ]);
+    },
+  );
 
   testWidgets('the owner bans a user for 30 days with a reason', (t) async {
     repo.users = [ownerUser('ali@b.c')];

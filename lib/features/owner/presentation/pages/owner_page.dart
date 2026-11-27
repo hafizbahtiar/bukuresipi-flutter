@@ -147,6 +147,10 @@ class _OwnerPageState extends State<OwnerPage> {
                         label: l.ownerAi,
                         onTap: () => context.push('/owner/ai'),
                       ),
+                      _Ledger(
+                        label: l.ownerMessages,
+                        onTap: () => context.push('/owner/messages'),
+                      ),
                     ],
                     Padding(
                       padding: const EdgeInsets.fromLTRB(

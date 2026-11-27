@@ -150,6 +150,17 @@ abstract interface class OwnerRepository {
 
   /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
   /// Throws 'ai_unavailable'.
+  /// A message to the inbox of one user ([to] = their id) or everyone ([to] null); [push] = to their phones too.
+  Future<void> sendMessage({
+    required String title,
+    required String body,
+    String? to,
+    required bool push,
+  });
+
+  /// What the owner sent, newest first.
+  Future<List<SentMessage>> sentMessages();
+
   /// The kinds of [query] (AI, owner): `POST /owner/ingredients/types`.
   Future<List<IngredientType>> ingredientTypes(String query);
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
+import '../../features/notifications/presentation/pages/notifications_page.dart';
+import '../../features/owner/presentation/pages/owner_messages_page.dart';
 import '../../features/places/presentation/pages/pin_picker_page.dart';
 import '../widgets/wide_page.dart';
 import '../../features/places/presentation/pages/places_map_page.dart';
@@ -158,6 +160,10 @@ GoRouter buildRouter(
         builder: (_, _) => const EinvoiceDetailsPage(),
       ),
       _page(path: '/badges', builder: (_, _) => const BadgesPage()),
+      _page(
+        path: '/notifications',
+        builder: (_, _) => const NotificationsPage(),
+      ),
       _page(path: '/credits', builder: (_, _) => const CreditsPage()),
       _page(path: '/about', builder: (_, _) => const AboutPage()),
       _page(path: '/family', builder: (_, _) => const FamilyPage()),
@@ -246,6 +252,7 @@ GoRouter buildRouter(
             builder: (_, _) => const OwnerCataloguePage(),
           ),
           _page(path: 'ai', builder: (_, _) => const OwnerAiPage()),
+          _page(path: 'messages', builder: (_, _) => const OwnerMessagesPage()),
         ],
       ),
     ],

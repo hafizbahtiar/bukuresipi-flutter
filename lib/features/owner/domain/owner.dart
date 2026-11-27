@@ -346,6 +346,17 @@ class OwnerPlace {
 /// [category] one of ours or null. Nothing saved.
 typedef IngredientType = ({String name, String? category, String? ingredient});
 
+/// A message the owner sent: [to] = the user's email, null = everyone. [pending] = its pushes are still going out.
+typedef SentMessage = ({
+  String title,
+  String body,
+  String? to,
+  int pushSent,
+  int pushTotal,
+  bool pending,
+  DateTime createdAt,
+});
+
 class IngredientGap {
   const IngredientGap({
     required this.key,
