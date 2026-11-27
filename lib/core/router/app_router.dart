@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
 import '../../features/notifications/presentation/pages/notifications_page.dart';
+import '../../features/owner/presentation/pages/owner_ingredient_edit_page.dart';
 import '../../features/owner/presentation/pages/owner_ingredient_list_page.dart';
 import '../../features/owner/presentation/pages/owner_ingredient_page.dart';
 import '../../features/owner/presentation/pages/owner_messages_page.dart';
@@ -263,6 +264,11 @@ GoRouter buildRouter(
             path: 'ingredient/:id',
             builder: (_, s) =>
                 OwnerIngredientPage(id: int.parse(s.pathParameters['id']!)),
+          ),
+          _page(
+            path: 'ingredient/:id/edit',
+            builder: (_, s) =>
+                OwnerIngredientEditPage(id: int.parse(s.pathParameters['id']!)),
           ),
         ],
       ),

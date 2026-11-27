@@ -100,6 +100,7 @@ class _MessageSheetState extends State<MessageSheet> {
             const SizedBox(height: spaceS),
             BaseTile(
               key: const ValueKey('message-to'),
+              style: TileStyle.plain, // the sheet's own gutter: an outlined tile would indent twice
               dense: true,
               leading: const Icon(Icons.person_outline),
               title: _to.email ?? l.ownerMessageEveryone,

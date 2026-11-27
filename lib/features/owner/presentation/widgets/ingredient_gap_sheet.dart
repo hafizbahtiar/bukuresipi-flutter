@@ -213,18 +213,22 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
                   style: text.bodySmall?.copyWith(color: nb.inkSoft),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: AiButton(
-                    key: const ValueKey('gap-ai'),
-                    label: l.ownerGapAiSuggest,
-                    busy: _aiBusy,
-                    onPressed: _suggest,
+              // One AI button; once it answered, its heading stands there instead (no second button-like chip).
+              if (_ai != null)
+                SectionHeader(l.ownerGapAiResults)
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: AiButton(
+                      key: const ValueKey('gap-ai'),
+                      label: l.ownerGapAiSuggest,
+                      busy: _aiBusy,
+                      onPressed: _suggest,
+                    ),
                   ),
                 ),
-              ),
               if (_ai case final ai?)
                 switch (ai) {
                   (
@@ -236,7 +240,7 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
                     row(
                       BaseTile(
                         key: const ValueKey('gap-ai-same'),
-                        leading: const AiBadge(),
+                        leading: const Icon(Icons.link),
                         title: l.ownerGapAiSame(ingredient),
                         dense: true,
                         trailing: const Icon(Icons.chevron_right),
@@ -252,7 +256,7 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
                     row(
                       BaseTile(
                         key: const ValueKey('gap-ai-new'),
-                        leading: const AiBadge(),
+                        leading: const Icon(Icons.add),
                         title: l.ownerGapAiNew(name),
                         dense: true,
                         trailing: const Icon(Icons.chevron_right),
@@ -278,9 +282,9 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
                   row(
                     BaseTile(
                       key: ValueKey('gap-type-${t.name}'),
-                      leading: t.ingredient == null
-                          ? const Icon(Icons.add)
-                          : const AiBadge(),
+                      leading: Icon(
+                        t.ingredient == null ? Icons.add : Icons.link,
+                      ),
                       title: t.name,
                       subtitle: [
                         if (t.ingredient == null) l.ownerGapTypeNew,

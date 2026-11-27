@@ -1,5 +1,6 @@
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredient_list_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredient_edit_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredient_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +62,11 @@ void main() {
           builder: (_, s) =>
               OwnerIngredientPage(id: int.parse(s.pathParameters['id']!)),
         ),
+        GoRoute(
+          path: '/owner/ingredient/:id/edit',
+          builder: (_, s) =>
+              OwnerIngredientEditPage(id: int.parse(s.pathParameters['id']!)),
+        ),
       ],
     );
     await t.pumpWidget(
@@ -113,7 +119,9 @@ void main() {
         lines: 2,
         sample: const ['2 biji limau nipis', 'limau nipis'],
       );
-      await pump(t, '/owner/ingredient/26');
+      await pump(t, '/owner/ingredient/26/edit');
+      await t.tap(find.text('Other names'));
+      await t.pumpAndSettle();
       await t.longPress(find.byKey(const ValueKey('alias-limau nipis')));
       await t.pumpAndSettle();
       await t.tap(find.text('Make it its own ingredient'));
@@ -139,7 +147,9 @@ void main() {
     'a wrong name is removed: asks with how many lines go back to the gaps',
     (t) async {
       repo.removeAnswer = (lines: 3, sample: const ['2 biji limau nipis']);
-      await pump(t, '/owner/ingredient/26');
+      await pump(t, '/owner/ingredient/26/edit');
+      await t.tap(find.text('Other names'));
+      await t.pumpAndSettle();
       await t.longPress(find.byKey(const ValueKey('alias-limau nipis')));
       await t.pumpAndSettle();
       await t.tap(find.text('Remove this name'));
@@ -153,31 +163,50 @@ void main() {
   );
 
   testWidgets(
-    'edit: a new name and category; add another name; a look-alike opens its own page',
+    'the page only shows: its names and look-alikes in tabs; nothing to change on it',
+    (t) async {
+      await pump(t, '/owner/ingredient/26');
+      expect(find.text('limau nipis'), findsOneWidget);
+      await t.longPress(find.text('limau nipis'));
+      await t.pumpAndSettle();
+      expect(find.text('Remove this name'), findsNothing);
+      expect(find.byKey(const ValueKey('alias-add')), findsNothing);
+      await t.tap(find.text('May be the same'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Daun limau purut'));
+      await t.pumpAndSettle();
+      expect(find.text('daun limau'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Edit: another name added on its tab; a new name saved with the check, back on the page',
     (t) async {
       await pump(t, '/owner/ingredient/26');
       await t.tap(find.byKey(const ValueKey('ingredient-edit')));
       await t.pumpAndSettle();
-      await t.enterText(
-        find.byKey(const ValueKey('ingredient-name')),
-        'Limau kasturi',
-      );
-      await t.tap(find.byKey(const ValueKey('ingredient-save')));
+      await t.tap(find.text('Other names'));
       await t.pumpAndSettle();
-      expect(repo.ingredientCalls, ['update 26 Limau kasturi Buah']);
-
       await t.tap(find.byKey(const ValueKey('alias-add')));
       await t.pumpAndSettle();
       await t.enterText(find.byKey(const ValueKey('alias-new')), 'lime');
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('alias-save')));
       await t.pumpAndSettle();
-      expect(repo.aliases, [('Limau kasturi', 'lime')]);
+      expect(repo.aliases, [('Limau', 'lime')]);
 
-      await t.scrollUntilVisible(find.text('Daun limau purut'), 200);
-      await t.tap(find.text('Daun limau purut'));
+      await t.tap(find.text('Details'));
       await t.pumpAndSettle();
-      expect(find.text('daun limau'), findsOneWidget);
+      await t.enterText(
+        find.byKey(const ValueKey('ingredient-name')),
+        'Limau kasturi',
+      );
+      await t.pump();
+      await t.tap(find.byKey(const ValueKey('ingredient-save')));
+      await t.pumpAndSettle();
+      expect(repo.ingredientCalls, ['update 26 Limau kasturi Buah']);
+      expect(find.byKey(const ValueKey('ingredient-edit')), findsOneWidget);
+      expect(find.text('Limau kasturi'), findsOneWidget); // the page's title
     },
   );
 }

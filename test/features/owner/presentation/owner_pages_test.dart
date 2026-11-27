@@ -789,6 +789,10 @@ void main() {
         await t.tap(find.byKey(const ValueKey('gap-ai')));
         await t.pumpAndSettle();
         expect(find.text('Same as Minyak masak'), findsOneWidget);
+        // Answered: the button gives way to the answer's heading; no AI chip on the rows to look like a second one.
+        expect(find.byKey(const ValueKey('gap-ai')), findsNothing);
+        expect(find.text('AI suggestions'), findsOneWidget);
+        expect(find.byType(AiBadge), findsNothing);
         expect(
           find.byKey(const ValueKey('gap-type-Minyak masak')),
           findsNothing,
