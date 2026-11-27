@@ -1,3 +1,4 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -156,13 +157,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   child: ClipRRect(
                                     key: ValueKey('inbox-image-$i'),
                                     borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
+                                    // On disk: downloaded once, not at every app open (each is a Worker request).
+                                    child: ExtendedImage.network(
                                       url,
+                                      cache: true,
                                       height: 160,
                                       fit: BoxFit.cover,
-                                      // Gone or offline: the text is enough.
-                                      errorBuilder: (_, _, _) =>
-                                          const SizedBox.shrink(),
+                                      // Loading: its space, quietly; gone or offline: the text is enough.
+                                      loadStateChanged: (s) =>
+                                          switch (s.extendedImageLoadState) {
+                                            LoadState.loading => const SizedBox(
+                                              height: 160,
+                                            ),
+                                            LoadState.failed =>
+                                              const SizedBox.shrink(),
+                                            LoadState.completed => null,
+                                          },
                                     ),
                                   ),
                                 ),

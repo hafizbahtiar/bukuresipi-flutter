@@ -1,3 +1,4 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:bukuresipi_flutter/features/notifications/data/notifications_api.dart';
 import 'package:bukuresipi_flutter/features/notifications/domain/inbox.dart';
 import 'package:bukuresipi_flutter/features/notifications/presentation/pages/notifications_page.dart';
@@ -217,5 +218,15 @@ void main() {
     await pump(t, api);
     expect(find.byKey(const ValueKey('inbox-image-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('inbox-image-1')), findsNothing);
+    // Kept on disk: a phone downloads a photo once, not at every app open (each download is a Worker request).
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is ExtendedImage &&
+            w.image is ExtendedNetworkImageProvider &&
+            (w.image as ExtendedNetworkImageProvider).cache,
+      ),
+      findsOneWidget,
+    );
   });
 }
