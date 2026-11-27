@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import '../../../core/utils/log.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
@@ -212,6 +213,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
         final data = (await _dio.post<Map<String, dynamic>>(
           '/recipes/from-pantry/suggest',
           data: {'ingredients': ingredients},
+          options: Options(receiveTimeout: aiWait),
         )).data!;
         return [
           for (final d in (data['dishes'] as List).cast<Map<String, dynamic>>())

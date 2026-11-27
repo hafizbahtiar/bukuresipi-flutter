@@ -161,12 +161,7 @@ abstract interface class OwnerRepository {
   /// What the owner sent, newest first.
   Future<List<SentMessage>> sentMessages();
 
-  /// The kinds of [query] (AI, owner): `POST /owner/ingredients/types`.
-  Future<List<IngredientType>> ingredientTypes(String query);
-
-  Future<({String? name, String? ingredient, String? category})> suggestGap(
-    String line,
-  );
+  Future<GapSuggestion> suggestGap(String line);
 
   /// AI: aliases for 20 ingredients (fewest aliases first) from [offset], each with the lines it would link;
   /// next = null at the end. Nothing saved (save with [addAliases]). Throws 'ai_unavailable'.

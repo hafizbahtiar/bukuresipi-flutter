@@ -346,6 +346,15 @@ class OwnerPlace {
 /// [category] one of ours or null. Nothing saved.
 typedef IngredientType = ({String name, String? category, String? ingredient});
 
+/// The AI's answer for an unknown line: its name, the catalogue ingredient it is (null = new), a category of ours, and
+/// the other kinds of that food (ours or new).
+typedef GapSuggestion = ({
+  String? name,
+  String? ingredient,
+  String? category,
+  List<IngredientType> types,
+});
+
 /// A message the owner sent: [to] = the user's email, null = everyone. [pending] = its pushes are still going out.
 typedef SentMessage = ({
   String title,
