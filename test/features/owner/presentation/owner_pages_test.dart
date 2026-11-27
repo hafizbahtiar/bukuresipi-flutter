@@ -976,6 +976,14 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('Kicap · 2 recipes'), findsOneWidget);
 
+      // Android back leaves the list for Products, not the page.
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      expect(find.text('Suggested by recipe authors'), findsNothing);
+      expect(find.text('2 suggestions from recipes'), findsOneWidget);
+      await t.tap(find.text('2 suggestions from recipes'));
+      await t.pumpAndSettle();
+
       await t.tap(find.text('Kicap Mak Cik'));
       await t.pumpAndSettle();
       await t.tap(find.text('Add as a brand'));

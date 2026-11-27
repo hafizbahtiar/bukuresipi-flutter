@@ -288,164 +288,181 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 76,
-        title: NotebookTitle(l.ownerCatalogue),
-        actions: [
-          if (_kind != null)
+    // Back from the suggestions list goes to Products (where its row is), not out of the page.
+    return PopScope(
+      canPop: _kind != null,
+      onPopInvokedWithResult: (popped, _) {
+        if (popped) return;
+        setState(() {
+          _kind = CatalogueKind.products;
+          _rows = const [];
+        });
+        _load();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 76,
+          title: NotebookTitle(l.ownerCatalogue),
+          actions: [
+            if (_kind != null)
+              IconButton(
+                key: const ValueKey('catalogue-add'),
+                tooltip: l.catalogueAdd,
+                icon: const Icon(Icons.add),
+                onPressed: () => _edit(),
+              ),
             IconButton(
-              key: const ValueKey('catalogue-add'),
-              tooltip: l.catalogueAdd,
-              icon: const Icon(Icons.add),
-              onPressed: () => _edit(),
-            ),
-          IconButton(
-            key: const ValueKey('catalogue-more'),
-            tooltip: MaterialLocalizations.of(context).showMenuTooltip,
-            icon: const Icon(Icons.more_vert),
-            onPressed: () => showActionSheet(
-              context,
-              actions: [
-                MenuAction(
-                  icon: Icons.content_copy,
-                  label: l.ownerCopyRows,
-                  onTap: _copyRows,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: WidePage(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: spaceM),
-              child: NotebookSegmented<CatalogueKind?>(
-                segments: [
-                  NotebookSegment(
-                    value: CatalogueKind.products,
-                    label: l.catalogueProducts,
-                  ),
-                  NotebookSegment(
-                    value: CatalogueKind.brands,
-                    label: l.catalogueBrands,
-                  ),
-                  NotebookSegment(
-                    value: CatalogueKind.makers,
-                    label: l.catalogueMakers,
+              key: const ValueKey('catalogue-more'),
+              tooltip: MaterialLocalizations.of(context).showMenuTooltip,
+              icon: const Icon(Icons.more_vert),
+              onPressed: () => showActionSheet(
+                context,
+                actions: [
+                  MenuAction(
+                    icon: Icons.content_copy,
+                    label: l.ownerCopyRows,
+                    onTap: _copyRows,
                   ),
                 ],
-                selected: _kind,
-                onChanged: (k) {
-                  setState(() {
-                    _kind = k;
-                    _rows = const [];
-                  });
-                  _load();
-                },
               ),
             ),
-            if (_kind != null)
+          ],
+        ),
+        body: WidePage(
+          child: Column(
+            children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(spaceM, spaceXs, spaceM, 0),
-                child: TextField(
-                  key: const ValueKey('catalogue-search'),
-                  controller: _search,
-                  decoration: InputDecoration(
-                    labelText: l.catalogueSearch,
-                    prefixIcon: const Icon(Icons.search),
-                  ),
-                  onChanged: _searchChanged,
-                ),
-              ),
-            if (_kind == CatalogueKind.products && _waiting > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: spaceS),
-                child: BaseTile(
-                  key: const ValueKey('catalogue-suggested'),
-                  title: l.catalogueSuggestedWaiting(_waiting),
-                  dense: true,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
+                padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                child: NotebookSegmented<CatalogueKind?>(
+                  segments: [
+                    NotebookSegment(
+                      value: CatalogueKind.products,
+                      label: l.catalogueProducts,
+                    ),
+                    NotebookSegment(
+                      value: CatalogueKind.brands,
+                      label: l.catalogueBrands,
+                    ),
+                    NotebookSegment(
+                      value: CatalogueKind.makers,
+                      label: l.catalogueMakers,
+                    ),
+                  ],
+                  selected: _kind,
+                  onChanged: (k) {
                     setState(() {
-                      _kind = null;
+                      _kind = k;
                       _rows = const [];
                     });
                     _load();
                   },
                 ),
               ),
-            if (_kind == null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(l.catalogueSuggested, style: text.titleMedium),
+              if (_kind != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    spaceM,
+                    spaceXs,
+                    spaceM,
+                    0,
+                  ),
+                  child: TextField(
+                    key: const ValueKey('catalogue-search'),
+                    controller: _search,
+                    decoration: InputDecoration(
+                      labelText: l.catalogueSearch,
+                      prefixIcon: const Icon(Icons.search),
+                    ),
+                    onChanged: _searchChanged,
+                  ),
                 ),
-              ),
-            Expanded(
-              child: LoadView(
-                loading: _loading && _rows.isEmpty,
-                error: _error,
-                onReload: _load,
-                child: _rows.isEmpty
-                    ? (_loading
-                          ? null
-                          : ListView(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(spaceL),
-                                  child: Text(
-                                    _kind == null
-                                        ? l.catalogueSuggestedEmpty
-                                        : l.catalogueEmpty,
-                                    textAlign: TextAlign.center,
-                                    style: text.bodyMedium?.copyWith(
-                                      color: nb.inkSoft,
+              if (_kind == CatalogueKind.products && _waiting > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: spaceS),
+                  child: BaseTile(
+                    key: const ValueKey('catalogue-suggested'),
+                    title: l.catalogueSuggestedWaiting(_waiting),
+                    dense: true,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      setState(() {
+                        _kind = null;
+                        _rows = const [];
+                      });
+                      _load();
+                    },
+                  ),
+                ),
+              if (_kind == null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(l.catalogueSuggested, style: text.titleMedium),
+                  ),
+                ),
+              Expanded(
+                child: LoadView(
+                  loading: _loading && _rows.isEmpty,
+                  error: _error,
+                  onReload: _load,
+                  child: _rows.isEmpty
+                      ? (_loading
+                            ? null
+                            : ListView(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(spaceL),
+                                    child: Text(
+                                      _kind == null
+                                          ? l.catalogueSuggestedEmpty
+                                          : l.catalogueEmpty,
+                                      textAlign: TextAlign.center,
+                                      style: text.bodyMedium?.copyWith(
+                                        color: nb.inkSoft,
+                                      ),
                                     ),
                                   ),
+                                ],
+                              ))
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(
+                            top: spaceS,
+                            bottom: spaceL,
+                          ),
+                          itemCount: _rows.length + (_next == null ? 0 : 1),
+                          itemBuilder: (context, i) {
+                            if (i == _rows.length) {
+                              return Center(
+                                child: TextButton(
+                                  key: const ValueKey('catalogue-load-more'),
+                                  onPressed: _more ? null : _loadMore,
+                                  child: Text(l.loadMore),
                                 ),
-                              ],
-                            ))
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(
-                          top: spaceS,
-                          bottom: spaceL,
-                        ),
-                        itemCount: _rows.length + (_next == null ? 0 : 1),
-                        itemBuilder: (context, i) {
-                          if (i == _rows.length) {
-                            return Center(
-                              child: TextButton(
-                                key: const ValueKey('catalogue-load-more'),
-                                onPressed: _more ? null : _loadMore,
-                                child: Text(l.loadMore),
+                              );
+                            }
+                            final row = _rows[i];
+                            final d = _describe(row);
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: spaceXs),
+                              child: BaseTile(
+                                key: ValueKey('catalogue-row-${d.title}'),
+                                title: d.title,
+                                subtitle: d.subtitle,
+                                dense: true,
+                                onTap: () => switch (row) {
+                                  final CatalogueSuggestion s =>
+                                    _suggestionActions(s),
+                                  _ => _edit(row),
+                                },
                               ),
                             );
-                          }
-                          final row = _rows[i];
-                          final d = _describe(row);
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: spaceXs),
-                            child: BaseTile(
-                              key: ValueKey('catalogue-row-${d.title}'),
-                              title: d.title,
-                              subtitle: d.subtitle,
-                              dense: true,
-                              onTap: () => switch (row) {
-                                final CatalogueSuggestion s =>
-                                  _suggestionActions(s),
-                                _ => _edit(row),
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                          },
+                        ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
