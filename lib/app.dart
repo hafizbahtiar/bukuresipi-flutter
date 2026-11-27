@@ -59,11 +59,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
         // an e-invoice reminder, its receipt; a market open tonight, its place.
         ..onTypeTap = (type, data) {
           // The owner's "new version" message: Play's update, as Home's chip.
-          final context = _router.routerDelegate.navigatorKey.currentContext;
-          if (type == 'update' && context != null) {
-            updateApp(context);
-            return;
-          }
+          if (type == 'update') return _updateApp();
           if (pushPath(type, data) case final path?) _router.push(path);
         }
         ..start();
@@ -104,7 +100,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
             ),
             _ when push.data['type'] == 'update' => SnackBarAction(
               label: AppLocalizations.of(context).updateAvailable,
-              onPressed: () => updateApp(context),
+              onPressed: _updateApp,
             ),
             (_, final String path) => SnackBarAction(
               label: AppLocalizations.of(context).openPlace,
@@ -114,6 +110,13 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
           },
         ),
       );
+  }
+
+  /// Play's update from a push or its banner. The page's context, under the ScaffoldMessenger: the messenger's own
+  /// context has none above it, so the store-page fallback (openLink's snackbar) threw.
+  void _updateApp() {
+    final page = _router.routerDelegate.navigatorKey.currentContext;
+    if (page != null) updateApp(page);
   }
 
   void _reload() {
