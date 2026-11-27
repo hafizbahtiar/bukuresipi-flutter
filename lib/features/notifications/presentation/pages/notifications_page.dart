@@ -43,7 +43,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Future<void> _reload() async {
     final next = _load();
-    setState(() => _inbox = next);
+    setState(() {
+      _inbox = next; // a block: an arrow would return the Future, which setState refuses
+    });
     await next;
   }
 
