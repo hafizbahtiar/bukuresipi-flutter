@@ -617,10 +617,11 @@ class OwnerRepositoryImpl implements OwnerRepository {
     required String title,
     required String body,
     String? to,
+    String kind = 'message',
   }) => apiCall(
     () => _dio.post<void>(
       '/owner/notifications',
-      data: {'title': title, 'body': body, 'to': to},
+      data: {'title': title, 'body': body, 'to': to, 'kind': kind},
     ),
   );
 
