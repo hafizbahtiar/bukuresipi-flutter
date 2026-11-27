@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/features/places/domain/market.dart';
 import 'package:bukuresipi_flutter/features/places/domain/nearby_branch.dart';
 import 'package:bukuresipi_flutter/features/places/domain/rating.dart';
 import 'package:bukuresipi_flutter/features/places/presentation/widgets/nearby_card.dart';
@@ -123,6 +124,50 @@ void main() {
       );
       expect(t.takeException(), isNull);
       expect(find.text('4.6 (128)'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'today on the card: open until, the break, opens later; no hours = no line',
+    (t) async {
+      const lunch = [
+        MarketDay(day: 1, opens: '11:00', closes: '15:00'),
+        MarketDay(day: 1, opens: '17:00', closes: '22:00'),
+      ];
+      Future<void> card(DateTime now, [List<MarketDay> s = lunch]) async {
+        await t.pumpWidget(
+          app(
+            SizedBox(
+              height: 100,
+              child: NearbyCard(
+                place: nearbyBranch(schedule: s),
+                now: now,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
+      }
+
+      // 2026-11-23 is a Monday (Malaysia time).
+      await card(DateTime.utc(2026, 11, 23, 12));
+      expect(
+        find.text('Open now · until 3:00 PM · Kedai Sederhana Bangsar'),
+        findsOneWidget,
+      );
+      await card(DateTime.utc(2026, 11, 23, 16));
+      expect(
+        find.text('Break until 5:00 PM · Kedai Sederhana Bangsar'),
+        findsOneWidget,
+      );
+      await card(DateTime.utc(2026, 11, 23, 9));
+      expect(
+        find.text('Opens 11:00 AM · Kedai Sederhana Bangsar'),
+        findsOneWidget,
+      );
+      await card(DateTime.utc(2026, 11, 23, 12), const []);
+      expect(find.text('Kedai Sederhana Bangsar'), findsOneWidget);
     },
   );
 }

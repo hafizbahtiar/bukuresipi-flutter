@@ -3987,5 +3987,14 @@
   "catalogueScan": "Scan a barcode",
   "@catalogueScan": {},
   "catalogueScanUnavailable": "This phone can't scan codes.",
-  "@catalogueScanUnavailable": {}
+  "@catalogueScanUnavailable": {},
+  "hoursTitle": "Opening hours",
+  "hoursHelp": "The usual weekly hours, Malaysia time. A break = two rows for that day (11:00–15:00, then 17:00–22:00). Leave empty when not known.",
+  "hoursUnknown": "Hours not known yet.",
+  "hoursSaved": "Opening hours saved.",
+  "branchTabHours": "Hours",
+  "hoursBreakUntil": "Break until {time}",
+  "@hoursBreakUntil": {"placeholders": {"time": {"type": "String"}}},
+  "hoursOpensAt": "Opens {time}",
+  "@hoursOpensAt": {"placeholders": {"time": {"type": "String"}}}
 }

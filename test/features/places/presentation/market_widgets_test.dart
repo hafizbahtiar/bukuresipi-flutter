@@ -61,6 +61,25 @@ void main() {
   }
 
   group('MarketDaysList', () {
+    testWidgets('any other place: Opening hours, today\'s line, its break', (
+      t,
+    ) async {
+      await pump(
+        t,
+        MarketDaysList(
+          market: false,
+          now: DateTime.utc(2026, 11, 23, 16), // Monday 4 PM, Malaysia time
+          schedule: const [
+            MarketDay(day: 1, opens: '11:00', closes: '15:00'),
+            MarketDay(day: 1, opens: '17:00', closes: '22:00'),
+          ],
+        ),
+      );
+      expect(find.text('Opening hours'), findsOneWidget);
+      expect(find.text('Break until 5:00 PM'), findsOneWidget);
+      expect(find.text('Monday'), findsNWidgets(2));
+    });
+
     testWidgets('days and hours in the app language', (t) async {
       await pump(t, const MarketDaysList(schedule: [sat]), lang: 'ms');
       expect(find.text('Sabtu'), findsOneWidget);
@@ -234,14 +253,30 @@ void main() {
       expect(find.text('Saturday'), findsOneWidget);
     });
 
-    testWidgets('no Days for a place that is not a market, or for a user', (
-      t,
-    ) async {
-      await pump(t, page());
-      expect(find.text('Days'), findsNothing);
-      repo.schedule = (market: true, days: const [sat]);
-      await pump(t, page(owner: false));
-      expect(find.text('Days'), findsNothing);
-    });
+    testWidgets(
+      'any other place gets Hours (a break = two rows); a user gets neither',
+      (t) async {
+        repo.schedule = (
+          market: false,
+          days: const [
+            MarketDay(day: 1, opens: '11:00', closes: '15:00'),
+            MarketDay(day: 1, opens: '17:00', closes: '22:00'),
+          ],
+        );
+        await pump(t, page());
+        expect(find.text('Days'), findsNothing);
+        await t.tap(find.text('Hours'));
+        await t.pumpAndSettle();
+        expect(find.text('Opening hours'), findsWidgets);
+        expect(find.text('Monday'), findsNWidgets(2));
+        repo.schedule = (market: true, days: const [sat]);
+        await t.pumpWidget(
+          const SizedBox(),
+        ); // a new page, not the owner's state
+        await pump(t, page(owner: false));
+        expect(find.text('Days'), findsNothing);
+        expect(find.text('Hours'), findsNothing);
+      },
+    );
   });
 }

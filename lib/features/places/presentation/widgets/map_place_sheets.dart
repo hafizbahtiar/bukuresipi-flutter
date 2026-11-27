@@ -306,10 +306,13 @@ class PinSheet extends StatelessWidget {
               ],
             ),
           ),
-        if (b != null && place.restaurant.isMarket)
+        if (b != null && (place.restaurant.isMarket || b.schedule.isNotEmpty))
           Padding(
             padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, spaceS),
-            child: MarketDaysList(schedule: b.schedule),
+            child: MarketDaysList(
+              schedule: b.schedule,
+              market: place.restaurant.isMarket,
+            ),
           ),
         if (place.note case final note? when note.isNotEmpty)
           ListTile(

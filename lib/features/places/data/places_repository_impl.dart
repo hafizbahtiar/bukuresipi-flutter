@@ -759,6 +759,11 @@ NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   rating: ratingFromJson(j['rating']),
   cover: j['cover'] as String?,
   halalCert: HalalCert.fromJson(j['halalCert']),
+  schedule: [
+    for (final s
+        in (j['schedule'] as List? ?? const []).cast<Map<String, dynamic>>())
+      MarketDay.fromJson(s),
+  ],
 );
 
 ReviewVotes reviewVotesFromJson(Object? json) {

@@ -1,3 +1,4 @@
+import 'market.dart';
 import 'place.dart' show HalalCert;
 import 'rating.dart';
 
@@ -21,6 +22,7 @@ class NearbyBranch {
     this.rating = const RatingSummary(),
     this.cover,
     this.halalCert,
+    this.schedule = const [],
   });
 
   final String branchId;
@@ -54,6 +56,9 @@ class NearbyBranch {
   /// JAKIM's halal certificate for this outlet; null = not found, never "not halal".
   final HalalCert? halalCert;
 
+  /// Weekly hours, Malaysia time (a break = two rows a day); [] = not known, never "closed".
+  final List<MarketDay> schedule;
+
   /// A JAKIM certificate for this outlet, not past its expiry.
   bool get jakimHalal => halalCert?.expiredAt(DateTime.now()) == false;
 
@@ -80,6 +85,7 @@ class NearbyBranch {
     rating: rating ?? this.rating,
     cover: cover,
     halalCert: halalCert,
+    schedule: schedule,
   );
 }
 

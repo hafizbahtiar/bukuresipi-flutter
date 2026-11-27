@@ -27,6 +27,21 @@ String marketTodayText(BuildContext context, MarketToday t) => t.openNow
           .marketOpenUntil(marketClock(context, t.slot.closes))
     : marketHours(context, t.slot);
 
+/// One line for any place: "Open now · until 3:00 PM", "Break until 5:00 PM", "Opens 11:00 AM"; null = nothing
+/// more today or hours not known (never "closed").
+String? hoursTodayText(
+  BuildContext context,
+  List<MarketDay> schedule, [
+  DateTime? now,
+]) {
+  final t = marketToday(schedule, now ?? malaysiaNow());
+  if (t == null) return null;
+  final l = AppLocalizations.of(context);
+  if (t.openNow) return marketTodayText(context, t);
+  final at = marketClock(context, t.slot.opens);
+  return t.breakNow ? l.hoursBreakUntil(at) : l.hoursOpensAt(at);
+}
+
 /// A market's weekly days and hours, today in bold. None = "not known yet", never a guess.
 class MarketDaysList extends StatelessWidget {
   const MarketDaysList({
@@ -34,9 +49,13 @@ class MarketDaysList extends StatelessWidget {
     required this.schedule,
     this.heading = true,
     this.now,
+    this.market = true,
   });
 
   final List<MarketDay> schedule;
+
+  /// false = any other place's opening hours (its own title and "not known" words).
+  final bool market;
 
   /// Its own small title; false under a page's section header.
   final bool heading;
@@ -55,6 +74,7 @@ class MarketDaysList extends StatelessWidget {
         final byDay = a.day.compareTo(b.day);
         return byDay != 0 ? byDay : a.opensAt.compareTo(b.opensAt);
       });
+    final todayLine = market ? null : hoursTodayText(context, schedule, now);
     return Column(
       key: const ValueKey('market-days'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -63,13 +83,19 @@ class MarketDaysList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: spaceXs),
             child: Text(
-              l.marketDaysTitle,
+              market ? l.marketDaysTitle : l.hoursTitle,
               style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
+        // A market's sheet shows its own today line above this list.
+        if (todayLine case final t?)
+          Padding(
+            padding: const EdgeInsets.only(bottom: spaceXs),
+            child: Text(t, style: text.bodyMedium),
+          ),
         if (days.isEmpty)
           Text(
-            l.marketDaysUnknown,
+            market ? l.marketDaysUnknown : l.hoursUnknown,
             style: text.bodyMedium?.copyWith(color: nb.inkSoft),
           ),
         for (final d in days)
