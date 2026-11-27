@@ -4232,5 +4232,15 @@
   "ownerIngredientNoCategory": "No category",
   "@ownerIngredientNoCategory": {},
   "ownerIngredientsShort": "All ingredients",
-  "@ownerIngredientsShort": {}
+  "@ownerIngredientsShort": {},
+  "catalogueProductPhoto": "Add a photo",
+  "@catalogueProductPhoto": {},
+  "catalogueProductPhotoChange": "Change the photo",
+  "@catalogueProductPhotoChange": {},
+  "creditsProducts": "Product data",
+  "@creditsProducts": {},
+  "creditsOff": "Open Food Facts",
+  "@creditsOff": {},
+  "creditsOffDetail": "Product details by barcode, ODbL; product photos, CC BY-SA.",
+  "@creditsOffDetail": {}
 }

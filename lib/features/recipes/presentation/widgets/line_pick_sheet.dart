@@ -7,6 +7,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/catalogue_photo.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
@@ -138,6 +139,7 @@ class _LinePickSheetState extends State<LinePickSheet> {
       key: ValueKey('pick-${p.kind}-${p.id}'),
       minHeight: 56,
       onTap: () => Navigator.of(context).pop(Picked(p)),
+      trailing: p.photo == null ? null : CataloguePhoto(p.photo!, size: 44),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

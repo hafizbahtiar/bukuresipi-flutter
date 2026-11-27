@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/core/widgets/catalogue_photo.dart';
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ const kara = LinePick(
   name: 'Kara UHT 200ml',
   brand: 'Kara',
   mine: true,
+  photo: 'p-kara',
 );
 const adabi = LinePick(kind: 'brand', id: 3, name: 'Adabi', brand: 'Adabi');
 
@@ -46,6 +48,7 @@ void main() {
     await t.pumpAndSettle();
     expect(fake.picksAsked.first, ('Santan', null));
     expect(find.text('Your brand'), findsOneWidget);
+    expect(find.byType(CataloguePhoto), findsOneWidget); // the product's photo
     await t.tap(find.byKey(const ValueKey('pick-product-7')));
     await t.pumpAndSettle();
     expect(find.text('Kara UHT 200ml'), findsOneWidget);

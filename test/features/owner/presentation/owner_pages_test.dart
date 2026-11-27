@@ -17,6 +17,9 @@ import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:bukuresipi_flutter/core/widgets/ai_button.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/widgets/message_sheet.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/widgets/catalogue_edit_sheet.dart';
+import 'package:bukuresipi_flutter/core/widgets/catalogue_photo.dart';
+import 'package:bukuresipi_flutter/core/widgets/base.dart' show showBaseSheet;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1140,6 +1143,7 @@ void main() {
           find.text('New brand: Kara. Added when you save.'),
           findsOneWidget,
         );
+        expect(find.byKey(const ValueKey('catalogue-photo')), findsOneWidget);
         // One Save: the maker, the brand, then the product.
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
@@ -1147,6 +1151,13 @@ void main() {
           'makers',
           'brands',
           'products',
+        ]);
+        // Open Food Facts' photo, shown before Save, kept with the new product.
+        expect(repo.photoCalls, [
+          (
+            500,
+            'url:https://images.openfoodfacts.org/images/products/kara/front_en.400.jpg',
+          ),
         ]);
         expect(repo.savedRows[1].$3, {
           'name': 'Kara',
@@ -1212,6 +1223,71 @@ void main() {
     );
 
     testWidgets(
+      'a product photo: picked (camera or photos) and uploaded on Save; removed on Save',
+      (t) async {
+        const kara = CatalogueProduct(
+          id: 7,
+          name: 'Kara 200ml',
+          ingredient: 'Santan',
+          photo: '0190-old',
+        );
+        // Opened as the app opens it: a sheet (Save pops it).
+        Future<void> open(Widget sheet) async {
+          await pump(
+            t,
+            Builder(
+              builder: (c) => Scaffold(
+                body: TextButton(
+                  onPressed: () =>
+                      showBaseSheet<String>(c, builder: (_) => sheet),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          );
+          await t.tap(find.text('open'));
+          await t.pumpAndSettle();
+          // Tests have no network: the saved photo's load fails while it is shown (blank), not after it goes.
+          await t.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 300)),
+          );
+          await t.pump();
+        }
+
+        await open(
+          CatalogueEditSheet(
+            kind: CatalogueKind.products,
+            row: kara,
+            pick: (_, source) async => '/tmp/${source.name}.jpg',
+          ),
+        );
+        expect(find.byType(CataloguePhoto), findsOneWidget); // the saved one
+        await t.tap(find.byKey(const ValueKey('catalogue-photo-pick')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('photo-gallery')));
+        await t.pumpAndSettle();
+        expect(
+          find.byType(CataloguePhoto),
+          findsNothing,
+        ); // the new one, from the phone
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.photoCalls, [(7, 'path:/tmp/gallery.jpg')]);
+
+        repo.photoCalls.clear();
+        await open(
+          const CatalogueEditSheet(kind: CatalogueKind.products, row: kara),
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-photo-remove')));
+        await t.pumpAndSettle();
+        expect(find.byType(CataloguePhoto), findsNothing);
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.photoCalls, [(7, 'remove')]);
+      },
+    );
+
+    testWidgets(
       'a fill that finds the product already: edit it instead of adding it again',
       (t) async {
         repo.fillAnswer = (
@@ -1225,6 +1301,7 @@ void main() {
           source: 'https://world.openfoodfacts.org/product/9555035703828',
           maker: null,
           similar: [repo.productList.single],
+          photo: null,
         );
         await pump(t, const OwnerCataloguePage());
         await t.tap(find.byKey(const ValueKey('catalogue-add')));

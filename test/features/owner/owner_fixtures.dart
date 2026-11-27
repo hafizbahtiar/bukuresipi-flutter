@@ -320,6 +320,7 @@ class FakeOwner implements OwnerRepository {
       source: 'https://kara.test/about',
     ),
     similar: const [],
+    photo: 'https://images.openfoodfacts.org/images/products/kara/front_en.400.jpg',
   );
 
   @override
@@ -664,24 +665,38 @@ class FakeOwner implements OwnerRepository {
   }
 
   @override
-  Future<void> saveProduct({
+  Future<int> saveProduct({
     int? id,
     required String name,
     String? ingredient,
     int? brandId,
     double? size,
     String? unit,
-  }) async => savedRows.add((
-    'products',
-    id,
-    {
-      'name': name,
-      'ingredient': ingredient,
-      'brandId': brandId,
-      'size': size,
-      'unit': unit,
-    },
-  ));
+  }) async {
+    savedRows.add((
+      'products',
+      id,
+      {
+        'name': name,
+        'ingredient': ingredient,
+        'brandId': brandId,
+        'size': size,
+        'unit': unit,
+      },
+    ));
+    return id ?? 500; // a new product's id
+  }
+
+  /// (id, `path:...` | `url:...` | `remove`).
+  final photoCalls = <(int, String)>[];
+
+  @override
+  Future<void> setProductPhoto(int id, {String? path, String? url}) async =>
+      photoCalls.add((id, path != null ? 'path:$path' : 'url:$url'));
+
+  @override
+  Future<void> removeProductPhoto(int id) async =>
+      photoCalls.add((id, 'remove'));
 
   @override
   Future<void> deleteCatalogueRow(String kind, int id) async =>

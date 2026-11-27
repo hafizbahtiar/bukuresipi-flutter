@@ -1521,5 +1521,10 @@
   "ownerIngredientName": "Nama",
   "ownerIngredientRenameNote": "Nama lama kekal sebagai nama lain, jadi tiada baris yang hilang padanan.",
   "ownerIngredientNoCategory": "Tiada kategori",
-  "ownerIngredientsShort": "Semua bahan"
+  "ownerIngredientsShort": "Semua bahan",
+  "catalogueProductPhoto": "Tambah foto",
+  "catalogueProductPhotoChange": "Tukar foto",
+  "creditsProducts": "Data produk",
+  "creditsOff": "Open Food Facts",
+  "creditsOffDetail": "Butiran produk mengikut kod bar, ODbL; foto produk, CC BY-SA."
 }

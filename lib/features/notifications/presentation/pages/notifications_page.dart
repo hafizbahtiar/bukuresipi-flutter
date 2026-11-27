@@ -161,6 +161,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     child: ExtendedImage.network(
                                       url,
                                       cache: true,
+                                      printError: false, // gone or offline: the blank shows; no error log
                                       height: 160,
                                       fit: BoxFit.cover,
                                       // Loading: its space, quietly; gone or offline: the text is enough.

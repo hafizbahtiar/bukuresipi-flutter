@@ -609,6 +609,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
             in (j['similar'] as List? ?? const []).cast<Map<String, dynamic>>())
           _catalogueProduct(p),
       ],
+      photo: j['photo'] as String?,
     );
   });
 
@@ -809,11 +810,21 @@ class OwnerRepositoryImpl implements OwnerRepository {
     );
   });
 
-  Future<void> _saveRow(String kind, int? id, Map<String, dynamic> body) =>
+  /// The row's id.
+  Future<int> _saveRow(String kind, int? id, Map<String, dynamic> body) =>
       apiCall(
-        () => id == null
-            ? _dio.post<void>('/owner/catalogue/$kind', data: body)
-            : _dio.patch<void>('/owner/catalogue/$kind/$id', data: body),
+        () async =>
+            (await (id == null
+                        ? _dio.post<Map<String, dynamic>>(
+                            '/owner/catalogue/$kind',
+                            data: body,
+                          )
+                        : _dio.patch<Map<String, dynamic>>(
+                            '/owner/catalogue/$kind/$id',
+                            data: body,
+                          )))
+                    .data!['id']
+                as int,
       );
 
   @override
@@ -833,7 +844,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<void> saveProduct({
+  Future<int> saveProduct({
     int? id,
     required String name,
     String? ingredient,
@@ -847,6 +858,25 @@ class OwnerRepositoryImpl implements OwnerRepository {
     'size': size,
     'unit': unit,
   });
+
+  @override
+  Future<void> setProductPhoto(int id, {String? path, String? url}) => apiCall(
+    () async => _dio.put<void>(
+      '/owner/catalogue/products/$id/photo',
+      data: path == null
+          ? {'url': url}
+          : FormData.fromMap({
+              'image': await MultipartFile.fromFile(
+                path,
+                contentType: DioMediaType('image', 'jpeg'),
+              ),
+            }),
+    ),
+  );
+
+  @override
+  Future<void> removeProductPhoto(int id) =>
+      apiCall(() => _dio.delete<void>('/owner/catalogue/products/$id/photo'));
 
   @override
   Future<void> deleteCatalogueRow(String kind, int id) =>
@@ -950,6 +980,7 @@ CatalogueProduct _catalogueProduct(Map<String, dynamic> p) => CatalogueProduct(
   brand: p['brand'] as String?,
   size: (p['size'] as num?)?.toDouble(),
   unit: p['unit'] as String?,
+  photo: p['photo'] as String?,
 );
 
 AiSetting _aiSetting(Map<String, dynamic> j) => (

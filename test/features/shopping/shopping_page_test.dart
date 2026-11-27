@@ -1,3 +1,4 @@
+import 'package:bukuresipi_flutter/core/widgets/catalogue_photo.dart';
 import 'package:bukuresipi_flutter/core/network/api_exception.dart';
 import 'package:bukuresipi_flutter/features/shopping/domain/shopping.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/pages/shopping_page.dart';
@@ -121,6 +122,8 @@ void main() {
         find.text('Jati · Serba Wangi Sdn Bhd · Malaysia'),
         findsOneWidget,
       );
+      // The one with a photo shows it; the other has none.
+      expect(find.byType(CataloguePhoto), findsOneWidget);
     },
   );
 
@@ -188,6 +191,7 @@ void main() {
             name: 'Kara UHT 200ml',
             brand: 'Kara',
             avoided: true,
+            photo: 'p-kara',
           ),
           products: [
             ShoppingProduct(
@@ -206,6 +210,11 @@ void main() {
       ); // the pick replaces the e.g. hint
       expect(find.text('Avoided'), findsOneWidget);
       expect(find.text('Your brand: Ayam Brand'), findsOneWidget);
+      // The picked product's photo beside it.
+      expect(
+        find.byWidgetPredicate((w) => w is CataloguePhoto && w.id == 'p-kara'),
+        findsOneWidget,
+      );
     },
   );
 

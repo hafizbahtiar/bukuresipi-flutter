@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/catalogue_photo.dart';
 
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -320,6 +321,20 @@ class _ItemRow extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onDelete;
 
+  /// [line] with a small product photo before it; none = the line alone.
+  static Widget _withPhoto(String? photo, Widget line) => photo == null
+      ? line
+      : Padding(
+          padding: const EdgeInsets.only(top: spaceXs),
+          child: Row(
+            children: [
+              CataloguePhoto(photo, size: 32),
+              const SizedBox(width: spaceS),
+              Expanded(child: line),
+            ],
+          ),
+        );
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -373,30 +388,36 @@ class _ItemRow extends StatelessWidget {
               ),
             ),
           if ((products.isNotEmpty || item.pick != null) && !item.done)
-            InkWell(
-              onTap: item.ingredient == null
-                  ? null
-                  : () => showProductsSheet(context, item.ingredient!),
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: switch (item.pick) {
-                        final p? => l.shoppingPicked(pickLabel(l, p)),
-                        null => l.shoppingProducts(products),
-                      },
-                    ),
-                    if (item.ingredient != null)
+            _withPhoto(
+              // The recipe's product, else the first hint with one.
+              item.pick != null
+                  ? item.pick!.photo
+                  : item.products.map((p) => p.photo).nonNulls.firstOrNull,
+              InkWell(
+                onTap: item.ingredient == null
+                    ? null
+                    : () => showProductsSheet(context, item.ingredient!),
+                child: Text.rich(
+                  TextSpan(
+                    children: [
                       TextSpan(
-                        text: '  ${l.shoppingSeeAllProducts}',
-                        style: TextStyle(
-                          color: nb.pandanDeep,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        text: switch (item.pick) {
+                          final p? => l.shoppingPicked(pickLabel(l, p)),
+                          null => l.shoppingProducts(products),
+                        },
                       ),
-                  ],
+                      if (item.ingredient != null)
+                        TextSpan(
+                          text: '  ${l.shoppingSeeAllProducts}',
+                          style: TextStyle(
+                            color: nb.pandanDeep,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                  style: small,
                 ),
-                style: small,
               ),
             ),
           // Avoided (the recipe's pick) and the user's own brand for this ingredient, as on a recipe line.
