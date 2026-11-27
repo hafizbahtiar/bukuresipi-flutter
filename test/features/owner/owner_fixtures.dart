@@ -645,7 +645,7 @@ class FakeOwner implements OwnerRepository {
   }
 
   @override
-  Future<void> saveBrand({
+  Future<int> saveBrand({
     int? id,
     required String name,
     int? makerId,
@@ -656,12 +656,10 @@ class FakeOwner implements OwnerRepository {
       id,
       {'name': name, 'makerId': makerId, 'country': country},
     ));
-    if (id == null) {
-      brandList = [
-        ...brandList,
-        CatalogueBrand(id: 900 + brandList.length, name: name),
-      ];
-    }
+    if (id != null) return id;
+    final added = CatalogueBrand(id: 900 + brandList.length, name: name);
+    brandList = [...brandList, added];
+    return added.id;
   }
 
   @override
@@ -687,20 +685,37 @@ class FakeOwner implements OwnerRepository {
     return id ?? 500; // a new product's id
   }
 
-  /// (id, `path:...` | `url:...` | `remove`).
-  final photoCalls = <(int, String)>[];
+  /// (kind, id, `path:...` | `url:...` | `remove`).
+  final photoCalls = <(String, int, String)>[];
 
-  Object? photoError; // thrown by setProductPhoto when set
+  Object? photoError; // thrown by setCataloguePhoto when set
 
   @override
-  Future<void> setProductPhoto(int id, {String? path, String? url}) async {
+  Future<void> setCataloguePhoto(
+    String kind,
+    int id, {
+    String? path,
+    String? url,
+  }) async {
     if (photoError case final e?) throw e;
-    photoCalls.add((id, path != null ? 'path:$path' : 'url:$url'));
+    photoCalls.add((kind, id, path != null ? 'path:$path' : 'url:$url'));
   }
 
   @override
-  Future<void> removeProductPhoto(int id) async =>
-      photoCalls.add((id, 'remove'));
+  Future<void> removeCataloguePhoto(String kind, int id) async =>
+      photoCalls.add((kind, id, 'remove'));
+
+  List<String> candidates = const [
+    'https://kara.test/logo.png',
+    'https://kara.test/og.jpg',
+  ];
+  final candidateSearches = <String>[];
+
+  @override
+  Future<List<String>> brandPhotoCandidates(String name) async {
+    candidateSearches.add(name);
+    return candidates;
+  }
 
   @override
   Future<void> deleteCatalogueRow(String kind, int id) async =>

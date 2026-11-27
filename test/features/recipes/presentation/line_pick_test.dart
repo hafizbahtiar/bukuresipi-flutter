@@ -15,7 +15,13 @@ const kara = LinePick(
   mine: true,
   photo: 'p-kara',
 );
-const adabi = LinePick(kind: 'brand', id: 3, name: 'Adabi', brand: 'Adabi');
+const adabi = LinePick(
+  kind: 'brand',
+  id: 3,
+  name: 'Adabi',
+  brand: 'Adabi',
+  photo: 'p-adabi',
+);
 
 RecipeDetail withSantan({LinePick? pick, String? suggested}) => recipeDetail(
   ingredients: [
@@ -66,6 +72,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 300));
     await t.pumpAndSettle();
     expect(fake.picksAsked.last, (null, 'ada'));
+    expect(find.byType(CataloguePhoto), findsOneWidget); // its logo
     await t.tap(find.text('Any Adabi'));
     await t.pumpAndSettle();
     await save(t);

@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import '../env/env.dart';
 import '../theme/app_theme.dart';
 
-/// A catalogue product's photo by its id (GET /catalogue/photo/:id, no sign-in), square, kept on disk: a new id per
-/// photo, so a cached one never goes stale. Loading or gone: a plain tile of the same size (a row never jumps).
+/// A catalogue photo (a product's, or a brand's logo) by its id (GET /catalogue/photo/:id, no sign-in), square, kept on
+/// disk: a new id per photo, so a cached one never goes stale. Loading or gone: a plain tile of the same size (a row
+/// never jumps).
 class CataloguePhoto extends StatelessWidget {
   const CataloguePhoto(this.id, {super.key, this.size = 40});
 

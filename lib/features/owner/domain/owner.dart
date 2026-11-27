@@ -414,6 +414,7 @@ class CatalogueBrand {
     this.maker,
     this.country,
     this.products = 0,
+    this.photo,
   });
 
   final int id;
@@ -422,6 +423,9 @@ class CatalogueBrand {
   final String? maker;
   final String? country;
   final int products;
+
+  /// Its logo's id ([CataloguePhoto]); null = none.
+  final String? photo;
 }
 
 class CatalogueProduct {

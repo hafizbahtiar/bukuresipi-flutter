@@ -4244,5 +4244,9 @@
   "creditsOffDetail": "Product details by barcode, ODbL; product photos, CC BY-SA.",
   "@creditsOffDetail": {},
   "catalogueSavedNoPhoto": "Saved. The photo was not saved.",
-  "@catalogueSavedNoPhoto": {}
+  "@catalogueSavedNoPhoto": {},
+  "catalogueLogoSearch": "Find the logo with AI",
+  "@catalogueLogoSearch": {},
+  "catalogueLogoNone": "No pictures found on its site. Add a photo instead.",
+  "@catalogueLogoNone": {}
 }

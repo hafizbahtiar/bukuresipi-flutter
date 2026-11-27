@@ -1527,5 +1527,7 @@
   "creditsProducts": "Data produk",
   "creditsOff": "Open Food Facts",
   "creditsOffDetail": "Butiran produk mengikut kod bar, ODbL; foto produk, CC BY-SA.",
-  "catalogueSavedNoPhoto": "Disimpan. Foto tidak disimpan."
+  "catalogueSavedNoPhoto": "Disimpan. Foto tidak disimpan.",
+  "catalogueLogoSearch": "Cari logo dengan AI",
+  "catalogueLogoNone": "Tiada gambar di laman webnya. Tambah foto sendiri."
 }
