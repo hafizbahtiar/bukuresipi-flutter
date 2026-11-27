@@ -791,6 +791,42 @@ void main() {
     );
 
     testWidgets(
+      'Scan reads a product barcode into the fill and fills the form; no scanner = a message',
+      (t) async {
+        Object? asked;
+        String? Function() answer = () => '9555123400011';
+        const channel = MethodChannel('bukuresipi/qr');
+        t.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+          call,
+        ) async {
+          asked = call.arguments;
+          final a = answer();
+          if (a == 'none') throw PlatformException(code: 'unavailable');
+          return a;
+        });
+        addTearDown(
+          () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            null,
+          ),
+        );
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-scan')));
+        await t.pumpAndSettle();
+        expect(asked, {'product': true});
+        expect(repo.fills.last, '9555123400011');
+        expect(find.widgetWithText(TextField, '9555123400011'), findsOneWidget);
+
+        answer = () => 'none';
+        await t.tap(find.byKey(const ValueKey('catalogue-scan')));
+        await t.pumpAndSettle();
+        expect(find.text("This phone can't scan codes."), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'a fill that finds the product already: edit it instead of adding it again',
       (t) async {
         repo.fillAnswer = (
