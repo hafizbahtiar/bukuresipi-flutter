@@ -21,6 +21,7 @@ class NotificationsApi {
             body: n['body'] as String,
             data: (n['data'] as Map).cast<String, String>(),
             fromOwner: n['fromOwner'] as bool,
+            image: n['image'] as String?,
             createdAt: dbTime(n['createdAt'] as String).toLocal(),
           ),
       ],

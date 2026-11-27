@@ -7,6 +7,7 @@ class InboxItem {
     required this.body,
     required this.data,
     required this.fromOwner,
+    this.image,
     required this.createdAt,
   });
 
@@ -15,5 +16,8 @@ class InboxItem {
   final String body;
   final Map<String, String> data;
   final bool fromOwner;
+
+  /// The owner's photo: a public link (null = none).
+  final String? image;
   final DateTime createdAt;
 }

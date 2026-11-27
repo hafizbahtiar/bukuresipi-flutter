@@ -146,7 +146,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           subtitle:
                               '${loc.formatMediumDate(n.createdAt)}, ${formatTime(context, n.createdAt)}',
                           // The whole text: the tile's subtitle stops at 2 lines.
-                          footer: Text(n.body, style: TextStyle(color: nb.ink)),
+                          footer: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(n.body, style: TextStyle(color: nb.ink)),
+                              if (n.image case final url?)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: spaceS),
+                                  child: ClipRRect(
+                                    key: ValueKey('inbox-image-$i'),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      url,
+                                      height: 160,
+                                      fit: BoxFit.cover,
+                                      // Gone or offline: the text is enough.
+                                      errorBuilder: (_, _, _) =>
+                                          const SizedBox.shrink(),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           onTap: tappable ? () => _open(n) : null,
                           actions: [
                             MenuAction(

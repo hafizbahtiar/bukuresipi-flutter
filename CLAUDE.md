@@ -52,6 +52,7 @@ inbox only. A row opens what its push opens
 (`push/push_routes.dart` `pushPath`, shared with `app.dart`; a share push goes to `PushController.onTap`). Owner:
 Owner > Send notifications (a template first, `msgTpl1..10` in the arbs, 1 = app update sent as kind `update`:
 a tap runs `updateApp`; To: everyone or a picked user) or Users > a user > Send a notification (`MessageSheet`);
+an optional photo (a step of `MessageSheet`, uploaded as multipart; shown in the push and the inbox row, public URL);
 always inbox + push, pushed by the send itself (a big broadcast's rest by the cron). A push in the open app: a banner
 with Open (`pushPath`) and `inboxChanged` re-reads the bell.
 

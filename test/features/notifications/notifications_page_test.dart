@@ -200,4 +200,22 @@ void main() {
       expect(find.text('Removed'), findsOneWidget); // the snackbar
     },
   );
+
+  testWidgets('a row with a photo shows it under its text', (t) async {
+    final api = _FakeApi([
+      InboxItem(
+        id: 1,
+        title: 'Raya',
+        body: 'Selamat hari raya!',
+        data: const {'type': 'message'},
+        fromOwner: true,
+        image: 'https://api.test/api/v1/notifications/image/abc',
+        createdAt: DateTime(2026, 11, 20, 9),
+      ),
+      item('No photo', {'type': 'badge'}),
+    ], 0);
+    await pump(t, api);
+    expect(find.byKey(const ValueKey('inbox-image-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('inbox-image-1')), findsNothing);
+  });
 }

@@ -618,12 +618,27 @@ class OwnerRepositoryImpl implements OwnerRepository {
     required String body,
     String? to,
     String kind = 'message',
-  }) => apiCall(
-    () => _dio.post<void>(
+    String? image,
+  }) => apiCall(() async {
+    final fields = {'title': title, 'body': body, 'to': to, 'kind': kind};
+    await _dio.post<void>(
       '/owner/notifications',
-      data: {'title': title, 'body': body, 'to': to, 'kind': kind},
-    ),
-  );
+      // With a photo: multipart, `to` empty = everyone.
+      data: image == null
+          ? fields
+          : FormData.fromMap({
+              ...fields,
+              'to': to ?? '',
+              'image': await MultipartFile.fromFile(
+                image,
+                contentType: DioMediaType(
+                  'image',
+                  'jpeg',
+                ), // the editor writes JPEG
+              ),
+            }),
+    );
+  });
 
   @override
   Future<List<SentMessage>> sentMessages() => apiCall(() async {

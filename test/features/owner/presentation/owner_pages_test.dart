@@ -16,6 +16,8 @@ import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_revie
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:bukuresipi_flutter/core/widgets/ai_button.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/widgets/message_sheet.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -290,7 +292,13 @@ void main() {
     await t.tap(send);
     await t.pumpAndSettle();
     expect(repo.messages, [
-      (title: 'Hai', body: 'Resipi baharu.', to: 'u-ali@b.c', kind: 'message'),
+      (
+        title: 'Hai',
+        body: 'Resipi baharu.',
+        to: 'u-ali@b.c',
+        kind: 'message',
+        image: null,
+      ),
     ]);
     expect(find.text('Sent'), findsOneWidget);
   });
@@ -336,8 +344,62 @@ void main() {
       await t.tap(find.byKey(const ValueKey('message-send')));
       await t.pumpAndSettle();
       expect(repo.messages, [
-        (title: 'Hai', body: 'x', to: 'u-siti@b.c', kind: 'message'),
+        (
+          title: 'Hai',
+          body: 'x',
+          to: 'u-siti@b.c',
+          kind: 'message',
+          image: null,
+        ),
       ]);
+    },
+  );
+
+  testWidgets(
+    'a photo is added in the same sheet (camera or photos), shown, removable, and sent with the message',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      final picked = <ImageSource>[];
+      await t.pumpWidget(
+        Provider<OwnerRepository>.value(
+          value: repo,
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MessageSheet(
+                pick: (_, source) async {
+                  picked.add(source);
+                  return '/tmp/raya.jpg';
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.tap(find.byKey(const ValueKey('tpl-7')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('message-photo')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('photo-gallery')));
+      await t.pumpAndSettle();
+      expect(picked, [ImageSource.gallery]);
+      expect(
+        find.byKey(const ValueKey('message-photo-preview')),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('message-photo-remove')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('message-photo-preview')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('message-photo')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('photo-camera')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('message-send')));
+      await t.pumpAndSettle();
+      expect(repo.messages.single.image, '/tmp/raya.jpg');
     },
   );
 
