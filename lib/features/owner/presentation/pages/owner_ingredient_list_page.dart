@@ -88,9 +88,10 @@ class _OwnerIngredientListPageState extends State<OwnerIngredientListPage> {
                     itemBuilder: (context, i) {
                       if (i == 0) {
                         return Padding(
+                          // Room above for the label when it floats onto the border.
                           padding: const EdgeInsets.fromLTRB(
                             spaceM,
-                            0,
+                            spaceS,
                             spaceM,
                             spaceS,
                           ),
