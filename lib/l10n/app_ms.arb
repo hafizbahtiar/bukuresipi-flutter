@@ -1448,5 +1448,22 @@
   "hoursSaved": "Waktu buka disimpan.",
   "branchTabHours": "Waktu",
   "hoursBreakUntil": "Rehat hingga {time}",
-  "hoursOpensAt": "Buka {time}"
+  "hoursOpensAt": "Buka {time}",
+  "inboxTitle": "Notifikasi",
+  "inboxEmpty": "Belum ada apa-apa. Pemberitahuan aplikasi akan muncul di sini.",
+  "ownerMessages": "Hantar notifikasi",
+  "ownerMessageNew": "Notifikasi baharu",
+  "ownerMessageTo": "Kepada {email}",
+  "ownerMessageEveryone": "Semua pengguna",
+  "ownerMessageTitle": "Tajuk",
+  "ownerMessageBody": "Mesej",
+  "ownerMessagePush": "Hantar ke telefon juga",
+  "ownerMessageSend": "Hantar",
+  "ownerMessageSending": "Menghantar…",
+  "ownerMessageSent": "Dihantar",
+  "ownerMessagePhones": "{sent} daripada {total} telefon",
+  "ownerMessageInboxOnly": "Peti masuk sahaja",
+  "ownerMessagePending": "Sedang dihantar…",
+  "ownerMessagesNone": "Belum ada yang dihantar.",
+  "ownerSendMessage": "Hantar notifikasi"
 }

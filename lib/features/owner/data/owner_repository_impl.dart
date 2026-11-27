@@ -512,6 +512,37 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
+  Future<void> sendMessage({
+    required String title,
+    required String body,
+    String? to,
+    required bool push,
+  }) => apiCall(
+    () => _dio.post<void>(
+      '/owner/notifications',
+      data: {'title': title, 'body': body, 'to': to, 'push': push},
+    ),
+  );
+
+  @override
+  Future<List<SentMessage>> sentMessages() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/owner/notifications'))
+        .data!;
+    return [
+      for (final m in (j['sent'] as List).cast<Map<String, dynamic>>())
+        (
+          title: m['title'] as String,
+          body: m['body'] as String,
+          to: m['to'] as String?,
+          pushSent: m['pushSent'] as int,
+          pushTotal: m['pushTotal'] as int,
+          pending: m['pending'] as bool,
+          createdAt: dbTime(m['createdAt'] as String).toLocal(),
+        ),
+    ];
+  });
+
+  @override
   Future<List<IngredientType>> ingredientTypes(String query) =>
       apiCall(() async {
         final j = (await _dio.post<Map<String, dynamic>>(

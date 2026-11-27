@@ -24,6 +24,7 @@ import '../../../shares/presentation/widgets/share_image.dart';
 import '../../../recipes/presentation/pages/pantry_page.dart';
 import '../add_sheet.dart';
 import '../../../auth/presentation/auth_controller.dart';
+import '../../../notifications/presentation/widgets/inbox_bell.dart';
 import '../widgets/feed_ad.dart';
 import '../widgets/feed_card.dart';
 import '../widgets/feed_empty.dart';
@@ -648,6 +649,7 @@ class _FeedPageState extends State<FeedPage> {
                 onPressed: () => updateApp(context),
               ),
             ),
+          const InboxBell(),
           IconButton(
             key: const ValueKey('feed-shopping'),
             tooltip: l.shoppingTitle,

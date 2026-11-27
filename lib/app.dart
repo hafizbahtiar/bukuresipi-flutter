@@ -17,6 +17,7 @@ import 'features/places/presentation/places_controller.dart';
 import 'features/push/push_controller.dart';
 import 'features/push/push_messaging.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
+import 'features/push/push_routes.dart';
 import 'features/shares/domain/share_repository.dart';
 import 'features/shares/presentation/recent_shares.dart';
 import 'features/shares/presentation/share_intake.dart';
@@ -54,17 +55,9 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
         ..onTap = _openShare
         // A new sign-in opens the device list (sign that one out); a family change opens the family; a badge, Badges;
         // an e-invoice reminder, its receipt; a market open tonight, its place.
-        ..onTypeTap = ((type, data) =>
-            switch ((type, data['receiptId'] ?? data['placeId'])) {
-              ('sign_in', _) => _router.push('/account/sessions'),
-              ('family', _) => _router.push('/family'),
-              ('badge', _) => _router.push('/badges'),
-              // The owner's digest and meter alerts: the overview has every count.
-              ('owner' || 'meter', _) => _router.push('/owner'),
-              ('einvoice', final String id) => _router.push('/receipts/$id'),
-              ('market', final String id) => _router.push('/places/$id'),
-              _ => null,
-            })
+        ..onTypeTap = (type, data) {
+          if (pushPath(type, data) case final path?) _router.push(path);
+        }
         ..start();
     }
   }

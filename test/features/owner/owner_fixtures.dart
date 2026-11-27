@@ -337,6 +337,20 @@ class FakeOwner implements OwnerRepository {
   List<IngredientType> typesAnswer = const [];
   final typesAsked = <String>[];
 
+  final messages = <({String title, String body, String? to, bool push})>[];
+  List<SentMessage> sent = [];
+
+  @override
+  Future<void> sendMessage({
+    required String title,
+    required String body,
+    String? to,
+    required bool push,
+  }) async => messages.add((title: title, body: body, to: to, push: push));
+
+  @override
+  Future<List<SentMessage>> sentMessages() async => sent;
+
   @override
   Future<List<IngredientType>> ingredientTypes(String query) async {
     typesAsked.add(query);
