@@ -65,6 +65,7 @@ class _OwnerAiPageState extends State<OwnerAiPage> {
     'place_draft' => l.aiUsePlaceDraft,
     'dish_draft' => l.aiUseDishDraft,
     'ingredient_name' => l.aiUseIngredientName,
+    'ingredient_gap' => l.aiUseIngredientGap,
     'brand_maker' => l.aiUseBrandMaker,
     'ingredient_aliases' => l.aiUseIngredientAliases,
     'receipt_read' => l.aiUseReceiptRead,

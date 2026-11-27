@@ -332,7 +332,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
                 child: NotebookSegmented<CatalogueKind?>(
                   segments: [
                     NotebookSegment(
@@ -360,12 +360,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
               ),
               if (_kind != null)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    spaceM,
-                    spaceXs,
-                    spaceM,
-                    0,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(spaceM, spaceM, spaceM, 0),
                   child: TextField(
                     key: const ValueKey('catalogue-search'),
                     controller: _search,
@@ -378,7 +373,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                 ),
               if (_kind == CatalogueKind.products && _waiting > 0)
                 Padding(
-                  padding: const EdgeInsets.only(top: spaceS),
+                  padding: const EdgeInsets.only(top: spaceM),
                   child: BaseTile(
                     key: const ValueKey('catalogue-suggested'),
                     title: l.catalogueSuggestedWaiting(_waiting),
@@ -395,7 +390,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                 ),
               if (_kind == null)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                  padding: const EdgeInsets.fromLTRB(spaceM, spaceM, spaceM, 0),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(l.catalogueSuggested, style: text.titleMedium),
@@ -427,7 +422,7 @@ class _OwnerCataloguePageState extends State<OwnerCataloguePage> {
                               ))
                       : ListView.builder(
                           padding: const EdgeInsets.only(
-                            top: spaceS,
+                            top: spaceM,
                             bottom: spaceL,
                           ),
                           itemCount: _rows.length + (_next == null ? 0 : 1),

@@ -293,9 +293,10 @@ class FakeOwner implements OwnerRepository {
     return (lines: 3, sample: const ['sedikit minyak', '2 sudu minyak']);
   }
 
-  ({String? name, String? ingredient}) gapAnswer = (
+  ({String? name, String? ingredient, String? category}) gapAnswer = (
     name: 'minyak masak',
     ingredient: 'Minyak masak',
+    category: null,
   );
   List<AliasSuggestion> aliasAnswer = const [
     (ingredient: 'Bawang putih', alias: 'garlic', lines: 12),
@@ -334,8 +335,9 @@ class FakeOwner implements OwnerRepository {
   }
 
   @override
-  Future<({String? name, String? ingredient})> suggestGap(String line) async =>
-      gapAnswer;
+  Future<({String? name, String? ingredient, String? category})> suggestGap(
+    String line,
+  ) async => gapAnswer;
 
   @override
   Future<({List<AliasSuggestion> items, int? next})> suggestAliases(

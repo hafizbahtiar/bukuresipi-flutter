@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/widgets/owner_panel.dart';
 import 'package:provider/provider.dart';
 
 import '../owner_fixtures.dart';
@@ -36,6 +37,14 @@ void main() {
       Provider<OwnerRepository>.value(
         value: repo,
         child: MaterialApp(
+          // The app theme's full-width filled button (AppTheme cannot load its fonts in tests).
+          theme: ThemeData(
+            filledButtonTheme: FilledButtonThemeData(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+            ),
+          ),
           locale: const Locale('en'),
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -510,6 +519,30 @@ void main() {
       shoppingLines: 1,
     );
 
+    testWidgets('the pick step scrolls on a short screen (keyboard up)', (
+      t,
+    ) async {
+      repo.gaps = [minyak];
+      repo.catalogue = [for (var i = 1; i <= 6; i++) 'Minyak $i'];
+      await pump(t, const OwnerIngredientsPage());
+      t.view.physicalSize = const Size(1080, 1300); // ~500 dp tall at 2.6
+      await t.tap(find.byKey(const ValueKey('gap-minyak')));
+      await t.pumpAndSettle(const Duration(milliseconds: 300));
+      expect(t.takeException(), isNull);
+      await t.scrollUntilVisible(
+        find.byKey(const ValueKey('gap-new')),
+        100,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey('pick')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey('gap-new')).hitTestable(),
+        findsOneWidget,
+      );
+    });
+
     testWidgets(
       'a gap: pick the ingredient, see what the name links, save; taken names are said',
       (t) async {
@@ -535,7 +568,7 @@ void main() {
         );
         expect(
           t
-              .widget<FilledButton>(find.byKey(const ValueKey('gap-save')))
+              .widget<BusyButton>(find.byKey(const ValueKey('gap-save')))
               .onPressed,
           isNull,
         );
@@ -566,7 +599,11 @@ void main() {
 
         Navigator.of(t.element(find.text('Links 3 lines'))).pop();
         await t.pumpAndSettle();
-        repo.gapAnswer = (name: 'daun salam', ingredient: null);
+        repo.gapAnswer = (
+          name: 'daun salam',
+          ingredient: null,
+          category: 'Rempah',
+        );
         await t.tap(find.byKey(const ValueKey('gap-minyak')));
         await t.pumpAndSettle(const Duration(milliseconds: 300));
         await t.tap(find.byKey(const ValueKey('gap-ai')));
@@ -574,6 +611,14 @@ void main() {
         await t.tap(find.text('New ingredient: daun salam'));
         await t.pumpAndSettle(const Duration(milliseconds: 400));
         expect(find.widgetWithText(TextField, 'Daun salam'), findsOneWidget);
+        // Its category from the AI, one of ours: ready to save.
+        expect(find.text('Rempah'), findsOneWidget);
+        expect(
+          t
+              .widget<BusyButton>(find.byKey(const ValueKey('gap-save')))
+              .onPressed,
+          isNotNull,
+        );
       },
     );
 

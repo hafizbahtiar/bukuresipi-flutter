@@ -150,7 +150,9 @@ abstract interface class OwnerRepository {
 
   /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
   /// Throws 'ai_unavailable'.
-  Future<({String? name, String? ingredient})> suggestGap(String line);
+  Future<({String? name, String? ingredient, String? category})> suggestGap(
+    String line,
+  );
 
   /// AI: aliases for 20 ingredients (fewest aliases first) from [offset], each with the lines it would link;
   /// next = null at the end. Nothing saved (save with [addAliases]). Throws 'ai_unavailable'.

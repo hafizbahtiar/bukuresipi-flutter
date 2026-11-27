@@ -3965,6 +3965,8 @@
   "aiUseDishDraft": "Draft a menu",
   "@aiUseDishDraft": {},
   "aiUseIngredientName": "Name an ingredient",
+  "aiUseIngredientGap": "Unknown ingredient: name and category",
+  "@aiUseIngredientGap": {},
   "@aiUseIngredientName": {},
   "aiUseBrandMaker": "Find a brand's maker",
   "@aiUseBrandMaker": {},
@@ -3989,12 +3991,29 @@
   "catalogueScanUnavailable": "This phone can't scan codes.",
   "@catalogueScanUnavailable": {},
   "hoursTitle": "Opening hours",
+  "@hoursTitle": {},
   "hoursHelp": "The usual weekly hours, Malaysia time. A break = two rows for that day (11:00–15:00, then 17:00–22:00). Leave empty when not known.",
+  "@hoursHelp": {},
   "hoursUnknown": "Hours not known yet.",
+  "@hoursUnknown": {},
   "hoursSaved": "Opening hours saved.",
+  "@hoursSaved": {},
   "branchTabHours": "Hours",
+  "@branchTabHours": {},
   "hoursBreakUntil": "Break until {time}",
-  "@hoursBreakUntil": {"placeholders": {"time": {"type": "String"}}},
+  "@hoursBreakUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "hoursOpensAt": "Opens {time}",
-  "@hoursOpensAt": {"placeholders": {"time": {"type": "String"}}}
+  "@hoursOpensAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

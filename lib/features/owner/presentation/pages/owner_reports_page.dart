@@ -5,11 +5,13 @@ import '../../../../core/widgets/base.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../../../places/presentation/widgets/owner_panel.dart';
 import '../../../../core/widgets/load_view.dart';
 
 /// Owner: community reports as open/closed tickets. Applying or rejecting always closes the ticket.
@@ -342,18 +344,24 @@ class _TicketRow extends StatelessWidget {
               ),
             if (onApply != null && onReject != null)
               Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                padding: const EdgeInsets.only(top: spaceS),
+                child: PanelActions(
                   children: [
-                    TextButton(
+                    BusyButton(
+                      icon: Icons.close,
+                      label: l.ownerReportReject,
+                      busyLabel: l.ownerReportReject,
+                      busy: false,
+                      kind: BusyButtonKind.danger,
                       onPressed: onReject,
-                      child: Text(l.ownerReportReject),
                     ),
-                    const SizedBox(width: 8),
-                    FilledButton(
+                    BusyButton(
+                      icon: Icons.check,
+                      label: l.ownerReportApply,
+                      busyLabel: l.ownerReportApply,
+                      busy: false,
+                      kind: BusyButtonKind.filled,
                       onPressed: onApply,
-                      child: Text(l.ownerReportApply),
                     ),
                   ],
                 ),

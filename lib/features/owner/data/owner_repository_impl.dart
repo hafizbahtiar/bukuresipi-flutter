@@ -512,17 +512,19 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<({String? name, String? ingredient})> suggestGap(String line) =>
-      apiCall(() async {
-        final j = (await _dio.post<Map<String, dynamic>>(
-          '/owner/ingredients/gaps/suggest',
-          data: {'line': line},
-        )).data!;
-        return (
-          name: j['name'] as String?,
-          ingredient: j['ingredient'] as String?,
-        );
-      });
+  Future<({String? name, String? ingredient, String? category})> suggestGap(
+    String line,
+  ) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/ingredients/gaps/suggest',
+      data: {'line': line},
+    )).data!;
+    return (
+      name: j['name'] as String?,
+      ingredient: j['ingredient'] as String?,
+      category: j['category'] as String?, // null from an older API
+    );
+  });
 
   @override
   Future<({List<AliasSuggestion> items, int? next})> suggestAliases(
