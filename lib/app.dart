@@ -17,6 +17,7 @@ import 'features/places/presentation/places_controller.dart';
 import 'features/push/push_controller.dart';
 import 'features/push/push_messaging.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
+import 'features/notifications/presentation/widgets/inbox_bell.dart';
 import 'features/push/push_routes.dart';
 import 'features/shares/domain/share_repository.dart';
 import 'features/shares/presentation/recent_shares.dart';
@@ -66,6 +67,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
 
   /// Android shows no system notification while the app is open, so the app says it itself.
   void _foreground(ForegroundPush push) {
+    inboxChanged.value++; // it is in the inbox now: the bell's dot
     // Only a share read or a family change changes the lists; a badge or a reminder doesn't.
     if (push.data['shareId'] != null) _reload();
     if (push.data['type'] == 'family') {
@@ -85,17 +87,20 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 5),
           content: Text(push.body == null ? title : '$title\n${push.body}'),
-          action: shareId != null
-              ? SnackBarAction(
-                  label: AppLocalizations.of(context).openPlace,
-                  onPressed: () => _openShare(shareId),
-                )
-              : push.data['type'] == 'badge'
-              ? SnackBarAction(
-                  label: AppLocalizations.of(context).badgesTitle,
-                  onPressed: () => _router.push('/badges'),
-                )
-              : null,
+          action: switch ((
+            shareId,
+            pushPath(push.data['type'] ?? '', push.data),
+          )) {
+            (final String id, _) => SnackBarAction(
+              label: AppLocalizations.of(context).openPlace,
+              onPressed: () => _openShare(id),
+            ),
+            (_, final String path) => SnackBarAction(
+              label: AppLocalizations.of(context).openPlace,
+              onPressed: () => _router.push(path),
+            ),
+            _ => null,
+          },
         ),
       );
   }

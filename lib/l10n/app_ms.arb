@@ -1454,7 +1454,7 @@
   "ownerMessageEveryone": "Semua pengguna",
   "ownerMessageTitle": "Tajuk",
   "ownerMessageBody": "Mesej",
-  "ownerMessagePush": "Hantar ke telefon juga",
+  "ownerMessageToLabel": "Kepada",
   "ownerMessageSend": "Hantar",
   "ownerMessageSending": "Menghantar…",
   "ownerMessageSent": "Dihantar",

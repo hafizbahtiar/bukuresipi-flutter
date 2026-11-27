@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,8 +15,8 @@ import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../widgets/message_sheet.dart';
 
-/// Owner > Send notifications: a message to everyone (one to a single user: Users > a user), and what was sent, with
-/// how many phones its push reached so far.
+/// Owner > Send notifications: a message to everyone or one user (also Users > a user), and what was sent, with how
+/// many phones its push reached so far (read again every few seconds while one is still pushing).
 class OwnerMessagesPage extends StatefulWidget {
   const OwnerMessagesPage({super.key});
 
@@ -26,6 +28,7 @@ class _OwnerMessagesPageState extends State<OwnerMessagesPage> {
   List<SentMessage>? _sent;
   Object? _error;
   bool _loading = true;
+  Timer? _poll;
 
   @override
   void initState() {
@@ -33,20 +36,29 @@ class _OwnerMessagesPageState extends State<OwnerMessagesPage> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load({bool quiet = false}) async {
+    _poll?.cancel();
+    if (!quiet) setState(() => _loading = true);
     try {
       final s = await context.read<OwnerRepository>().sentMessages();
-      if (mounted) {
-        setState(() {
-          _sent = s;
-          _error = null;
-        });
+      if (!mounted) return;
+      setState(() {
+        _sent = s;
+        _error = null;
+      });
+      if (s.any((m) => m.pending)) {
+        _poll = Timer(const Duration(seconds: 5), () => _load(quiet: true));
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e);
+      if (mounted && !quiet) setState(() => _error = e);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && !quiet) setState(() => _loading = false);
     }
   }
 

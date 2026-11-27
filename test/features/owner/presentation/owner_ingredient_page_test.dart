@@ -169,7 +169,7 @@ void main() {
       await t.tap(find.byKey(const ValueKey('alias-add')));
       await t.pumpAndSettle();
       await t.enterText(find.byKey(const ValueKey('alias-new')), 'lime');
-    await t.pumpAndSettle();
+      await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('alias-save')));
       await t.pumpAndSettle();
       expect(repo.aliases, [('Limau kasturi', 'lime')]);

@@ -3,13 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
+import '../../../../core/widgets/base.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/widgets/owner_panel.dart';
 import '../../domain/owner_repository.dart';
 
-/// The owner's message: a title and text, to one user ([toId], named by [toEmail]) or everyone (both null), with or
-/// without a push. Sends it itself; pops true once sent.
+/// The owner's message: a title and text, in the inbox and pushed to the phones. To one user ([toId], named by
+/// [toEmail]) or, opened without one, to everyone or a user picked on the To row. Sends it itself; pops true once sent.
 class MessageSheet extends StatefulWidget {
   const MessageSheet({super.key, this.toId, this.toEmail});
 
@@ -23,7 +24,10 @@ class MessageSheet extends StatefulWidget {
 class _MessageSheetState extends State<MessageSheet> {
   final _title = TextEditingController();
   final _body = TextEditingController();
-  bool _push = true;
+  late ({String? id, String? email}) _to = (
+    id: widget.toId,
+    email: widget.toEmail,
+  );
   bool _busy = false;
   Object? _error;
 
@@ -43,8 +47,7 @@ class _MessageSheetState extends State<MessageSheet> {
       await context.read<OwnerRepository>().sendMessage(
         title: _title.text.trim(),
         body: _body.text.trim(),
-        to: widget.toId,
-        push: _push,
+        to: _to.id,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -52,6 +55,24 @@ class _MessageSheetState extends State<MessageSheet> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  // shortcut: the newest users the server lists (its search box filters them); a server search when there are many.
+  Future<void> _pickTo() async {
+    final l = AppLocalizations.of(context);
+    final users = await context.read<OwnerRepository>().listUsers();
+    if (!mounted) return;
+    final picked = await showBasePicker<({String? id, String? email})>(
+      context,
+      title: l.ownerMessageToLabel,
+      options: [
+        (id: null, email: null),
+        for (final u in users) (id: u.id, email: u.email),
+      ],
+      selected: _to,
+      label: (o) => o.email ?? l.ownerMessageEveryone,
+    );
+    if (picked != null && mounted) setState(() => _to = picked);
   }
 
   @override
@@ -70,10 +91,23 @@ class _MessageSheetState extends State<MessageSheet> {
             style: Theme.of(context).textTheme.titleLarge
                 ?.copyWith(fontWeight: FontWeight.w700),
           ),
-          Text(switch (widget.toEmail) {
-            final email? => l.ownerMessageTo(email),
-            null => l.ownerMessageTo(l.ownerMessageEveryone),
-          }, style: TextStyle(color: nb.inkSoft)),
+          if (widget.toId != null)
+            Text(
+              l.ownerMessageTo(widget.toEmail ?? ''),
+              style: TextStyle(color: nb.inkSoft),
+            )
+          else ...[
+            const SizedBox(height: spaceS),
+            BaseTile(
+              key: const ValueKey('message-to'),
+              dense: true,
+              leading: const Icon(Icons.person_outline),
+              title: _to.email ?? l.ownerMessageEveryone,
+              subtitle: l.ownerMessageToLabel,
+              trailing: const Icon(Icons.expand_more),
+              onTap: _busy ? null : _pickTo,
+            ),
+          ],
           const SizedBox(height: spaceM),
           TextField(
             key: const ValueKey('message-title'),
@@ -93,16 +127,6 @@ class _MessageSheetState extends State<MessageSheet> {
             textCapitalization: TextCapitalization.sentences,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(labelText: l.ownerMessageBody),
-          ),
-          Row(
-            children: [
-              Expanded(child: Text(l.ownerMessagePush)),
-              Switch(
-                key: const ValueKey('message-push'),
-                value: _push,
-                onChanged: (v) => setState(() => _push = v),
-              ),
-            ],
           ),
           if (_error case final e?)
             Padding(

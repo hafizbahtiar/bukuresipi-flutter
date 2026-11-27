@@ -6,7 +6,11 @@ import '../../../../core/network/api_client.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/notifications_api.dart';
 
-/// Home's bell: a dot while the inbox has something new; opens it. Read again when Home is built and on return.
+/// Bumped by app.dart when a push arrives while the app is open: every bell reads the inbox again.
+final inboxChanged = ValueNotifier(0);
+
+/// Home's bell: a dot while the inbox has something new; opens it. Read again when Home is built, on return, when a
+/// push arrives in the open app ([inboxChanged]) and when the app comes back to the front.
 class InboxBell extends StatefulWidget {
   const InboxBell({super.key, this.api});
 
@@ -25,11 +29,21 @@ class _InboxBellState extends State<InboxBell> {
         null => null,
       };
   int _unread = 0;
+  late final _resume = AppLifecycleListener(onResume: _load);
 
   @override
   void initState() {
     super.initState();
+    _resume;
+    inboxChanged.addListener(_load);
     _load();
+  }
+
+  @override
+  void dispose() {
+    inboxChanged.removeListener(_load);
+    _resume.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
