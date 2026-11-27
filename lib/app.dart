@@ -59,6 +59,8 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
               ('sign_in', _) => _router.push('/account/sessions'),
               ('family', _) => _router.push('/family'),
               ('badge', _) => _router.push('/badges'),
+              // The owner's digest and meter alerts: the overview has every count.
+              ('owner' || 'meter', _) => _router.push('/owner'),
               ('einvoice', final String id) => _router.push('/receipts/$id'),
               ('market', final String id) => _router.push('/places/$id'),
               _ => null,
