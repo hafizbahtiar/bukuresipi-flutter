@@ -2,6 +2,7 @@
 /// opens the same page the push does.
 class InboxItem {
   const InboxItem({
+    required this.id,
     required this.title,
     required this.body,
     required this.data,
@@ -9,6 +10,7 @@ class InboxItem {
     required this.createdAt,
   });
 
+  final int id;
   final String title;
   final String body;
   final Map<String, String> data;
