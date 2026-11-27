@@ -3550,6 +3550,8 @@
   "ownerGapSearch": "Search ingredients",
   "@ownerGapSearch": {},
   "ownerGapNew": "New ingredient",
+  "ownerGapTypeNew": "New",
+  "@ownerGapTypeNew": {},
   "@ownerGapNew": {},
   "ownerGapAlias": "Another name for {ingredient}",
   "@ownerGapAlias": {
@@ -3738,6 +3740,8 @@
   },
   "ownerGapAiSuggest": "Suggest with AI",
   "@ownerGapAiSuggest": {},
+  "ownerGapAiResults": "AI suggestions",
+  "@ownerGapAiResults": {},
   "ownerGapAiSame": "Same as {ingredient}",
   "@ownerGapAiSame": {
     "placeholders": {
@@ -3965,6 +3969,8 @@
   "aiUseDishDraft": "Draft a menu",
   "@aiUseDishDraft": {},
   "aiUseIngredientName": "Name an ingredient",
+  "aiUseIngredientGap": "Unknown ingredient: name and category",
+  "@aiUseIngredientGap": {},
   "@aiUseIngredientName": {},
   "aiUseBrandMaker": "Find a brand's maker",
   "@aiUseBrandMaker": {},
@@ -3989,12 +3995,254 @@
   "catalogueScanUnavailable": "This phone can't scan codes.",
   "@catalogueScanUnavailable": {},
   "hoursTitle": "Opening hours",
+  "@hoursTitle": {},
   "hoursHelp": "The usual weekly hours, Malaysia time. A break = two rows for that day (11:00–15:00, then 17:00–22:00). Leave empty when not known.",
+  "@hoursHelp": {},
   "hoursUnknown": "Hours not known yet.",
+  "@hoursUnknown": {},
   "hoursSaved": "Opening hours saved.",
+  "@hoursSaved": {},
   "branchTabHours": "Hours",
+  "@branchTabHours": {},
   "hoursBreakUntil": "Break until {time}",
-  "@hoursBreakUntil": {"placeholders": {"time": {"type": "String"}}},
+  "@hoursBreakUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "hoursOpensAt": "Opens {time}",
-  "@hoursOpensAt": {"placeholders": {"time": {"type": "String"}}}
+  "@hoursOpensAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxTitle": "Notifications",
+  "@inboxTitle": {},
+  "inboxEmpty": "Nothing yet. What the app tells you shows here.",
+  "inboxRemove": "Remove",
+  "@inboxRemove": {},
+  "inboxRemoved": "Removed",
+  "@inboxRemoved": {},
+  "@inboxEmpty": {},
+  "ownerMessages": "Send notifications",
+  "@ownerMessages": {},
+  "ownerMessageNew": "New notification",
+  "@ownerMessageNew": {},
+  "ownerMessageTemplates": "Pick a template",
+  "@ownerMessageTemplates": {},
+  "ownerMessageBlank": "Write your own",
+  "@ownerMessageBlank": {},
+  "msgTpl1Label": "App update",
+  "@msgTpl1Label": {},
+  "msgTpl1Title": "A new Bukuresipi is here!",
+  "@msgTpl1Title": {},
+  "msgTpl1Body": "Update on Google Play for [what is new]. Tap to update.",
+  "@msgTpl1Body": {},
+  "msgTpl2Label": "New feature",
+  "@msgTpl2Label": {},
+  "msgTpl2Title": "New: [feature name]",
+  "@msgTpl2Title": {},
+  "msgTpl2Body": "Now you can [what it does]. Try it in [where in the app].",
+  "@msgTpl2Body": {},
+  "msgTpl3Label": "Problem fixed",
+  "@msgTpl3Label": {},
+  "msgTpl3Title": "[Problem] is fixed",
+  "@msgTpl3Title": {},
+  "msgTpl3Body": "Thank you for your patience. Update the app if it still happens.",
+  "@msgTpl3Body": {},
+  "msgTpl4Label": "Maintenance",
+  "@msgTpl4Label": {},
+  "msgTpl4Title": "Maintenance [date], [time]",
+  "@msgTpl4Title": {},
+  "msgTpl4Body": "Bukuresipi may not open for about [how long]. Your recipes are safe.",
+  "@msgTpl4Body": {},
+  "msgTpl5Label": "Service back",
+  "@msgTpl5Label": {},
+  "msgTpl5Title": "Bukuresipi is back to normal",
+  "@msgTpl5Title": {},
+  "msgTpl5Body": "The earlier problem is over. Sorry for the trouble.",
+  "@msgTpl5Body": {},
+  "msgTpl6Label": "Recipes this week",
+  "@msgTpl6Label": {},
+  "msgTpl6Title": "New recipes this week",
+  "@msgTpl6Title": {},
+  "msgTpl6Body": "[n] new recipes in Community, including [recipe name]. Have a look!",
+  "@msgTpl6Body": {},
+  "msgTpl7Label": "Festive season",
+  "@msgTpl7Label": {},
+  "msgTpl7Title": "Happy [festival]!",
+  "@msgTpl7Title": {},
+  "msgTpl7Body": "Find your favourite [festival] recipes and keep them in your book.",
+  "@msgTpl7Body": {},
+  "msgTpl8Label": "Ramadan bazaar",
+  "@msgTpl8Label": {},
+  "msgTpl8Title": "Ramadan bazaars nearby",
+  "@msgTpl8Title": {},
+  "msgTpl8Body": "See the bazaars and markets open tonight on the Bukuresipi map.",
+  "@msgTpl8Body": {},
+  "msgTpl9Label": "Ask for feedback",
+  "@msgTpl9Label": {},
+  "msgTpl9Title": "What do you think?",
+  "@msgTpl9Title": {},
+  "msgTpl9Body": "Help us make Bukuresipi better: reply on the Play Store or email [email].",
+  "@msgTpl9Body": {},
+  "msgTpl10Label": "Thank you",
+  "@msgTpl10Label": {},
+  "msgTpl10Title": "Thank you, [n] users!",
+  "@msgTpl10Title": {},
+  "msgTpl10Body": "Bukuresipi now has [n] users. Share it with a friend who loves to cook.",
+  "@msgTpl10Body": {},
+  "ownerMessageTo": "To {email}",
+  "@ownerMessageTo": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerMessageEveryone": "Everyone",
+  "@ownerMessageEveryone": {},
+  "ownerMessageTitle": "Title",
+  "@ownerMessageTitle": {},
+  "ownerMessageBody": "Message",
+  "@ownerMessageBody": {},
+  "ownerMessageToLabel": "To",
+  "@ownerMessageToLabel": {},
+  "ownerMessagePhoto": "Add a photo",
+  "@ownerMessagePhoto": {},
+  "ownerMessagePhotoRemove": "Remove photo",
+  "@ownerMessagePhotoRemove": {},
+  "ownerMessageSend": "Send",
+  "@ownerMessageSend": {},
+  "ownerMessageSending": "Sending…",
+  "@ownerMessageSending": {},
+  "ownerMessageSent": "Sent",
+  "@ownerMessageSent": {},
+  "ownerMessagePhones": "{sent} of {total} phones",
+  "@ownerMessagePhones": {
+    "placeholders": {
+      "sent": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerMessageInboxOnly": "No phone registered",
+  "@ownerMessageInboxOnly": {},
+  "ownerMessagePending": "Pushing…",
+  "@ownerMessagePending": {},
+  "ownerMessagesNone": "Nothing sent yet.",
+  "ownerMessageDeleteAsk": "Delete \"{title}\"? It disappears from every recipient's inbox; a push not yet sent stops.",
+  "@ownerMessageDeleteAsk": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerMessageDeleted": "Deleted",
+  "@ownerMessageDeleted": {},
+  "@ownerMessagesNone": {},
+  "ownerSendMessage": "Send a notification",
+  "@ownerSendMessage": {},
+  "ownerIngredientList": "Ingredients and other names",
+  "@ownerIngredientList": {},
+  "ownerIngredientRowSub": "{category} · {count} other names",
+  "@ownerIngredientRowSub": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientAliases": "Other names",
+  "@ownerIngredientAliases": {},
+  "ownerIngredientAliasesHint": "A line that says one of these is this ingredient. A kind of it (\"limau nipis\" on Limau) is another food: make it its own ingredient.",
+  "@ownerIngredientAliasesHint": {},
+  "ownerIngredientNoAliases": "No other names yet.",
+  "@ownerIngredientNoAliases": {},
+  "ownerIngredientAddAlias": "Add another name",
+  "@ownerIngredientAddAlias": {},
+  "ownerIngredientRemoveAlias": "Remove this name",
+  "@ownerIngredientRemoveAlias": {},
+  "ownerIngredientSplitAlias": "Make it its own ingredient",
+  "@ownerIngredientSplitAlias": {},
+  "ownerIngredientRemoveAsk": "Remove \"{alias}\"? {count} lines that only this name matched go back to Ingredient gaps.",
+  "@ownerIngredientRemoveAsk": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientSplitAsk": "Make \"{alias}\" its own ingredient, in the same category? {count} lines that say it move there.",
+  "@ownerIngredientSplitAsk": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientRemoved": "Removed. {count} lines unlinked.",
+  "@ownerIngredientRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientSplitDone": "{name} added. {count} lines moved.",
+  "@ownerIngredientSplitDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerIngredientTabDetails": "Details",
+  "@ownerIngredientTabDetails": {},
+  "ownerIngredientSimilar": "May be the same",
+  "@ownerIngredientSimilar": {},
+  "ownerIngredientNoSimilar": "None found.",
+  "@ownerIngredientNoSimilar": {},
+  "ownerIngredientEdit": "Edit ingredient",
+  "@ownerIngredientEdit": {},
+  "ownerIngredientName": "Name",
+  "@ownerIngredientName": {},
+  "ownerIngredientRenameNote": "The old name stays as another name, so no line loses its link.",
+  "@ownerIngredientRenameNote": {},
+  "ownerIngredientNoCategory": "No category",
+  "@ownerIngredientNoCategory": {},
+  "ownerIngredientsShort": "All ingredients",
+  "@ownerIngredientsShort": {},
+  "catalogueProductPhoto": "Add a photo",
+  "@catalogueProductPhoto": {},
+  "catalogueProductPhotoChange": "Change the photo",
+  "@catalogueProductPhotoChange": {},
+  "creditsProducts": "Product data",
+  "@creditsProducts": {},
+  "creditsOff": "Open Food Facts",
+  "@creditsOff": {},
+  "creditsOffDetail": "Product details by barcode, ODbL; product photos, CC BY-SA.",
+  "@creditsOffDetail": {},
+  "catalogueSavedNoPhoto": "Saved. The photo was not saved.",
+  "@catalogueSavedNoPhoto": {}
 }

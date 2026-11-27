@@ -293,9 +293,11 @@ class FakeOwner implements OwnerRepository {
     return (lines: 3, sample: const ['sedikit minyak', '2 sudu minyak']);
   }
 
-  ({String? name, String? ingredient}) gapAnswer = (
+  GapSuggestion gapAnswer = (
     name: 'minyak masak',
     ingredient: 'Minyak masak',
+    category: null,
+    types: const [],
   );
   List<AliasSuggestion> aliasAnswer = const [
     (ingredient: 'Bawang putih', alias: 'garlic', lines: 12),
@@ -318,6 +320,7 @@ class FakeOwner implements OwnerRepository {
       source: 'https://kara.test/about',
     ),
     similar: const [],
+    photo: 'https://images.openfoodfacts.org/images/products/kara/front_en.400.jpg',
   );
 
   @override
@@ -333,9 +336,40 @@ class FakeOwner implements OwnerRepository {
     return fillAnswer;
   }
 
+  final messages =
+      <({String title, String body, String? to, String kind, String? image})>[];
+  List<SentMessage> sent = [];
+
   @override
-  Future<({String? name, String? ingredient})> suggestGap(String line) async =>
-      gapAnswer;
+  Future<void> sendMessage({
+    required String title,
+    required String body,
+    String? to,
+    String kind = 'message',
+    String? image,
+  }) async => messages.add((
+    title: title,
+    body: body,
+    to: to,
+    kind: kind,
+    image: image,
+  ));
+
+  @override
+  Future<List<SentMessage>> sentMessages() async => sent;
+
+  final deletedMessages = <int>[];
+  @override
+  Future<void> deleteMessage(int id) async {
+    deletedMessages.add(id);
+    sent = [
+      for (final m in sent)
+        if (m.id != id) m,
+    ];
+  }
+
+  @override
+  Future<GapSuggestion> suggestGap(String line) async => gapAnswer;
 
   @override
   Future<({List<AliasSuggestion> items, int? next})> suggestAliases(
@@ -344,6 +378,92 @@ class FakeOwner implements OwnerRepository {
     items: offset == 0 ? aliasAnswer : const <AliasSuggestion>[],
     next: null,
   );
+
+  List<IngredientRow> ingredientRows = const [];
+  Map<int, IngredientDetail> details = {};
+  ({int lines, List<String> sample}) removeAnswer = (
+    lines: 0,
+    sample: const [],
+  );
+  ({int lines, List<String> sample}) splitAnswer = (lines: 0, sample: const []);
+  final ingredientCalls = <String>[];
+
+  IngredientDetail _without(int id, String alias) {
+    final d = details[id]!;
+    return details[id] = (
+      id: d.id,
+      name: d.name,
+      category: d.category,
+      aliases: [
+        for (final a in d.aliases)
+          if (a != alias) a,
+      ],
+      recipeLines: d.recipeLines,
+      shoppingLines: d.shoppingLines,
+      similar: d.similar,
+    );
+  }
+
+  @override
+  Future<List<IngredientRow>> listIngredients() async => ingredientRows;
+
+  @override
+  Future<IngredientDetail> ingredientDetail(int id) async =>
+      details[id] ?? (throw const ApiException('not_found', status: 404));
+
+  @override
+  Future<IngredientDetail> updateIngredient(
+    int id, {
+    String? name,
+    String? category,
+  }) async {
+    final d = details[id]!;
+    ingredientCalls.add(
+      'update $id ${name ?? d.name} ${category ?? d.category}',
+    );
+    return details[id] = (
+      id: id,
+      name: name ?? d.name,
+      category: category ?? d.category,
+      aliases: d.aliases,
+      recipeLines: d.recipeLines,
+      shoppingLines: d.shoppingLines,
+      similar: d.similar,
+    );
+  }
+
+  @override
+  Future<({int lines, List<String> sample})> previewRemoveAlias(
+    int id,
+    String alias,
+  ) async => removeAnswer;
+
+  @override
+  Future<int> removeAlias(int id, String alias) async {
+    ingredientCalls.add('remove $id $alias');
+    _without(id, alias);
+    return removeAnswer.lines;
+  }
+
+  @override
+  Future<({int lines, List<String> sample})> previewSplitAlias(
+    int id,
+    String alias,
+  ) async => splitAnswer;
+
+  @override
+  Future<({int id, String name, int moved})> splitAlias(
+    int id,
+    String alias,
+  ) async {
+    ingredientCalls.add('split $id $alias');
+    _without(id, alias);
+    return (
+      id: 900,
+      name: alias[0].toUpperCase() + alias.substring(1),
+      moved: splitAnswer.lines,
+    );
+  }
 
   @override
   Future<int> addAlias(String ingredient, String alias) async {
@@ -545,24 +665,42 @@ class FakeOwner implements OwnerRepository {
   }
 
   @override
-  Future<void> saveProduct({
+  Future<int> saveProduct({
     int? id,
     required String name,
     String? ingredient,
     int? brandId,
     double? size,
     String? unit,
-  }) async => savedRows.add((
-    'products',
-    id,
-    {
-      'name': name,
-      'ingredient': ingredient,
-      'brandId': brandId,
-      'size': size,
-      'unit': unit,
-    },
-  ));
+  }) async {
+    savedRows.add((
+      'products',
+      id,
+      {
+        'name': name,
+        'ingredient': ingredient,
+        'brandId': brandId,
+        'size': size,
+        'unit': unit,
+      },
+    ));
+    return id ?? 500; // a new product's id
+  }
+
+  /// (id, `path:...` | `url:...` | `remove`).
+  final photoCalls = <(int, String)>[];
+
+  Object? photoError; // thrown by setProductPhoto when set
+
+  @override
+  Future<void> setProductPhoto(int id, {String? path, String? url}) async {
+    if (photoError case final e?) throw e;
+    photoCalls.add((id, path != null ? 'path:$path' : 'url:$url'));
+  }
+
+  @override
+  Future<void> removeProductPhoto(int id) async =>
+      photoCalls.add((id, 'remove'));
 
   @override
   Future<void> deleteCatalogueRow(String kind, int id) async =>

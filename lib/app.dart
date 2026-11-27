@@ -17,6 +17,9 @@ import 'features/places/presentation/places_controller.dart';
 import 'features/push/push_controller.dart';
 import 'features/push/push_messaging.dart';
 import 'features/recipes/presentation/recipes_controller.dart';
+import 'core/widgets/system_pages.dart';
+import 'features/notifications/presentation/widgets/inbox_bell.dart';
+import 'features/push/push_routes.dart';
 import 'features/shares/domain/share_repository.dart';
 import 'features/shares/presentation/recent_shares.dart';
 import 'features/shares/presentation/share_intake.dart';
@@ -54,15 +57,11 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
         ..onTap = _openShare
         // A new sign-in opens the device list (sign that one out); a family change opens the family; a badge, Badges;
         // an e-invoice reminder, its receipt; a market open tonight, its place.
-        ..onTypeTap = ((type, data) =>
-            switch ((type, data['receiptId'] ?? data['placeId'])) {
-              ('sign_in', _) => _router.push('/account/sessions'),
-              ('family', _) => _router.push('/family'),
-              ('badge', _) => _router.push('/badges'),
-              ('einvoice', final String id) => _router.push('/receipts/$id'),
-              ('market', final String id) => _router.push('/places/$id'),
-              _ => null,
-            })
+        ..onTypeTap = (type, data) {
+          // The owner's "new version" message: Play's update, as Home's chip.
+          if (type == 'update') return _updateApp();
+          if (pushPath(type, data) case final path?) _router.push(path);
+        }
         ..start();
     }
   }
@@ -71,6 +70,7 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
 
   /// Android shows no system notification while the app is open, so the app says it itself.
   void _foreground(ForegroundPush push) {
+    inboxChanged.value++; // it is in the inbox now: the bell's dot
     // Only a share read or a family change changes the lists; a badge or a reminder doesn't.
     if (push.data['shareId'] != null) _reload();
     if (push.data['type'] == 'family') {
@@ -90,19 +90,33 @@ class _BukuresipiAppState extends State<BukuresipiApp> {
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 5),
           content: Text(push.body == null ? title : '$title\n${push.body}'),
-          action: shareId != null
-              ? SnackBarAction(
-                  label: AppLocalizations.of(context).openPlace,
-                  onPressed: () => _openShare(shareId),
-                )
-              : push.data['type'] == 'badge'
-              ? SnackBarAction(
-                  label: AppLocalizations.of(context).badgesTitle,
-                  onPressed: () => _router.push('/badges'),
-                )
-              : null,
+          action: switch ((
+            shareId,
+            pushPath(push.data['type'] ?? '', push.data),
+          )) {
+            (final String id, _) => SnackBarAction(
+              label: AppLocalizations.of(context).openPlace,
+              onPressed: () => _openShare(id),
+            ),
+            _ when push.data['type'] == 'update' => SnackBarAction(
+              label: AppLocalizations.of(context).updateAvailable,
+              onPressed: _updateApp,
+            ),
+            (_, final String path) => SnackBarAction(
+              label: AppLocalizations.of(context).openPlace,
+              onPressed: () => _router.push(path),
+            ),
+            _ => null,
+          },
         ),
       );
+  }
+
+  /// Play's update from a push or its banner. The page's context, under the ScaffoldMessenger: the messenger's own
+  /// context has none above it, so the store-page fallback (openLink's snackbar) threw.
+  void _updateApp() {
+    final page = _router.routerDelegate.navigatorKey.currentContext;
+    if (page != null) updateApp(page);
   }
 
   void _reload() {

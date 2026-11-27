@@ -40,6 +40,14 @@ class CreditsPage extends StatelessWidget {
         url: 'https://maplibre.org',
       ),
     ];
+    final products = [
+      _Credit(
+        icon: Icons.shopping_basket_outlined,
+        title: l.creditsOff,
+        detail: l.creditsOffDetail,
+        url: 'https://world.openfoodfacts.org',
+      ),
+    ];
     final places = [
       _Credit(
         icon: Icons.place_outlined,
@@ -142,6 +150,8 @@ class CreditsPage extends StatelessWidget {
             for (final credit in map) _CreditRow(credit: credit),
             NotebookHeading(l.creditsPlaces),
             for (final credit in places) _CreditRow(credit: credit),
+            NotebookHeading(l.creditsProducts),
+            for (final credit in products) _CreditRow(credit: credit),
             NotebookHeading(l.creditsTypography),
             for (final credit in type) _CreditRow(credit: credit),
             NotebookHeading(l.creditsApp),

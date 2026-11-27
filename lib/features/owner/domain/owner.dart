@@ -342,6 +342,47 @@ class OwnerPlace {
 
 /// Owner > Ingredient gaps: recipe and shopping lines no catalogue name or alias matched, grouped by what they name
 /// ([key], amount and unit off); [sample] = one line as written.
+/// A kind of a food the AI named ("mee" -> Mee kuning, Mee sua). [ingredient] = ours it is, null = new;
+/// [category] one of ours or null. Nothing saved.
+typedef IngredientType = ({String name, String? category, String? ingredient});
+
+/// A row of Owner > Ingredients and other names: [aliases] = how many other names it has.
+typedef IngredientRow = ({int id, String name, String? category, int aliases});
+
+/// One ingredient's page: its other names (lowercase, A-Z), the lines it links, and up to 8 that may be the same food.
+typedef IngredientDetail = ({
+  int id,
+  String name,
+  String? category,
+  List<String> aliases,
+  int recipeLines,
+  int shoppingLines,
+  List<({int id, String name, String? category})> similar,
+});
+
+/// The AI's answer for an unknown line: its name, the catalogue ingredient it is (null = new), a category of ours, and
+/// the other kinds of that food (ours or new).
+typedef GapSuggestion = ({
+  String? name,
+  String? ingredient,
+  String? category,
+  List<IngredientType> types,
+});
+
+/// A message the owner sent: [to] = the user's email, null = everyone. [pending] = its pushes are still going out.
+typedef SentMessage = ({
+  int id,
+  String title,
+  String body,
+  String? to,
+  int pushSent,
+  int pushTotal,
+  bool pending,
+  String kind, // 'message' or 'update' (a tap opens Play)
+  String? image, // the photo's public link
+  DateTime createdAt,
+});
+
 class IngredientGap {
   const IngredientGap({
     required this.key,
@@ -392,10 +433,14 @@ class CatalogueProduct {
     this.brand,
     this.size,
     this.unit,
+    this.photo,
   });
 
   final int id;
   final String name;
+
+  /// Its photo's id ([CataloguePhoto]); null = none.
+  final String? photo;
 
   /// A catalogue ingredient name.
   final String? ingredient;
@@ -428,6 +473,9 @@ typedef ProductFill = ({
 
   /// Catalogue products that may be this one: edit one of them rather than add it again.
   List<CatalogueProduct> similar,
+
+  /// Open Food Facts' front photo (a link); kept only when the product is saved. null = none.
+  String? photo,
 });
 
 /// A brand or product authors asked for from recipe lines, grouped by name (Owner > Catalogue > Suggested).

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
 import '../../recipes/data/recipes_repository_impl.dart';
@@ -387,6 +388,105 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
+  Future<List<IngredientRow>> listIngredients() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/owner/ingredients'))
+        .data!;
+    return [
+      for (final i in (j['ingredients'] as List).cast<Map<String, dynamic>>())
+        (
+          id: i['id'] as int,
+          name: i['name'] as String,
+          category: i['category'] as String?,
+          aliases: i['aliases'] as int,
+        ),
+    ];
+  });
+
+  static IngredientDetail _detail(Map<String, dynamic> j) => (
+    id: j['id'] as int,
+    name: j['name'] as String,
+    category: j['category'] as String?,
+    aliases: (j['aliases'] as List).cast<String>(),
+    recipeLines: j['recipeLines'] as int,
+    shoppingLines: j['shoppingLines'] as int,
+    similar: [
+      for (final s in (j['similar'] as List).cast<Map<String, dynamic>>())
+        (
+          id: s['id'] as int,
+          name: s['name'] as String,
+          category: s['category'] as String?,
+        ),
+    ],
+  );
+
+  @override
+  Future<IngredientDetail> ingredientDetail(int id) => apiCall(
+    () async => _detail(
+      (await _dio.get<Map<String, dynamic>>('/owner/ingredients/$id')).data!,
+    ),
+  );
+
+  @override
+  Future<IngredientDetail> updateIngredient(
+    int id, {
+    String? name,
+    String? category,
+  }) => apiCall(
+    () async => _detail(
+      (await _dio.patch<Map<String, dynamic>>(
+        '/owner/ingredients/$id',
+        data: {'name': ?name, 'category': ?category},
+      )).data!,
+    ),
+  );
+
+  Future<Map<String, dynamic>> _aliasAction(
+    int id,
+    String action,
+    String alias,
+    bool preview,
+  ) async => (await _dio.post<Map<String, dynamic>>(
+    '/owner/ingredients/$id/aliases/$action',
+    data: {'alias': alias, 'preview': preview},
+  )).data!;
+
+  static ({int lines, List<String> sample}) _preview(Map<String, dynamic> j) =>
+      (lines: j['lines'] as int, sample: (j['sample'] as List).cast<String>());
+
+  @override
+  Future<({int lines, List<String> sample})> previewRemoveAlias(
+    int id,
+    String alias,
+  ) => apiCall(
+    () async => _preview(await _aliasAction(id, 'remove', alias, true)),
+  );
+
+  @override
+  Future<int> removeAlias(int id, String alias) => apiCall(
+    () async =>
+        (await _aliasAction(id, 'remove', alias, false))['unlinked'] as int,
+  );
+
+  @override
+  Future<({int lines, List<String> sample})> previewSplitAlias(
+    int id,
+    String alias,
+  ) => apiCall(
+    () async => _preview(await _aliasAction(id, 'split', alias, true)),
+  );
+
+  @override
+  Future<({int id, String name, int moved})> splitAlias(int id, String alias) =>
+      apiCall(() async {
+        final j = await _aliasAction(id, 'split', alias, false);
+        return (
+          id: j['id'] as int,
+          name: j['name'] as String,
+          moved: j['moved'] as int,
+        );
+      });
+
+  @override
   Future<int> addAlias(String ingredient, String alias) => apiCall(
     () async =>
         (await _alias(ingredient, alias, preview: false))['relinked'] as int,
@@ -485,6 +585,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
           : url != null
           ? {'url': url}
           : {'name': name},
+      options: Options(receiveTimeout: aiWait),
     )).data!;
     final m = j['maker'] as Map<String, dynamic>?;
     return (
@@ -508,21 +609,85 @@ class OwnerRepositoryImpl implements OwnerRepository {
             in (j['similar'] as List? ?? const []).cast<Map<String, dynamic>>())
           _catalogueProduct(p),
       ],
+      photo: j['photo'] as String?,
     );
   });
 
   @override
-  Future<({String? name, String? ingredient})> suggestGap(String line) =>
-      apiCall(() async {
-        final j = (await _dio.post<Map<String, dynamic>>(
-          '/owner/ingredients/gaps/suggest',
-          data: {'line': line},
-        )).data!;
-        return (
-          name: j['name'] as String?,
-          ingredient: j['ingredient'] as String?,
-        );
-      });
+  Future<void> sendMessage({
+    required String title,
+    required String body,
+    String? to,
+    String kind = 'message',
+    String? image,
+  }) => apiCall(() async {
+    final fields = {'title': title, 'body': body, 'to': to, 'kind': kind};
+    await _dio.post<void>(
+      '/owner/notifications',
+      // With a photo: multipart, `to` empty = everyone.
+      data: image == null
+          ? fields
+          : FormData.fromMap({
+              ...fields,
+              'to': to ?? '',
+              'image': await MultipartFile.fromFile(
+                image,
+                contentType: DioMediaType(
+                  'image',
+                  'jpeg',
+                ), // the editor writes JPEG
+              ),
+            }),
+    );
+  });
+
+  @override
+  Future<List<SentMessage>> sentMessages() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/owner/notifications'))
+        .data!;
+    return [
+      for (final m in (j['sent'] as List).cast<Map<String, dynamic>>())
+        (
+          id: m['id'] as int,
+          title: m['title'] as String,
+          body: m['body'] as String,
+          to: m['to'] as String?,
+          pushSent: m['pushSent'] as int,
+          pushTotal: m['pushTotal'] as int,
+          pending: m['pending'] as bool,
+          kind: m['kind'] as String? ?? 'message', // a server before 2026-11
+          image: m['image'] as String?,
+          createdAt: dbTime(m['createdAt'] as String).toLocal(),
+        ),
+    ];
+  });
+
+  @override
+  Future<void> deleteMessage(int id) =>
+      apiCall(() => _dio.delete<void>('/owner/notifications/$id'));
+
+  @override
+  Future<GapSuggestion> suggestGap(String line) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/ingredients/gaps/suggest',
+      data: {'line': line},
+      options: Options(receiveTimeout: aiWait),
+    )).data!;
+    return (
+      name: j['name'] as String?,
+      ingredient: j['ingredient'] as String?,
+      category: j['category'] as String?, // null from an older API
+      types: [
+        for (final t
+            in (j['types'] as List? ?? const []).cast<Map<String, dynamic>>())
+          (
+            name: t['name'] as String,
+            category: t['category'] as String?,
+            ingredient: t['ingredient'] as String?,
+          ),
+      ],
+    );
+  });
 
   @override
   Future<({List<AliasSuggestion> items, int? next})> suggestAliases(
@@ -531,6 +696,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/owner/ingredients/aliases/suggest',
       data: {'offset': offset},
+      options: Options(receiveTimeout: aiWait),
     )).data!;
     return (
       items: [
@@ -644,11 +810,21 @@ class OwnerRepositoryImpl implements OwnerRepository {
     );
   });
 
-  Future<void> _saveRow(String kind, int? id, Map<String, dynamic> body) =>
+  /// The row's id.
+  Future<int> _saveRow(String kind, int? id, Map<String, dynamic> body) =>
       apiCall(
-        () => id == null
-            ? _dio.post<void>('/owner/catalogue/$kind', data: body)
-            : _dio.patch<void>('/owner/catalogue/$kind/$id', data: body),
+        () async =>
+            (await (id == null
+                        ? _dio.post<Map<String, dynamic>>(
+                            '/owner/catalogue/$kind',
+                            data: body,
+                          )
+                        : _dio.patch<Map<String, dynamic>>(
+                            '/owner/catalogue/$kind/$id',
+                            data: body,
+                          )))
+                    .data!['id']
+                as int,
       );
 
   @override
@@ -668,7 +844,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<void> saveProduct({
+  Future<int> saveProduct({
     int? id,
     required String name,
     String? ingredient,
@@ -682,6 +858,25 @@ class OwnerRepositoryImpl implements OwnerRepository {
     'size': size,
     'unit': unit,
   });
+
+  @override
+  Future<void> setProductPhoto(int id, {String? path, String? url}) => apiCall(
+    () async => _dio.put<void>(
+      '/owner/catalogue/products/$id/photo',
+      data: path == null
+          ? {'url': url}
+          : FormData.fromMap({
+              'image': await MultipartFile.fromFile(
+                path,
+                contentType: DioMediaType('image', 'jpeg'),
+              ),
+            }),
+    ),
+  );
+
+  @override
+  Future<void> removeProductPhoto(int id) =>
+      apiCall(() => _dio.delete<void>('/owner/catalogue/products/$id/photo'));
 
   @override
   Future<void> deleteCatalogueRow(String kind, int id) =>
@@ -785,6 +980,7 @@ CatalogueProduct _catalogueProduct(Map<String, dynamic> p) => CatalogueProduct(
   brand: p['brand'] as String?,
   size: (p['size'] as num?)?.toDouble(),
   unit: p['unit'] as String?,
+  photo: p['photo'] as String?,
 );
 
 AiSetting _aiSetting(Map<String, dynamic> j) => (

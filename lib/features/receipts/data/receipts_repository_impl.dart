@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/utils/image_type.dart';
 import '../domain/einvoice_link.dart';
@@ -148,19 +149,29 @@ class ReceiptsRepositoryImpl implements ReceiptsRepository {
       '/meals/estimate',
       data: form,
       // One AI call over a photo while the user waits: past the usual 30 s on a slow day.
-      options: Options(receiveTimeout: const Duration(seconds: 60)),
+      options: Options(receiveTimeout: aiWait),
     )).data!;
     return [for (final i in (j['items'] as List?) ?? const []) _mealItem(i)];
   });
 
   @override
-  Future<void> saveMeal(DateTime eatenAt, List<MealItem> items) =>
-      apiCall(() => _dio.post<void>('/meals', data: _mealBody(eatenAt, items)));
+  Future<void> saveMeal(DateTime eatenAt, List<MealItem> items) => apiCall(
+    // Unknown dishes are matched by the AI.
+    () => _dio.post<void>(
+      '/meals',
+      data: _mealBody(eatenAt, items),
+      options: Options(receiveTimeout: aiWait),
+    ),
+  );
 
   @override
   Future<void> replaceMeal(String id, DateTime eatenAt, List<MealItem> items) =>
       apiCall(
-        () => _dio.patch<void>('/meals/$id', data: _mealBody(eatenAt, items)),
+        () => _dio.patch<void>(
+          '/meals/$id',
+          data: _mealBody(eatenAt, items),
+          options: Options(receiveTimeout: aiWait),
+        ),
       );
 
   static Map<String, dynamic> _mealBody(

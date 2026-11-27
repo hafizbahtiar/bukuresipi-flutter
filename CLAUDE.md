@@ -46,6 +46,26 @@ filter); the map has its own `markets` source under the pins (street/ground + do
 camera moves 7.5 km; `?market=<branch>` opens that sheet. Owner: Edit branch > Days, shown only once the server says it
 is a market (a failed read = no tab, so an empty editor can never overwrite saved days).
 
+Notifications (`features/notifications/`): Home's bell (`InboxBell`, a dot while something is new) opens the inbox:
+every push a phone got plus the owner's messages; opening it marks all read; a row's ⋮ removes it from this user's
+inbox only. A row opens what its push opens
+(`push/push_routes.dart` `pushPath`, shared with `app.dart`; a share push goes to `PushController.onTap`). Owner:
+Owner > Send notifications (a template first, `msgTpl1..10` in the arbs, 1 = app update sent as kind `update`:
+a tap runs `updateApp`; To: everyone or a picked user) or Users > a user > Send a notification (`MessageSheet`);
+an optional photo (a step of `MessageSheet`, uploaded as multipart; shown in the push and the inbox row, public URL);
+always inbox + push, pushed by the send itself (a big broadcast's rest by the cron). A push in the open app: a banner
+with Open (`pushPath`) and `inboxChanged` re-reads the bell.
+
+Product photos: `CataloguePhoto(id)` (`core/widgets/catalogue_photo.dart`, public link, disk cache, ≤512 px so no
+resize) on the picker, "see all products" and the shopping row; the owner sets one on the product form (camera /
+photos, or Open Food Facts' from the fill, sent after Save). Credits names Open Food Facts (CC BY-SA photos).
+
+Ingredients (owner): Owner > Bahan dan nama lain (`owner_ingredient_list_page.dart`, also the gaps page's ⋮) lists
+every ingredient; its page (`owner_ingredient_page.dart`, `/owner/ingredient/:id`) only shows (tabs: other names,
+may be the same); Edit (`owner_ingredient_edit_page.dart`, `/:id/edit`, EditTabs) renames (the old name stays as
+another name) and sets the category (the check saves), adds a name, removes a wrong one (asks with how many lines go
+back to the gaps), or makes a name that is another food its own ingredient ("limau nipis" off Limau: its lines move there).
+
 ## House components (`core/widgets/`; use them, never a native copy)
 
 `import '.../core/widgets/base.dart'` gives all of `base/`:

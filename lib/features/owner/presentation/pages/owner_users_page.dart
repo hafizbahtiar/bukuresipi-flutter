@@ -8,6 +8,7 @@ import '../../domain/owner_repository.dart';
 import '../../../../core/widgets/deleting_overlay.dart';
 import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/base.dart';
+import '../widgets/message_sheet.dart';
 import '../widgets/user_action_sheets.dart';
 
 /// Owner: users, newest first, searchable by email. Actions: end their sessions, ban / unban, delete the account.
@@ -81,6 +82,12 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
         children: [
           _UserTile(user: u),
           ListTile(
+            key: const ValueKey('user-message'),
+            leading: const Icon(Icons.campaign_outlined),
+            title: Text(l.ownerSendMessage),
+            onTap: () => Navigator.pop(context, 'message'),
+          ),
+          ListTile(
             key: const ValueKey('user-logout'),
             leading: Icon(Icons.logout, color: error),
             title: Text(l.ownerEndSessions),
@@ -112,6 +119,15 @@ class _OwnerUsersPageState extends State<OwnerUsersPage> {
     );
     if (!mounted) return;
     switch (action) {
+      case 'message':
+        final messenger = ScaffoldMessenger.of(context);
+        final sent = await showBaseSheet<bool>(
+          context,
+          builder: (_) => MessageSheet(toId: u.id, toEmail: u.email),
+        );
+        if (sent == true) {
+          messenger.showSnackBar(SnackBar(content: Text(l.ownerMessageSent)));
+        }
       case 'logout':
         await _endSessions(u);
       case 'ban':

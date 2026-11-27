@@ -118,6 +118,37 @@ abstract interface class OwnerRepository {
     String alias,
   );
 
+  /// Every catalogue ingredient, A-Z.
+  Future<List<IngredientRow>> listIngredients();
+
+  /// One ingredient's page. Throws 'not_found'.
+  Future<IngredientDetail> ingredientDetail(int id);
+
+  /// A new name and/or category; the old name stays as another name. Throws 'name_taken'.
+  Future<IngredientDetail> updateIngredient(
+    int id, {
+    String? name,
+    String? category,
+  });
+
+  /// How many lines only [alias] matched (they go back to the gaps), and some of them. Nothing saved.
+  Future<({int lines, List<String> sample})> previewRemoveAlias(
+    int id,
+    String alias,
+  );
+
+  /// Removes [alias] from ingredient [id]: how many lines it unlinked (or moved to another match).
+  Future<int> removeAlias(int id, String alias);
+
+  /// How many lines say [alias] and would move if it became its own ingredient. Nothing saved.
+  Future<({int lines, List<String> sample})> previewSplitAlias(
+    int id,
+    String alias,
+  );
+
+  /// [alias] of ingredient [id] becomes its own ingredient (same category); the lines that say it move there.
+  Future<({int id, String name, int moved})> splitAlias(int id, String alias);
+
   /// Saves the alias and relinks every unlinked line: how many it linked. Throws as [previewAlias].
   Future<int> addAlias(String ingredient, String alias);
 
@@ -148,9 +179,26 @@ abstract interface class OwnerRepository {
   /// A new catalogue ingredient; every unlinked line is matched again: how many it linked. Throws 'name_taken'.
   Future<int> addIngredient(String name, String category);
 
+  /// A message to one user ([to] = their id) or everyone ([to] null): in the inbox and pushed to their phones.
+  /// [kind] 'update' = a tap opens the Play update, not the inbox. [image] = a local JPEG path, shown in the push and
+  /// the inbox.
+  Future<void> sendMessage({
+    required String title,
+    required String body,
+    String? to,
+    String kind = 'message',
+    String? image,
+  });
+
+  /// What the owner sent, newest first.
+  Future<List<SentMessage>> sentMessages();
+
+  /// Takes a sent message back: out of every inbox; a push still going stops. Throws 'not_found'.
+  Future<void> deleteMessage(int id);
+
   /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
   /// Throws 'ai_unavailable'.
-  Future<({String? name, String? ingredient})> suggestGap(String line);
+  Future<GapSuggestion> suggestGap(String line);
 
   /// AI: aliases for 20 ingredients (fewest aliases first) from [offset], each with the lines it would link;
   /// next = null at the end. Nothing saved (save with [addAliases]). Throws 'ai_unavailable'.
@@ -189,7 +237,8 @@ abstract interface class OwnerRepository {
   /// 'unreadable' (no product on that page), 'ai_unavailable' (no search left).
   Future<ProductFill> fillProduct({String? barcode, String? url, String? name});
 
-  Future<void> saveProduct({
+  /// Returns its id (a new product's, for its photo).
+  Future<int> saveProduct({
     int? id,
     required String name,
     String? ingredient,
@@ -197,6 +246,12 @@ abstract interface class OwnerRepository {
     double? size,
     String? unit,
   });
+
+  /// Product [id]'s photo: a local JPEG [path] (camera / gallery), or Open Food Facts' [url] from a fill. Replaces
+  /// the one before. Throws 'invalid_image', 'not_found'.
+  Future<void> setProductPhoto(int id, {String? path, String? url});
+
+  Future<void> removeProductPhoto(int id);
 
   /// [kind] is 'makers', 'brands' or 'products'. What used it stays, without it.
   Future<void> deleteCatalogueRow(String kind, int id);

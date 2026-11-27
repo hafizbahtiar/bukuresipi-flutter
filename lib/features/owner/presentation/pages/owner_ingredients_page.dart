@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -121,6 +122,11 @@ class _OwnerIngredientsPageState extends State<OwnerIngredientsPage> {
             onPressed: () => showActionSheet(
               context,
               actions: [
+                MenuAction(
+                  icon: Icons.list_alt,
+                  label: l.ownerIngredientList,
+                  onTap: () => context.push('/owner/ingredients-all'),
+                ),
                 MenuAction(
                   icon: Icons.auto_awesome,
                   label: l.ownerAliasAiTitle,

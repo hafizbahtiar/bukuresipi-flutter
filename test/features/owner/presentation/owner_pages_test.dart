@@ -1,3 +1,5 @@
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
+
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
@@ -6,6 +8,7 @@ import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ai_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_catalogue_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_hidden_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_messages_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredients_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
@@ -15,10 +18,16 @@ import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_revie
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
 import 'package:bukuresipi_flutter/core/widgets/ai_button.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/widgets/message_sheet.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/widgets/catalogue_edit_sheet.dart';
+import 'package:bukuresipi_flutter/core/widgets/catalogue_photo.dart';
+import 'package:bukuresipi_flutter/core/widgets/base.dart' show showBaseSheet;
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bukuresipi_flutter/features/places/presentation/widgets/owner_panel.dart';
 import 'package:provider/provider.dart';
 
 import '../owner_fixtures.dart';
@@ -36,6 +45,14 @@ void main() {
       Provider<OwnerRepository>.value(
         value: repo,
         child: MaterialApp(
+          // The app theme's full-width filled button (AppTheme cannot load its fonts in tests).
+          theme: ThemeData(
+            filledButtonTheme: FilledButtonThemeData(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+            ),
+          ),
           locale: const Locale('en'),
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -55,6 +72,10 @@ void main() {
     (t) async {
       await pump(t, const OwnerPage());
       expect(find.text('12'), findsOneWidget);
+      await t.scrollUntilVisible(
+        find.text('Nominatim'),
+        200,
+      ); // below the owner's rows
       expect(find.text('Nominatim'), findsOneWidget);
       expect(find.text('90 / 100 a month'), findsOneWidget);
     },
@@ -213,7 +234,10 @@ void main() {
     t,
   ) async {
     await pump(t, const OwnerPage());
-    await t.ensureVisible(find.text('Nominatim')); // below the owner's rows
+    await t.scrollUntilVisible(
+      find.text('Nominatim'),
+      200,
+    ); // below the owner's rows
     await t.pumpAndSettle();
     await t.tap(find.text('Nominatim'));
     await t.pumpAndSettle();
@@ -250,6 +274,278 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Sign out'));
     await t.pumpAndSettle();
     expect(repo.loggedOut, ['u-ali@b.c']);
+  });
+
+  testWidgets('the owner sends one user a notification', (t) async {
+    repo.users = [ownerUser('ali@b.c')];
+    await pump(t, const OwnerUsersPage());
+    await t.tap(find.text('ali@b.c'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('user-message')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('tpl-blank')));
+    await t.pumpAndSettle();
+    expect(find.text('To ali@b.c'), findsOneWidget);
+    final send = find.byKey(const ValueKey('message-send'));
+    expect(t.widget<BusyButton>(send).onPressed, isNull); // nothing written yet
+    await t.enterText(find.byKey(const ValueKey('message-title')), 'Hai');
+    await t.enterText(
+      find.byKey(const ValueKey('message-body')),
+      'Resipi baharu.',
+    );
+    await t.pump();
+    await t.tap(send);
+    await t.pumpAndSettle();
+    expect(repo.messages, [
+      (
+        title: 'Hai',
+        body: 'Resipi baharu.',
+        to: 'u-ali@b.c',
+        kind: 'message',
+        image: null,
+      ),
+    ]);
+    expect(find.text('Sent'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Send notifications: what was sent; a new one to everyone or to a user picked in the sheet',
+    (t) async {
+      repo.users = [ownerUser('ali@b.c'), ownerUser('siti@b.c')];
+      repo.sent = [
+        (
+          id: 1,
+
+          title: 'Kemas kini',
+          body: 'Versi baharu.',
+          to: null,
+          pushSent: 40,
+          pushTotal: 42,
+          pending: false,
+          kind: 'message',
+          image: null,
+          createdAt: DateTime(2026, 11, 20, 9),
+        ),
+      ];
+      await pump(t, const OwnerMessagesPage());
+      expect(find.text('40 of 42 phones'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('messages-new')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('tpl-blank')));
+      await t.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('message-to')),
+          matching: find.text('Everyone'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('message-push')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('message-to')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('siti@b.c'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const ValueKey('message-title')), 'Hai');
+      await t.enterText(find.byKey(const ValueKey('message-body')), 'x');
+      await t.pump();
+      await t.tap(find.byKey(const ValueKey('message-send')));
+      await t.pumpAndSettle();
+      expect(repo.messages, [
+        (
+          title: 'Hai',
+          body: 'x',
+          to: 'u-siti@b.c',
+          kind: 'message',
+          image: null,
+        ),
+      ]);
+    },
+  );
+
+  testWidgets(
+    'a photo is added in the same sheet (camera or photos), shown, removable, and sent with the message',
+    (t) async {
+      await t.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      final picked = <ImageSource>[];
+      await t.pumpWidget(
+        Provider<OwnerRepository>.value(
+          value: repo,
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MessageSheet(
+                pick: (_, source) async {
+                  picked.add(source);
+                  return '/tmp/raya.jpg';
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.tap(find.byKey(const ValueKey('tpl-7')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('message-photo')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('photo-gallery')));
+      await t.pumpAndSettle();
+      expect(picked, [ImageSource.gallery]);
+      expect(
+        find.byKey(const ValueKey('message-photo-preview')),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('message-photo-remove')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('message-photo-preview')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('message-photo')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('photo-camera')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('message-send')));
+      await t.pumpAndSettle();
+      expect(repo.messages.single.image, '/tmp/raya.jpg');
+    },
+  );
+
+  testWidgets(
+    'a template fills the message; the update one is sent as an update (a tap opens Play); Back picks another',
+    (t) async {
+      await pump(t, const OwnerMessagesPage());
+      await t.tap(find.byKey(const ValueKey('messages-new')));
+      await t.pumpAndSettle();
+      expect(find.text('Pick a template'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('tpl-6')));
+      await t.pumpAndSettle();
+      expect(
+        find.text('New recipes this week'),
+        findsOneWidget,
+      ); // the title field
+      await t.tap(find.byKey(const ValueKey('sheet-back')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('tpl-1')));
+      await t.pumpAndSettle();
+      expect(find.text('A new Bukuresipi is here!'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('message-send')));
+      await t.pumpAndSettle();
+      expect(repo.messages.single.kind, 'update');
+      expect(repo.messages.single.title, 'A new Bukuresipi is here!');
+    },
+  );
+
+  testWidgets(
+    'the owner deletes a sent message: asks first, then it is gone from the list',
+    (t) async {
+      repo.sent = [
+        (
+          id: 7,
+          title: 'Salah',
+          body: 'Tersilap.',
+          to: null,
+          pushSent: 3,
+          pushTotal: 3,
+          pending: false,
+          kind: 'message',
+          image: null,
+          createdAt: DateTime(2026, 11, 20, 8),
+        ),
+      ];
+      await pump(t, const OwnerMessagesPage());
+      await t.longPress(find.byKey(const ValueKey('sent-0')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Delete'));
+      await t.pumpAndSettle();
+      expect(find.textContaining("every recipient's inbox"), findsOneWidget);
+      expect(repo.deletedMessages, isEmpty); // not before it is confirmed
+      await t.tap(find.text('Delete').last); // the dialog's button
+      await t.pumpAndSettle();
+      expect(repo.deletedMessages, [7]);
+      expect(find.text('Salah'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a tap opens the sent message in a sheet: its photo, whole text, kind and Delete',
+    (t) async {
+      repo.sent = [
+        (
+          id: 5,
+          title: 'Versi baharu',
+          body: 'Kemas kini sekarang.',
+          to: null,
+          pushSent: 2,
+          pushTotal: 2,
+          pending: false,
+          kind: 'update',
+          image: 'https://api.test/api/v1/notifications/image/x',
+          createdAt: DateTime(2026, 11, 20, 8),
+        ),
+      ];
+      await pump(t, const OwnerMessagesPage());
+      expect(find.byKey(const ValueKey('sent-image')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('sent-0')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('sent-image')), findsOneWidget);
+      expect(
+        find.text('App update'),
+        findsNWidgets(2),
+      ); // the row and the sheet
+      expect(
+        find.text('2 of 2 phones'),
+        findsNWidgets(2),
+      ); // the row and the sheet
+      await t.tap(find.byKey(const ValueKey('sent-delete')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Delete').last); // the dialog's button
+      await t.pumpAndSettle();
+      expect(repo.deletedMessages, [5]);
+      expect(
+        find.text('Versi baharu'),
+        findsNothing,
+      ); // sheet closed, list read again
+    },
+  );
+
+  testWidgets('a message still pushing is read again until it is done', (
+    t,
+  ) async {
+    repo.sent = [
+      (
+        id: 2,
+
+        title: 'Hai',
+        body: 'x',
+        to: 'ali@b.c',
+        pushSent: 0,
+        pushTotal: 2,
+        pending: true,
+        kind: 'message',
+        image: null,
+        createdAt: DateTime(2026, 11, 20, 8),
+      ),
+    ];
+    await pump(t, const OwnerMessagesPage());
+    expect(find.text('Pushing…'), findsOneWidget);
+    repo.sent = [
+      (
+        id: 3,
+
+        title: 'Hai',
+        body: 'x',
+        to: 'ali@b.c',
+        pushSent: 2,
+        pushTotal: 2,
+        pending: false,
+        kind: 'message',
+        image: null,
+        createdAt: DateTime(2026, 11, 20, 8),
+      ),
+    ];
+    await t.pump(const Duration(seconds: 5));
+    await t.pumpAndSettle();
+    expect(find.text('2 of 2 phones'), findsOneWidget);
   });
 
   testWidgets('the owner bans a user for 30 days with a reason', (t) async {
@@ -510,6 +806,30 @@ void main() {
       shoppingLines: 1,
     );
 
+    testWidgets('the pick step scrolls on a short screen (keyboard up)', (
+      t,
+    ) async {
+      repo.gaps = [minyak];
+      repo.catalogue = [for (var i = 1; i <= 6; i++) 'Minyak $i'];
+      await pump(t, const OwnerIngredientsPage());
+      t.view.physicalSize = const Size(1080, 1300); // ~500 dp tall at 2.6
+      await t.tap(find.byKey(const ValueKey('gap-minyak')));
+      await t.pumpAndSettle(const Duration(milliseconds: 300));
+      expect(t.takeException(), isNull);
+      await t.scrollUntilVisible(
+        find.byKey(const ValueKey('gap-new')),
+        100,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey('pick')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey('gap-new')).hitTestable(),
+        findsOneWidget,
+      );
+    });
+
     testWidgets(
       'a gap: pick the ingredient, see what the name links, save; taken names are said',
       (t) async {
@@ -535,7 +855,7 @@ void main() {
         );
         expect(
           t
-              .widget<FilledButton>(find.byKey(const ValueKey('gap-save')))
+              .widget<BusyButton>(find.byKey(const ValueKey('gap-save')))
               .onPressed,
           isNull,
         );
@@ -566,7 +886,12 @@ void main() {
 
         Navigator.of(t.element(find.text('Links 3 lines'))).pop();
         await t.pumpAndSettle();
-        repo.gapAnswer = (name: 'daun salam', ingredient: null);
+        repo.gapAnswer = (
+          name: 'daun salam',
+          ingredient: null,
+          category: 'Rempah',
+          types: const [],
+        );
         await t.tap(find.byKey(const ValueKey('gap-minyak')));
         await t.pumpAndSettle(const Duration(milliseconds: 300));
         await t.tap(find.byKey(const ValueKey('gap-ai')));
@@ -574,6 +899,14 @@ void main() {
         await t.tap(find.text('New ingredient: daun salam'));
         await t.pumpAndSettle(const Duration(milliseconds: 400));
         expect(find.widgetWithText(TextField, 'Daun salam'), findsOneWidget);
+        // Its category from the AI, one of ours: ready to save.
+        expect(find.text('Rempah'), findsOneWidget);
+        expect(
+          t
+              .widget<BusyButton>(find.byKey(const ValueKey('gap-save')))
+              .onPressed,
+          isNotNull,
+        );
       },
     );
 
@@ -605,6 +938,63 @@ void main() {
         expect(repo.aliases, [('Bawang putih', 'garlic')]);
         expect(repo.aliasBatches, 1);
         expect(find.text('1 alias saved, 3 lines linked'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'one AI button: the match and the other kinds (the match not twice); a new kind opens the form, ours links',
+      (t) async {
+        repo.gaps = [minyak];
+        repo.catalogue = ['Minyak masak', 'Ghee'];
+        repo.gapAnswer = (
+          name: 'minyak masak',
+          ingredient: 'Minyak masak',
+          category: 'Lain',
+          types: [
+            (
+              name: 'Minyak masak',
+              category: 'Lain',
+              ingredient: 'Minyak masak',
+            ),
+            (name: 'Minyak sapi', category: 'Lain', ingredient: null),
+            (name: 'Ghee', category: 'Lain', ingredient: 'Ghee'),
+          ],
+        );
+        await pump(t, const OwnerIngredientsPage());
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.enterText(find.byKey(const ValueKey('gap-search')), 'minyak');
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        expect(
+          find.byKey(const ValueKey('gap-types')),
+          findsNothing,
+        ); // one AI button only
+        await t.tap(find.byKey(const ValueKey('gap-ai')));
+        await t.pumpAndSettle();
+        expect(find.text('Same as Minyak masak'), findsOneWidget);
+        // Answered: the button gives way to the answer's heading; no AI chip on the rows to look like a second one.
+        expect(find.byKey(const ValueKey('gap-ai')), findsNothing);
+        expect(find.text('AI suggestions'), findsOneWidget);
+        expect(find.byType(AiBadge), findsNothing);
+        expect(
+          find.byKey(const ValueKey('gap-type-Minyak masak')),
+          findsNothing,
+        );
+        expect(find.byKey(const ValueKey('gap-type-Ghee')), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('gap-type-Minyak sapi')));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.widgetWithText(TextField, 'Minyak sapi'), findsOneWidget);
+        expect(find.text('Lain'), findsOneWidget);
+
+        Navigator.of(t.element(find.text('Lain'))).pop();
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.byKey(const ValueKey('gap-ai')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('gap-type-Ghee')));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.text('Links 3 lines'), findsOneWidget); // its alias step
       },
     );
 
@@ -755,6 +1145,7 @@ void main() {
           find.text('New brand: Kara. Added when you save.'),
           findsOneWidget,
         );
+        expect(find.byKey(const ValueKey('catalogue-photo')), findsOneWidget);
         // One Save: the maker, the brand, then the product.
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
@@ -762,6 +1153,13 @@ void main() {
           'makers',
           'brands',
           'products',
+        ]);
+        // Open Food Facts' photo, shown before Save, kept with the new product.
+        expect(repo.photoCalls, [
+          (
+            500,
+            'url:https://images.openfoodfacts.org/images/products/kara/front_en.400.jpg',
+          ),
         ]);
         expect(repo.savedRows[1].$3, {
           'name': 'Kara',
@@ -827,6 +1225,92 @@ void main() {
     );
 
     testWidgets(
+      'a product photo: picked (camera or photos) and uploaded on Save; removed on Save',
+      (t) async {
+        const kara = CatalogueProduct(
+          id: 7,
+          name: 'Kara 200ml',
+          ingredient: 'Santan',
+          photo: '0190-old',
+        );
+        // Opened as the app opens it: a sheet (Save pops it).
+        Future<void> open(Widget sheet) async {
+          await pump(
+            t,
+            Builder(
+              builder: (c) => Scaffold(
+                body: TextButton(
+                  onPressed: () =>
+                      showBaseSheet<String>(c, builder: (_) => sheet),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          );
+          await t.tap(find.text('open'));
+          await t.pumpAndSettle();
+          // Tests have no network: the saved photo's load fails while it is shown (blank), not after it goes.
+          await t.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 300)),
+          );
+          await t.pump();
+        }
+
+        await open(
+          CatalogueEditSheet(
+            kind: CatalogueKind.products,
+            row: kara,
+            pick: (_, source) async => '/tmp/${source.name}.jpg',
+          ),
+        );
+        expect(find.byType(CataloguePhoto), findsOneWidget); // the saved one
+        await t.tap(find.byKey(const ValueKey('catalogue-photo-pick')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('photo-gallery')));
+        await t.pumpAndSettle();
+        expect(
+          find.byType(CataloguePhoto),
+          findsNothing,
+        ); // the new one, from the phone
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.photoCalls, [(7, 'path:/tmp/gallery.jpg')]);
+
+        repo.photoCalls.clear();
+        await open(
+          const CatalogueEditSheet(kind: CatalogueKind.products, row: kara),
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-photo-remove')));
+        await t.pumpAndSettle();
+        expect(find.byType(CataloguePhoto), findsNothing);
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.photoCalls, [(7, 'remove')]);
+
+        // The product saves, its photo does not: the sheet still closes (a second Save would add it twice).
+        repo
+          ..savedRows.clear()
+          ..photoError = const ApiException('invalid_image', status: 400);
+        await open(
+          CatalogueEditSheet(
+            kind: CatalogueKind.products,
+            pick: (_, source) async => '/tmp/${source.name}.jpg',
+          ),
+        );
+        await t.enterText(find.byKey(const ValueKey('catalogue-name')), 'Baru');
+        await t.tap(find.byKey(const ValueKey('catalogue-photo-pick')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('photo-gallery')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows, hasLength(1));
+        expect(find.byKey(const ValueKey('catalogue-save')), findsNothing);
+        expect(find.text('Saved. The photo was not saved.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'a fill that finds the product already: edit it instead of adding it again',
       (t) async {
         repo.fillAnswer = (
@@ -840,6 +1324,7 @@ void main() {
           source: 'https://world.openfoodfacts.org/product/9555035703828',
           maker: null,
           similar: [repo.productList.single],
+          photo: null,
         );
         await pump(t, const OwnerCataloguePage());
         await t.tap(find.byKey(const ValueKey('catalogue-add')));

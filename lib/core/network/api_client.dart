@@ -3,6 +3,9 @@ import 'package:dio/dio.dart';
 import '../utils/log.dart';
 import '../storage/token_store.dart';
 
+/// How long a request that waits on the AI may take: the server gives the AI 120 s, and a few calls ask it twice.
+const aiWait = Duration(minutes: 3);
+
 /// The one Dio for the API (`<baseUrl>/api/v1`). Every request carries `X-App-Version` (the API answers 426 when the
 /// app is too old) and, unless `extra: {'auth': false}`, the access token. A 401 on an authenticated request
 /// refreshes the session once (shared by concurrent requests: refresh tokens rotate, so a second refresh with the

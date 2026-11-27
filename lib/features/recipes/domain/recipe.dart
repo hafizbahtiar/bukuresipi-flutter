@@ -227,7 +227,11 @@ class LinePick {
     this.country,
     this.avoided = false,
     this.mine = false,
+    this.photo,
   });
+
+  /// A product's photo id ([CataloguePhoto]); null = none, and always for a brand.
+  final String? photo;
 
   /// 'product' | 'brand'.
   final String kind;
@@ -254,6 +258,7 @@ class LinePick {
     country: p['country'] as String?,
     avoided: p['avoided'] == true,
     mine: p['mine'] == true,
+    photo: p['photo'] as String?,
   );
 
   bool get isBrand => kind == 'brand';
