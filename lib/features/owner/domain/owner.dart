@@ -378,6 +378,8 @@ typedef SentMessage = ({
   int pushSent,
   int pushTotal,
   bool pending,
+  String kind, // 'message' or 'update' (a tap opens Play)
+  String? image, // the photo's public link
   DateTime createdAt,
 });
 
