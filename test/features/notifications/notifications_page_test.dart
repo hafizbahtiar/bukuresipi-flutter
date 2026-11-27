@@ -156,4 +156,14 @@ void main() {
       expect(dot(), isFalse);
     },
   );
+
+  testWidgets('pull to refresh reads the inbox again', (t) async {
+    final api = _FakeApi([item('Old', {'type': 'badge'})], 0);
+    await pump(t, api);
+    api.items = [item('New one', {'type': 'badge'})];
+    await t.fling(find.text('Old'), const Offset(0, 400), 1000);
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+    expect(find.text('New one'), findsOneWidget);
+  });
 }
