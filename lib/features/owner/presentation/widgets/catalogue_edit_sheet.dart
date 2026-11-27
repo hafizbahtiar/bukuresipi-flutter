@@ -338,7 +338,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
           await _repo.saveMaker(id: id, name: name);
         case CatalogueKind.brands:
           final maker = _orNull(_maker);
-          await _repo.saveBrand(
+          final saved = await _repo.saveBrand(
             id: id,
             name: name,
             makerId: maker == null
@@ -347,6 +347,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
                       (_row as CatalogueBrand?)?.makerId,
             country: _orNull(_country),
           );
+          await _savePhoto('brands', saved);
         case CatalogueKind.products:
           if (_fill case final f?
               when f.brandIsNew && !_brandAdded && _orNull(_brand) == null) {
@@ -364,22 +365,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             size: double.tryParse(_size.text.trim().replaceAll(',', '.')),
             unit: _orNull(_unit),
           );
-          // The product is saved: a failed photo only says so (the sheet closes; Save again would add it twice).
-          try {
-            if (_photoPath != null || _photoUrl != null) {
-              await _repo.setProductPhoto(
-                saved,
-                path: _photoPath,
-                url: _photoUrl,
-              );
-            } else if (_photoRemoved && _savedPhoto != null) {
-              await _repo.removeProductPhoto(saved);
-            }
-          } catch (_) {
-            messenger.showSnackBar(
-              SnackBar(content: Text(l.catalogueSavedNoPhoto)),
-            );
-          }
+          await _savePhoto('products', saved);
       }
       widget.onSaved?.call(name);
       if (mounted) Navigator.of(context).pop('saved');
@@ -427,7 +413,88 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     }
   }
 
-  String? get _savedPhoto => (_row as CatalogueProduct?)?.photo;
+  String? get _savedPhoto => switch (_row) {
+    CatalogueProduct p => p.photo,
+    CatalogueBrand b => b.photo,
+    _ => null,
+  };
+
+  /// After the row is saved (a new one needs its id): its photo as picked. A failed photo only says so: the sheet
+  /// still closes (Save again would add the row twice).
+  Future<void> _savePhoto(String kind, int id) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (_photoPath != null || _photoUrl != null) {
+        await _repo.setCataloguePhoto(
+          kind,
+          id,
+          path: _photoPath,
+          url: _photoUrl,
+        );
+      } else if (_photoRemoved && _savedPhoto != null) {
+        await _repo.removeCataloguePhoto(kind, id);
+      }
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l.catalogueSavedNoPhoto)));
+    }
+  }
+
+  List<String> _candidates = const [];
+  bool _searching = false;
+
+  /// "Cari dengan AI" for a brand's logo: its site's pictures to pick from (metered); nothing saved.
+  Future<void> _searchPhoto() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final name = _name.text.trim();
+    if (name.length < 2) return;
+    setState(() => _searching = true);
+    try {
+      final found = await _repo.brandPhotoCandidates(name);
+      if (!mounted) return;
+      setState(() => _candidates = found);
+      if (found.isEmpty) {
+        messenger.showSnackBar(SnackBar(content: Text(l.catalogueLogoNone)));
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
+  /// The pictures "Cari dengan AI" found: one tap takes it (kept on Save).
+  Widget _candidateGrid() => Wrap(
+    spacing: spaceS,
+    runSpacing: spaceS,
+    children: [
+      for (final (i, url) in _candidates.indexed)
+        InkWell(
+          key: ValueKey('photo-candidate-$i'),
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() {
+            _photoUrl = url;
+            _photoPath = null;
+            _photoRemoved = false;
+            _candidates = const [];
+          }),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ColoredBox(
+              color: Notebook.of(context).mist, // a white logo still shows
+              child: Image.network(
+                url,
+                width: 72,
+                height: 72,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox.square(dimension: 72),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 
   Future<void> _pickPhoto() async {
     final l = AppLocalizations.of(context);
@@ -613,6 +680,19 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
               options: [l.catalogueNone, ...widget.countries],
               allowTyped: true,
             ),
+            gap,
+            _photoField(l),
+            const SizedBox(height: spaceXs),
+            Align(
+              alignment: Alignment.centerRight,
+              child: AiButton(
+                key: const ValueKey('catalogue-photo-search'),
+                label: l.catalogueLogoSearch,
+                busy: _searching,
+                onPressed: _busy ? null : _searchPhoto,
+              ),
+            ),
+            if (_candidates.isNotEmpty) ...[gap, _candidateGrid()],
           ],
           if (widget.kind == CatalogueKind.products) ...[
             gap,

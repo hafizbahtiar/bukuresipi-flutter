@@ -225,7 +225,9 @@ abstract interface class OwnerRepository {
   /// New when [id] is null. Throws 'name_taken' (makers and brands, ignoring case) or 'not_found' (a link that is
   /// gone, or a product's ingredient name the catalogue does not have).
   Future<void> saveMaker({int? id, required String name});
-  Future<void> saveBrand({
+
+  /// Returns its id (a new brand's, for its logo).
+  Future<int> saveBrand({
     int? id,
     required String name,
     int? makerId,
@@ -247,11 +249,21 @@ abstract interface class OwnerRepository {
     String? unit,
   });
 
-  /// Product [id]'s photo: a local JPEG [path] (camera / gallery), or Open Food Facts' [url] from a fill. Replaces
-  /// the one before. Throws 'invalid_image', 'not_found'.
-  Future<void> setProductPhoto(int id, {String? path, String? url});
+  /// A product's photo or a brand's logo ([kind] 'products' | 'brands'): a local JPEG [path] (camera / gallery), or
+  /// a [url] (a product: Open Food Facts' from a fill; a brand: one of [brandPhotoCandidates]). Replaces the one
+  /// before. Throws 'invalid_image', 'not_found'.
+  Future<void> setCataloguePhoto(
+    String kind,
+    int id, {
+    String? path,
+    String? url,
+  });
 
-  Future<void> removeProductPhoto(int id);
+  Future<void> removeCataloguePhoto(String kind, int id);
+
+  /// "Cari dengan AI": photo links for a brand's logo from its own site (metered web search). Nothing saved.
+  /// Throws 'ai_unavailable'.
+  Future<List<String>> brandPhotoCandidates(String name);
 
   /// [kind] is 'makers', 'brands' or 'products'. What used it stays, without it.
   Future<void> deleteCatalogueRow(String kind, int id);

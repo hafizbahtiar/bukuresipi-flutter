@@ -59,6 +59,8 @@ with Open (`pushPath`) and `inboxChanged` re-reads the bell.
 Product photos: `CataloguePhoto(id)` (`core/widgets/catalogue_photo.dart`, public link, disk cache, ≤512 px so no
 resize) on the picker, "see all products" and the shopping row; the owner sets one on the product form (camera /
 photos, or Open Food Facts' from the fill, sent after Save). Credits names Open Food Facts (CC BY-SA photos).
+Brand logos: the brand form's photo field + "Cari logo dengan AI" (pictures from its site, tap one), sent after Save;
+a product without its own photo shows its brand's logo (the server picks), a brand pick shows its logo.
 
 Ingredients (owner): Owner > Bahan dan nama lain (`owner_ingredient_list_page.dart`, also the gaps page's ⋮) lists
 every ingredient; its page (`owner_ingredient_page.dart`, `/owner/ingredient/:id`) only shows (tabs: other names,

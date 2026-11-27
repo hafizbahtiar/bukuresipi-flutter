@@ -784,6 +784,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
               maker: b['maker'] as String?,
               country: b['country'] as String?,
               products: b['products'] as int,
+              photo: b['photo'] as String?,
             ),
         ],
         next: j['next'] as int?,
@@ -832,7 +833,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
       _saveRow('makers', id, {'name': name});
 
   @override
-  Future<void> saveBrand({
+  Future<int> saveBrand({
     int? id,
     required String name,
     int? makerId,
@@ -860,9 +861,14 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<void> setProductPhoto(int id, {String? path, String? url}) => apiCall(
+  Future<void> setCataloguePhoto(
+    String kind,
+    int id, {
+    String? path,
+    String? url,
+  }) => apiCall(
     () async => _dio.put<void>(
-      '/owner/catalogue/products/$id/photo',
+      '/owner/catalogue/$kind/$id/photo',
       data: path == null
           ? {'url': url}
           : FormData.fromMap({
@@ -875,8 +881,20 @@ class OwnerRepositoryImpl implements OwnerRepository {
   );
 
   @override
-  Future<void> removeProductPhoto(int id) =>
-      apiCall(() => _dio.delete<void>('/owner/catalogue/products/$id/photo'));
+  Future<void> removeCataloguePhoto(String kind, int id) =>
+      apiCall(() => _dio.delete<void>('/owner/catalogue/$kind/$id/photo'));
+
+  @override
+  Future<List<String>> brandPhotoCandidates(String name) => apiCall(
+    () async =>
+        ((await _dio.post<Map<String, dynamic>>(
+                  '/owner/catalogue/brands/photo/search',
+                  data: {'name': name},
+                  options: Options(receiveTimeout: aiWait),
+                )).data!['candidates']
+                as List)
+            .cast<String>(),
+  );
 
   @override
   Future<void> deleteCatalogueRow(String kind, int id) =>

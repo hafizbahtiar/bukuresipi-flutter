@@ -1157,6 +1157,7 @@ void main() {
         // Open Food Facts' photo, shown before Save, kept with the new product.
         expect(repo.photoCalls, [
           (
+            'products',
             500,
             'url:https://images.openfoodfacts.org/images/products/kara/front_en.400.jpg',
           ),
@@ -1274,7 +1275,7 @@ void main() {
         ); // the new one, from the phone
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
-        expect(repo.photoCalls, [(7, 'path:/tmp/gallery.jpg')]);
+        expect(repo.photoCalls, [('products', 7, 'path:/tmp/gallery.jpg')]);
 
         repo.photoCalls.clear();
         await open(
@@ -1285,7 +1286,7 @@ void main() {
         expect(find.byType(CataloguePhoto), findsNothing);
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
-        expect(repo.photoCalls, [(7, 'remove')]);
+        expect(repo.photoCalls, [('products', 7, 'remove')]);
 
         // The product saves, its photo does not: the sheet still closes (a second Save would add it twice).
         repo
@@ -1307,6 +1308,48 @@ void main() {
         expect(repo.savedRows, hasLength(1));
         expect(find.byKey(const ValueKey('catalogue-save')), findsNothing);
         expect(find.text('Saved. The photo was not saved.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "a brand's logo: Cari dengan AI lists its site's pictures; the one picked is kept on Save",
+      (t) async {
+        Future<void> open(Widget sheet) async {
+          await pump(
+            t,
+            Builder(
+              builder: (c) => Scaffold(
+                body: TextButton(
+                  onPressed: () =>
+                      showBaseSheet<String>(c, builder: (_) => sheet),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          );
+          await t.tap(find.text('open'));
+          await t.pumpAndSettle();
+        }
+
+        await open(
+          const CatalogueEditSheet(
+            kind: CatalogueKind.brands,
+            row: CatalogueBrand(id: 3, name: 'Kara'),
+          ),
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-photo-search')));
+        await t.pumpAndSettle();
+        expect(repo.candidateSearches, ['Kara']);
+        expect(find.byKey(const ValueKey('photo-candidate-1')), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('photo-candidate-0')));
+        await t.pumpAndSettle();
+        expect(find.byKey(const ValueKey('photo-candidate-1')), findsNothing);
+        expect(find.byKey(const ValueKey('catalogue-photo')), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.photoCalls, [
+          ('brands', 3, 'url:https://kara.test/logo.png'),
+        ]);
       },
     );
 
