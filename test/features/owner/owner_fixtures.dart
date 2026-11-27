@@ -335,7 +335,8 @@ class FakeOwner implements OwnerRepository {
     return fillAnswer;
   }
 
-  final messages = <({String title, String body, String? to, String kind})>[];
+  final messages =
+      <({String title, String body, String? to, String kind, String? image})>[];
   List<SentMessage> sent = [];
 
   @override
@@ -344,7 +345,14 @@ class FakeOwner implements OwnerRepository {
     required String body,
     String? to,
     String kind = 'message',
-  }) async => messages.add((title: title, body: body, to: to, kind: kind));
+    String? image,
+  }) async => messages.add((
+    title: title,
+    body: body,
+    to: to,
+    kind: kind,
+    image: image,
+  ));
 
   @override
   Future<List<SentMessage>> sentMessages() async => sent;

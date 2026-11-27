@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../places/presentation/widgets/owner_panel.dart';
@@ -14,10 +18,13 @@ import '../../domain/owner_repository.dart';
 /// the same sheet; Back returns to them); the app update one is sent as kind update (a tap opens Play). Sends it
 /// itself; pops true once sent.
 class MessageSheet extends StatefulWidget {
-  const MessageSheet({super.key, this.toId, this.toEmail});
+  const MessageSheet({super.key, this.toId, this.toEmail, this.pick});
 
   final String? toId;
   final String? toEmail;
+
+  /// Picks and crops the photo (tests pass a fake); null = [pickPhoto]. A local JPEG path, null = backed out.
+  final Future<String?> Function(BuildContext, ImageSource)? pick;
 
   @override
   State<MessageSheet> createState() => _MessageSheetState();
@@ -31,8 +38,9 @@ class _MessageSheetState extends State<MessageSheet> {
   Map<String, String> _ids = const {}; // email -> user id, for the To field
   bool _busy = false;
   Object? _error;
-  bool _picked = false; // the template step is done: the form shows
+  String _step = 'templates'; // then 'form'; 'photo' = camera or photos
   bool _forward = true;
+  String? _image; // the photo's local path
   String _kind = 'message';
 
   @override
@@ -54,6 +62,7 @@ class _MessageSheetState extends State<MessageSheet> {
         body: _body.text.trim(),
         to: widget.toId ?? _toId,
         kind: _kind,
+        image: _image,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -103,16 +112,52 @@ class _MessageSheetState extends State<MessageSheet> {
     _title.text = t?.$2 ?? '';
     _body.text = t?.$3 ?? '';
     _kind = n == 1 ? 'update' : 'message';
-    _forward = true;
-    _picked = true;
+    _go('form');
   });
+
+  void _go(String step, {bool forward = true}) => setState(() {
+    _forward = forward;
+    _step = step;
+  });
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    final pick =
+        widget.pick ??
+        (context, source) => pickPhoto(
+          context,
+          ratios: [
+            ('2:1', 2),
+            ('1:1', 1),
+            ('—', null),
+          ], // 2:1 fills an expanded push
+          source: source,
+        );
+    final path = await pick(context, source);
+    if (!mounted) return;
+    setState(() => _image = path ?? _image);
+    _go('form', forward: false);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SheetSwitcher(
       forward: _forward,
-      child: _picked ? _form(l) : _templateStep(l),
+      child: switch (_step) {
+        'form' => _form(l),
+        'photo' => Column(
+          key: const ValueKey('message-step-photo'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SheetStepTitle(
+              title: l.ownerMessagePhoto,
+              onBack: () => _go('form', forward: false),
+            ),
+            PhotoSourceTiles(camera: l.coverCamera, onPick: _pickPhoto),
+          ],
+        ),
+        _ => _templateStep(l),
+      },
     );
   }
 
@@ -162,12 +207,7 @@ class _MessageSheetState extends State<MessageSheet> {
         children: [
           SheetStepTitle(
             title: l.ownerMessageNew,
-            onBack: _busy
-                ? () {}
-                : () => setState(() {
-                    _forward = false;
-                    _picked = false;
-                  }),
+            onBack: _busy ? () {} : () => _go('templates', forward: false),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: spaceM),
@@ -210,6 +250,47 @@ class _MessageSheetState extends State<MessageSheet> {
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(labelText: l.ownerMessageBody),
                 ),
+                const SizedBox(height: spaceS),
+                if (_image case final path?)
+                  Stack(
+                    key: const ValueKey('message-photo-preview'),
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(path),
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox(
+                            height: 140,
+                            child: Center(
+                              child: Icon(Icons.broken_image_outlined),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: spaceXs,
+                        right: spaceXs,
+                        child: IconButton.filledTonal(
+                          key: const ValueKey('message-photo-remove'),
+                          tooltip: l.ownerMessagePhotoRemove,
+                          icon: const Icon(Icons.close),
+                          onPressed: _busy
+                              ? null
+                              : () => setState(() => _image = null),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  OutlinedButton.icon(
+                    key: const ValueKey('message-photo'),
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(l.ownerMessagePhoto),
+                    onPressed: _busy ? null : () => _go('photo'),
+                  ),
                 if (_error case final e?)
                   Padding(
                     padding: const EdgeInsets.only(top: spaceXs),
