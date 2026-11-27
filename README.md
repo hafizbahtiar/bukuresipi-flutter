@@ -16,7 +16,7 @@ flutter test
 
 `./setup.sh` asks apk/aab and dev/prod, then cleans, builds and copies the file to `apk/` or `aab/` as
 `bukuresipi-v<version>(<code>).aab` (`-dev` for a debug build). Prod needs `android/key.properties` (upload key in
-`~/Documents/Keystore`). Raise `version:` in `pubspec.yaml` before every upload: the `+code` must go up each time.
+`~/.keystore`; its backup is `~/Documents/Keystore` in iCloud, which the build never reads: macOS guards Documents). Raise `version:` in `pubspec.yaml` before every upload: the `+code` must go up each time.
 
 Updates: Home shows an **Update** chip when Google Play has a newer version (`in_app_update`; only on a build installed
 from Play: the closed test track, not a sideloaded APK). The backend's `MIN_APP_VERSION` forces an update (426 screen);

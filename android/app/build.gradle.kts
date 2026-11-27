@@ -1,6 +1,7 @@
 import java.util.Properties
 
-// Release signing: android/key.properties (git-ignored) points at the upload key in ~/Documents/Keystore (iCloud).
+// Release signing: android/key.properties (git-ignored) points at the upload key in ~/.keystore; ~/Documents/Keystore
+// (iCloud) is its backup, not read by the build (macOS guards Documents: "Operation not permitted").
 val keyProps = Properties().apply {
     rootProject.file("key.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
