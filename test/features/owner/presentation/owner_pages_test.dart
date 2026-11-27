@@ -299,6 +299,8 @@ void main() {
       repo.users = [ownerUser('ali@b.c'), ownerUser('siti@b.c')];
       repo.sent = [
         (
+          id: 1,
+
           title: 'Kemas kini',
           body: 'Versi baharu.',
           to: null,
@@ -333,11 +335,42 @@ void main() {
     },
   );
 
+  testWidgets(
+    'the owner deletes a sent message: asks first, then it is gone from the list',
+    (t) async {
+      repo.sent = [
+        (
+          id: 7,
+          title: 'Salah',
+          body: 'Tersilap.',
+          to: null,
+          pushSent: 3,
+          pushTotal: 3,
+          pending: false,
+          createdAt: DateTime(2026, 11, 20, 8),
+        ),
+      ];
+      await pump(t, const OwnerMessagesPage());
+      await t.longPress(find.byKey(const ValueKey('sent-0')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Delete'));
+      await t.pumpAndSettle();
+      expect(find.textContaining("every recipient's inbox"), findsOneWidget);
+      expect(repo.deletedMessages, isEmpty); // not before it is confirmed
+      await t.tap(find.text('Delete').last); // the dialog's button
+      await t.pumpAndSettle();
+      expect(repo.deletedMessages, [7]);
+      expect(find.text('Salah'), findsNothing);
+    },
+  );
+
   testWidgets('a message still pushing is read again until it is done', (
     t,
   ) async {
     repo.sent = [
       (
+        id: 2,
+
         title: 'Hai',
         body: 'x',
         to: 'ali@b.c',
@@ -351,6 +384,8 @@ void main() {
     expect(find.text('Pushing…'), findsOneWidget);
     repo.sent = [
       (
+        id: 3,
+
         title: 'Hai',
         body: 'x',
         to: 'ali@b.c',

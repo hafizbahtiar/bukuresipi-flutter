@@ -189,6 +189,9 @@ abstract interface class OwnerRepository {
   /// What the owner sent, newest first.
   Future<List<SentMessage>> sentMessages();
 
+  /// Takes a sent message back: out of every inbox; a push still going stops. Throws 'not_found'.
+  Future<void> deleteMessage(int id);
+
   /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
   /// Throws 'ai_unavailable'.
   Future<GapSuggestion> suggestGap(String line);

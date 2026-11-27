@@ -24,15 +24,15 @@ class MessageSheet extends StatefulWidget {
 class _MessageSheetState extends State<MessageSheet> {
   final _title = TextEditingController();
   final _body = TextEditingController();
-  late ({String? id, String? email}) _to = (
-    id: widget.toId,
-    email: widget.toEmail,
-  );
+  final _to = TextEditingController(); // the To field: "Everyone" or an email
+  String? _toId; // null = everyone
+  Map<String, String> _ids = const {}; // email -> user id, for the To field
   bool _busy = false;
   Object? _error;
 
   @override
   void dispose() {
+    _to.dispose();
     _title.dispose();
     _body.dispose();
     super.dispose();
@@ -47,7 +47,7 @@ class _MessageSheetState extends State<MessageSheet> {
       await context.read<OwnerRepository>().sendMessage(
         title: _title.text.trim(),
         body: _body.text.trim(),
-        to: _to.id,
+        to: widget.toId ?? _toId,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -57,22 +57,24 @@ class _MessageSheetState extends State<MessageSheet> {
     }
   }
 
-  // shortcut: the newest users the server lists (its search box filters them); a server search when there are many.
-  Future<void> _pickTo() async {
-    final l = AppLocalizations.of(context);
-    final users = await context.read<OwnerRepository>().listUsers();
-    if (!mounted) return;
-    final picked = await showBasePicker<({String? id, String? email})>(
-      context,
-      title: l.ownerMessageToLabel,
-      options: [
-        (id: null, email: null),
-        for (final u in users) (id: u.id, email: u.email),
-      ],
-      selected: _to,
-      label: (o) => o.email ?? l.ownerMessageEveryone,
-    );
-    if (picked != null && mounted) setState(() => _to = picked);
+  @override
+  void initState() {
+    super.initState();
+    if (widget.toId != null) return;
+    // shortcut: the newest users the server lists (the picker's search filters them); a server search when there are many.
+    context.read<OwnerRepository>().listUsers().then((users) {
+      if (mounted) {
+        setState(() => _ids = {for (final u in users) u.email: u.id});
+      }
+    }, onError: (_) {}); // offline: everyone is still offered
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_to.text.isEmpty) {
+      _to.text = AppLocalizations.of(context).ownerMessageEveryone;
+    }
   }
 
   @override
@@ -98,15 +100,12 @@ class _MessageSheetState extends State<MessageSheet> {
             )
           else ...[
             const SizedBox(height: spaceS),
-            BaseTile(
+            PickerField(
               key: const ValueKey('message-to'),
-              style: TileStyle.plain, // the sheet's own gutter: an outlined tile would indent twice
-              dense: true,
-              leading: const Icon(Icons.person_outline),
-              title: _to.email ?? l.ownerMessageEveryone,
-              subtitle: l.ownerMessageToLabel,
-              trailing: const Icon(Icons.expand_more),
-              onTap: _busy ? null : _pickTo,
+              controller: _to,
+              label: l.ownerMessageToLabel,
+              options: [l.ownerMessageEveryone, ..._ids.keys],
+              onPicked: (picked) => setState(() => _toId = _ids[picked]),
             ),
           ],
           const SizedBox(height: spaceM),

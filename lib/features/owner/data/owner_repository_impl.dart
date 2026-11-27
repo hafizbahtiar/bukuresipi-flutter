@@ -631,6 +631,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
     return [
       for (final m in (j['sent'] as List).cast<Map<String, dynamic>>())
         (
+          id: m['id'] as int,
           title: m['title'] as String,
           body: m['body'] as String,
           to: m['to'] as String?,
@@ -641,6 +642,10 @@ class OwnerRepositoryImpl implements OwnerRepository {
         ),
     ];
   });
+
+  @override
+  Future<void> deleteMessage(int id) =>
+      apiCall(() => _dio.delete<void>('/owner/notifications/$id'));
 
   @override
   Future<GapSuggestion> suggestGap(String line) => apiCall(() async {
