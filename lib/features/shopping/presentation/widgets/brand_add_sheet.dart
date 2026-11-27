@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
-import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../shopping_controller.dart';
 import 'products_sheet.dart';
@@ -79,47 +78,51 @@ class _BrandAddSheetState extends State<BrandAddSheet> {
               onChanged: widget.onChanged,
               onBack: () => _open(null),
             )
+          // A floating sheet: the spaceM gutter and BaseTile rows (CLAUDE.md), as the other sheets.
           : ListView(
               key: const ValueKey('search'),
               shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: spaceM),
+              padding: const EdgeInsets.only(bottom: spaceS),
               children: [
-                NotebookRow(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l.brandsAdd,
-                        style: text.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        l.brandsAddHint,
-                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                      ),
-                    ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                  child: Text(l.brandsAdd, style: text.titleMedium),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    spaceM,
+                    spaceXs,
+                    spaceM,
+                    0,
+                  ),
+                  child: Text(
+                    l.brandsAddHint,
+                    style: text.bodySmall?.copyWith(color: nb.inkSoft),
                   ),
                 ),
-                NotebookRow(
-                  mark: Icon(Icons.search, size: 20, color: nb.inkSoft),
+                Padding(
+                  padding: const EdgeInsets.all(spaceM),
                   child: TextField(
                     key: const ValueKey('brands-add-query'),
                     controller: _query,
                     autofocus: true,
-                    decoration: InputDecoration.collapsed(
-                      hintText: l.brandsFindIngredient,
+                    decoration: InputDecoration(
+                      labelText: l.brandsFindIngredient,
+                      prefixIcon: const Icon(Icons.search),
                     ),
                     onChanged: _find,
                   ),
                 ),
                 for (final name in _found)
-                  NotebookRow(
-                    key: ValueKey('brands-add-$name'),
-                    minHeight: 56,
-                    onTap: () => _open(name),
-                    trailing: const Icon(Icons.chevron_right),
-                    child: Text(name),
+                  Padding(
+                    padding: const EdgeInsets.only(top: spaceXs),
+                    child: BaseTile(
+                      key: ValueKey('brands-add-$name'),
+                      title: name,
+                      dense: true,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _open(name),
+                    ),
                   ),
               ],
             ),
