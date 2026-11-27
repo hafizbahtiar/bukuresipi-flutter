@@ -3740,6 +3740,8 @@
   },
   "ownerGapAiSuggest": "Suggest with AI",
   "@ownerGapAiSuggest": {},
+  "ownerGapAiResults": "AI suggestions",
+  "@ownerGapAiResults": {},
   "ownerGapAiSame": "Same as {ingredient}",
   "@ownerGapAiSame": {
     "placeholders": {
@@ -4040,8 +4042,8 @@
   "@ownerMessageTitle": {},
   "ownerMessageBody": "Message",
   "@ownerMessageBody": {},
-  "ownerMessagePush": "Push to their phones too",
-  "@ownerMessagePush": {},
+  "ownerMessageToLabel": "To",
+  "@ownerMessageToLabel": {},
   "ownerMessageSend": "Send",
   "@ownerMessageSend": {},
   "ownerMessageSending": "Sending…",
@@ -4133,7 +4135,9 @@
       }
     }
   },
-  "ownerIngredientSimilar": "Ingredients that may be the same",
+  "ownerIngredientTabDetails": "Details",
+  "@ownerIngredientTabDetails": {},
+  "ownerIngredientSimilar": "May be the same",
   "@ownerIngredientSimilar": {},
   "ownerIngredientNoSimilar": "None found.",
   "@ownerIngredientNoSimilar": {},

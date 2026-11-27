@@ -269,7 +269,7 @@ void main() {
     expect(repo.loggedOut, ['u-ali@b.c']);
   });
 
-  testWidgets('the owner sends one user a notification, push on', (t) async {
+  testWidgets('the owner sends one user a notification', (t) async {
     repo.users = [ownerUser('ali@b.c')];
     await pump(t, const OwnerUsersPage());
     await t.tap(find.text('ali@b.c'));
@@ -288,14 +288,15 @@ void main() {
     await t.tap(send);
     await t.pumpAndSettle();
     expect(repo.messages, [
-      (title: 'Hai', body: 'Resipi baharu.', to: 'u-ali@b.c', push: true),
+      (title: 'Hai', body: 'Resipi baharu.', to: 'u-ali@b.c'),
     ]);
     expect(find.text('Sent'), findsOneWidget);
   });
 
   testWidgets(
-    'Send notifications: what was sent, and a message to everyone, inbox only',
+    'Send notifications: what was sent; a new one to everyone or to a user picked in the sheet',
     (t) async {
+      repo.users = [ownerUser('ali@b.c'), ownerUser('siti@b.c')];
       repo.sent = [
         (
           title: 'Kemas kini',
@@ -306,37 +307,63 @@ void main() {
           pending: false,
           createdAt: DateTime(2026, 11, 20, 9),
         ),
-        (
-          title: 'Hai',
-          body: 'x',
-          to: 'ali@b.c',
-          pushSent: 0,
-          pushTotal: 2,
-          pending: true,
-          createdAt: DateTime(2026, 11, 20, 8),
-        ),
       ];
       await pump(t, const OwnerMessagesPage());
       expect(find.text('40 of 42 phones'), findsOneWidget);
-      expect(find.text('Pushing…'), findsOneWidget);
-      expect(find.text('ali@b.c'), findsOneWidget);
       await t.tap(find.byKey(const ValueKey('messages-new')));
       await t.pumpAndSettle();
-      expect(find.text('To Everyone'), findsOneWidget);
-      await t.enterText(find.byKey(const ValueKey('message-title')), 'Senyap');
-      await t.enterText(
-        find.byKey(const ValueKey('message-body')),
-        'Tiada push.',
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('message-to')),
+          matching: find.text('Everyone'),
+        ),
+        findsOneWidget,
       );
-      await t.tap(find.byKey(const ValueKey('message-push')));
+      expect(find.byKey(const ValueKey('message-push')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('message-to')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('siti@b.c'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const ValueKey('message-title')), 'Hai');
+      await t.enterText(find.byKey(const ValueKey('message-body')), 'x');
       await t.pump();
       await t.tap(find.byKey(const ValueKey('message-send')));
       await t.pumpAndSettle();
-      expect(repo.messages, [
-        (title: 'Senyap', body: 'Tiada push.', to: null, push: false),
-      ]);
+      expect(repo.messages, [(title: 'Hai', body: 'x', to: 'u-siti@b.c')]);
     },
   );
+
+  testWidgets('a message still pushing is read again until it is done', (
+    t,
+  ) async {
+    repo.sent = [
+      (
+        title: 'Hai',
+        body: 'x',
+        to: 'ali@b.c',
+        pushSent: 0,
+        pushTotal: 2,
+        pending: true,
+        createdAt: DateTime(2026, 11, 20, 8),
+      ),
+    ];
+    await pump(t, const OwnerMessagesPage());
+    expect(find.text('Pushing…'), findsOneWidget);
+    repo.sent = [
+      (
+        title: 'Hai',
+        body: 'x',
+        to: 'ali@b.c',
+        pushSent: 2,
+        pushTotal: 2,
+        pending: false,
+        createdAt: DateTime(2026, 11, 20, 8),
+      ),
+    ];
+    await t.pump(const Duration(seconds: 5));
+    await t.pumpAndSettle();
+    expect(find.text('2 of 2 phones'), findsOneWidget);
+  });
 
   testWidgets('the owner bans a user for 30 days with a reason', (t) async {
     repo.users = [ownerUser('ali@b.c')];
@@ -762,6 +789,10 @@ void main() {
         await t.tap(find.byKey(const ValueKey('gap-ai')));
         await t.pumpAndSettle();
         expect(find.text('Same as Minyak masak'), findsOneWidget);
+        // Answered: the button gives way to the answer's heading; no AI chip on the rows to look like a second one.
+        expect(find.byKey(const ValueKey('gap-ai')), findsNothing);
+        expect(find.text('AI suggestions'), findsOneWidget);
+        expect(find.byType(AiBadge), findsNothing);
         expect(
           find.byKey(const ValueKey('gap-type-Minyak masak')),
           findsNothing,

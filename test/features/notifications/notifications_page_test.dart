@@ -116,4 +116,44 @@ void main() {
       expect(badge().isLabelVisible, isFalse);
     },
   );
+
+  testWidgets(
+    'the bell is read again when a push arrives in the open app and when the app comes back',
+    (t) async {
+      final api = _FakeApi([], 0);
+      await pump(
+        t,
+        api,
+        home: Scaffold(
+          appBar: AppBar(actions: [InboxBell(api: api)]),
+        ),
+      );
+      bool dot() => t
+          .widget<Badge>(
+            find.descendant(
+              of: find.byKey(const ValueKey('feed-inbox')),
+              matching: find.byType(Badge),
+            ),
+          )
+          .isLabelVisible;
+      expect(dot(), isFalse);
+      api.unread = 1;
+      inboxChanged.value++; // app.dart: a push arrived while the app is open
+      await t.pumpAndSettle();
+      expect(dot(), isTrue);
+      api.unread = 0;
+      for (final s in [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        t.binding.handleAppLifecycleStateChanged(s);
+      }
+      await t.pumpAndSettle();
+      expect(dot(), isFalse);
+    },
+  );
 }

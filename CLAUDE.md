@@ -49,13 +49,15 @@ is a market (a failed read = no tab, so an empty editor can never overwrite save
 Notifications (`features/notifications/`): Home's bell (`InboxBell`, a dot while something is new) opens the inbox:
 every push a phone got plus the owner's messages; opening it marks all read. A row opens what its push opens
 (`push/push_routes.dart` `pushPath`, shared with `app.dart`; a share push goes to `PushController.onTap`). Owner:
-Owner > Send notifications (to everyone) or Users > a user > Send a notification (`MessageSheet`); the server pushes
-them from its cron, so "Sedang dihantar" until done.
+Owner > Send notifications (To: everyone or a picked user) or Users > a user > Send a notification (`MessageSheet`);
+always inbox + push, pushed by the send itself (a big broadcast's rest by the cron). A push in the open app: a banner
+with Open (`pushPath`) and `inboxChanged` re-reads the bell.
 
 Ingredients (owner): Owner > Bahan dan nama lain (`owner_ingredient_list_page.dart`, also the gaps page's ⋮) lists
-every ingredient; its page (`owner_ingredient_page.dart`, `/owner/ingredient/:id`) renames (the old name stays as
-another name), sets the category, adds a name, removes a wrong one (asks with how many lines go back to the gaps), or
-makes a name that is another food its own ingredient ("limau nipis" off Limau: its lines move there).
+every ingredient; its page (`owner_ingredient_page.dart`, `/owner/ingredient/:id`) only shows (tabs: other names,
+may be the same); Edit (`owner_ingredient_edit_page.dart`, `/:id/edit`, EditTabs) renames (the old name stays as
+another name) and sets the category (the check saves), adds a name, removes a wrong one (asks with how many lines go
+back to the gaps), or makes a name that is another food its own ingredient ("limau nipis" off Limau: its lines move there).
 
 ## House components (`core/widgets/`; use them, never a native copy)
 

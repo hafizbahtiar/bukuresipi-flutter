@@ -179,19 +179,18 @@ abstract interface class OwnerRepository {
   /// A new catalogue ingredient; every unlinked line is matched again: how many it linked. Throws 'name_taken'.
   Future<int> addIngredient(String name, String category);
 
-  /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
-  /// Throws 'ai_unavailable'.
-  /// A message to the inbox of one user ([to] = their id) or everyone ([to] null); [push] = to their phones too.
+  /// A message to one user ([to] = their id) or everyone ([to] null): in the inbox and pushed to their phones.
   Future<void> sendMessage({
     required String title,
     required String body,
     String? to,
-    required bool push,
   });
 
   /// What the owner sent, newest first.
   Future<List<SentMessage>> sentMessages();
 
+  /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
+  /// Throws 'ai_unavailable'.
   Future<GapSuggestion> suggestGap(String line);
 
   /// AI: aliases for 20 ingredients (fewest aliases first) from [offset], each with the lines it would link;
