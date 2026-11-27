@@ -237,7 +237,8 @@ abstract interface class OwnerRepository {
   /// 'unreadable' (no product on that page), 'ai_unavailable' (no search left).
   Future<ProductFill> fillProduct({String? barcode, String? url, String? name});
 
-  Future<void> saveProduct({
+  /// Returns its id (a new product's, for its photo).
+  Future<int> saveProduct({
     int? id,
     required String name,
     String? ingredient,
@@ -245,6 +246,12 @@ abstract interface class OwnerRepository {
     double? size,
     String? unit,
   });
+
+  /// Product [id]'s photo: a local JPEG [path] (camera / gallery), or Open Food Facts' [url] from a fill. Replaces
+  /// the one before. Throws 'invalid_image', 'not_found'.
+  Future<void> setProductPhoto(int id, {String? path, String? url});
+
+  Future<void> removeProductPhoto(int id);
 
   /// [kind] is 'makers', 'brands' or 'products'. What used it stays, without it.
   Future<void> deleteCatalogueRow(String kind, int id);

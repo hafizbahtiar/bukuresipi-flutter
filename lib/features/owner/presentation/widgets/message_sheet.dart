@@ -130,7 +130,8 @@ class _MessageSheetState extends State<MessageSheet> {
             ('1:1', 1),
             ('—', null),
           ], // 2:1 fills an expanded push
-          maxSide: 1024, // FCM drops a push image over 1 MB (it shows without it)
+          maxSide:
+              1024, // FCM drops a push image over 1 MB (it shows without it)
           source: source,
         );
     final path = await pick(context, source);

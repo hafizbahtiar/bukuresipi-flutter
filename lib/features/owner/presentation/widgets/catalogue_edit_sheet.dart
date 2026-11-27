@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_exception.dart';
@@ -10,6 +12,8 @@ import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/utils/live_scanner.dart';
 import '../../../../core/widgets/ai_button.dart';
 import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/catalogue_photo.dart';
+import '../../../../core/widgets/photo_editor_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
@@ -45,7 +49,11 @@ class CatalogueEditSheet extends StatefulWidget {
     this.initialName,
     this.initialIngredient,
     this.onSaved,
+    this.pick,
   });
+
+  /// Picks and crops a product photo (tests pass a fake); null = [pickPhoto]. A local JPEG path, null = backed out.
+  final Future<String?> Function(BuildContext, ImageSource)? pick;
 
   /// A new row's name (and a product's ingredient and fill), e.g. from a recipe author's suggestion.
   final String? initialName;
@@ -88,6 +96,12 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   bool _deleting = false; // which button spins while busy
   bool _taken = false;
   bool _unknown = false;
+
+  // A product's photo: the saved one ([CatalogueProduct.photo]) unless replaced by a local pick or a fill's link,
+  // or removed. Sent after the product is saved (a new one needs its id first).
+  String? _photoPath;
+  String? _photoUrl;
+  bool _photoRemoved = false;
 
   OwnerRepository get _repo => context.read<OwnerRepository>();
 
@@ -133,6 +147,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   void _editInstead(CatalogueProduct p) => setState(() {
     _row = p;
     _fill = null;
+    _photoUrl = null;
     _fillFrom.clear();
     _taken = false;
     _unknown = false;
@@ -206,6 +221,13 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             (_size.text.trim().isEmpty && _unit.text.trim().isEmpty)) {
           _size.text = _sizeText(f.size);
           _unit.text = f.unit ?? '';
+        }
+        // Its photo, unless the product has one (or one was picked): the owner can still remove it.
+        if (f.photo != null &&
+            _photoPath == null &&
+            (_savedPhoto == null || _photoRemoved)) {
+          _photoUrl = f.photo;
+          _photoRemoved = false;
         }
         _taken = false;
         _unknown = false;
@@ -331,7 +353,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             await _addNewBrand(f.brand!);
           }
           final brand = _orNull(_brand);
-          await _repo.saveProduct(
+          final saved = await _repo.saveProduct(
             id: id,
             name: name,
             ingredient: _orNull(_ingredient),
@@ -342,6 +364,15 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             size: double.tryParse(_size.text.trim().replaceAll(',', '.')),
             unit: _orNull(_unit),
           );
+          if (_photoPath != null || _photoUrl != null) {
+            await _repo.setProductPhoto(
+              saved,
+              path: _photoPath,
+              url: _photoUrl,
+            );
+          } else if (_photoRemoved && _savedPhoto != null) {
+            await _repo.removeProductPhoto(saved);
+          }
       }
       widget.onSaved?.call(name);
       if (mounted) Navigator.of(context).pop('saved');
@@ -387,6 +418,92 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  String? get _savedPhoto => (_row as CatalogueProduct?)?.photo;
+
+  Future<void> _pickPhoto() async {
+    final l = AppLocalizations.of(context);
+    final source = await showPhotoSourceSheet(context, camera: l.coverCamera);
+    if (source == null || !mounted) return;
+    final pick =
+        widget.pick ??
+        (context, source) => pickPhoto(
+          context,
+          ratios: [('1:1', 1)], // shown square everywhere
+          maxSide: 512, // a thumbnail at most: decoded whole on every list row
+          source: source,
+        );
+    final path = await pick(context, source);
+    if (path == null || !mounted) return;
+    setState(() {
+      _photoPath = path;
+      _photoUrl = null;
+      _photoRemoved = false;
+    });
+  }
+
+  /// The photo as it will be saved: a local pick, a fill's link, the saved one, or none (the pick button).
+  Widget _photoField(AppLocalizations l) {
+    const side = 72.0;
+    final Widget? shown = switch ((
+      _photoPath,
+      _photoUrl,
+      _photoRemoved ? null : _savedPhoto,
+    )) {
+      (final path?, _, _) => Image.file(
+        File(path),
+        width: side,
+        height: side,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox.square(dimension: side),
+      ),
+      (_, final url?, _) => Image.network(
+        url,
+        width: side,
+        height: side,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox.square(dimension: side),
+      ),
+      (_, _, final id?) => CataloguePhoto(id, size: side),
+      _ => null,
+    };
+    if (shown == null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          key: const ValueKey('catalogue-photo-pick'),
+          icon: const Icon(Icons.add_photo_alternate_outlined),
+          label: Text(l.catalogueProductPhoto),
+          onPressed: _busy ? null : _pickPhoto,
+        ),
+      );
+    }
+    return Row(
+      key: const ValueKey('catalogue-photo'),
+      children: [
+        ClipRRect(borderRadius: BorderRadius.circular(12), child: shown),
+        const SizedBox(width: spaceS),
+        IconButton(
+          key: const ValueKey('catalogue-photo-pick'),
+          tooltip: l.catalogueProductPhotoChange,
+          icon: const Icon(Icons.photo_camera_outlined),
+          onPressed: _busy ? null : _pickPhoto,
+        ),
+        IconButton(
+          key: const ValueKey('catalogue-photo-remove'),
+          tooltip: l.ownerMessagePhotoRemove,
+          icon: const Icon(Icons.close),
+          onPressed: _busy
+              ? null
+              : () => setState(() {
+                  _photoPath = null;
+                  _photoUrl = null;
+                  _photoRemoved = true;
+                }),
+        ),
+      ],
+    );
   }
 
   @override
@@ -491,6 +608,8 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             ),
           ],
           if (widget.kind == CatalogueKind.products) ...[
+            gap,
+            _photoField(l),
             // Added with the product on Save, unless the owner picks another brand.
             if (_fill case final f?
                 when f.brandIsNew &&

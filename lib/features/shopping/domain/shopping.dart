@@ -40,7 +40,11 @@ class ShoppingProduct {
     this.manufacturer,
     this.country,
     this.mine = false,
+    this.photo,
   });
+
+  /// Its photo id ([CataloguePhoto]); null = none.
+  final String? photo;
 
   final String name;
   final String? brand;

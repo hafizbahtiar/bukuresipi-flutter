@@ -195,6 +195,7 @@ ShoppingProduct _product(Map<String, dynamic> p) => ShoppingProduct(
   manufacturer: p['manufacturer'] as String?,
   country: p['country'] as String?,
   mine: p['mine'] as bool? ?? false,
+  photo: p['photo'] as String?,
 );
 
 Map<String, String> _target(AvoidTarget t) =>

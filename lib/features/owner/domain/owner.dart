@@ -433,10 +433,14 @@ class CatalogueProduct {
     this.brand,
     this.size,
     this.unit,
+    this.photo,
   });
 
   final int id;
   final String name;
+
+  /// Its photo's id ([CataloguePhoto]); null = none.
+  final String? photo;
 
   /// A catalogue ingredient name.
   final String? ingredient;
@@ -469,6 +473,9 @@ typedef ProductFill = ({
 
   /// Catalogue products that may be this one: edit one of them rather than add it again.
   List<CatalogueProduct> similar,
+
+  /// Open Food Facts' front photo (a link); kept only when the product is saved. null = none.
+  String? photo,
 });
 
 /// A brand or product authors asked for from recipe lines, grouped by name (Owner > Catalogue > Suggested).

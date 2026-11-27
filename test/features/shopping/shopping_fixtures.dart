@@ -126,6 +126,7 @@ class FakeShopping implements ShoppingRepository {
         name: 'Jati Signature Super Special Rice 10kg',
         brand: 'Jati',
         mine: mine,
+        photo: 'p-jati10',
       ),
     ];
   }

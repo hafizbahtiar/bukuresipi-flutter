@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
+import '../../../../core/widgets/catalogue_photo.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/shopping.dart';
@@ -123,6 +124,9 @@ class _ProductsSheetState extends State<ProductsSheet> {
                         padding: const EdgeInsets.only(top: spaceXs),
                         child: BaseTile(
                           key: ValueKey('product-${p.name}'),
+                          leading: p.photo == null
+                              ? null
+                              : CataloguePhoto(p.photo!),
                           title: p.name,
                           subtitle: p.brand == null
                               ? null
