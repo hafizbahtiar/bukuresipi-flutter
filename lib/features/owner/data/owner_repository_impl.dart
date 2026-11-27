@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/db_time.dart';
 import '../../recipes/data/recipes_repository_impl.dart';
@@ -485,6 +486,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
           : url != null
           ? {'url': url}
           : {'name': name},
+      options: Options(receiveTimeout: aiWait),
     )).data!;
     final m = j['maker'] as Map<String, dynamic>?;
     return (
@@ -543,34 +545,25 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
-  Future<List<IngredientType>> ingredientTypes(String query) =>
-      apiCall(() async {
-        final j = (await _dio.post<Map<String, dynamic>>(
-          '/owner/ingredients/types',
-          data: {'q': query},
-        )).data!;
-        return [
-          for (final t in (j['types'] as List).cast<Map<String, dynamic>>())
-            (
-              name: t['name'] as String,
-              category: t['category'] as String?,
-              ingredient: t['ingredient'] as String?,
-            ),
-        ];
-      });
-
-  @override
-  Future<({String? name, String? ingredient, String? category})> suggestGap(
-    String line,
-  ) => apiCall(() async {
+  Future<GapSuggestion> suggestGap(String line) => apiCall(() async {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/owner/ingredients/gaps/suggest',
       data: {'line': line},
+      options: Options(receiveTimeout: aiWait),
     )).data!;
     return (
       name: j['name'] as String?,
       ingredient: j['ingredient'] as String?,
       category: j['category'] as String?, // null from an older API
+      types: [
+        for (final t
+            in (j['types'] as List? ?? const []).cast<Map<String, dynamic>>())
+          (
+            name: t['name'] as String,
+            category: t['category'] as String?,
+            ingredient: t['ingredient'] as String?,
+          ),
+      ],
     );
   });
 
@@ -581,6 +574,7 @@ class OwnerRepositoryImpl implements OwnerRepository {
     final j = (await _dio.post<Map<String, dynamic>>(
       '/owner/ingredients/aliases/suggest',
       data: {'offset': offset},
+      options: Options(receiveTimeout: aiWait),
     )).data!;
     return (
       items: [

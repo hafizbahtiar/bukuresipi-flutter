@@ -293,10 +293,11 @@ class FakeOwner implements OwnerRepository {
     return (lines: 3, sample: const ['sedikit minyak', '2 sudu minyak']);
   }
 
-  ({String? name, String? ingredient, String? category}) gapAnswer = (
+  GapSuggestion gapAnswer = (
     name: 'minyak masak',
     ingredient: 'Minyak masak',
     category: null,
+    types: const [],
   );
   List<AliasSuggestion> aliasAnswer = const [
     (ingredient: 'Bawang putih', alias: 'garlic', lines: 12),
@@ -334,9 +335,6 @@ class FakeOwner implements OwnerRepository {
     return fillAnswer;
   }
 
-  List<IngredientType> typesAnswer = const [];
-  final typesAsked = <String>[];
-
   final messages = <({String title, String body, String? to, bool push})>[];
   List<SentMessage> sent = [];
 
@@ -352,15 +350,7 @@ class FakeOwner implements OwnerRepository {
   Future<List<SentMessage>> sentMessages() async => sent;
 
   @override
-  Future<List<IngredientType>> ingredientTypes(String query) async {
-    typesAsked.add(query);
-    return typesAnswer;
-  }
-
-  @override
-  Future<({String? name, String? ingredient, String? category})> suggestGap(
-    String line,
-  ) async => gapAnswer;
+  Future<GapSuggestion> suggestGap(String line) async => gapAnswer;
 
   @override
   Future<({List<AliasSuggestion> items, int? next})> suggestAliases(

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import '../../../core/utils/log.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/disk_image_cache.dart';
 import '../../../core/network/db_time.dart';
@@ -67,7 +68,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
     final res = await _dio.post<Map<String, dynamic>>(
       '/places/branches/$branchId/locate',
       // The server may search the web and ask the AI: longer than the usual 30 s.
-      options: Options(receiveTimeout: const Duration(seconds: 90)),
+      options: Options(receiveTimeout: aiWait),
     );
     return switch (res.data!['result']) {
       'tried_today' => LocateResult.triedToday,
@@ -91,7 +92,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
         final res = await _dio.post<Map<String, dynamic>>(
           '/places/restaurants/$placeId/tidy',
           // Clef compares the branches one by one on the server.
-          options: Options(receiveTimeout: const Duration(seconds: 90)),
+          options: Options(receiveTimeout: aiWait),
         );
         return (
           merged: res.data!['merged'] as int,
@@ -248,7 +249,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
       '/places/branches/$branchId/search-pin',
       data: {'source': source, 'q': ?q},
       // JAKIM: up to 5 pages, 1 a second.
-      options: Options(receiveTimeout: const Duration(seconds: 90)),
+      options: Options(receiveTimeout: aiWait),
     )).data!;
     return (
       query: j['query'] as String,
@@ -628,7 +629,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
         ? await _dio.post<Map<String, dynamic>>(
             path,
             // JAKIM's site, maybe a "Check JAKIM" first (a page at a time).
-            options: Options(receiveTimeout: const Duration(seconds: 90)),
+            options: Options(receiveTimeout: aiWait),
           )
         : await _dio.get<Map<String, dynamic>>(path);
     return BranchCompany.fromJson(res.data!);
@@ -652,7 +653,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
           '/places/branches/$branchId/halal-check',
           data: q == null ? null : {'q': q},
           // JAKIM's site, a page at a time, then Clef.
-          options: Options(receiveTimeout: const Duration(seconds: 90)),
+          options: Options(receiveTimeout: aiWait),
         )).data!;
         return (
           status: j['status'] as String,
@@ -679,7 +680,7 @@ class PlacesRepositoryImpl implements PlacesRepository {
           '/places/restaurants/$placeId/halal-outlets',
           data: q == null ? null : {'q': q},
           // JAKIM's site, up to 5 pages a second apart.
-          options: Options(receiveTimeout: const Duration(seconds: 90)),
+          options: Options(receiveTimeout: aiWait),
         )).data!;
         return (
           status: j['status'] as String,
