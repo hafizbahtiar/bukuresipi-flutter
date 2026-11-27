@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/base.dart';
-import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/shopping.dart';
@@ -91,16 +90,18 @@ class _ProductsSheetState extends State<ProductsSheet> {
                       onBack: back,
                     )
                   else
-                    NotebookRow(
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: spaceM),
                       child: Text(
                         l.shoppingProductsTitle(widget.ingredient),
-                        style: text.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: text.titleMedium,
                       ),
                     ),
                   if (s.hasError)
-                    NotebookRow(child: Text(errorText(l, s.error!)))
+                    Padding(
+                      padding: const EdgeInsets.all(spaceM),
+                      child: Text(errorText(l, s.error!)),
+                    )
                   else if (s.connectionState != ConnectionState.done)
                     const Padding(
                       padding: EdgeInsets.all(spaceL),
@@ -109,7 +110,8 @@ class _ProductsSheetState extends State<ProductsSheet> {
                       ),
                     )
                   else if (s.data!.isEmpty)
-                    NotebookRow(
+                    Padding(
+                      padding: const EdgeInsets.all(spaceM),
                       child: Text(
                         l.brandsNoProducts,
                         style: text.bodyMedium?.copyWith(color: nb.inkSoft),
@@ -117,35 +119,27 @@ class _ProductsSheetState extends State<ProductsSheet> {
                     )
                   else
                     for (final p in s.data!)
-                      NotebookRow(
-                        key: ValueKey('product-${p.name}'),
-                        onTap: p.brand == null ? null : () => _pick(p),
-                        trailing: p.brand == null
-                            ? null
-                            : const Icon(Icons.chevron_right),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p.name),
-                            if (p.brand != null)
-                              Text(
-                                [
+                      Padding(
+                        padding: const EdgeInsets.only(top: spaceXs),
+                        child: BaseTile(
+                          key: ValueKey('product-${p.name}'),
+                          title: p.name,
+                          subtitle: p.brand == null
+                              ? null
+                              : [
                                   p.brand,
                                   ?p.manufacturer,
                                   ?p.country,
                                 ].join(' · '),
-                                style: text.bodySmall?.copyWith(
-                                  color: nb.inkSoft,
-                                ),
-                              ),
+                          tags: [
                             if (p.mine)
-                              Padding(
-                                padding: const EdgeInsets.only(top: spaceXs),
-                                child: TagChip(
-                                  TileTag(l.brandsYours, tone: TagTone.good),
-                                ),
-                              ),
+                              TileTag(l.brandsYours, tone: TagTone.good),
                           ],
+                          dense: true,
+                          trailing: p.brand == null
+                              ? null
+                              : const Icon(Icons.chevron_right),
+                          onTap: p.brand == null ? null : () => _pick(p),
                         ),
                       ),
                 ],
@@ -157,43 +151,42 @@ class _ProductsSheetState extends State<ProductsSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SheetStepTitle(title: p.brand!, onBack: () => _pick(null)),
-                NotebookRow(
+                // As the house action sheet's rows (showActionSheet): icon + label, danger in the margin's red.
+                ListTile(
                   key: const ValueKey('brand-mine'),
-                  minHeight: 56,
-                  mark: Icon(p.mine ? Icons.star : Icons.star_outline),
+                  leading: Icon(p.mine ? Icons.star : Icons.star_outline),
+                  title: Text(
+                    p.mine
+                        ? l.brandsStopUsing(p.brand!, widget.ingredient)
+                        : l.brandsUse(p.brand!, widget.ingredient),
+                  ),
                   onTap: () => _change(
                     (r) => p.mine
                         ? r.clearMyBrand(widget.ingredient)
                         : r.setMyBrand(widget.ingredient, p.brand!),
                   ),
-                  child: Text(
-                    p.mine
-                        ? l.brandsStopUsing(p.brand!, widget.ingredient)
-                        : l.brandsUse(p.brand!, widget.ingredient),
-                  ),
                 ),
-                NotebookRow(
+                const Divider(height: spaceS),
+                ListTile(
                   key: const ValueKey('brand-avoid'),
-                  minHeight: 56,
-                  mark: Icon(Icons.block, color: nb.margin),
-                  onTap: () =>
-                      _change((r) => r.avoid((brand: p.brand, maker: null))),
-                  child: Text(
+                  leading: Icon(Icons.block, color: nb.margin),
+                  title: Text(
                     l.brandsAvoid(p.brand!),
                     style: TextStyle(color: nb.margin),
                   ),
+                  onTap: () =>
+                      _change((r) => r.avoid((brand: p.brand, maker: null))),
                 ),
                 if (p.manufacturer != null)
-                  NotebookRow(
+                  ListTile(
                     key: const ValueKey('maker-avoid'),
-                    minHeight: 56,
-                    mark: Icon(Icons.domain_disabled, color: nb.margin),
-                    onTap: () => _change(
-                      (r) => r.avoid((brand: null, maker: p.manufacturer)),
-                    ),
-                    child: Text(
+                    leading: Icon(Icons.domain_disabled, color: nb.margin),
+                    title: Text(
                       l.brandsAvoidMaker(p.manufacturer!),
                       style: TextStyle(color: nb.margin),
+                    ),
+                    onTap: () => _change(
+                      (r) => r.avoid((brand: null, maker: p.manufacturer)),
                     ),
                   ),
                 const SizedBox(height: spaceS),
