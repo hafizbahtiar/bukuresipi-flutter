@@ -36,6 +36,14 @@ void main() {
       Provider<OwnerRepository>.value(
         value: repo,
         child: MaterialApp(
+          // The app theme's full-width filled button (AppTheme cannot load its fonts in tests).
+          theme: ThemeData(
+            filledButtonTheme: FilledButtonThemeData(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+            ),
+          ),
           locale: const Locale('en'),
           localizationsDelegates: const [
             AppLocalizations.delegate,

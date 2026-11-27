@@ -14,6 +14,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../../../places/presentation/widgets/owner_panel.dart';
 
 /// What Owner > Catalogue edits: the API path segment.
 enum CatalogueKind { products, brands, makers }
@@ -84,6 +85,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   late Object? _row = widget.row;
   Timer? _debounce;
   bool _busy = false;
+  bool _deleting = false; // which button spins while busy
   bool _taken = false;
   bool _unknown = false;
 
@@ -356,7 +358,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busy = _deleting = false);
     }
   }
 
@@ -376,7 +378,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
       confirmLabel: l.delete,
     );
     if (!sure || !mounted) return;
-    setState(() => _busy = true);
+    setState(() => _busy = _deleting = true);
     try {
       await _repo.deleteCatalogueRow(widget.kind.name, id);
       if (mounted) Navigator.of(context).pop('deleted');
@@ -577,30 +579,33 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             ),
           ],
           const SizedBox(height: spaceM),
-          // Negative left, positive right (owner panels).
-          Row(
-            children: [
-              if (_row != null)
-                TextButton(
-                  key: const ValueKey('catalogue-delete'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
+          ListenableBuilder(
+            listenable: _name,
+            builder: (_, _) => PanelActions(
+              children: [
+                if (_row != null)
+                  BusyButton(
+                    key: const ValueKey('catalogue-delete'),
+                    icon: Icons.delete_outline,
+                    label: l.delete,
+                    busyLabel: l.delete,
+                    busy: _deleting,
+                    kind: BusyButtonKind.danger,
+                    onPressed: _busy ? null : _delete,
                   ),
-                  onPressed: _busy ? null : _delete,
-                  child: Text(l.delete),
-                ),
-              const Spacer(),
-              ListenableBuilder(
-                listenable: _name,
-                builder: (_, _) => FilledButton(
+                BusyButton(
                   key: const ValueKey('catalogue-save'),
+                  icon: Icons.check,
+                  label: l.save,
+                  busyLabel: l.ownerSaving,
+                  busy: _busy && !_deleting,
+                  kind: BusyButtonKind.filled,
                   onPressed: _busy || _name.text.trim().length < 2
                       ? null
                       : _save,
-                  child: Text(l.save),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
