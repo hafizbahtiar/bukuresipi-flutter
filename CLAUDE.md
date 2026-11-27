@@ -52,6 +52,11 @@ every push a phone got plus the owner's messages; opening it marks all read. A r
 Owner > Send notifications (to everyone) or Users > a user > Send a notification (`MessageSheet`); the server pushes
 them from its cron, so "Sedang dihantar" until done.
 
+Ingredients (owner): Owner > Bahan dan nama lain (`owner_ingredient_list_page.dart`, also the gaps page's ⋮) lists
+every ingredient; its page (`owner_ingredient_page.dart`, `/owner/ingredient/:id`) renames (the old name stays as
+another name), sets the category, adds a name, removes a wrong one (asks with how many lines go back to the gaps), or
+makes a name that is another food its own ingredient ("limau nipis" off Limau: its lines move there).
+
 ## House components (`core/widgets/`; use them, never a native copy)
 
 `import '.../core/widgets/base.dart'` gives all of `base/`:

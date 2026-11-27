@@ -346,6 +346,20 @@ class OwnerPlace {
 /// [category] one of ours or null. Nothing saved.
 typedef IngredientType = ({String name, String? category, String? ingredient});
 
+/// A row of Owner > Ingredients and other names: [aliases] = how many other names it has.
+typedef IngredientRow = ({int id, String name, String? category, int aliases});
+
+/// One ingredient's page: its other names (lowercase, A-Z), the lines it links, and up to 8 that may be the same food.
+typedef IngredientDetail = ({
+  int id,
+  String name,
+  String? category,
+  List<String> aliases,
+  int recipeLines,
+  int shoppingLines,
+  List<({int id, String name, String? category})> similar,
+});
+
 /// The AI's answer for an unknown line: its name, the catalogue ingredient it is (null = new), a category of ours, and
 /// the other kinds of that food (ours or new).
 typedef GapSuggestion = ({

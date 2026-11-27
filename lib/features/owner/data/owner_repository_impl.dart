@@ -388,6 +388,105 @@ class OwnerRepositoryImpl implements OwnerRepository {
   });
 
   @override
+  Future<List<IngredientRow>> listIngredients() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>('/owner/ingredients'))
+        .data!;
+    return [
+      for (final i in (j['ingredients'] as List).cast<Map<String, dynamic>>())
+        (
+          id: i['id'] as int,
+          name: i['name'] as String,
+          category: i['category'] as String?,
+          aliases: i['aliases'] as int,
+        ),
+    ];
+  });
+
+  static IngredientDetail _detail(Map<String, dynamic> j) => (
+    id: j['id'] as int,
+    name: j['name'] as String,
+    category: j['category'] as String?,
+    aliases: (j['aliases'] as List).cast<String>(),
+    recipeLines: j['recipeLines'] as int,
+    shoppingLines: j['shoppingLines'] as int,
+    similar: [
+      for (final s in (j['similar'] as List).cast<Map<String, dynamic>>())
+        (
+          id: s['id'] as int,
+          name: s['name'] as String,
+          category: s['category'] as String?,
+        ),
+    ],
+  );
+
+  @override
+  Future<IngredientDetail> ingredientDetail(int id) => apiCall(
+    () async => _detail(
+      (await _dio.get<Map<String, dynamic>>('/owner/ingredients/$id')).data!,
+    ),
+  );
+
+  @override
+  Future<IngredientDetail> updateIngredient(
+    int id, {
+    String? name,
+    String? category,
+  }) => apiCall(
+    () async => _detail(
+      (await _dio.patch<Map<String, dynamic>>(
+        '/owner/ingredients/$id',
+        data: {'name': ?name, 'category': ?category},
+      )).data!,
+    ),
+  );
+
+  Future<Map<String, dynamic>> _aliasAction(
+    int id,
+    String action,
+    String alias,
+    bool preview,
+  ) async => (await _dio.post<Map<String, dynamic>>(
+    '/owner/ingredients/$id/aliases/$action',
+    data: {'alias': alias, 'preview': preview},
+  )).data!;
+
+  static ({int lines, List<String> sample}) _preview(Map<String, dynamic> j) =>
+      (lines: j['lines'] as int, sample: (j['sample'] as List).cast<String>());
+
+  @override
+  Future<({int lines, List<String> sample})> previewRemoveAlias(
+    int id,
+    String alias,
+  ) => apiCall(
+    () async => _preview(await _aliasAction(id, 'remove', alias, true)),
+  );
+
+  @override
+  Future<int> removeAlias(int id, String alias) => apiCall(
+    () async =>
+        (await _aliasAction(id, 'remove', alias, false))['unlinked'] as int,
+  );
+
+  @override
+  Future<({int lines, List<String> sample})> previewSplitAlias(
+    int id,
+    String alias,
+  ) => apiCall(
+    () async => _preview(await _aliasAction(id, 'split', alias, true)),
+  );
+
+  @override
+  Future<({int id, String name, int moved})> splitAlias(int id, String alias) =>
+      apiCall(() async {
+        final j = await _aliasAction(id, 'split', alias, false);
+        return (
+          id: j['id'] as int,
+          name: j['name'] as String,
+          moved: j['moved'] as int,
+        );
+      });
+
+  @override
   Future<int> addAlias(String ingredient, String alias) => apiCall(
     () async =>
         (await _alias(ingredient, alias, preview: false))['relinked'] as int,

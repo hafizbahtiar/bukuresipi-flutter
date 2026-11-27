@@ -360,6 +360,92 @@ class FakeOwner implements OwnerRepository {
     next: null,
   );
 
+  List<IngredientRow> ingredientRows = const [];
+  Map<int, IngredientDetail> details = {};
+  ({int lines, List<String> sample}) removeAnswer = (
+    lines: 0,
+    sample: const [],
+  );
+  ({int lines, List<String> sample}) splitAnswer = (lines: 0, sample: const []);
+  final ingredientCalls = <String>[];
+
+  IngredientDetail _without(int id, String alias) {
+    final d = details[id]!;
+    return details[id] = (
+      id: d.id,
+      name: d.name,
+      category: d.category,
+      aliases: [
+        for (final a in d.aliases)
+          if (a != alias) a,
+      ],
+      recipeLines: d.recipeLines,
+      shoppingLines: d.shoppingLines,
+      similar: d.similar,
+    );
+  }
+
+  @override
+  Future<List<IngredientRow>> listIngredients() async => ingredientRows;
+
+  @override
+  Future<IngredientDetail> ingredientDetail(int id) async =>
+      details[id] ?? (throw const ApiException('not_found', status: 404));
+
+  @override
+  Future<IngredientDetail> updateIngredient(
+    int id, {
+    String? name,
+    String? category,
+  }) async {
+    final d = details[id]!;
+    ingredientCalls.add(
+      'update $id ${name ?? d.name} ${category ?? d.category}',
+    );
+    return details[id] = (
+      id: id,
+      name: name ?? d.name,
+      category: category ?? d.category,
+      aliases: d.aliases,
+      recipeLines: d.recipeLines,
+      shoppingLines: d.shoppingLines,
+      similar: d.similar,
+    );
+  }
+
+  @override
+  Future<({int lines, List<String> sample})> previewRemoveAlias(
+    int id,
+    String alias,
+  ) async => removeAnswer;
+
+  @override
+  Future<int> removeAlias(int id, String alias) async {
+    ingredientCalls.add('remove $id $alias');
+    _without(id, alias);
+    return removeAnswer.lines;
+  }
+
+  @override
+  Future<({int lines, List<String> sample})> previewSplitAlias(
+    int id,
+    String alias,
+  ) async => splitAnswer;
+
+  @override
+  Future<({int id, String name, int moved})> splitAlias(
+    int id,
+    String alias,
+  ) async {
+    ingredientCalls.add('split $id $alias');
+    _without(id, alias);
+    return (
+      id: 900,
+      name: alias[0].toUpperCase() + alias.substring(1),
+      moved: splitAnswer.lines,
+    );
+  }
+
   @override
   Future<int> addAlias(String ingredient, String alias) async {
     aliases.add((ingredient, alias));

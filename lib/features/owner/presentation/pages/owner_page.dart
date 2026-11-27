@@ -140,6 +140,10 @@ class _OwnerPageState extends State<OwnerPage> {
                         onTap: () => context.push('/owner/ingredients'),
                       ),
                       _Ledger(
+                        label: l.ownerIngredientList,
+                        onTap: () => context.push('/owner/ingredients-all'),
+                      ),
+                      _Ledger(
                         label: l.ownerCatalogue,
                         onTap: () => context.push('/owner/catalogue'),
                       ),
