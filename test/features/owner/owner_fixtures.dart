@@ -690,9 +690,13 @@ class FakeOwner implements OwnerRepository {
   /// (id, `path:...` | `url:...` | `remove`).
   final photoCalls = <(int, String)>[];
 
+  Object? photoError; // thrown by setProductPhoto when set
+
   @override
-  Future<void> setProductPhoto(int id, {String? path, String? url}) async =>
-      photoCalls.add((id, path != null ? 'path:$path' : 'url:$url'));
+  Future<void> setProductPhoto(int id, {String? path, String? url}) async {
+    if (photoError case final e?) throw e;
+    photoCalls.add((id, path != null ? 'path:$path' : 'url:$url'));
+  }
 
   @override
   Future<void> removeProductPhoto(int id) async =>

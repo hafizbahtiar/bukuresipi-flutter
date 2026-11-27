@@ -1,3 +1,5 @@
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
+
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
@@ -1284,6 +1286,27 @@ void main() {
         await t.tap(find.byKey(const ValueKey('catalogue-save')));
         await t.pumpAndSettle();
         expect(repo.photoCalls, [(7, 'remove')]);
+
+        // The product saves, its photo does not: the sheet still closes (a second Save would add it twice).
+        repo
+          ..savedRows.clear()
+          ..photoError = const ApiException('invalid_image', status: 400);
+        await open(
+          CatalogueEditSheet(
+            kind: CatalogueKind.products,
+            pick: (_, source) async => '/tmp/${source.name}.jpg',
+          ),
+        );
+        await t.enterText(find.byKey(const ValueKey('catalogue-name')), 'Baru');
+        await t.tap(find.byKey(const ValueKey('catalogue-photo-pick')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('photo-gallery')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows, hasLength(1));
+        expect(find.byKey(const ValueKey('catalogue-save')), findsNothing);
+        expect(find.text('Saved. The photo was not saved.'), findsOneWidget);
       },
     );
 
