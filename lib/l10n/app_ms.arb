@@ -1526,5 +1526,6 @@
   "catalogueProductPhotoChange": "Tukar foto",
   "creditsProducts": "Data produk",
   "creditsOff": "Open Food Facts",
-  "creditsOffDetail": "Butiran produk mengikut kod bar, ODbL; foto produk, CC BY-SA."
+  "creditsOffDetail": "Butiran produk mengikut kod bar, ODbL; foto produk, CC BY-SA.",
+  "catalogueSavedNoPhoto": "Disimpan. Foto tidak disimpan."
 }

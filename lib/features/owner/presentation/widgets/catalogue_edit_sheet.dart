@@ -364,14 +364,21 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             size: double.tryParse(_size.text.trim().replaceAll(',', '.')),
             unit: _orNull(_unit),
           );
-          if (_photoPath != null || _photoUrl != null) {
-            await _repo.setProductPhoto(
-              saved,
-              path: _photoPath,
-              url: _photoUrl,
+          // The product is saved: a failed photo only says so (the sheet closes; Save again would add it twice).
+          try {
+            if (_photoPath != null || _photoUrl != null) {
+              await _repo.setProductPhoto(
+                saved,
+                path: _photoPath,
+                url: _photoUrl,
+              );
+            } else if (_photoRemoved && _savedPhoto != null) {
+              await _repo.removeProductPhoto(saved);
+            }
+          } catch (_) {
+            messenger.showSnackBar(
+              SnackBar(content: Text(l.catalogueSavedNoPhoto)),
             );
-          } else if (_photoRemoved && _savedPhoto != null) {
-            await _repo.removeProductPhoto(saved);
           }
       }
       widget.onSaved?.call(name);
