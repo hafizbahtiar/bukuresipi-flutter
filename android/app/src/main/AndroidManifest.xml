@@ -28,11 +28,12 @@
         <!-- AdMob (Home ads, lib/core/ads/ads.dart). Public: it ships in every APK. -->
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1300180769466949~4313134076"/>
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="share_ready"/>
+        <!-- One app, one task: no taskAffinity="" (the Flutter template's). With it, singleTask never finds the running
+             app, so a share, a push or a link from another app opened a second Bukuresipi beside the first. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
