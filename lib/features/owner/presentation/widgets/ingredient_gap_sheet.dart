@@ -50,6 +50,10 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
   bool _busy = false;
   ({String? name, String? ingredient, String? category})? _ai;
   bool _aiBusy = false;
+
+  /// The AI's kinds of the searched word (null = not asked); cleared when the word changes.
+  List<IngredientType>? _types;
+  bool _typesBusy = false;
   Timer? _debounce;
   int _asked = 0;
 
@@ -107,6 +111,21 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     } finally {
       if (mounted) setState(() => _aiBusy = false);
+    }
+  }
+
+  /// AI: the kinds of the searched word ("mee" -> Mee kuning, Mee sua). Only on a tap: each one is metered.
+  Future<void> _askTypes() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _typesBusy = true);
+    try {
+      final types = await _repo.ingredientTypes(_search.text.trim());
+      if (mounted) setState(() => _types = types);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    } finally {
+      if (mounted) setState(() => _typesBusy = false);
     }
   }
 
@@ -272,7 +291,10 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
                     labelText: l.ownerGapSearch,
                     prefixIcon: const Icon(Icons.search),
                   ),
-                  onChanged: _find,
+                  onChanged: (q) {
+                    setState(() => _types = null);
+                    _find(q);
+                  },
                 ),
               ),
               for (final name in _found.take(6))
@@ -285,6 +307,49 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
                     onTap: () => _pick(name),
                   ),
                 ),
+              if (_search.text.trim().length >= 2)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: AiButton(
+                      key: const ValueKey('gap-types'),
+                      label: l.ownerGapTypes(_search.text.trim()),
+                      busy: _typesBusy,
+                      onPressed: _askTypes,
+                    ),
+                  ),
+                ),
+              if (_types case final types? when types.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                  child: Text(
+                    l.ownerGapTypesNone,
+                    style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                  ),
+                ),
+              // Ours that the search already lists are not shown twice.
+              for (final t in _types ?? const <IngredientType>[])
+                if (!_found.take(6).contains(t.ingredient))
+                  row(
+                    BaseTile(
+                      key: ValueKey('gap-type-${t.name}'),
+                      leading: t.ingredient == null
+                          ? const Icon(Icons.add)
+                          : const AiBadge(),
+                      title: t.name,
+                      subtitle: [
+                        if (t.ingredient == null) l.ownerGapTypeNew,
+                        ?t.category,
+                      ].join(' · '),
+                      dense: true,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => switch (t.ingredient) {
+                        final String ours => _pick(ours),
+                        null => _createFromAi(t.name, t.category),
+                      },
+                    ),
+                  ),
               row(
                 BaseTile(
                   key: const ValueKey('gap-new'),

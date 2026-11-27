@@ -334,6 +334,15 @@ class FakeOwner implements OwnerRepository {
     return fillAnswer;
   }
 
+  List<IngredientType> typesAnswer = const [];
+  final typesAsked = <String>[];
+
+  @override
+  Future<List<IngredientType>> ingredientTypes(String query) async {
+    typesAsked.add(query);
+    return typesAnswer;
+  }
+
   @override
   Future<({String? name, String? ingredient, String? category})> suggestGap(
     String line,

@@ -342,6 +342,10 @@ class OwnerPlace {
 
 /// Owner > Ingredient gaps: recipe and shopping lines no catalogue name or alias matched, grouped by what they name
 /// ([key], amount and unit off); [sample] = one line as written.
+/// A kind of a food the AI named ("mee" -> Mee kuning, Mee sua). [ingredient] = ours it is, null = new;
+/// [category] one of ours or null. Nothing saved.
+typedef IngredientType = ({String name, String? category, String? ingredient});
+
 class IngredientGap {
   const IngredientGap({
     required this.key,

@@ -653,6 +653,63 @@ void main() {
       },
     );
 
+    testWidgets(
+      'AI kinds of a food: one we have links the line, a new one opens the form filled',
+      (t) async {
+        repo.gaps = [minyak];
+        repo.catalogue = ['Minyak masak', 'Ghee'];
+        repo.typesAnswer = [
+          (name: 'Minyak masak', category: 'Lain', ingredient: 'Minyak masak'),
+          (name: 'Minyak sapi', category: 'Lain', ingredient: null),
+          // Ours under another name: not in the search's results.
+          (name: 'Ghee', category: 'Lain', ingredient: 'Ghee'),
+        ];
+        await pump(t, const OwnerIngredientsPage());
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        // No button until there is a word to ask about.
+        await t.enterText(find.byKey(const ValueKey('gap-search')), '');
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        expect(find.byKey(const ValueKey('gap-types')), findsNothing);
+        await t.enterText(find.byKey(const ValueKey('gap-search')), 'minyak');
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.ensureVisible(find.byKey(const ValueKey('gap-types')));
+        await t.tap(find.byKey(const ValueKey('gap-types')));
+        await t.pumpAndSettle();
+        expect(repo.typesAsked, ['minyak']);
+        // The search already lists Minyak masak: not shown twice.
+        expect(
+          find.byKey(const ValueKey('gap-type-Minyak masak')),
+          findsNothing,
+        );
+
+        await t.ensureVisible(
+          find.byKey(const ValueKey('gap-type-Minyak sapi')),
+        );
+        await t.tap(find.byKey(const ValueKey('gap-type-Minyak sapi')));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.widgetWithText(TextField, 'Minyak sapi'), findsOneWidget);
+        expect(find.text('Lain'), findsOneWidget);
+
+        Navigator.of(t.element(find.text('Lain'))).pop();
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.enterText(find.byKey(const ValueKey('gap-search')), 'minyak');
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.ensureVisible(find.byKey(const ValueKey('gap-types')));
+        await t.tap(find.byKey(const ValueKey('gap-types')));
+        await t.pumpAndSettle();
+        await t.ensureVisible(find.byKey(const ValueKey('gap-type-Ghee')));
+        await t.tap(find.byKey(const ValueKey('gap-type-Ghee')));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(
+          find.text('Links 3 lines'),
+          findsOneWidget,
+        ); // the alias step, as a search pick
+      },
+    );
+
     testWidgets('a new ingredient: name and category, then saved', (t) async {
       repo.gaps = [
         const IngredientGap(
