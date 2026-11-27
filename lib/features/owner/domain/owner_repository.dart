@@ -150,6 +150,9 @@ abstract interface class OwnerRepository {
 
   /// AI: what [line] names (Malay, lowercase) and the catalogue ingredient that is, if any. Nothing saved.
   /// Throws 'ai_unavailable'.
+  /// The kinds of [query] (AI, owner): `POST /owner/ingredients/types`.
+  Future<List<IngredientType>> ingredientTypes(String query);
+
   Future<({String? name, String? ingredient, String? category})> suggestGap(
     String line,
   );
