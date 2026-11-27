@@ -4061,11 +4061,21 @@
       }
     }
   },
-  "ownerMessageInboxOnly": "Inbox only",
+  "ownerMessageInboxOnly": "No phone registered",
   "@ownerMessageInboxOnly": {},
   "ownerMessagePending": "Pushing…",
   "@ownerMessagePending": {},
   "ownerMessagesNone": "Nothing sent yet.",
+  "ownerMessageDeleteAsk": "Delete \"{title}\"? It disappears from every recipient's inbox; a push not yet sent stops.",
+  "@ownerMessageDeleteAsk": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerMessageDeleted": "Deleted",
+  "@ownerMessageDeleted": {},
   "@ownerMessagesNone": {},
   "ownerSendMessage": "Send a notification",
   "@ownerSendMessage": {},

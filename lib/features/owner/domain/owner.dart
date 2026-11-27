@@ -371,6 +371,7 @@ typedef GapSuggestion = ({
 
 /// A message the owner sent: [to] = the user's email, null = everyone. [pending] = its pushes are still going out.
 typedef SentMessage = ({
+  int id,
   String title,
   String body,
   String? to,

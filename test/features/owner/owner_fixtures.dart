@@ -348,6 +348,16 @@ class FakeOwner implements OwnerRepository {
   @override
   Future<List<SentMessage>> sentMessages() async => sent;
 
+  final deletedMessages = <int>[];
+  @override
+  Future<void> deleteMessage(int id) async {
+    deletedMessages.add(id);
+    sent = [
+      for (final m in sent)
+        if (m.id != id) m,
+    ];
+  }
+
   @override
   Future<GapSuggestion> suggestGap(String line) async => gapAnswer;
 

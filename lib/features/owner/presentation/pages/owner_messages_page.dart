@@ -11,6 +11,7 @@ import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
 import '../../../../core/widgets/wide_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
 import '../widgets/message_sheet.dart';
@@ -74,6 +75,25 @@ class _OwnerMessagesPageState extends State<OwnerMessagesPage> {
     await _load();
   }
 
+  Future<void> _delete(SentMessage m) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showBaseDialog(
+      context,
+      message: l.ownerMessageDeleteAsk(m.title),
+      tone: DialogTone.danger,
+      confirmLabel: l.delete,
+    );
+    if (!ok || !mounted) return;
+    try {
+      await context.read<OwnerRepository>().deleteMessage(m.id);
+      messenger.showSnackBar(SnackBar(content: Text(l.ownerMessageDeleted)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
+    await _load(quiet: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -124,6 +144,14 @@ class _OwnerMessagesPageState extends State<OwnerMessagesPage> {
                               '${loc.formatMediumDate(m.createdAt)}, ${formatTime(context, m.createdAt)}',
                           // The whole text: the tile's subtitle stops at 2 lines.
                           footer: Text(m.body, style: TextStyle(color: nb.ink)),
+                          actions: [
+                            MenuAction(
+                              icon: Icons.delete_outline,
+                              label: l.delete,
+                              danger: true,
+                              onTap: () => _delete(m),
+                            ),
+                          ],
                           tags: [
                             TileTag(m.to ?? l.ownerMessageEveryone),
                             if (m.pending)
