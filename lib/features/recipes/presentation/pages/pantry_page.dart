@@ -29,16 +29,21 @@ class PantryPage extends StatefulWidget {
 
 const _key = 'pantry.ingredients';
 
-/// What the user said they have (What can I cook?), kept on this phone; empty when nothing or the store fails.
-Future<List<String>> pantryIngredients() async {
+const _staplesKey = 'pantry.staples';
+
+/// What the user said they have (What can I cook?), kept on this phone, and whether salt, sugar, oil and water count;
+/// empty when nothing or the store fails.
+Future<({List<String> have, bool staples})> pantryIngredients() async {
   try {
-    return (await SharedPreferences.getInstance()).getStringList(_key) ?? [];
+    final p = await SharedPreferences.getInstance();
+    return (
+      have: p.getStringList(_key) ?? <String>[],
+      staples: p.getBool(_staplesKey) ?? true,
+    );
   } catch (_) {
-    return [];
+    return (have: <String>[], staples: true);
   }
 }
-
-const _staplesKey = 'pantry.staples';
 
 class _PantryPageState extends State<PantryPage> {
   final _field = TextEditingController();
@@ -48,6 +53,7 @@ class _PantryPageState extends State<PantryPage> {
   Timer? _debounce;
   int _query = 0;
   List<PantryMatch>? _results;
+  Set<String> _unrecognised = const {};
   bool _finding = false;
   List<DishSuggestion>? _dishes;
   bool _suggesting = false;
@@ -124,6 +130,7 @@ class _PantryPageState extends State<PantryPage> {
     setState(() {
       if (!_have.any((h) => h.toLowerCase() == n.toLowerCase())) {
         _have = [..._have, n];
+        _stale();
       }
       _field.clear();
       _suggestions = const [];
@@ -132,8 +139,17 @@ class _PantryPageState extends State<PantryPage> {
   }
 
   void _remove(String name) {
-    setState(() => _have = _have.where((h) => h != name).toList());
+    setState(() {
+      _have = _have.where((h) => h != name).toList();
+      _stale();
+    });
     _remember();
+  }
+
+  /// The list changed: the last answer no longer says what it can cook (called inside setState).
+  void _stale() {
+    _results = null;
+    _dishes = null;
   }
 
   Future<void> _find() async {
@@ -147,7 +163,8 @@ class _PantryPageState extends State<PantryPage> {
       );
       if (mounted) {
         setState(() {
-          _results = r;
+          _results = r.items;
+          _unrecognised = {for (final u in r.unrecognised) u.toLowerCase()};
           _dishes = null;
         });
       }
@@ -178,10 +195,21 @@ class _PantryPageState extends State<PantryPage> {
     final messenger = ScaffoldMessenger.of(context);
     final shopping = context.read<ShoppingController>();
     try {
-      for (final name in m.missing) {
-        await shopping.addText(name);
-      }
-      messenger.showSnackBar(SnackBar(content: Text(l.pantryAdded)));
+      // The recipe's own lines (amounts as written), less what the kitchen has: the server's same rule as the match.
+      final added = await shopping.addRecipe(
+        m.recipe.id,
+        family: shopping.family,
+        skipOptional: true,
+        have: _have,
+        staples: _staples,
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            added == 0 ? l.shoppingAlreadyAdded : l.shoppingAdded(added),
+          ),
+        ),
+      );
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
     }
@@ -243,15 +271,33 @@ class _PantryPageState extends State<PantryPage> {
                 runSpacing: 6,
                 children: [
                   for (final h in _have)
-                    InputChip(label: Text(h), onDeleted: () => _remove(h)),
+                    InputChip(
+                      avatar: _unrecognised.contains(h.toLowerCase())
+                          ? Icon(Icons.help_outline, color: nb.inkSoft)
+                          : null,
+                      label: Text(h),
+                      onDeleted: () => _remove(h),
+                    ),
                 ],
+              ),
+            ),
+          if (_have.any((h) => _unrecognised.contains(h.toLowerCase())))
+            Padding(
+              key: const ValueKey('pantry-unrecognised'),
+              padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+              child: Text(
+                l.pantryUnrecognised,
+                style: text.bodySmall?.copyWith(color: nb.inkSoft),
               ),
             ),
           SwitchListTile(
             value: _staples,
             title: Text(l.pantryStaples),
             onChanged: (v) {
-              setState(() => _staples = v);
+              setState(() {
+                _staples = v;
+                _stale();
+              });
               _remember();
             },
           ),
@@ -333,12 +379,13 @@ class _PantryPageState extends State<PantryPage> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (m.missing.isEmpty)
+                    // Lines to check may be anything: only a recipe with none is "cook now".
+                    if (m.missing.isEmpty && m.unknown.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: TagChip(TileTag(l.pantryCookNow)),
                       )
-                    else
+                    else if (m.missing.isNotEmpty)
                       Text(l.pantryMissing(m.missing.join(', '))),
                     if (m.unknown.isNotEmpty)
                       Text(

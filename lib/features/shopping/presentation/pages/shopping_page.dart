@@ -9,12 +9,15 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_theme_constant.dart';
 import '../../../../core/widgets/notebook.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../family/presentation/family_controller.dart';
+import '../../../recipes/presentation/widgets/line_pick.dart';
 import '../../domain/shopping.dart';
 import '../shopping_controller.dart';
+import '../widgets/products_sheet.dart';
 
 /// The shopping list page (opened from Home): a checklist filled from recipes ("add to list") or typed in.
 class ShoppingPage extends StatefulWidget {
@@ -324,7 +327,11 @@ class _ItemRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final small = text.bodySmall?.copyWith(color: nb.inkSoft);
     final products = item.products
-        .map((p) => p.brand == null ? p.name : '${p.name} (${p.brand})')
+        .map(
+          (p) => p.brand == null
+              ? p.name
+              : '${p.name} (${[p.brand, ?p.country].join(', ')})',
+        )
         .join(', ');
     final row = NotebookRow(
       onTap: saving ? null : onToggle,
@@ -365,15 +372,20 @@ class _ItemRow extends StatelessWidget {
                 style: small,
               ),
             ),
-          if (products.isNotEmpty && !item.done)
+          if ((products.isNotEmpty || item.pick != null) && !item.done)
             InkWell(
               onTap: item.ingredient == null
                   ? null
-                  : () => _showProducts(context, item.ingredient!),
+                  : () => showProductsSheet(context, item.ingredient!),
               child: Text.rich(
                 TextSpan(
                   children: [
-                    TextSpan(text: l.shoppingProducts(products)),
+                    TextSpan(
+                      text: switch (item.pick) {
+                        final p? => l.shoppingPicked(pickLabel(l, p)),
+                        null => l.shoppingProducts(products),
+                      },
+                    ),
                     if (item.ingredient != null)
                       TextSpan(
                         text: '  ${l.shoppingSeeAllProducts}',
@@ -387,6 +399,21 @@ class _ItemRow extends StatelessWidget {
                 style: small,
               ),
             ),
+          // Avoided (the recipe's pick) and the user's own brand for this ingredient, as on a recipe line.
+          if (pickTags(
+                context,
+                item.pick,
+                item.products.where((p) => p.mine).firstOrNull?.brand,
+              )
+              case final tags when tags.isNotEmpty && !item.done)
+            Padding(
+              padding: const EdgeInsets.only(top: spaceXs),
+              child: Wrap(
+                spacing: spaceXs,
+                runSpacing: spaceXs,
+                children: tags,
+              ),
+            ),
         ],
       ),
     );
@@ -396,57 +423,6 @@ class _ItemRow extends StatelessWidget {
       child: row,
     );
   }
-}
-
-/// Every catalogue product of [ingredient]: brand and maker, as buying hints.
-Future<void> _showProducts(BuildContext context, String ingredient) {
-  final shopping = context.read<ShoppingController>();
-  final products = shopping.products(ingredient);
-  return showBaseSheet<void>(
-    context,
-    builder: (context) {
-      final l = AppLocalizations.of(context);
-      final nb = Notebook.of(context);
-      final text = Theme.of(context).textTheme;
-      return FutureBuilder(
-        future: products,
-        builder: (context, s) => ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: 16),
-          children: [
-            NotebookRow(
-              child: Text(
-                l.shoppingProductsTitle(ingredient),
-                style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ),
-            if (s.hasError)
-              NotebookRow(child: Text(errorText(l, s.error!)))
-            else if (!s.hasData)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator.adaptive()),
-              )
-            else
-              for (final p in s.data!)
-                NotebookRow(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(p.name),
-                      if (p.brand != null)
-                        Text(
-                          [p.brand, ?p.manufacturer].join(' · '),
-                          style: text.bodySmall?.copyWith(color: nb.inkSoft),
-                        ),
-                    ],
-                  ),
-                ),
-          ],
-        ),
-      );
-    },
-  );
 }
 
 /// To-buy lines grouped by catalogue section (A-Z, "Other" last; the catalogue's own "Lain" joins it), each group

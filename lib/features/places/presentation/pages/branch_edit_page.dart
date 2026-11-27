@@ -104,7 +104,8 @@ class _BranchEditPageState extends State<BranchEditPage> {
   BranchSuggestion? _suggestion;
 
   /// Owner: the Days tab shows once the server says this is a market, with what it has saved.
-  List<MarketDay>? _marketDays;
+  /// null = not loaded (no tab: an editor that started empty could wipe the saved hours).
+  ({bool market, List<MarketDay> days})? _schedule;
 
   /// A draft photo picked as the restaurant's cover: set when the branch is saved.
   String? _photo;
@@ -124,13 +125,13 @@ class _BranchEditPageState extends State<BranchEditPage> {
     }
   }
 
-  /// Not answered = no tab: an editor that started empty could wipe the saved days.
+  /// Any place: a market's days or a shop's hours.
   Future<void> _loadMarketDays() async {
     try {
       final s = await context.read<PlacesController>().branchSchedule(
         widget.branch.id,
       );
-      if (mounted && s.market) setState(() => _marketDays = s.days);
+      if (mounted) setState(() => _schedule = s);
     } catch (_) {}
   }
 
@@ -668,13 +669,17 @@ class _BranchEditPageState extends State<BranchEditPage> {
                   tab([BranchCompanyPanel(branch: widget.branch)]),
                 ],
               ),
-            if (_marketDays case final days?)
+            if (_schedule case (:final market, :final days)?)
               DetailSection(
                 id: 'branch-tab-days',
-                label: l.branchTabDays,
+                label: market ? l.branchTabDays : l.branchTabHours,
                 rows: [
                   tab([
-                    MarketDaysEditor(branchId: widget.branch.id, initial: days),
+                    MarketDaysEditor(
+                      branchId: widget.branch.id,
+                      initial: days,
+                      market: market,
+                    ),
                   ]),
                 ],
               ),

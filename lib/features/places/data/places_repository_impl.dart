@@ -589,6 +589,21 @@ class PlacesRepositoryImpl implements PlacesRepository {
       });
 
   @override
+  Future<List<MenuPrice>> prices(String placeId) => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/places/restaurants/$placeId/prices',
+    )).data!;
+    return [
+      for (final i in (j['items'] as List).cast<Map<String, dynamic>>())
+        (
+          name: i['name'] as String,
+          priceSen: i['priceSen'] as int,
+          people: i['people'] as int,
+        ),
+    ];
+  });
+
+  @override
   Future<PlaceCompanies> placeCompanies(String placeId) => apiCall(() async {
     final j = (await _dio.get<Map<String, dynamic>>(
       '/places/restaurants/$placeId/halal-companies',
@@ -744,6 +759,11 @@ NearbyBranch nearbyBranchFromJson(Map<String, dynamic> j) => NearbyBranch(
   rating: ratingFromJson(j['rating']),
   cover: j['cover'] as String?,
   halalCert: HalalCert.fromJson(j['halalCert']),
+  schedule: [
+    for (final s
+        in (j['schedule'] as List? ?? const []).cast<Map<String, dynamic>>())
+      MarketDay.fromJson(s),
+  ],
 );
 
 ReviewVotes reviewVotesFromJson(Object? json) {

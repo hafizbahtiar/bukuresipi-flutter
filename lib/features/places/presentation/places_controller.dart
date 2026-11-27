@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -37,6 +39,8 @@ class PlacesController extends ChangeNotifier {
   void clear() {
     _generation++; // a load still in flight belongs to the previous user: drop its answer
     _loading = false;
+    _again = false;
+    _running = null;
     _places = const [];
     _loaded = false;
     _error = null;
@@ -52,8 +56,37 @@ class PlacesController extends ChangeNotifier {
     changes.value++;
   }
 
-  Future<void> load() async {
-    if (_loading) return;
+  /// A load asked for while one runs (an edit saved meanwhile): that one may have read the list before the write, so
+  /// one more runs after it, and every caller waits for both (a list awaited is then fresh).
+  bool _again = false;
+  Future<void>? _running;
+
+  Future<void> load() {
+    if (_running case final running?) {
+      _again = true;
+      return running;
+    }
+    final generation = _generation;
+    // Set before the work starts: a listener notified inside it that asks again joins this run.
+    final done = Completer<void>();
+    final run = _running = done.future;
+    () async {
+      try {
+        do {
+          _again = false;
+          await _loadOnce();
+        } while (_again && generation == _generation);
+        done.complete();
+      } catch (e, s) {
+        done.completeError(e, s);
+      } finally {
+        if (identical(_running, run)) _running = null;
+      }
+    }();
+    return run;
+  }
+
+  Future<void> _loadOnce() async {
     final generation = _generation;
     _loading = true;
     notifyListeners();
@@ -399,6 +432,8 @@ class PlacesController extends ChangeNotifier {
   }
 
   /// Owner only: the company behind a branch's certificate ([refresh]: read again now). Throws ApiException.
+  Future<List<MenuPrice>> prices(String placeId) => _repo.prices(placeId);
+
   Future<PlaceCompanies> placeCompanies(String placeId) =>
       _repo.placeCompanies(placeId);
 

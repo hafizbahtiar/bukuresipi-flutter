@@ -93,4 +93,129 @@ void main() {
       throwsA(isA<ApiException>().having((e) => e.code, 'code', 'not_found')),
     );
   });
+
+  test("edit sends a line's pick in object form, null to clear", () async {
+    final repo = make((_) => (200, recipeDetailJson));
+    await repo.edit(
+      'r-1',
+      name: 'N',
+      ingredients: ['200 ml santan', 'garam', 'kicap'],
+      steps: ['Masak.'],
+      optional: {1: true},
+      picks: {0: (kind: 'product', id: 7), 1: (kind: 'brand', id: 3), 2: null},
+    );
+    expect((adapter.requests.single.data as Map)['ingredients'], [
+      {
+        'text': '200 ml santan',
+        'pick': {'productId': 7},
+      },
+      {
+        'text': 'garam',
+        'optional': true,
+        'pick': {'brandId': 3},
+      },
+      {'text': 'kicap', 'pick': null},
+    ]);
+  });
+
+  test("a recipe line's pick and suggested are read", () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          ...recipeDetailJson,
+          'ingredients': [
+            {
+              'name': 'Santan',
+              'rawText': '200 ml santan',
+              'pick': {
+                'kind': 'product',
+                'id': 7,
+                'name': 'Kara UHT 200ml',
+                'brand': 'Kara',
+                'maker': 'Kara Marketing',
+                'country': 'Malaysia',
+                'avoided': true,
+              },
+              'suggested': null,
+            },
+            {'rawText': 'kicap', 'pick': null, 'suggested': 'Kicap Mak Cik'},
+          ],
+        },
+      ),
+    );
+    final lines = (await repo.get('r-1')).ingredients;
+    final pick = lines.first.pick!;
+    expect(
+      [
+        pick.kind,
+        pick.id,
+        pick.name,
+        pick.brand,
+        pick.maker,
+        pick.country,
+        pick.avoided,
+      ],
+      [
+        'product',
+        7,
+        'Kara UHT 200ml',
+        'Kara',
+        'Kara Marketing',
+        'Malaysia',
+        true,
+      ],
+    );
+    expect(lines.last.pick, isNull);
+    expect(lines.last.suggested, 'Kicap Mak Cik');
+  });
+
+  test('picks() reads products and brands', () async {
+    final repo = make(
+      (_) => (
+        200,
+        {
+          'products': [
+            {
+              'id': 7,
+              'name': 'Kara UHT 200ml',
+              'brand': 'Kara',
+              'maker': null,
+              'country': null,
+              'avoided': false,
+              'mine': true,
+              'size': 200,
+              'unit': 'ml',
+            },
+          ],
+          'brands': [
+            {
+              'id': 3,
+              'name': 'Adabi',
+              'brand': 'Adabi',
+              'maker': null,
+              'country': 'Malaysia',
+              'avoided': false,
+            },
+          ],
+        },
+      ),
+    );
+    final found = await repo.picks(ingredient: 'Santan', query: 'ada');
+    expect(adapter.requests.single.path, '/catalogue/picks');
+    expect(adapter.requests.single.queryParameters, {
+      'ingredient': 'Santan',
+      'q': 'ada',
+    });
+    expect(found.products.single.kind, 'product');
+    expect(found.products.single.mine, isTrue);
+    expect(found.brands.single.kind, 'brand');
+    expect(found.brands.single.name, 'Adabi');
+    await repo.suggestPick('r-1', 'kicap', 'Kicap Mak Cik');
+    expect(adapter.requests.last.path, '/recipes/r-1/suggest');
+    expect(adapter.requests.last.data, {
+      'line': 'kicap',
+      'name': 'Kicap Mak Cik',
+    });
+  });
 }

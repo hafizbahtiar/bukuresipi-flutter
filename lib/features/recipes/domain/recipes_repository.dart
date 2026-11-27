@@ -40,8 +40,8 @@ abstract interface class RecipesRepository {
   Future<void> delete(String id);
 
   /// Readable recipes ranked by what the user still lacks, from what they have (cook now first, then 1-3 missing).
-  /// [staples] = salt, sugar and cooking oil count as owned.
-  Future<List<PantryMatch>> fromPantry(
+  /// [staples] = salt, sugar, cooking oil and water count as owned.
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   });
@@ -70,6 +70,7 @@ abstract interface class RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   });
 
@@ -82,12 +83,20 @@ abstract interface class RecipesRepository {
   Future<Uint8List?> cover(String id, String cover);
 
   /// Replaces the name, ingredient lines and steps; returns the saved recipe.
+  /// [picks]: line index -> its product or brand (null = clear); a line left out keeps its own if unchanged.
   Future<RecipeDetail> edit(
     String id, {
     required String name,
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   });
+
+  /// The picker: [ingredient]'s products and brands whose name has [query] (2+ letters).
+  Future<PickChoices> picks({String? ingredient, String? query});
+
+  /// Asks the owner to add brand [name] for recipe [id]'s [line] (its text). Author only.
+  Future<void> suggestPick(String id, String line, String name);
 }

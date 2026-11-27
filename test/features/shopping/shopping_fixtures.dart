@@ -48,6 +48,7 @@ class FakeShopping implements ShoppingRepository {
 
   final skippedOptional = <bool>[];
   final haves = <List<String>>[];
+  final staplesAsked = <bool>[];
   final servingsAsked = <int?>[];
   @override
   Future<List<ShoppingItem>> addRecipe(
@@ -55,11 +56,13 @@ class FakeShopping implements ShoppingRepository {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    bool staples = false,
     int? servings,
   }) async {
     recipesAdded.add(recipeId);
     skippedOptional.add(skipOptional);
     haves.add(have);
+    staplesAsked.add(staples);
     servingsAsked.add(servings);
     if (items.any((i) => i.recipes.any((r) => r.id == recipeId))) return [];
     final item = ShoppingItem(
@@ -72,6 +75,7 @@ class FakeShopping implements ShoppingRepository {
         ShoppingProduct(
           name: 'Beras Super Special Tempatan Jati 5kg',
           brand: 'Jati',
+          country: 'Malaysia',
         ),
       ],
     );
@@ -106,15 +110,67 @@ class FakeShopping implements ShoppingRepository {
       items = items.where((i) => !i.done).toList();
 
   @override
-  Future<List<ShoppingProduct>> products(String ingredient) async => const [
-    ShoppingProduct(
-      name: 'Beras Super Special Tempatan Jati 5kg',
-      brand: 'Jati',
-      manufacturer: 'Serba Wangi Sdn Bhd',
-    ),
-    ShoppingProduct(
-      name: 'Jati Signature Super Special Rice 10kg',
-      brand: 'Jati',
-    ),
-  ];
+  Future<List<ShoppingProduct>> products(String ingredient) async {
+    final mine = choices.mine.any(
+      (m) => m.ingredient == ingredient && m.brand == 'Jati',
+    );
+    return [
+      ShoppingProduct(
+        name: 'Beras Super Special Tempatan Jati 5kg',
+        brand: 'Jati',
+        manufacturer: 'Serba Wangi Sdn Bhd',
+        country: 'Malaysia',
+        mine: mine,
+      ),
+      ShoppingProduct(
+        name: 'Jati Signature Super Special Rice 10kg',
+        brand: 'Jati',
+        mine: mine,
+      ),
+    ];
+  }
+
+  BrandChoices choices = (mine: const [], avoid: const []);
+  final brandCalls = <String>[];
+
+  @override
+  Future<BrandChoices> brandChoices() async => choices;
+
+  @override
+  Future<void> setMyBrand(String ingredient, String brand) async {
+    brandCalls.add('mine $ingredient $brand');
+    choices = (
+      mine: [
+        ...choices.mine.where((m) => m.ingredient != ingredient),
+        (ingredient: ingredient, brand: brand),
+      ],
+      avoid: choices.avoid.where((a) => a.brand != brand).toList(),
+    );
+  }
+
+  @override
+  Future<void> clearMyBrand(String ingredient) async {
+    brandCalls.add('clear $ingredient');
+    choices = (
+      mine: choices.mine.where((m) => m.ingredient != ingredient).toList(),
+      avoid: choices.avoid,
+    );
+  }
+
+  @override
+  Future<void> avoid(AvoidTarget target) async {
+    brandCalls.add('avoid ${target.brand ?? target.maker}');
+    choices = (mine: choices.mine, avoid: [...choices.avoid, target]);
+  }
+
+  @override
+  Future<void> unavoid(AvoidTarget target) async {
+    brandCalls.add('unavoid ${target.brand ?? target.maker}');
+    choices = (
+      mine: choices.mine,
+      avoid: choices.avoid
+          .where((a) => a.brand != target.brand || a.maker != target.maker)
+          .toList(),
+    );
+  }
 }

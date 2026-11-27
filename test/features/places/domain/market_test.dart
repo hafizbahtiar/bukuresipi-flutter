@@ -26,6 +26,21 @@ void main() {
   });
 
   group('marketToday', () {
+    test('a shop with a break: open, then on its break until it opens again, then nothing', () {
+      final lunch = [d(1, '11:00', '15:00'), d(1, '17:00', '22:00')];
+      expect(
+        marketToday(lunch, at(1, 10))?.breakNow,
+        false,
+      ); // opens later, no break yet
+      final open = marketToday(lunch, at(1, 12))!;
+      expect((open.openNow, open.slot.closes), (true, '15:00'));
+      final rest = marketToday(lunch, at(1, 16))!;
+      expect(
+        (rest.openNow, rest.breakNow, rest.slot.opens),
+        (false, true, '17:00'),
+      );
+      expect(marketToday(lunch, at(1, 22, 30)), isNull);
+    });
     final saturday = [d(6, '17:00', '22:00')];
 
     test('later today, open, the last minute, and over', () {

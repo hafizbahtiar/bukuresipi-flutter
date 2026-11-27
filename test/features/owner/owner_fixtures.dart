@@ -1,7 +1,10 @@
+import 'package:bukuresipi_flutter/core/network/api_exception.dart';
+
 import 'dart:async';
 
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:bukuresipi_flutter/features/recipes/domain/recipe_variant.dart';
+import 'package:bukuresipi_flutter/features/owner/data/owner_repository_impl.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
 
@@ -28,6 +31,44 @@ OwnerUser ownerUser(
   shares: shares,
   ban: ban,
 );
+
+/// GET /owner/ai as the server sends it: one provider, the default, three of the uses (one overridden).
+const aiSettingsJson = {
+  'providers': [
+    {
+      'id': 'commandcode',
+      'name': 'Command Code',
+      'configured': true,
+      'models': [
+        {
+          'id': 'deepseek/deepseek-v4.1-flash',
+          'name': 'DeepSeek v4.1 Flash',
+          'reasoning': ['off', 'low', 'high', 'max'],
+          'images': true,
+        },
+      ],
+    },
+  ],
+  'default': {
+    'provider': 'commandcode',
+    'model': 'deepseek/deepseek-v4.1-flash',
+    'reasoning': 'off',
+  },
+  'uses': [
+    {'id': 'share_extract', 'budget': true, 'images': false, 'setting': null},
+    {
+      'id': 'place_draft',
+      'budget': false,
+      'images': false,
+      'setting': {
+        'provider': 'commandcode',
+        'model': 'deepseek/deepseek-v4.1-flash',
+        'reasoning': 'high',
+      },
+    },
+    {'id': 'receipt_read', 'budget': true, 'images': true, 'setting': null},
+  ],
+};
 
 class FakeOwner implements OwnerRepository {
   OwnerStats stats = OwnerStats(
@@ -226,4 +267,309 @@ class FakeOwner implements OwnerRepository {
       b.ratings.removeWhere((r) => r.id == ratingId);
     }
   }
+
+  List<IngredientGap> gaps = const [];
+  List<String> catalogue = const ['Minyak masak', 'Minyak zaitun', 'Garam'];
+  final aliases = <(String, String)>[];
+  final newIngredients = <(String, String)>[];
+  int relinks = 0;
+
+  @override
+  Future<({List<IngredientGap> gaps, List<String> categories})>
+  ingredientGaps() async => (gaps: gaps, categories: const ['Lain', 'Rempah']);
+
+  @override
+  Future<List<String>> searchIngredients(String query) async => [
+    for (final c in catalogue)
+      if (c.toLowerCase().contains(query.toLowerCase())) c,
+  ];
+
+  @override
+  Future<({int lines, List<String> sample})> previewAlias(
+    String ingredient,
+    String alias,
+  ) async {
+    if (alias == 'garam') throw const ApiException('name_taken', status: 409);
+    return (lines: 3, sample: const ['sedikit minyak', '2 sudu minyak']);
+  }
+
+  ({String? name, String? ingredient}) gapAnswer = (
+    name: 'minyak masak',
+    ingredient: 'Minyak masak',
+  );
+  List<AliasSuggestion> aliasAnswer = const [
+    (ingredient: 'Bawang putih', alias: 'garlic', lines: 12),
+    (ingredient: 'Bawang putih', alias: 'garlics', lines: 0),
+  ];
+
+  final fills = <String>[];
+  ProductFill fillAnswer = (
+    name: 'Kara UHT Coconut Cream 200ml',
+    brand: 'Kara',
+    brandIsNew: true,
+    size: 200,
+    unit: 'ml',
+    ingredient: 'Santan',
+    aiIngredient: true,
+    source: 'https://www.jayagrocer.com/products/kara-uht-coconut-cream-200ml',
+    maker: (
+      name: 'PT Kara Santan Pertama',
+      country: 'Indonesia',
+      source: 'https://kara.test/about',
+    ),
+    similar: const [],
+  );
+
+  @override
+  Future<ProductFill> fillProduct({
+    String? barcode,
+    String? url,
+    String? name,
+  }) async {
+    fills.add(barcode ?? url ?? name!);
+    if (barcode == '0000000000000') {
+      throw const ApiException('not_found', status: 404);
+    }
+    return fillAnswer;
+  }
+
+  @override
+  Future<({String? name, String? ingredient})> suggestGap(String line) async =>
+      gapAnswer;
+
+  @override
+  Future<({List<AliasSuggestion> items, int? next})> suggestAliases(
+    int offset,
+  ) async => (
+    items: offset == 0 ? aliasAnswer : const <AliasSuggestion>[],
+    next: null,
+  );
+
+  @override
+  Future<int> addAlias(String ingredient, String alias) async {
+    aliases.add((ingredient, alias));
+    gaps = const [];
+    return 3;
+  }
+
+  /// Owner > AI: the settings as the server holds them; saves and clears change them as the server would.
+  AiSettings aiAnswer = aiSettingsFromJson(aiSettingsJson);
+  final aiSaved = <(String, AiSetting)>[];
+  final aiCleared = <String>[];
+
+  @override
+  Future<AiSettings> aiSettings() async => aiAnswer;
+
+  @override
+  Future<AiSettings> saveAiSetting(String use, AiSetting setting) async {
+    aiSaved.add((use, setting));
+    return aiAnswer = use == 'default'
+        ? (
+            providers: aiAnswer.providers,
+            defaults: setting,
+            uses: aiAnswer.uses,
+          )
+        : (
+            providers: aiAnswer.providers,
+            defaults: aiAnswer.defaults,
+            uses: [
+              for (final u in aiAnswer.uses)
+                u.id == use
+                    ? (
+                        id: u.id,
+                        budget: u.budget,
+                        images: u.images,
+                        setting: setting,
+                      )
+                    : u,
+            ],
+          );
+  }
+
+  @override
+  Future<AiSettings> clearAiSetting(String use) async {
+    aiCleared.add(use);
+    return aiAnswer = (
+      providers: aiAnswer.providers,
+      defaults: aiAnswer.defaults,
+      uses: [
+        for (final u in aiAnswer.uses)
+          u.id == use
+              ? (id: u.id, budget: u.budget, images: u.images, setting: null)
+              : u,
+      ],
+    );
+  }
+
+  @override
+  Future<List<CatalogueSuggestion>> catalogueSuggestions() async =>
+      suggestionList;
+
+  List<CatalogueSuggestion> suggestionList = const [];
+  final resolvedSuggestions = <(String, PickRef)>[];
+  final dismissed = <String>[];
+
+  @override
+  Future<int> resolveSuggestion(String name, PickRef target) async {
+    resolvedSuggestions.add((name, target));
+    final linked =
+        suggestionList.where((s) => s.name == name).firstOrNull?.recipes ?? 0;
+    suggestionList = [...suggestionList.where((s) => s.name != name)];
+    return linked;
+  }
+
+  @override
+  Future<void> dismissSuggestion(String name) async {
+    dismissed.add(name);
+    suggestionList = [...suggestionList.where((s) => s.name != name)];
+  }
+
+  @override
+  Future<({int saved, int linked})> addAliases(
+    List<({String ingredient, String alias})> items,
+  ) async {
+    aliasBatches++;
+    for (final i in items) {
+      aliases.add((i.ingredient, i.alias));
+    }
+    gaps = const [];
+    return (saved: items.length, linked: 3);
+  }
+
+  int aliasBatches = 0;
+
+  @override
+  Future<int> addIngredient(String name, String category) async {
+    newIngredients.add((name, category));
+    gaps = const [];
+    return 1;
+  }
+
+  @override
+  Future<({int checked, int linked})> relinkIngredients() async {
+    relinks++;
+    return (checked: 5, linked: 2);
+  }
+
+  @override
+  Future<({String ingredients, String aliases})> addedIngredientRows() async =>
+      (ingredients: '| 289 | Daun salam | Rempah | — | — | — |', aliases: '');
+
+  List<CatalogueMaker> makerList = const [
+    CatalogueMaker(id: 1, name: 'Faiza Marketing', brands: 1),
+  ];
+  List<CatalogueBrand> brandList = const [
+    CatalogueBrand(
+      id: 1,
+      name: 'Faiza',
+      makerId: 1,
+      maker: 'Faiza Marketing',
+      country: 'Malaysia',
+      products: 3,
+    ),
+  ];
+  List<CatalogueProduct> productList = const [
+    CatalogueProduct(
+      id: 1,
+      name: 'Beras Faiza 5kg',
+      ingredient: 'Beras putih',
+      brandId: 1,
+      brand: 'Faiza',
+      size: 5,
+      unit: 'kg',
+    ),
+  ];
+  final catalogueQueries = <(String, String?)>[];
+  final savedRows = <(String, int?, Map<String, Object?>)>[];
+  final deletedRows = <(String, int)>[];
+
+  @override
+  Future<CataloguePage<CatalogueMaker>> makers({
+    String? query,
+    int offset = 0,
+  }) async {
+    catalogueQueries.add(('makers', query));
+    return (items: makerList, next: null);
+  }
+
+  @override
+  Future<(CataloguePage<CatalogueBrand>, List<String>)> brands({
+    String? query,
+    int offset = 0,
+  }) async {
+    catalogueQueries.add(('brands', query));
+    return ((items: brandList, next: null), const ['Malaysia', 'Thailand']);
+  }
+
+  @override
+  Future<(CataloguePage<CatalogueProduct>, List<String>)> products({
+    String? query,
+    int offset = 0,
+  }) async {
+    catalogueQueries.add(('products', query));
+    return ((items: productList, next: null), const ['kg', 'L']);
+  }
+
+  @override
+  Future<void> saveMaker({int? id, required String name}) async {
+    if (name.toLowerCase() == 'taken') {
+      throw const ApiException('name_taken', status: 409);
+    }
+    savedRows.add(('makers', id, {'name': name}));
+    if (id == null) {
+      makerList = [
+        ...makerList,
+        CatalogueMaker(id: 800 + makerList.length, name: name),
+      ];
+    }
+  }
+
+  @override
+  Future<void> saveBrand({
+    int? id,
+    required String name,
+    int? makerId,
+    String? country,
+  }) async {
+    savedRows.add((
+      'brands',
+      id,
+      {'name': name, 'makerId': makerId, 'country': country},
+    ));
+    if (id == null) {
+      brandList = [
+        ...brandList,
+        CatalogueBrand(id: 900 + brandList.length, name: name),
+      ];
+    }
+  }
+
+  @override
+  Future<void> saveProduct({
+    int? id,
+    required String name,
+    String? ingredient,
+    int? brandId,
+    double? size,
+    String? unit,
+  }) async => savedRows.add((
+    'products',
+    id,
+    {
+      'name': name,
+      'ingredient': ingredient,
+      'brandId': brandId,
+      'size': size,
+      'unit': unit,
+    },
+  ));
+
+  @override
+  Future<void> deleteCatalogueRow(String kind, int id) async =>
+      deletedRows.add((kind, id));
+
+  @override
+  Future<({String makers, String brands, String products})>
+  catalogueRows() async =>
+      (makers: '| 122 | Kilang Baru |', brands: '', products: '');
 }

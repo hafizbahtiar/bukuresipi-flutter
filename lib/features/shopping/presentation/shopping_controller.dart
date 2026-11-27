@@ -158,12 +158,14 @@ class ShoppingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// How many lines were added (0 = all already on the list). [family] = to the family list.
+  /// How many lines were added (0 = all already on the list). [family] = to the family list. [have] = what the
+  /// kitchen has (What can I cook?), left out; [staples] = salt, sugar, oil and water too.
   Future<int> addRecipe(
     String recipeId, {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    bool staples = false,
     int? servings,
   }) async {
     final added = await _repo.addRecipe(
@@ -171,6 +173,7 @@ class ShoppingController extends ChangeNotifier {
       family: family,
       skipOptional: skipOptional,
       have: have,
+      staples: staples,
       servings: servings,
     );
     lastRecipeList = family;
@@ -215,6 +218,17 @@ class ShoppingController extends ChangeNotifier {
   /// Throws ApiException.
   Future<List<ShoppingProduct>> products(String ingredient) =>
       _repo.products(ingredient);
+
+  /// Throws ApiException.
+  Future<BrandChoices> brandChoices() => _repo.brandChoices();
+
+  /// A brand choice ([change]), then the list again: its hints follow the user's choices. Throws ApiException.
+  Future<void> changeBrands(
+    Future<void> Function(ShoppingRepository r) change,
+  ) async {
+    await change(_repo);
+    await load();
+  }
 
   Future<void> clearDone() async {
     final done = _items.where((i) => i.done).toList();

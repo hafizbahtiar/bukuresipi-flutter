@@ -57,6 +57,22 @@ void main() {
     await t.pump();
   }
 
+  testWidgets(
+    'calories still pending: checked for ~5 minutes, then left for the next open',
+    (t) async {
+      final repo = FakeReceipts()
+        ..answers = [receipt(status: 'saved', caloriesPending: true)];
+      await pump(t, repo);
+      // 20 polls at 10 ms, then 16 at 50 ms (the test's [poll]), then none.
+      for (var i = 0; i < 60; i++) {
+        await t.pump(const Duration(milliseconds: 50));
+      }
+      expect(repo.gets, 37);
+      await t.pump(const Duration(seconds: 10));
+      expect(repo.gets, 37);
+    },
+  );
+
   testWidgets('waits while reading, then the user checks the total and saves', (
     t,
   ) async {
@@ -697,7 +713,17 @@ void main() {
       expect(repo.savedSplits.last.portions, [
         (position: 0, person: 1, quantity: 1.0),
       ]);
-      expect(find.text('RM 22.75'), findsOneWidget);
+      // Ali's share (the Teh Ais line also costs RM 22.75: on a wide screen both are built).
+      final aliShare = find.byKey(const ValueKey('split-share-1'));
+      await t.scrollUntilVisible(aliShare, 200, scrollable: _vertical);
+      await t.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('split-share-1')),
+          matching: find.text('RM 22.75'),
+        ),
+        findsOneWidget,
+      );
 
       final shareButton = find.byKey(const ValueKey('split-share-button'));
       await t.scrollUntilVisible(shareButton, 200, scrollable: _vertical);

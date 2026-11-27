@@ -40,8 +40,9 @@ class MarketDay {
   }
 }
 
-/// A market's opening that still matters today: [openNow], or later today.
-typedef MarketToday = ({MarketDay slot, bool openNow});
+/// An opening that still matters today: [openNow], or later today. [breakNow] = closed between two of today's
+/// openings (a shop's lunch or rest break: "Rehat until 5 pm").
+typedef MarketToday = ({MarketDay slot, bool openNow, bool breakNow});
 
 /// What is left of today at [now] (Malaysia time). Last night's opening still running counts. null = nothing more
 /// today, or days not known: never "closed".
@@ -49,18 +50,24 @@ MarketToday? marketToday(List<MarketDay> schedule, DateTime now) {
   final minute = now.hour * 60 + now.minute;
   final yesterday = now.weekday == 1 ? 7 : now.weekday - 1;
   MarketDay? later;
+  var endedToday = false;
   for (final s in schedule) {
     if (s.day == yesterday && s.overnight && minute < s.closesAt) {
-      return (slot: s, openNow: true);
+      return (slot: s, openNow: true, breakNow: false);
     }
     if (s.day != now.weekday) continue;
     final end = s.overnight ? s.closesAt + 24 * 60 : s.closesAt;
-    if (minute >= s.opensAt && minute < end) return (slot: s, openNow: true);
+    if (minute >= s.opensAt && minute < end) {
+      return (slot: s, openNow: true, breakNow: false);
+    }
+    if (minute >= end) endedToday = true;
     if (minute < s.opensAt && (later == null || s.opensAt < later.opensAt)) {
       later = s;
     }
   }
-  return later == null ? null : (slot: later, openNow: false);
+  return later == null
+      ? null
+      : (slot: later, openNow: false, breakNow: endedToday);
 }
 
 /// The markets still on today: open now first, then nearest.

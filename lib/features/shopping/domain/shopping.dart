@@ -1,3 +1,5 @@
+import '../../recipes/domain/recipe.dart';
+
 /// One line on the user's shopping checklist.
 class ShoppingItem {
   const ShoppingItem({
@@ -8,7 +10,11 @@ class ShoppingItem {
     this.category,
     this.recipes = const [],
     this.products = const [],
+    this.pick,
   });
+
+  /// The recipe line's product or brand, copied when the recipe was added; null = none.
+  final LinePick? pick;
 
   final String id;
   final String text;
@@ -28,9 +34,31 @@ class ShoppingItem {
 }
 
 class ShoppingProduct {
-  const ShoppingProduct({required this.name, this.brand, this.manufacturer});
+  const ShoppingProduct({
+    required this.name,
+    this.brand,
+    this.manufacturer,
+    this.country,
+    this.mine = false,
+  });
 
   final String name;
   final String? brand;
   final String? manufacturer;
+
+  /// Where the brand is from ("Malaysia").
+  final String? country;
+
+  /// The user's own brand for this ingredient (Account > Brands).
+  final bool mine;
 }
+
+/// The user's brand choices: their brand per ingredient, and brands or whole makers they avoid (one of the two
+/// set). Private to them, also on a family list.
+typedef BrandChoices = ({
+  List<({String ingredient, String brand})> mine,
+  List<({String? brand, String? maker})> avoid,
+});
+
+/// What to avoid: a [brand], or everything from a [maker].
+typedef AvoidTarget = ({String? brand, String? maker});

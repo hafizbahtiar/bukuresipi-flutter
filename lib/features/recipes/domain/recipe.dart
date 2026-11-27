@@ -177,7 +177,23 @@ class RecipeIngredient {
     this.quantity,
     this.unit,
     this.optional = false,
+    this.hasProducts = false,
+    this.myBrand,
+    this.pick,
+    this.suggested,
   });
+
+  /// The author's catalogue product or brand for this line; null = none.
+  final LinePick? pick;
+
+  /// The author's own open suggestion for a brand the catalogue lacks (only they see it); null = none.
+  final String? suggested;
+
+  /// The catalogue has products of [name] the user has not avoided (the shopping list's See all).
+  final bool hasProducts;
+
+  /// The user's own brand for [name] (Account > Brands); null = none.
+  final String? myBrand;
 
   /// "If you like": the dish is still the dish without it (the post said so, or the owner marked it).
   final bool optional;
@@ -200,6 +216,56 @@ class RecipeIngredient {
   }
 }
 
+/// A catalogue product or brand: a recipe line's pick, a shopping line's (copied from it), or a picker row.
+class LinePick {
+  const LinePick({
+    required this.kind,
+    required this.id,
+    required this.name,
+    this.brand,
+    this.maker,
+    this.country,
+    this.avoided = false,
+    this.mine = false,
+  });
+
+  /// 'product' | 'brand'.
+  final String kind;
+  final int id;
+
+  /// The product's name, or the brand's.
+  final String name;
+  final String? brand;
+  final String? maker;
+  final String? country;
+
+  /// The reader avoids this brand or its maker: shown and marked, never hidden.
+  final bool avoided;
+
+  /// Picker only: the reader's own brand for the ingredient.
+  final bool mine;
+
+  factory LinePick.fromJson(Map<String, dynamic> p) => LinePick(
+    kind: p['kind'] as String,
+    id: p['id'] as int,
+    name: p['name'] as String,
+    brand: p['brand'] as String?,
+    maker: p['maker'] as String?,
+    country: p['country'] as String?,
+    avoided: p['avoided'] == true,
+    mine: p['mine'] == true,
+  );
+
+  bool get isBrand => kind == 'brand';
+  PickRef get ref => (kind: kind, id: id);
+}
+
+/// What the app sends for a line's pick.
+typedef PickRef = ({String kind, int id});
+
+/// The recipe editor's picker: the ingredient's products and brands by name.
+typedef PickChoices = ({List<LinePick> products, List<LinePick> brands});
+
 class RecipeStep {
   const RecipeStep({required this.stepNo, required this.instruction});
 
@@ -216,6 +282,10 @@ typedef PantryMatch = ({
   List<String> missing,
   List<String> unknown,
 });
+
+/// What can I cook?'s answer: [unrecognised] = the user's names the catalogue does not know (matched only word for
+/// word to lines with no catalogue link).
+typedef PantryResult = ({List<PantryMatch> items, List<String> unrecognised});
 
 /// A dish AI named for ingredients no recipe fits: a name only; [uses] = the user's own ingredients it takes.
 typedef DishSuggestion = ({String name, List<String> uses});

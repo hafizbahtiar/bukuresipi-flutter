@@ -1008,8 +1008,11 @@
     }
   },
   "placeSubPasarMalam": "Pasar malam",
+  "@placeSubPasarMalam": {},
   "placeSubPasarTani": "Pasar tani",
+  "@placeSubPasarTani": {},
   "marketsNearTitle": "Pasar near you today",
+  "@marketsNearTitle": {},
   "marketOpenUntil": "Open now · until {time}",
   "@marketOpenUntil": {
     "placeholders": {
@@ -1019,26 +1022,47 @@
     }
   },
   "marketNotToday": "Not on today",
+  "@marketNotToday": {},
   "marketDaysTitle": "Market days",
+  "@marketDaysTitle": {},
   "marketDaysUnknown": "Days not known yet.",
+  "@marketDaysUnknown": {},
   "marketDaysHelp": "The usual weekly days and hours, Malaysia time. Leave empty when not known.",
+  "@marketDaysHelp": {},
   "marketDayField": "Day",
+  "@marketDayField": {},
   "marketOpens": "Opens",
+  "@marketOpens": {},
   "marketCloses": "Closes",
+  "@marketCloses": {},
   "marketPastMidnight": "Closes after midnight",
+  "@marketPastMidnight": {},
   "marketAddDay": "Add day",
+  "@marketAddDay": {},
   "marketSaveDays": "Save days",
+  "@marketSaveDays": {},
   "marketSavingDays": "Saving…",
+  "@marketSavingDays": {},
   "marketDaysSaved": "Market days saved.",
+  "@marketDaysSaved": {},
   "marketDayTwice": "Two rows have the same day and opening time.",
+  "@marketDayTwice": {},
   "marketSameTime": "Opening and closing time can't be the same.",
+  "@marketSameTime": {},
   "branchTabDays": "Days",
+  "@branchTabDays": {},
   "legendMarket": "Pasar",
+  "@legendMarket": {},
   "legendMarketHint": "A pasar malam or pasar tani, drawn along its street or ground when known.",
+  "@legendMarketHint": {},
   "ownerHidden": "Hidden content",
+  "@ownerHidden": {},
   "ownerHiddenEmpty": "Nothing is hidden.",
+  "@ownerHiddenEmpty": {},
   "ownerHiddenRecipes": "Recipes",
+  "@ownerHiddenRecipes": {},
   "ownerHiddenReviews": "Reviews",
+  "@ownerHiddenReviews": {},
   "ownerHiddenOn": "Hidden {date}",
   "@ownerHiddenOn": {
     "placeholders": {
@@ -1048,11 +1072,17 @@
     }
   },
   "ownerHiddenNotPublic": "Not public now",
+  "@ownerHiddenNotPublic": {},
   "ownerHiddenTextRemoved": "The author removed this text.",
+  "@ownerHiddenTextRemoved": {},
   "ownerUnhide": "Show again",
+  "@ownerUnhide": {},
   "ownerUnhiding": "Showing…",
+  "@ownerUnhiding": {},
   "ownerUnhideRecipeConfirm": "Stop hiding this recipe? If it is still public, it returns to Community.",
+  "@ownerUnhideRecipeConfirm": {},
   "ownerUnhideReviewConfirm": "Stop hiding this person's review? Its current text, or what they write next, can be read by everyone.",
+  "@ownerUnhideReviewConfirm": {},
   "ownerReviewReportReasons": "Reasons: {reasons}",
   "@ownerReviewReportReasons": {
     "placeholders": {
@@ -3012,8 +3042,12 @@
   "@pantryAdd": {},
   "pantryFull": "Up to 30 ingredients. Remove one to add another.",
   "@pantryFull": {},
-  "pantryStaples": "Salt, sugar and cooking oil are in my kitchen",
+  "pantryStaples": "Salt, sugar, cooking oil and water are in my kitchen",
   "@pantryStaples": {},
+  "pantryUnrecognised": "Marked ? = not in our ingredient list: only recipes that use the same word count it. Pick a suggestion as you type for a better match.",
+  "@pantryUnrecognised": {
+    "description": "Under the ingredient chips after a search: chips marked with a ? icon matched nothing in the ingredient catalogue."
+  },
   "pantryFind": "Find recipes",
   "@pantryFind": {},
   "pantryCookNow": "Cook now",
@@ -3038,8 +3072,6 @@
   "@pantryNone": {},
   "pantryAddMissing": "Add missing to shopping list",
   "@pantryAddMissing": {},
-  "pantryAdded": "Added to your shopping list",
-  "@pantryAdded": {},
   "pantrySuggest": "Suggest a dish",
   "@pantrySuggest": {},
   "pantrySuggestNote": "AI names a dish you could make with these. Tap one to look for a recipe online.",
@@ -3288,6 +3320,18 @@
       }
     }
   },
+  "pricesTitle": "Prices",
+  "@pricesTitle": {},
+  "pricesPeople": "{count} people paid this",
+  "@pricesPeople": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pricesNote": "From receipts people confirmed in the last 12 months, the middle price of one piece. Prices may have changed.",
+  "@pricesNote": {},
   "shareSendScreenshot": "Send a screenshot",
   "@shareSendScreenshot": {},
   "spendingBudget": "Monthly food budget",
@@ -3477,5 +3521,480 @@
   "einvoiceNameHelp": "As on your IC",
   "@einvoiceNameHelp": {},
   "einvoiceTinHelp": "Your tax number from LHDN (MyTax)",
-  "@einvoiceTinHelp": {}
+  "@einvoiceTinHelp": {},
+  "ownerIngredientGaps": "Ingredient gaps",
+  "@ownerIngredientGaps": {},
+  "ownerIngredientGapsHint": "Recipe and shopping lines that match no ingredient. Tap one to add the name we lack: every line it names is linked.",
+  "@ownerIngredientGapsHint": {},
+  "ownerNoGaps": "Every line has an ingredient.",
+  "@ownerNoGaps": {},
+  "ownerGapCount": "Recipes {recipes} · Shopping lists {shopping}",
+  "@ownerGapCount": {
+    "placeholders": {
+      "recipes": {
+        "type": "int"
+      },
+      "shopping": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerGapPick": "Which ingredient is “{key}”?",
+  "@ownerGapPick": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapSearch": "Search ingredients",
+  "@ownerGapSearch": {},
+  "ownerGapNew": "New ingredient",
+  "@ownerGapNew": {},
+  "ownerGapAlias": "Another name for {ingredient}",
+  "@ownerGapAlias": {
+    "placeholders": {
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapName": "Name",
+  "@ownerGapName": {},
+  "ownerGapLinks": "Links {count} lines",
+  "@ownerGapLinks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerGapTaken": "That name is already an ingredient or another name.",
+  "@ownerGapTaken": {},
+  "ownerGapCategory": "Category",
+  "@ownerGapCategory": {},
+  "ownerGapSaved": "Saved. {count} lines linked.",
+  "@ownerGapSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerRelink": "Relink all lines",
+  "@ownerRelink": {},
+  "ownerRelinked": "{linked} of {checked} lines linked.",
+  "@ownerRelinked": {
+    "placeholders": {
+      "linked": {
+        "type": "int"
+      },
+      "checked": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerCopyRows": "Copy rows for docs",
+  "@ownerCopyRows": {},
+  "ownerCopyRowsHint": "Paste at the end of the tables in docs/plans/, then run bun run db:build-seed.",
+  "@ownerCopyRowsHint": {},
+  "ownerCopyRowsNone": "Nothing added in the app yet.",
+  "@ownerCopyRowsNone": {},
+  "ownerCopied": "Copied",
+  "@ownerCopied": {},
+  "ownerCatalogue": "Catalogue",
+  "@ownerCatalogue": {},
+  "catalogueProducts": "Products",
+  "@catalogueProducts": {},
+  "catalogueBrands": "Brands",
+  "@catalogueBrands": {},
+  "catalogueMakers": "Makers",
+  "@catalogueMakers": {},
+  "catalogueSearch": "Search",
+  "@catalogueSearch": {},
+  "catalogueAdd": "Add",
+  "@catalogueAdd": {},
+  "catalogueEmpty": "Nothing here.",
+  "@catalogueEmpty": {},
+  "catalogueBrandCount": "{count} brands",
+  "@catalogueBrandCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueProductCount": "{count} products",
+  "@catalogueProductCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueName": "Name",
+  "@catalogueName": {},
+  "catalogueMaker": "Maker",
+  "@catalogueMaker": {},
+  "catalogueCountry": "Country",
+  "@catalogueCountry": {},
+  "catalogueBrand": "Brand",
+  "@catalogueBrand": {},
+  "catalogueIngredient": "Ingredient",
+  "@catalogueIngredient": {},
+  "catalogueSize": "Size",
+  "@catalogueSize": {},
+  "catalogueUnit": "Unit",
+  "@catalogueUnit": {},
+  "catalogueNone": "None",
+  "@catalogueNone": {},
+  "catalogueTaken": "That name is already used.",
+  "@catalogueTaken": {},
+  "catalogueUnknown": "Not found. Pick an ingredient from the suggestions, or reload: it may have been deleted.",
+  "@catalogueUnknown": {},
+  "catalogueDeleteAsk": "Delete {name}? What uses it stays, without it. Remove its row from docs/plans by hand too.",
+  "@catalogueDeleteAsk": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogueSaved": "Saved",
+  "@catalogueSaved": {},
+  "catalogueDeleted": "Deleted",
+  "@catalogueDeleted": {},
+  "catalogueRowsHint": "Paste into docs/plans/: a changed row replaces the row with its id, a new one goes at the end. Deletes are not here: remove those rows by hand.",
+  "@catalogueRowsHint": {},
+  "brandsTitle": "Brands",
+  "@brandsTitle": {},
+  "brandsLocalFirst": "Malaysian brands first",
+  "@brandsLocalFirst": {},
+  "brandsLocalFirstHint": "Product hints on your shopping list show brands from Malaysia before others. Only you see this choice.",
+  "@brandsLocalFirstHint": {},
+  "brandsYours": "Your brand",
+  "@brandsYours": {},
+  "brandsUse": "Use {brand} for {ingredient}",
+  "@brandsUse": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      },
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsStopUsing": "Stop using {brand} for {ingredient}",
+  "@brandsStopUsing": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      },
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsAvoid": "Avoid {brand}",
+  "@brandsAvoid": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsAvoidMaker": "Avoid everything from {maker}",
+  "@brandsAvoidMaker": {
+    "placeholders": {
+      "maker": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsMine": "Your brands",
+  "@brandsMine": {},
+  "brandsAvoided": "Avoided",
+  "@brandsAvoided": {},
+  "brandsWholeMaker": "Everything this maker makes",
+  "@brandsWholeMaker": {},
+  "brandsNone": "None yet. Choose one below, or tap See all on a shopping line.",
+  "@brandsNone": {},
+  "brandsRemove": "Remove",
+  "@brandsRemove": {},
+  "errMakerAvoided": "You avoid this brand's maker. Remove it from Account > Brands first.",
+  "@errMakerAvoided": {},
+  "errAvoidFull": "You avoid 100 brands and makers already. Remove some in Account > Brands.",
+  "@errAvoidFull": {},
+  "recipeProducts": "Products",
+  "@recipeProducts": {},
+  "recipeMyBrand": "Your brand: {brand}",
+  "@recipeMyBrand": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapAiSuggest": "Suggest with AI",
+  "@ownerGapAiSuggest": {},
+  "ownerGapAiSame": "Same as {ingredient}",
+  "@ownerGapAiSame": {
+    "placeholders": {
+      "ingredient": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapAiNew": "New ingredient: {name}",
+  "@ownerGapAiNew": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerGapAiNone": "AI could not tell what this is",
+  "@ownerGapAiNone": {},
+  "ownerAliasAiTitle": "Suggest aliases with AI",
+  "@ownerAliasAiTitle": {},
+  "ownerAliasAiHint": "Other names for ingredients with the fewest. Tick the right ones: a wrong alias links lines (and their allergens) to the wrong ingredient.",
+  "@ownerAliasAiHint": {},
+  "ownerAliasAiLines": "{count, plural, =0{Links no line yet} =1{Links 1 line now} other{Links {count} lines now}}",
+  "@ownerAliasAiLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAliasAiNone": "No new aliases for these.",
+  "@ownerAliasAiNone": {},
+  "ownerAliasAiSave": "{count, plural, =0{Save} other{Save {count}}}",
+  "@ownerAliasAiSave": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAliasAiSaved": "{aliases, plural, =1{1 alias saved} other{{aliases} aliases saved}}, {lines} lines linked",
+  "@ownerAliasAiSaved": {
+    "placeholders": {
+      "aliases": {
+        "type": "int"
+      },
+      "lines": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueFillFrom": "Barcode, store link or product name",
+  "@catalogueFillFrom": {},
+  "catalogueFillHint": "Fills the form from Open Food Facts, the store's page, or a web search for the name. Check it, then save.",
+  "@catalogueFillHint": {},
+  "catalogueFill": "Fill",
+  "@catalogueFill": {},
+  "catalogueFillSource": "From {site}. Check it, then save.",
+  "@catalogueFillSource": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogueFillNotFound": "No product found for that.",
+  "@catalogueFillNotFound": {},
+  "catalogueFillUnreadable": "No product found on that page.",
+  "@catalogueFillUnreadable": {},
+  "catalogueNewBrand": "New brand: {brand}. Added when you save.",
+  "@catalogueNewBrand": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogueMadeBy": "Made by {maker} (from {site})",
+  "@catalogueMadeBy": {
+    "placeholders": {
+      "maker": {
+        "type": "String"
+      },
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogueSimilar": "This may be in the catalogue already. Tap it to edit it instead.",
+  "@catalogueSimilar": {},
+  "ownerAliasAiTickAll": "Tick all",
+  "@ownerAliasAiTickAll": {},
+  "ownerAliasAiTickNone": "Untick all",
+  "@ownerAliasAiTickNone": {},
+  "brandsAdd": "Choose a brand",
+  "@brandsAdd": {},
+  "brandsAddHint": "Type an ingredient, then pick its brand.",
+  "@brandsAddHint": {},
+  "brandsFindIngredient": "Ingredient",
+  "@brandsFindIngredient": {},
+  "brandsNoProducts": "No products for this ingredient yet.",
+  "@brandsNoProducts": {},
+  "recipePickNone": "Brand: none",
+  "@recipePickNone": {},
+  "recipePickAny": "Any {brand}",
+  "@recipePickAny": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "recipePickTitle": "Which product or brand?",
+  "@recipePickTitle": {},
+  "recipePickSearch": "Find a brand",
+  "@recipePickSearch": {},
+  "recipePickSuggest": "Not listed? Suggest it",
+  "@recipePickSuggest": {},
+  "recipePickSuggestHint": "We add it to the catalogue, then this line gets it. Only you and us see what you send.",
+  "@recipePickSuggestHint": {},
+  "recipePickSuggestName": "Brand or product name",
+  "@recipePickSuggestName": {},
+  "recipePickSend": "Send",
+  "@recipePickSend": {},
+  "recipePickSuggested": "Suggested: {name}",
+  "@recipePickSuggested": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errPickMismatch": "That product is for another ingredient. Pick again on the changed line.",
+  "@errPickMismatch": {},
+  "errPickUnknown": "That product or brand is gone from the catalogue. Pick another.",
+  "@errPickUnknown": {},
+  "errSuggestionFull": "You have 20 suggestions waiting already. Try again once some are added.",
+  "@errSuggestionFull": {},
+  "shoppingPicked": "Recipe uses {name}",
+  "@shoppingPicked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogueSuggested": "Suggested by recipe authors",
+  "@catalogueSuggested": {},
+  "catalogueSuggestedRecipes": "{count, plural, =1{1 recipe} other{{count} recipes}}",
+  "@catalogueSuggestedRecipes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catalogueSuggestedEmpty": "No suggestions waiting.",
+  "@catalogueSuggestedEmpty": {},
+  "catalogueAddAsBrand": "Add as a brand",
+  "@catalogueAddAsBrand": {},
+  "catalogueAddAsProduct": "Add as a product",
+  "@catalogueAddAsProduct": {},
+  "catalogueLinkExisting": "Link to one in the catalogue",
+  "@catalogueLinkExisting": {},
+  "catalogueDismiss": "Dismiss",
+  "@catalogueDismiss": {},
+  "catalogueLinked": "{count, plural, =0{No line still needed it} =1{Linked to 1 line} other{Linked to {count} lines}}",
+  "@catalogueLinked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipePickSaveFirst": "Save the recipe first to suggest a brand that is not listed.",
+  "@recipePickSaveFirst": {},
+  "catalogueSuggestedWaiting": "{count, plural, =1{1 suggestion from recipes} other{{count} suggestions from recipes}}",
+  "@catalogueSuggestedWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAi": "AI",
+  "@ownerAi": {},
+  "ownerAiHelp": "Which model each use runs, and how long it thinks first.",
+  "@ownerAiHelp": {},
+  "aiDefault": "Default",
+  "@aiDefault": {},
+  "aiUses": "Uses",
+  "@aiUses": {},
+  "aiUseDefault": "Use default",
+  "@aiUseDefault": {},
+  "aiNotConfigured": "Not configured",
+  "@aiNotConfigured": {},
+  "aiModel": "Model",
+  "@aiModel": {},
+  "aiReasoning": "Thinking",
+  "@aiReasoning": {},
+  "aiBudgetWarning": "Runs inside a share or receipt's ~25 s: thinking can make it fail.",
+  "@aiBudgetWarning": {},
+  "aiReasoningOff": "Off",
+  "@aiReasoningOff": {},
+  "aiReasoningLow": "Low",
+  "@aiReasoningLow": {},
+  "aiReasoningMedium": "Medium",
+  "@aiReasoningMedium": {},
+  "aiReasoningHigh": "High",
+  "@aiReasoningHigh": {},
+  "aiReasoningMax": "Max",
+  "@aiReasoningMax": {},
+  "aiUseShareExtract": "Share: read a place post",
+  "@aiUseShareExtract": {},
+  "aiUseImageRead": "Share: read a screenshot",
+  "@aiUseImageRead": {},
+  "aiUseBranchExtract": "Find a brand's branches",
+  "@aiUseBranchExtract": {},
+  "aiUseRecipeExtract": "Share: read a recipe",
+  "@aiUseRecipeExtract": {},
+  "aiUseGeoQuery": "Understand a place search",
+  "@aiUseGeoQuery": {},
+  "aiUsePlaceDraft": "Draft a place",
+  "@aiUsePlaceDraft": {},
+  "aiUseDishDraft": "Draft a menu",
+  "@aiUseDishDraft": {},
+  "aiUseIngredientName": "Name an ingredient",
+  "@aiUseIngredientName": {},
+  "aiUseBrandMaker": "Find a brand's maker",
+  "@aiUseBrandMaker": {},
+  "aiUseIngredientAliases": "An ingredient's other names",
+  "@aiUseIngredientAliases": {},
+  "aiUseReceiptRead": "Read a receipt",
+  "@aiUseReceiptRead": {},
+  "aiUseDishMatch": "Match a receipt's dishes",
+  "@aiUseDishMatch": {},
+  "aiUseMealRead": "Read a meal photo",
+  "@aiUseMealRead": {},
+  "aiUseCoverPick": "Pick cover photos",
+  "@aiUseCoverPick": {},
+  "aiUsePantrySuggest": "Suggest dishes from the pantry",
+  "@aiUsePantrySuggest": {},
+  "errAiUnknownModel": "That model or level is not offered.",
+  "@errAiUnknownModel": {},
+  "errAiNoImages": "This model can't read photos, and this use sends them.",
+  "@errAiNoImages": {},
+  "catalogueScan": "Scan a barcode",
+  "@catalogueScan": {},
+  "catalogueScanUnavailable": "This phone can't scan codes.",
+  "@catalogueScanUnavailable": {},
+  "hoursTitle": "Opening hours",
+  "hoursHelp": "The usual weekly hours, Malaysia time. A break = two rows for that day (11:00–15:00, then 17:00–22:00). Leave empty when not known.",
+  "hoursUnknown": "Hours not known yet.",
+  "hoursSaved": "Opening hours saved.",
+  "branchTabHours": "Hours",
+  "hoursBreakUntil": "Break until {time}",
+  "@hoursBreakUntil": {"placeholders": {"time": {"type": "String"}}},
+  "hoursOpensAt": "Opens {time}",
+  "@hoursOpensAt": {"placeholders": {"time": {"type": "String"}}}
 }

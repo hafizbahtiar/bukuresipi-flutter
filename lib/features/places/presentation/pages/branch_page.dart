@@ -308,11 +308,15 @@ class BranchPage extends StatelessWidget {
               '${l.branchLatitude}, ${l.branchLongitude}',
               '${branch.lat!.toStringAsFixed(6)}, ${branch.lng!.toStringAsFixed(6)}',
             ),
-          if (r.isMarket) ...[
-            SectionHeader(l.marketDaysTitle),
+          if (r.isMarket || branch.schedule.isNotEmpty) ...[
+            SectionHeader(r.isMarket ? l.marketDaysTitle : l.hoursTitle),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: spaceM),
-              child: MarketDaysList(schedule: branch.schedule, heading: false),
+              child: MarketDaysList(
+                schedule: branch.schedule,
+                heading: false,
+                market: r.isMarket,
+              ),
             ),
           ],
           // Halal (food only): this outlet's JAKIM certificate, else the brand's note, else nothing known.

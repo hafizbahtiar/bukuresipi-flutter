@@ -19,8 +19,10 @@ import '../../../family/presentation/family_controller.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../../../shopping/presentation/shopping_controller.dart';
+import '../../../shopping/presentation/widgets/products_sheet.dart';
 import '../recipes_controller.dart';
 import '../widgets/ingredient_picker.dart';
+import '../widgets/line_pick.dart';
 import '../widgets/recipe_variants.dart';
 import 'pantry_page.dart' show pantryIngredients;
 import 'recipe_edit_page.dart';
@@ -237,7 +239,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       skipOptional = skip;
     }
     // What can I cook? list on this phone: asked only when it has something.
-    var have = await pantryIngredients();
+    var (:have, :staples) = await pantryIngredients();
     if (have.isNotEmpty) {
       if (!mounted) return;
       final skip = await showBasePicker<bool>(
@@ -257,6 +259,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         family: family,
         skipOptional: skipOptional,
         have: have,
+        staples: staples,
         // Only a changed "Serves N": the list then has the amounts the page shows.
         servings: _people == recipe.servings ? null : _people,
       );
@@ -664,6 +667,14 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   triggerMode: TooltipTriggerMode.tap,
                   child: Icon(Icons.help_outline, size: 18, color: nb.inkSoft),
                 )
+              : i.hasProducts
+              ? IconButton(
+                  key: ValueKey('recipe-products-$index'),
+                  tooltip: l.recipeProducts,
+                  icon: Icon(Icons.storefront_outlined, color: nb.inkSoft),
+                  onPressed: () =>
+                      showProductsSheet(context, i.name!, onChanged: _load),
+                )
               : null,
           minLeadingWidth: 0,
           leading: Container(
@@ -686,12 +697,24 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ],
             ),
           ),
-          subtitle: i.optional
-              ? Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: TagChip(TileTag(l.recipeOptional)),
+          subtitle: i.optional || i.myBrand != null || i.pick != null
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (i.pick case final p?) ...pickLines(context, p),
+                      Wrap(
+                        spacing: spaceXs,
+                        runSpacing: spaceXs,
+                        children: pickTags(
+                          context,
+                          i.pick,
+                          i.myBrand,
+                          optional: i.optional,
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : null,

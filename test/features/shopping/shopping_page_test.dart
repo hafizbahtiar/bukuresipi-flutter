@@ -3,6 +3,7 @@ import 'package:bukuresipi_flutter/features/shopping/domain/shopping.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/pages/shopping_page.dart';
 import 'package:bukuresipi_flutter/features/shopping/presentation/shopping_controller.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
+import 'package:bukuresipi_flutter/features/recipes/domain/recipe.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,7 +54,7 @@ void main() {
       expect(find.text('For Nasi Lemak Ayam'), findsOneWidget);
       expect(
         find.textContaining(
-          'e.g. Beras Super Special Tempatan Jati 5kg (Jati)',
+          'e.g. Beras Super Special Tempatan Jati 5kg (Jati, Malaysia)',
           findRichText: true,
         ),
         findsOneWidget,
@@ -116,7 +117,95 @@ void main() {
         find.text('Jati Signature Super Special Rice 10kg'),
         findsOneWidget,
       );
-      expect(find.text('Jati · Serba Wangi Sdn Bhd'), findsOneWidget);
+      expect(
+        find.text('Jati · Serba Wangi Sdn Bhd · Malaysia'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'a product\'s brand, as the next step: use it for the ingredient, avoid it or its maker',
+    (t) async {
+      await shopping.addRecipe('r-1');
+      await pump(t);
+      await t.tap(find.textContaining('See all'));
+      await t.pumpAndSettle();
+      await t.tap(
+        find.byKey(
+          const ValueKey('product-Beras Super Special Tempatan Jati 5kg'),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.text('Use Jati for Beras putih'), findsOneWidget);
+      expect(find.text('Avoid Jati'), findsOneWidget);
+      expect(
+        find.text('Avoid everything from Serba Wangi Sdn Bhd'),
+        findsOneWidget,
+      );
+      await t.tap(find.byKey(const ValueKey('brand-mine')));
+      await t.pumpAndSettle();
+      expect(repo.brandCalls, ['mine Beras putih Jati']);
+      // Back on the list, still open, reloaded with the new tag.
+      expect(find.text('Use Jati for Beras putih'), findsNothing);
+      expect(find.text('Your brand'), findsNWidgets(2));
+    },
+  );
+
+  testWidgets('a line whose products include my brand says so', (t) async {
+    repo.items = const [
+      ShoppingItem(
+        id: 'i1',
+        text: '2 cawan beras putih',
+        done: false,
+        ingredient: 'Beras putih',
+        products: [
+          ShoppingProduct(
+            name: 'Beras Super Special Tempatan Jati 5kg',
+            brand: 'Jati',
+            mine: true,
+          ),
+        ],
+      ),
+    ];
+    await pump(t);
+    expect(find.text('Your brand: Jati'), findsOneWidget);
+  });
+
+  testWidgets(
+    "a picked line says what the recipe uses and the reader's brand under it",
+    (t) async {
+      repo.items = const [
+        ShoppingItem(
+          id: 'i1',
+          text: '200 ml santan',
+          done: false,
+          ingredient: 'Santan',
+          recipes: [(id: 'r-1', name: 'Lemak')],
+          pick: LinePick(
+            kind: 'product',
+            id: 7,
+            name: 'Kara UHT 200ml',
+            brand: 'Kara',
+            avoided: true,
+          ),
+          products: [
+            ShoppingProduct(
+              name: 'Ayam Brand Santan',
+              brand: 'Ayam Brand',
+              mine: true,
+            ),
+          ],
+        ),
+      ];
+      await pump(t);
+      expect(find.textContaining('Recipe uses Kara UHT 200ml'), findsOneWidget);
+      expect(
+        find.textContaining('Ayam Brand Santan'),
+        findsNothing,
+      ); // the pick replaces the e.g. hint
+      expect(find.text('Avoided'), findsOneWidget);
+      expect(find.text('Your brand: Ayam Brand'), findsOneWidget);
     },
   );
 

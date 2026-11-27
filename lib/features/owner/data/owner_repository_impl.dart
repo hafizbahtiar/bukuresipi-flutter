@@ -337,6 +337,366 @@ class OwnerRepositoryImpl implements OwnerRepository {
         ),
     ];
   });
+
+  @override
+  Future<({List<IngredientGap> gaps, List<String> categories})>
+  ingredientGaps() => apiCall(() async {
+    final j = await _get('/owner/ingredients/gaps');
+    return (
+      gaps: [
+        for (final g in (j['gaps'] as List).cast<Map<String, dynamic>>())
+          IngredientGap(
+            key: g['key'] as String,
+            sample: g['sample'] as String,
+            recipeLines: g['recipeLines'] as int,
+            shoppingLines: g['shoppingLines'] as int,
+          ),
+      ],
+      categories: (j['categories'] as List).cast<String>(),
+    );
+  });
+
+  @override
+  Future<List<String>> searchIngredients(String query) => apiCall(() async {
+    final j = await _get('/recipes/ingredients', {'q': query});
+    return [
+      for (final i in (j['ingredients'] as List).cast<Map<String, dynamic>>())
+        i['name'] as String,
+    ];
+  });
+
+  Future<Map<String, dynamic>> _alias(
+    String ingredient,
+    String alias, {
+    required bool preview,
+  }) async => (await _dio.post<Map<String, dynamic>>(
+    '/owner/ingredients/aliases',
+    data: {'ingredient': ingredient, 'alias': alias, 'preview': preview},
+  )).data!;
+
+  @override
+  Future<({int lines, List<String> sample})> previewAlias(
+    String ingredient,
+    String alias,
+  ) => apiCall(() async {
+    final j = await _alias(ingredient, alias, preview: true);
+    return (
+      lines: j['lines'] as int,
+      sample: (j['sample'] as List).cast<String>(),
+    );
+  });
+
+  @override
+  Future<int> addAlias(String ingredient, String alias) => apiCall(
+    () async =>
+        (await _alias(ingredient, alias, preview: false))['relinked'] as int,
+  );
+
+  @override
+  Future<AiSettings> aiSettings() => apiCall(
+    () async => aiSettingsFromJson(
+      (await _dio.get<Map<String, dynamic>>('/owner/ai')).data!,
+    ),
+  );
+
+  @override
+  Future<AiSettings> saveAiSetting(String use, AiSetting setting) => apiCall(
+    () async => aiSettingsFromJson(
+      (await _dio.put<Map<String, dynamic>>(
+        '/owner/ai/$use',
+        data: {
+          'provider': setting.provider,
+          'model': setting.model,
+          'reasoning': setting.reasoning,
+        },
+      )).data!,
+    ),
+  );
+
+  @override
+  Future<AiSettings> clearAiSetting(String use) => apiCall(
+    () async => aiSettingsFromJson(
+      (await _dio.delete<Map<String, dynamic>>('/owner/ai/$use')).data!,
+    ),
+  );
+
+  @override
+  Future<List<CatalogueSuggestion>> catalogueSuggestions() => apiCall(() async {
+    final j = (await _dio.get<Map<String, dynamic>>(
+      '/owner/catalogue/suggestions',
+    )).data!;
+    return [
+      for (final s in (j['suggestions'] as List).cast<Map<String, dynamic>>())
+        (
+          name: s['name'] as String,
+          ingredient: s['ingredient'] as String?,
+          recipes: s['recipes'] as int,
+          sample: s['sample'] as String,
+        ),
+    ];
+  });
+
+  @override
+  Future<int> resolveSuggestion(String name, PickRef target) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/owner/catalogue/suggestions/resolve',
+          data: {
+            'name': name,
+            target.kind == 'brand' ? 'brandId' : 'productId': target.id,
+          },
+        )).data!;
+        return j['linked'] as int;
+      });
+
+  @override
+  Future<void> dismissSuggestion(String name) => apiCall(
+    () => _dio.post<void>(
+      '/owner/catalogue/suggestions/dismiss',
+      data: {'name': name},
+    ),
+  );
+
+  @override
+  Future<({int saved, int linked})> addAliases(
+    List<({String ingredient, String alias})> items,
+  ) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/ingredients/aliases/batch',
+      data: {
+        'items': [
+          for (final i in items) {'ingredient': i.ingredient, 'alias': i.alias},
+        ],
+      },
+    )).data!;
+    return (saved: j['saved'] as int, linked: j['relinked'] as int);
+  });
+
+  @override
+  Future<ProductFill> fillProduct({
+    String? barcode,
+    String? url,
+    String? name,
+  }) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/catalogue/products/fill',
+      data: barcode != null
+          ? {'barcode': barcode}
+          : url != null
+          ? {'url': url}
+          : {'name': name},
+    )).data!;
+    final m = j['maker'] as Map<String, dynamic>?;
+    return (
+      name: j['name'] as String,
+      brand: j['brand'] as String?,
+      brandIsNew: j['brandIsNew'] == true,
+      size: (j['size'] as num?)?.toDouble(),
+      unit: j['unit'] as String?,
+      ingredient: j['ingredient'] as String?,
+      aiIngredient: j['aiIngredient'] == true,
+      source: j['source'] as String,
+      maker: m == null
+          ? null
+          : (
+              name: m['name'] as String,
+              country: m['country'] as String?,
+              source: m['source'] as String,
+            ),
+      similar: [
+        for (final p
+            in (j['similar'] as List? ?? const []).cast<Map<String, dynamic>>())
+          _catalogueProduct(p),
+      ],
+    );
+  });
+
+  @override
+  Future<({String? name, String? ingredient})> suggestGap(String line) =>
+      apiCall(() async {
+        final j = (await _dio.post<Map<String, dynamic>>(
+          '/owner/ingredients/gaps/suggest',
+          data: {'line': line},
+        )).data!;
+        return (
+          name: j['name'] as String?,
+          ingredient: j['ingredient'] as String?,
+        );
+      });
+
+  @override
+  Future<({List<AliasSuggestion> items, int? next})> suggestAliases(
+    int offset,
+  ) => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/ingredients/aliases/suggest',
+      data: {'offset': offset},
+    )).data!;
+    return (
+      items: [
+        for (final i in (j['items'] as List).cast<Map<String, dynamic>>())
+          (
+            ingredient: i['ingredient'] as String,
+            alias: i['alias'] as String,
+            lines: i['lines'] as int,
+          ),
+      ],
+      next: j['next'] as int?,
+    );
+  });
+
+  @override
+  Future<int> addIngredient(String name, String category) => apiCall(
+    () async =>
+        (await _dio.post<Map<String, dynamic>>(
+              '/owner/ingredients',
+              data: {'name': name, 'category': category},
+            )).data!['relinked']
+            as int,
+  );
+
+  @override
+  Future<({int checked, int linked})> relinkIngredients() => apiCall(() async {
+    final j = (await _dio.post<Map<String, dynamic>>(
+      '/owner/ingredients/relink',
+    )).data!;
+    return (checked: j['checked'] as int, linked: j['linked'] as int);
+  });
+
+  @override
+  Future<({String ingredients, String aliases})> addedIngredientRows() =>
+      apiCall(() async {
+        final j = await _get('/owner/ingredients/added');
+        return (
+          ingredients: j['ingredients'] as String,
+          aliases: j['aliases'] as String,
+        );
+      });
+
+  Future<Map<String, dynamic>> _catalogue(
+    String kind,
+    String? query,
+    int offset,
+  ) => _get('/owner/catalogue/$kind', {
+    if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+    'offset': offset,
+  });
+
+  @override
+  Future<CataloguePage<CatalogueMaker>> makers({
+    String? query,
+    int offset = 0,
+  }) => apiCall(() async {
+    final j = await _catalogue('makers', query, offset);
+    return (
+      items: [
+        for (final m in (j['items'] as List).cast<Map<String, dynamic>>())
+          CatalogueMaker(
+            id: m['id'] as int,
+            name: m['name'] as String,
+            brands: m['brands'] as int,
+          ),
+      ],
+      next: j['next'] as int?,
+    );
+  });
+
+  @override
+  Future<(CataloguePage<CatalogueBrand>, List<String>)> brands({
+    String? query,
+    int offset = 0,
+  }) => apiCall(() async {
+    final j = await _catalogue('brands', query, offset);
+    return (
+      (
+        items: [
+          for (final b in (j['items'] as List).cast<Map<String, dynamic>>())
+            CatalogueBrand(
+              id: b['id'] as int,
+              name: b['name'] as String,
+              makerId: b['makerId'] as int?,
+              maker: b['maker'] as String?,
+              country: b['country'] as String?,
+              products: b['products'] as int,
+            ),
+        ],
+        next: j['next'] as int?,
+      ),
+      (j['countries'] as List).cast<String>(),
+    );
+  });
+
+  @override
+  Future<(CataloguePage<CatalogueProduct>, List<String>)> products({
+    String? query,
+    int offset = 0,
+  }) => apiCall(() async {
+    final j = await _catalogue('products', query, offset);
+    return (
+      (
+        items: [
+          for (final p in (j['items'] as List).cast<Map<String, dynamic>>())
+            _catalogueProduct(p),
+        ],
+        next: j['next'] as int?,
+      ),
+      (j['units'] as List).cast<String>(),
+    );
+  });
+
+  Future<void> _saveRow(String kind, int? id, Map<String, dynamic> body) =>
+      apiCall(
+        () => id == null
+            ? _dio.post<void>('/owner/catalogue/$kind', data: body)
+            : _dio.patch<void>('/owner/catalogue/$kind/$id', data: body),
+      );
+
+  @override
+  Future<void> saveMaker({int? id, required String name}) =>
+      _saveRow('makers', id, {'name': name});
+
+  @override
+  Future<void> saveBrand({
+    int? id,
+    required String name,
+    int? makerId,
+    String? country,
+  }) => _saveRow('brands', id, {
+    'name': name,
+    'makerId': makerId,
+    'country': country,
+  });
+
+  @override
+  Future<void> saveProduct({
+    int? id,
+    required String name,
+    String? ingredient,
+    int? brandId,
+    double? size,
+    String? unit,
+  }) => _saveRow('products', id, {
+    'name': name,
+    'ingredient': ingredient,
+    'brandId': brandId,
+    'size': size,
+    'unit': unit,
+  });
+
+  @override
+  Future<void> deleteCatalogueRow(String kind, int id) =>
+      apiCall(() => _dio.delete<void>('/owner/catalogue/$kind/$id'));
+
+  @override
+  Future<({String makers, String brands, String products})> catalogueRows() =>
+      apiCall(() async {
+        final j = await _get('/owner/catalogue/added');
+        return (
+          makers: j['makers'] as String,
+          brands: j['brands'] as String,
+          products: j['products'] as String,
+        );
+      });
 }
 
 ReviewReportGroup _reviewReport(Map<String, dynamic> j) {
@@ -416,3 +776,53 @@ RatingBurst _burst(Map<String, dynamic> j) {
     ],
   );
 }
+
+CatalogueProduct _catalogueProduct(Map<String, dynamic> p) => CatalogueProduct(
+  id: p['id'] as int,
+  name: p['name'] as String,
+  ingredient: p['ingredient'] as String?,
+  brandId: p['brandId'] as int?,
+  brand: p['brand'] as String?,
+  size: (p['size'] as num?)?.toDouble(),
+  unit: p['unit'] as String?,
+);
+
+AiSetting _aiSetting(Map<String, dynamic> j) => (
+  provider: j['provider'] as String,
+  model: j['model'] as String,
+  reasoning: j['reasoning'] as String,
+);
+
+/// GET /owner/ai's body (also what PUT and DELETE return).
+AiSettings aiSettingsFromJson(Map<String, dynamic> j) => (
+  providers: [
+    for (final p in (j['providers'] as List).cast<Map<String, dynamic>>())
+      (
+        id: p['id'] as String,
+        name: p['name'] as String,
+        configured: p['configured'] == true,
+        models: [
+          for (final m in (p['models'] as List).cast<Map<String, dynamic>>())
+            (
+              id: m['id'] as String,
+              name: m['name'] as String,
+              reasoning: (m['reasoning'] as List).cast<String>(),
+              images: m['images'] == true,
+            ),
+        ],
+      ),
+  ],
+  defaults: _aiSetting(j['default'] as Map<String, dynamic>),
+  uses: [
+    for (final u in (j['uses'] as List).cast<Map<String, dynamic>>())
+      (
+        id: u['id'] as String,
+        budget: u['budget'] == true,
+        images: u['images'] == true,
+        setting: switch (u['setting']) {
+          final Map<String, dynamic> s => _aiSetting(s),
+          _ => null,
+        },
+      ),
+  ],
+);

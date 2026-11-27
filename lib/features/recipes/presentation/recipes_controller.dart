@@ -43,6 +43,8 @@ class RecipesController extends ChangeNotifier {
   void clear() {
     _generation++; // a load still in flight belongs to the previous user: drop its answer
     _loading = false;
+    _again = false;
+    _running = null;
     _recipes = const [];
     _family = const [];
     _loaded = false;
@@ -50,8 +52,37 @@ class RecipesController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> load() async {
-    if (_loading) return;
+  /// A load asked for while one runs (an edit saved meanwhile): that one may have read the list before the write, so
+  /// one more runs after it, and every caller waits for both (a list awaited is then fresh).
+  bool _again = false;
+  Future<void>? _running;
+
+  Future<void> load() {
+    if (_running case final running?) {
+      _again = true;
+      return running;
+    }
+    final generation = _generation;
+    // Set before the work starts: a listener notified inside it that asks again joins this run.
+    final done = Completer<void>();
+    final run = _running = done.future;
+    () async {
+      try {
+        do {
+          _again = false;
+          await _loadOnce();
+        } while (_again && generation == _generation);
+        done.complete();
+      } catch (e, s) {
+        done.completeError(e, s);
+      } finally {
+        if (identical(_running, run)) _running = null;
+      }
+    }();
+    return run;
+  }
+
+  Future<void> _loadOnce() async {
     final generation = _generation;
     _loading = true;
     notifyListeners();
@@ -112,7 +143,7 @@ class RecipesController extends ChangeNotifier {
       _repo.searchIngredients(query);
 
   /// Throws ApiException.
-  Future<List<PantryMatch>> fromPantry(
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   }) => _repo.fromPantry(ingredients, staples: staples);
@@ -137,6 +168,7 @@ class RecipesController extends ChangeNotifier {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
     final saved = await _repo.create(
@@ -144,6 +176,7 @@ class RecipesController extends ChangeNotifier {
       ingredients: ingredients,
       steps: steps,
       optional: optional,
+      picks: picks,
       servings: servings,
     );
     unawaited(load());
@@ -156,6 +189,7 @@ class RecipesController extends ChangeNotifier {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
     final saved = await _repo.edit(
@@ -164,11 +198,20 @@ class RecipesController extends ChangeNotifier {
       ingredients: ingredients,
       steps: steps,
       optional: optional,
+      picks: picks,
       servings: servings,
     );
     unawaited(load());
     return saved;
   }
+
+  /// The recipe editor's picker. Throws ApiException.
+  Future<PickChoices> picks({String? ingredient, String? query}) =>
+      _repo.picks(ingredient: ingredient, query: query);
+
+  /// Throws ApiException.
+  Future<void> suggestPick(String id, String line, String name) =>
+      _repo.suggestPick(id, line, name);
 
   /// Throws ApiException.
   Future<({List<Recipe> recipes, String? next})> community({

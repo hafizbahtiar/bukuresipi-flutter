@@ -44,11 +44,15 @@ class MainActivity : FlutterActivity() {
                 Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) else null
             result.success(mapOf("name" to (name?.takeIf { it.isNotBlank() } ?: model), "model" to model, "os" to "Android ${Build.VERSION.RELEASE}"))
         }
-        // A receipt's e-invoice QR (lib/features/receipts/data/receipt_qr.dart): Google's scanner, in Play services, so
-        // this app needs no camera permission for it. null = the user closed it.
+        // A receipt's e-invoice QR, or a product's barcode ("product": true; lib/core/utils/live_scanner.dart): Google's
+        // scanner, in Play services, so this app needs no camera permission for it. null = the user closed it.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "bukuresipi/qr").setMethodCallHandler { call, result ->
             if (call.method != "scan") return@setMethodCallHandler result.notImplemented()
-            val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).enableAutoZoom().build()
+            val formats = if (call.argument<Boolean>("product") == true)
+                intArrayOf(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
+            else intArrayOf(Barcode.FORMAT_QR_CODE)
+            val options = GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(formats.first(), *formats.drop(1).toIntArray()).enableAutoZoom().build()
             GmsBarcodeScanning.getClient(this, options).startScan()
                 .addOnSuccessListener { result.success(it.rawValue) }
                 .addOnCanceledListener { result.success(null) }

@@ -223,7 +223,7 @@ class RecipesRepositoryImpl implements RecipesRepository {
       });
 
   @override
-  Future<List<PantryMatch>> fromPantry(
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   }) => apiCall(() async {
@@ -231,16 +231,21 @@ class RecipesRepositoryImpl implements RecipesRepository {
       '/recipes/from-pantry',
       data: {'ingredients': ingredients, 'staples': staples},
     )).data!;
-    return [
-      for (final m in (data['items'] as List).cast<Map<String, dynamic>>())
-        (
-          recipe: recipeFromJson(m['recipe'] as Map<String, dynamic>),
-          have: m['have'] as int,
-          required: m['required'] as int,
-          missing: (m['missing'] as List).cast<String>(),
-          unknown: (m['unknown'] as List).cast<String>(),
-        ),
-    ];
+    return (
+      items: [
+        for (final m in (data['items'] as List).cast<Map<String, dynamic>>())
+          (
+            recipe: recipeFromJson(m['recipe'] as Map<String, dynamic>),
+            have: m['have'] as int,
+            required: m['required'] as int,
+            missing: (m['missing'] as List).cast<String>(),
+            unknown: (m['unknown'] as List).cast<String>(),
+          ),
+      ],
+      // An older server sends no list.
+      unrecognised: ((data['unrecognised'] as List?) ?? const [])
+          .cast<String>(),
+    );
   });
 
   @override
@@ -285,13 +290,14 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) => apiCall(() async {
     final data = (await _dio.post<Map<String, dynamic>>(
       '/recipes',
       data: {
         'name': name,
-        'ingredients': _lines(ingredients, optional),
+        'ingredients': _lines(ingredients, optional, picks),
         'steps': steps,
         'servings': servings,
       },
@@ -306,25 +312,66 @@ class RecipesRepositoryImpl implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) => apiCall(() async {
     final data = (await _dio.patch<Map<String, dynamic>>(
       '/recipes/$id',
       data: {
         'name': name,
-        'ingredients': _lines(ingredients, optional),
+        'ingredients': _lines(ingredients, optional, picks),
         'steps': steps,
         'servings': servings,
       },
     )).data!;
     return recipeDetailFromJson(data);
   });
+
+  @override
+  Future<PickChoices> picks({String? ingredient, String? query}) =>
+      apiCall(() async {
+        final data = (await _dio.get<Map<String, dynamic>>(
+          '/catalogue/picks',
+          queryParameters: {'ingredient': ?ingredient, 'q': ?query},
+        )).data!;
+        List<LinePick> read(String key, String kind) => [
+          for (final p in (data[key] as List).cast<Map<String, dynamic>>())
+            LinePick.fromJson({...p, 'kind': kind}),
+        ];
+        return (
+          products: read('products', 'product'),
+          brands: read('brands', 'brand'),
+        );
+      });
+
+  @override
+  Future<void> suggestPick(String id, String line, String name) => apiCall(
+    () => _dio.post<void>(
+      '/recipes/$id/suggest',
+      data: {'line': line, 'name': name},
+    ),
+  );
 }
 
-/// A line as text, or { text, optional } when the editor's switch is sent for it.
-List<Object> _lines(List<String> lines, Map<int, bool> optional) => [
+/// A line as text, or { text, optional?, pick? } when the editor sends its switch or its pick.
+List<Object> _lines(
+  List<String> lines,
+  Map<int, bool> optional,
+  Map<int, PickRef?> picks,
+) => [
   for (final (i, text) in lines.indexed)
-    if (optional[i] case final on?) {'text': text, 'optional': on} else text,
+    if (optional.containsKey(i) || picks.containsKey(i))
+      {
+        'text': text,
+        'optional': ?optional[i],
+        if (picks.containsKey(i))
+          'pick': switch (picks[i]) {
+            null => null,
+            final p => {p.kind == 'brand' ? 'brandId' : 'productId': p.id},
+          },
+      }
+    else
+      text,
 ];
 
 List<String> _missing(Object? v) => [
@@ -377,6 +424,13 @@ RecipeDetail recipeDetailFromJson(Map<String, dynamic> j) => RecipeDetail(
         quantity: i['quantity'] as String?,
         unit: i['unit'] as String?,
         optional: i['optional'] == true,
+        hasProducts: i['hasProducts'] == true,
+        myBrand: i['myBrand'] as String?,
+        pick: switch (i['pick']) {
+          final Map<String, dynamic> p => LinePick.fromJson(p),
+          _ => null,
+        },
+        suggested: i['suggested'] as String?,
       ),
   ],
   steps: [

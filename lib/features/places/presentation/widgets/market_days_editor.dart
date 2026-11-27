@@ -17,10 +17,14 @@ class MarketDaysEditor extends StatefulWidget {
     super.key,
     required this.branchId,
     required this.initial,
+    this.market = true,
   });
 
   final String branchId;
   final List<MarketDay> initial;
+
+  /// false = any other place: its opening hours ("Opening hours", a break = two rows).
+  final bool market;
 
   static const maxRows = 14; // the API's limit
 
@@ -113,7 +117,10 @@ class _MarketDaysEditorState extends State<MarketDaysEditor> {
       if (!mounted) return;
       setState(() {
         _days = days;
-        _notice = (text: l.marketDaysSaved, tone: PanelTone.success);
+        _notice = (
+          text: widget.market ? l.marketDaysSaved : l.hoursSaved,
+          tone: PanelTone.success,
+        );
       });
     } catch (e) {
       if (mounted) {
@@ -138,14 +145,14 @@ class _MarketDaysEditorState extends State<MarketDaysEditor> {
     );
     return OwnerPanel(
       icon: Icons.event_outlined,
-      title: l.marketDaysTitle,
-      subtitle: l.marketDaysHelp,
+      title: widget.market ? l.marketDaysTitle : l.hoursTitle,
+      subtitle: widget.market ? l.marketDaysHelp : l.hoursHelp,
       children: [
         if (_days.isEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: spaceS),
             child: Text(
-              l.marketDaysUnknown,
+              widget.market ? l.marketDaysUnknown : l.hoursUnknown,
               style: text.bodyMedium?.copyWith(color: nb.inkSoft),
             ),
           ),

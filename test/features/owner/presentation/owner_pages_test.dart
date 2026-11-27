@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:bukuresipi_flutter/core/widgets/notebook.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner.dart';
 import 'package:bukuresipi_flutter/features/owner/domain/owner_repository.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ai_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_catalogue_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_hidden_page.dart';
+import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_ingredients_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_rating_bursts_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_reports_page.dart';
@@ -11,6 +14,7 @@ import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_teste
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_review_reports_page.dart';
 import 'package:bukuresipi_flutter/features/owner/presentation/pages/owner_users_page.dart';
 import 'package:bukuresipi_flutter/l10n/gen/app_localizations.dart';
+import 'package:bukuresipi_flutter/core/widgets/ai_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -209,6 +213,8 @@ void main() {
     t,
   ) async {
     await pump(t, const OwnerPage());
+    await t.ensureVisible(find.text('Nominatim')); // below the owner's rows
+    await t.pumpAndSettle();
     await t.tap(find.text('Nominatim'));
     await t.pumpAndSettle();
     expect(find.text('Cap applies per'), findsOneWidget);
@@ -495,4 +501,563 @@ void main() {
       expect(find.text('Invite sent.'), findsOneWidget);
     },
   );
+
+  group('ingredient gaps', () {
+    const minyak = IngredientGap(
+      key: 'minyak',
+      sample: 'sedikit minyak untuk menggoreng',
+      recipeLines: 2,
+      shoppingLines: 1,
+    );
+
+    testWidgets(
+      'a gap: pick the ingredient, see what the name links, save; taken names are said',
+      (t) async {
+        repo.gaps = [minyak];
+        await pump(t, const OwnerIngredientsPage());
+        expect(
+          find.text(
+            'Recipes 2 · Shopping lists 1\nsedikit minyak untuk menggoreng',
+          ),
+          findsOneWidget,
+        );
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.byKey(const ValueKey('gap-ingredient-Minyak masak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.text('Links 3 lines'), findsOneWidget);
+
+        await t.enterText(find.byKey(const ValueKey('gap-alias')), 'garam');
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(
+          find.text('That name is already an ingredient or another name.'),
+          findsOneWidget,
+        );
+        expect(
+          t
+              .widget<FilledButton>(find.byKey(const ValueKey('gap-save')))
+              .onPressed,
+          isNull,
+        );
+
+        await t.enterText(find.byKey(const ValueKey('gap-alias')), 'minyak');
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        await t.tap(find.byKey(const ValueKey('gap-save')));
+        await t.pumpAndSettle();
+        expect(repo.aliases, [('Minyak masak', 'minyak')]);
+        expect(find.text('Saved. 3 lines linked.'), findsOneWidget);
+        expect(find.text('Every line has an ingredient.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Suggest with AI: the catalogue match opens its alias step; a name it lacks opens the new ingredient',
+      (t) async {
+        repo.gaps = [minyak];
+        await pump(t, const OwnerIngredientsPage());
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.byKey(const ValueKey('gap-ai')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Same as Minyak masak'));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.text('Links 3 lines'), findsOneWidget);
+        expect(repo.aliases, isEmpty); // nothing saved by the AI
+
+        Navigator.of(t.element(find.text('Links 3 lines'))).pop();
+        await t.pumpAndSettle();
+        repo.gapAnswer = (name: 'daun salam', ingredient: null);
+        await t.tap(find.byKey(const ValueKey('gap-minyak')));
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.byKey(const ValueKey('gap-ai')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('New ingredient: daun salam'));
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.widgetWithText(TextField, 'Daun salam'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Suggest aliases with AI: none ticked, the one that links lines first; tick and save',
+      (t) async {
+        repo.gaps = [minyak];
+        await pump(t, const OwnerIngredientsPage());
+        await t.tap(find.byKey(const ValueKey('gaps-more')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Suggest aliases with AI'));
+        await t.pumpAndSettle();
+        expect(find.text('Links 12 lines now'), findsOneWidget);
+        expect(find.text('Save'), findsOneWidget);
+        expect(
+          t.getTopLeft(find.byKey(const ValueKey('alias-ai-garlic'))).dy,
+          lessThan(
+            t.getTopLeft(find.byKey(const ValueKey('alias-ai-garlics'))).dy,
+          ),
+        );
+        await t.tap(find.byKey(const ValueKey('alias-ai-all')));
+        await t.pump();
+        expect(find.text('Save 2'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('alias-ai-garlics')));
+        await t.pump();
+        expect(find.text('Save 1'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('alias-ai-save')));
+        await t.pumpAndSettle();
+        expect(repo.aliases, [('Bawang putih', 'garlic')]);
+        expect(repo.aliasBatches, 1);
+        expect(find.text('1 alias saved, 3 lines linked'), findsOneWidget);
+      },
+    );
+
+    testWidgets('a new ingredient: name and category, then saved', (t) async {
+      repo.gaps = [
+        const IngredientGap(
+          key: 'daun salam',
+          sample: '2 lembar daun salam',
+          recipeLines: 1,
+          shoppingLines: 0,
+        ),
+      ];
+      await pump(t, const OwnerIngredientsPage());
+      await t.tap(find.byKey(const ValueKey('gap-daun salam')));
+      await t.pumpAndSettle(const Duration(milliseconds: 300));
+      await t.tap(find.byKey(const ValueKey('gap-new')));
+      await t.pumpAndSettle();
+      expect(find.text('Daun salam'), findsOneWidget); // the name, capitalised
+      await t.tap(find.text('Category'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Rempah'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('gap-save')));
+      await t.pumpAndSettle();
+      expect(repo.newIngredients, [('Daun salam', 'Rempah')]);
+    });
+
+    testWidgets('the menu relinks every line and shows the rows for docs', (
+      t,
+    ) async {
+      repo.gaps = [minyak];
+      await pump(t, const OwnerIngredientsPage());
+      await t.tap(find.byKey(const ValueKey('gaps-more')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Relink all lines'));
+      await t.pumpAndSettle();
+      expect(repo.relinks, 1);
+      expect(find.text('2 of 5 lines linked.'), findsOneWidget);
+
+      await t.tap(find.byKey(const ValueKey('gaps-more')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Copy rows for docs'));
+      await t.pumpAndSettle();
+      expect(find.text('ingredient.md'), findsOneWidget);
+      expect(find.text('ingredient_alias.md'), findsNothing); // none added
+      expect(
+        find.text('| 289 | Daun salam | Rempah | — | — | — |'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('catalogue', () {
+    testWidgets(
+      'products, brands and makers each list, with what they link to',
+      (t) async {
+        await pump(t, const OwnerCataloguePage());
+        expect(find.text('Beras Faiza 5kg'), findsOneWidget);
+        expect(find.text('Faiza · Beras putih · 5 kg'), findsOneWidget);
+        await t.tap(find.text('Brands'));
+        await t.pumpAndSettle();
+        expect(
+          find.text('Faiza Marketing · Malaysia · 3 products'),
+          findsOneWidget,
+        );
+        await t.tap(find.text('Makers'));
+        await t.pumpAndSettle();
+        expect(find.text('1 brands'), findsOneWidget);
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-search')),
+          'faiza',
+        );
+        await t.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(repo.catalogueQueries.last, ('makers', 'faiza'));
+      },
+    );
+
+    testWidgets(
+      'a brand is edited: its maker kept by id; a taken maker name is said',
+      (t) async {
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.text('Brands'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-row-Faiza')));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Country'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Thailand'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.single.$1, 'brands');
+        expect(repo.savedRows.single.$2, 1);
+        expect(repo.savedRows.single.$3, {
+          'name': 'Faiza',
+          'makerId': 1,
+          'country': 'Thailand',
+        });
+        expect(find.text('Saved'), findsOneWidget);
+        await t.pump(const Duration(seconds: 5)); // the snackbar leaves
+        await t.pumpAndSettle();
+
+        await t.tap(find.text('Makers'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-name')),
+          'Taken',
+        );
+        await t.pump();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(find.text('That name is already used.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a new product filled from a store link: checked, its new brand added, then saved',
+      (t) async {
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-fill')),
+          'https://www.jayagrocer.com/products/kara-uht-coconut-cream-200ml',
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+        await t.pumpAndSettle();
+        expect(
+          find.widgetWithText(TextField, 'Kara UHT Coconut Cream 200ml'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('From www.jayagrocer.com. Check it, then save.'),
+          findsOneWidget,
+        );
+        expect(find.byType(AiBadge), findsOneWidget); // on the ingredient
+        expect(repo.savedRows, isEmpty); // nothing saved by the fill
+
+        expect(
+          find.text(
+            'Made by PT Kara Santan Pertama, Indonesia (from kara.test)',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('New brand: Kara. Added when you save.'),
+          findsOneWidget,
+        );
+        // One Save: the maker, the brand, then the product.
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.map((r) => r.$1), [
+          'makers',
+          'brands',
+          'products',
+        ]);
+        expect(repo.savedRows[1].$3, {
+          'name': 'Kara',
+          'makerId': 801,
+          'country': 'Indonesia',
+        });
+        expect(repo.savedRows.last.$3, {
+          'name': 'Kara UHT Coconut Cream 200ml',
+          'ingredient': 'Santan',
+          'brandId': 901,
+          'size': 200.0,
+          'unit': 'ml',
+        });
+        await t.pump(const Duration(seconds: 5)); // "Saved" leaves
+        await t.pumpAndSettle();
+
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-fill')),
+          '0000000000000',
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+        await t.pumpAndSettle();
+        expect(find.text('No product found for that.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Scan reads a product barcode into the fill and fills the form; no scanner = a message',
+      (t) async {
+        Object? asked;
+        String? Function() answer = () => '9555123400011';
+        const channel = MethodChannel('bukuresipi/qr');
+        t.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+          call,
+        ) async {
+          asked = call.arguments;
+          final a = answer();
+          if (a == 'none') throw PlatformException(code: 'unavailable');
+          return a;
+        });
+        addTearDown(
+          () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            null,
+          ),
+        );
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-scan')));
+        await t.pumpAndSettle();
+        expect(asked, {'product': true});
+        expect(repo.fills.last, '9555123400011');
+        expect(find.widgetWithText(TextField, '9555123400011'), findsOneWidget);
+
+        answer = () => 'none';
+        await t.tap(find.byKey(const ValueKey('catalogue-scan')));
+        await t.pumpAndSettle();
+        expect(find.text("This phone can't scan codes."), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a fill that finds the product already: edit it instead of adding it again',
+      (t) async {
+        repo.fillAnswer = (
+          name: 'Beras Faiza 5kg',
+          brand: 'Faiza',
+          brandIsNew: false,
+          size: 5,
+          unit: 'kg',
+          ingredient: 'Beras putih',
+          aiIngredient: false,
+          source: 'https://world.openfoodfacts.org/product/9555035703828',
+          maker: null,
+          similar: [repo.productList.single],
+        );
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-fill')),
+          '9555035703828',
+        );
+        await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-similar-1')));
+        await t.pumpAndSettle();
+        expect(find.text('Add: Products'), findsNothing); // now editing it
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.single.$1, 'products');
+        expect(repo.savedRows.single.$2, 1); // the existing row, not a new one
+      },
+    );
+
+    testWidgets('fill on an existing product fills only its empty fields', (
+      t,
+    ) async {
+      repo.productList = const [
+        CatalogueProduct(
+          id: 7,
+          name: 'Santan Kara Saya',
+          brandId: 1,
+          brand: 'Faiza',
+        ),
+      ];
+      await pump(t, const OwnerCataloguePage());
+      await t.tap(find.byKey(const ValueKey('catalogue-row-Santan Kara Saya')));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byKey(const ValueKey('catalogue-fill')),
+        '8992736000000',
+      );
+      await t.tap(find.byKey(const ValueKey('catalogue-fill-go')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('catalogue-save')));
+      await t.pumpAndSettle();
+      expect(repo.savedRows.single.$1, 'products');
+      expect(repo.savedRows.single.$2, 7);
+      expect(repo.savedRows.single.$3, {
+        'name': 'Santan Kara Saya', // kept
+        'ingredient': 'Santan', // was empty: filled
+        'brandId': 1, // kept; the fill's new brand is not added
+        'size': 200.0,
+        'unit': 'ml',
+      });
+    });
+
+    testWidgets(
+      'a new product: brand from the list, ingredient from the suggestions, size and unit',
+      (t) async {
+        repo.catalogue = const ['Kicap'];
+        await pump(t, const OwnerCataloguePage());
+        await t.tap(find.byKey(const ValueKey('catalogue-add')));
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-name')),
+          'Kicap Faiza 1L',
+        );
+        await t.tap(find.text('Brand'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Faiza').last);
+        await t.pumpAndSettle();
+        await t.enterText(
+          find.byKey(const ValueKey('catalogue-ingredient')),
+          'kic',
+        );
+        await t.pumpAndSettle(const Duration(milliseconds: 300));
+        await t.tap(find.widgetWithText(ActionChip, 'Kicap'));
+        await t.enterText(find.byKey(const ValueKey('catalogue-size')), '1');
+        await t.tap(find.text('Unit'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('L'));
+        await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('catalogue-save')));
+        await t.pumpAndSettle();
+        expect(repo.savedRows.single.$1, 'products');
+        expect(repo.savedRows.single.$2, null);
+        expect(repo.savedRows.single.$3, {
+          'name': 'Kicap Faiza 1L',
+          'ingredient': 'Kicap',
+          'brandId': 1,
+          'size': 1.0,
+          'unit': 'L',
+        });
+      },
+    );
+
+    testWidgets('delete asks first; the rows for docs are shown', (t) async {
+      await pump(t, const OwnerCataloguePage());
+      await t.tap(find.byKey(const ValueKey('catalogue-row-Beras Faiza 5kg')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('catalogue-delete')));
+      await t.pumpAndSettle();
+      expect(repo.deletedRows, isEmpty);
+      await t.tap(find.text('Delete').last);
+      await t.pumpAndSettle();
+      expect(repo.deletedRows, [('products', 1)]);
+      expect(find.text('Deleted'), findsOneWidget);
+
+      await t.tap(find.byKey(const ValueKey('catalogue-more')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Copy rows for docs'));
+      await t.pumpAndSettle();
+      expect(find.text('manufacturer.md'), findsOneWidget);
+      expect(find.text('brand.md'), findsNothing);
+      expect(find.text('| 122 | Kilang Baru |'), findsOneWidget);
+    });
+  });
+
+  testWidgets(
+    'a suggestion: added as a brand links it; dismiss removes the row',
+    (t) async {
+      repo.suggestionList = [
+        (
+          name: 'Kicap Mak Cik',
+          ingredient: 'Kicap',
+          recipes: 2,
+          sample: '2 sudu kicap',
+        ),
+        (name: 'Santan Desa', ingredient: null, recipes: 1, sample: 'santan'),
+      ];
+      await pump(t, const OwnerCataloguePage());
+      expect(
+        find.text('Suggested'),
+        findsNothing,
+      ); // not a 4th tab: 3 fit a phone
+      await t.tap(find.text('2 suggestions from recipes'));
+      await t.pumpAndSettle();
+      expect(find.text('Kicap · 2 recipes'), findsOneWidget);
+
+      // Android back leaves the list for Products, not the page.
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      expect(find.text('Suggested by recipe authors'), findsNothing);
+      expect(find.text('2 suggestions from recipes'), findsOneWidget);
+      await t.tap(find.text('2 suggestions from recipes'));
+      await t.pumpAndSettle();
+
+      await t.tap(find.text('Kicap Mak Cik'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Add as a brand'));
+      await t.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Kicap Mak Cik'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('catalogue-save')));
+      await t.pumpAndSettle();
+      final added = repo.brandList.last;
+      expect(added.name, 'Kicap Mak Cik');
+      expect(repo.resolvedSuggestions.single, (
+        'Kicap Mak Cik',
+        (kind: 'brand', id: added.id),
+      ));
+      expect(find.text('Linked to 2 lines'), findsOneWidget);
+      expect(
+        find.text('Kicap Mak Cik'),
+        findsNothing,
+      ); // resolved: gone from the tab
+
+      await t.tap(find.text('Santan Desa'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Dismiss'));
+      await t.pumpAndSettle();
+      expect(repo.dismissed, ['Santan Desa']);
+      expect(find.text('Santan Desa'), findsNothing);
+    },
+  );
+
+  group('Owner > AI', () {
+    testWidgets(
+      'the default and every use are listed, an override shows its own line',
+      (t) async {
+        await pump(t, const OwnerAiPage());
+        expect(find.text('Default'), findsWidgets);
+        expect(
+          find.text('DeepSeek v4.1 Flash · Off'),
+          findsOneWidget,
+        ); // the default row
+        expect(find.text('Share: read a place post'), findsOneWidget);
+        expect(find.text('Draft a place'), findsOneWidget);
+        expect(find.text('DeepSeek v4.1 Flash · High'), findsOneWidget);
+        expect(find.text('Read a receipt'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a budget use above Off warns; it is saved; Use default clears another',
+      (t) async {
+        await pump(t, const OwnerAiPage());
+        await t.tap(find.text('Share: read a place post'));
+        await t.pumpAndSettle();
+        expect(find.textContaining('can make it fail'), findsNothing);
+        await t.tap(find.text('High'));
+        await t.pumpAndSettle();
+        expect(find.textContaining('can make it fail'), findsOneWidget);
+        await t.tap(find.byKey(const ValueKey('ai-save')));
+        await t.pumpAndSettle();
+        expect(repo.aiSaved.single, (
+          'share_extract',
+          (
+            provider: 'commandcode',
+            model: 'deepseek/deepseek-v4.1-flash',
+            reasoning: 'high',
+          ),
+        ));
+        expect(find.text('DeepSeek v4.1 Flash · High'), findsNWidgets(2));
+
+        await t.tap(find.text('Draft a place'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Use default'));
+        await t.pumpAndSettle();
+        expect(repo.aiCleared, ['place_draft']);
+        expect(find.text('DeepSeek v4.1 Flash · High'), findsOneWidget);
+      },
+    );
+  });
 }

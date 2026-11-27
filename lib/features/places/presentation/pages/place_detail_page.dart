@@ -11,6 +11,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../../family/presentation/family_controller.dart';
+import '../../../receipts/domain/receipt.dart' show rm;
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/place.dart';
 import '../../domain/report.dart';
@@ -52,6 +53,16 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
   static const _branchesShown = 10;
   bool _allBranches = false;
   bool _checking = false;
+
+  /// Menu prices from people's receipts (food places); empty = no section. Asked once, when the place is first shown.
+  List<MenuPrice> _prices = const [];
+
+  Future<void> _loadPrices(String placeId) async {
+    try {
+      final prices = await context.read<PlacesController>().prices(placeId);
+      if (mounted) setState(() => _prices = prices);
+    } catch (_) {} // no prices is no section: nothing to tell the user
+  }
 
   @override
   void initState() {
@@ -186,6 +197,7 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
     if (_savedNote == null) {
       _savedNote = place.note ?? '';
       _note.text = _savedNote!;
+      if (place.restaurant.isFood) _loadPrices(place.restaurant.id);
     }
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
@@ -365,11 +377,13 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                       ),
                   ],
                 ),
-              if (r.isMarket)
+              if (r.isMarket ||
+                  (place.savedBranch?.schedule.isNotEmpty ?? false))
                 Padding(
                   padding: const EdgeInsets.only(top: spaceM),
                   child: MarketDaysList(
                     schedule: place.savedBranch?.schedule ?? const [],
+                    market: r.isMarket,
                   ),
                 ),
               // Going there first: big, plain buttons instead of the ⋮ menu.
@@ -482,6 +496,32 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
                     ),
                     child: Text(
                       l.halalDisclaimer,
+                      style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                    ),
+                  ),
+                ],
+              ),
+            if (_prices.isNotEmpty)
+              DetailSection(
+                id: 'place-tab-prices',
+                label: l.pricesTitle,
+                rows: [
+                  SectionHeader(l.pricesTitle),
+                  for (final p in _prices)
+                    ListTile(
+                      title: Text(p.name),
+                      subtitle: Text(l.pricesPeople(p.people)),
+                      trailing: Text(rm(p.priceSen), style: text.titleMedium),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      spaceM,
+                      spaceM,
+                      spaceM,
+                      0,
+                    ),
+                    child: Text(
+                      l.pricesNote,
                       style: text.bodySmall?.copyWith(color: nb.inkSoft),
                     ),
                   ),

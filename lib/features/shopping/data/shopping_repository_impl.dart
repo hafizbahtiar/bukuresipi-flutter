@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../recipes/domain/recipe.dart';
 import '../domain/shopping.dart';
 import '../domain/shopping_repository.dart';
 
@@ -46,6 +47,7 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
     bool family = false,
     bool skipOptional = false,
     List<String> have = const [],
+    bool staples = false,
     int? servings,
   }) => apiCall(
     () => _items(
@@ -62,6 +64,7 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
               for (final h in have.map((h) => h.trim()))
                 if (h.isNotEmpty && h.length <= 60) h,
             ].take(50).toList(),
+          if (have.isNotEmpty && staples) 'staples': true,
         },
       ),
     ),
@@ -109,6 +112,51 @@ class ShoppingRepositoryImpl implements ShoppingRepository {
   );
 
   @override
+  Future<BrandChoices> brandChoices() => apiCall(() async {
+    final data = (await _dio.get<Map<String, dynamic>>('/catalogue/choices'))
+        .data!;
+    return (
+      mine: [
+        for (final m in (data['mine'] as List).cast<Map<String, dynamic>>())
+          (ingredient: m['ingredient'] as String, brand: m['brand'] as String),
+      ],
+      avoid: [
+        for (final a in (data['avoid'] as List).cast<Map<String, dynamic>>())
+          (brand: a['brand'] as String?, maker: a['manufacturer'] as String?),
+      ],
+    );
+  });
+
+  @override
+  Future<void> setMyBrand(String ingredient, String brand) => apiCall(
+    () => _dio.put<void>(
+      '/catalogue/choices/mine',
+      data: {'ingredient': ingredient, 'brand': brand},
+    ),
+  );
+
+  @override
+  Future<void> clearMyBrand(String ingredient) => apiCall(
+    () => _dio.delete<void>(
+      '/catalogue/choices/mine',
+      queryParameters: {'ingredient': ingredient},
+    ),
+  );
+
+  @override
+  Future<void> avoid(AvoidTarget target) => apiCall(
+    () => _dio.post<void>('/catalogue/choices/avoid', data: _target(target)),
+  );
+
+  @override
+  Future<void> unavoid(AvoidTarget target) => apiCall(
+    () => _dio.delete<void>(
+      '/catalogue/choices/avoid',
+      queryParameters: _target(target),
+    ),
+  );
+
+  @override
   Future<void> clearDone({bool family = false}) => apiCall(
     () => _dio.delete<void>(
       '/shopping/done',
@@ -124,6 +172,10 @@ ShoppingItem shoppingItemFromJson(Map<String, dynamic> j) {
     done: j['done'] as bool,
     ingredient: j['ingredient'] as String?,
     category: j['category'] as String?,
+    pick: switch (j['pick']) {
+      final Map<String, dynamic> p => LinePick.fromJson(p),
+      _ => null,
+    },
     recipes: [
       for (final r
           in (j['recipes'] as List? ?? const []).cast<Map<String, dynamic>>())
@@ -141,4 +193,9 @@ ShoppingProduct _product(Map<String, dynamic> p) => ShoppingProduct(
   name: p['name'] as String,
   brand: p['brand'] as String?,
   manufacturer: p['manufacturer'] as String?,
+  country: p['country'] as String?,
+  mine: p['mine'] as bool? ?? false,
 );
+
+Map<String, String> _target(AvoidTarget t) =>
+    t.brand != null ? {'brand': t.brand!} : {'manufacturer': t.maker!};

@@ -98,6 +98,7 @@ RecipeDetail recipeDetail({
 
 class FakeRecipes implements RecipesRepository {
   List<PantryMatch> pantryAnswer = const [];
+  List<String> pantryUnrecognised = const [];
   final pantryAsked = <(List<String>, bool)>[];
   List<DishSuggestion> dishAnswer = const [];
   Object? dishError;
@@ -111,12 +112,12 @@ class FakeRecipes implements RecipesRepository {
   }
 
   @override
-  Future<List<PantryMatch>> fromPantry(
+  Future<PantryResult> fromPantry(
     List<String> ingredients, {
     bool staples = true,
   }) async {
     pantryAsked.add((ingredients, staples));
-    return pantryAnswer;
+    return (items: pantryAnswer, unrecognised: pantryUnrecognised);
   }
 
   final covers = <(String, String)>[];
@@ -157,9 +158,20 @@ class FakeRecipes implements RecipesRepository {
 
   @override
   Future<List<Recipe>> list({bool family = false}) async {
+    if (!family) lists++;
+    final snapshot = family ? this.family : recipes;
+    final h = family ? null : hold;
+    if (h != null) {
+      hold = null;
+      await h.future;
+    }
     if (error != null) throw error!;
-    return family ? this.family : recipes;
+    return snapshot;
   }
+
+  /// How many times the user's own list was asked; [hold] keeps its next answer waiting until completed.
+  int lists = 0;
+  Completer<void>? hold;
 
   @override
   Future<({List<Recipe> recipes, String? next})> community({
@@ -222,8 +234,10 @@ class FakeRecipes implements RecipesRepository {
   /// While set and not completed, the recipe detail waits for it (the page still loading).
   Completer<void>? detailGate;
 
+  int detailCalls = 0;
   @override
   Future<RecipeDetail> get(String id) async {
+    detailCalls++;
     await detailGate?.future;
     if (detailError != null) throw detailError!;
     return detailResult!;
@@ -267,6 +281,31 @@ class FakeRecipes implements RecipesRepository {
   /// The optional switches sent with each create/edit, in order.
   final optionals = <Map<int, bool>>[];
 
+  /// The picks sent with each create/edit, in order.
+  final picksSent = <Map<int, PickRef?>>[];
+
+  /// The picker's answer, and each (ingredient, query) asked.
+  PickChoices pickAnswer = (products: const [], brands: const []);
+  final picksAsked = <(String?, String?)>[];
+  Object? picksError;
+
+  @override
+  Future<PickChoices> picks({String? ingredient, String? query}) async {
+    picksAsked.add((ingredient, query));
+    if (picksError case final e?) throw e;
+    return pickAnswer;
+  }
+
+  /// (recipe id, line, name) per suggestion sent.
+  final suggestions = <(String, String, String)>[];
+  Object? suggestError;
+
+  @override
+  Future<void> suggestPick(String id, String line, String name) async {
+    if (suggestError case final e?) throw e;
+    suggestions.add((id, line, name));
+  }
+
   final created = <(String, List<String>, List<String>)>[];
 
   final servingsSent = <int?>[];
@@ -277,8 +316,10 @@ class FakeRecipes implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
+    picksSent.add(picks);
     created.add((name, ingredients, steps));
     servingsSent.add(servings);
     optionals.add(optional);
@@ -292,8 +333,10 @@ class FakeRecipes implements RecipesRepository {
     required List<String> ingredients,
     required List<String> steps,
     Map<int, bool> optional = const {},
+    Map<int, PickRef?> picks = const {},
     int? servings,
   }) async {
+    picksSent.add(picks);
     edited.add((id, name, ingredients, steps));
     servingsSent.add(servings);
     optionals.add(optional);

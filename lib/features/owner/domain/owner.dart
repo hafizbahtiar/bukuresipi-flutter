@@ -339,3 +339,130 @@ class OwnerPlace {
     pinSource: pinSource,
   );
 }
+
+/// Owner > Ingredient gaps: recipe and shopping lines no catalogue name or alias matched, grouped by what they name
+/// ([key], amount and unit off); [sample] = one line as written.
+class IngredientGap {
+  const IngredientGap({
+    required this.key,
+    required this.sample,
+    required this.recipeLines,
+    required this.shoppingLines,
+  });
+
+  final String key;
+  final String sample;
+  final int recipeLines;
+  final int shoppingLines;
+}
+
+/// Owner > Catalogue rows. [id]s are the server's internal ones (owner only).
+class CatalogueMaker {
+  const CatalogueMaker({required this.id, required this.name, this.brands = 0});
+
+  final int id;
+  final String name;
+  final int brands;
+}
+
+class CatalogueBrand {
+  const CatalogueBrand({
+    required this.id,
+    required this.name,
+    this.makerId,
+    this.maker,
+    this.country,
+    this.products = 0,
+  });
+
+  final int id;
+  final String name;
+  final int? makerId;
+  final String? maker;
+  final String? country;
+  final int products;
+}
+
+class CatalogueProduct {
+  const CatalogueProduct({
+    required this.id,
+    required this.name,
+    this.ingredient,
+    this.brandId,
+    this.brand,
+    this.size,
+    this.unit,
+  });
+
+  final int id;
+  final String name;
+
+  /// A catalogue ingredient name.
+  final String? ingredient;
+  final int? brandId;
+  final String? brand;
+  final double? size;
+  final String? unit;
+}
+
+/// One page of a catalogue list; [next] = the offset of the next page, null at the end.
+typedef CataloguePage<T> = ({List<T> items, int? next});
+
+/// An alias the AI proposed for a catalogue [ingredient]; [lines] = unlinked lines it would link now.
+typedef AliasSuggestion = ({String ingredient, String alias, int lines});
+
+/// A product form filled from a barcode, a store link or a name (nothing saved). [brandIsNew]: the catalogue has no
+/// such brand yet; [aiIngredient]: the AI named the ingredient; [source]: the page the fields came from; [maker]: a
+/// new brand's maker as a page names it (its country when the page says), null = not found; [similar] = may be
+/// this product already.
+typedef ProductFill = ({
+  String name,
+  String? brand,
+  bool brandIsNew,
+  double? size,
+  String? unit,
+  String? ingredient,
+  bool aiIngredient,
+  String source,
+  ({String name, String? country, String source})? maker,
+
+  /// Catalogue products that may be this one: edit one of them rather than add it again.
+  List<CatalogueProduct> similar,
+});
+
+/// A brand or product authors asked for from recipe lines, grouped by name (Owner > Catalogue > Suggested).
+typedef CatalogueSuggestion = ({
+  String name,
+  String? ingredient,
+  int recipes,
+  String sample,
+});
+
+/// Owner > AI: which provider, model and reasoning level ('off' | 'low' | 'medium' | 'high' | 'max') a use gets.
+typedef AiSetting = ({String provider, String model, String reasoning});
+
+/// A model the server offers, the levels it takes, and whether it reads photos.
+typedef AiModel = ({
+  String id,
+  String name,
+  List<String> reasoning,
+  bool images,
+});
+
+/// [configured] = its key is set on the server.
+typedef AiProvider = ({
+  String id,
+  String name,
+  bool configured,
+  List<AiModel> models,
+});
+
+/// One AI use: [budget] = runs inside a share or receipt run (thinking can make it fail), [images] = sends photos,
+/// [setting] null = it follows the default.
+typedef AiUse = ({String id, bool budget, bool images, AiSetting? setting});
+
+typedef AiSettings = ({
+  List<AiProvider> providers,
+  AiSetting defaults,
+  List<AiUse> uses,
+});

@@ -21,6 +21,7 @@ import '../../../owner/domain/owner_repository.dart';
 import '../../../shares/presentation/widgets/share_image.dart';
 import '../../domain/recipe.dart';
 import '../recipes_controller.dart';
+import '../widgets/line_pick_sheet.dart';
 
 /// Edits a recipe: its name, then one row per ingredient (amount, unit, ingredient, Optional) and per step. Drag to reorder;
 /// Enter starts the next row and moves the cursor there; a pasted list splits into rows. The API still takes one line
@@ -134,6 +135,9 @@ class _Ingredient {
     String name = '',
     this.original,
     this.optional = false,
+    this.ingredient,
+    this.pick,
+    this.suggested,
   }) : amount = TextEditingController(text: amount),
        name = TextEditingController(text: name);
 
@@ -141,6 +145,9 @@ class _Ingredient {
     String line, {
     bool stored = false,
     bool optional = false,
+    String? ingredient,
+    LinePick? pick,
+    String? suggested,
   }) {
     final s = splitLine(line);
     return _Ingredient(
@@ -149,6 +156,9 @@ class _Ingredient {
       name: s.name,
       original: stored ? line : null,
       optional: optional,
+      ingredient: ingredient,
+      pick: pick,
+      suggested: suggested,
     );
   }
 
@@ -156,6 +166,20 @@ class _Ingredient {
   /// line's own words, e.g. "jika suka"); otherwise the server reads the words as before.
   bool optional;
   bool optionalSwitched = false;
+
+  /// The stored line's catalogue ingredient (the picker lists its products); null = unlinked or a new row.
+  final String? ingredient;
+
+  /// The author's product or brand. Sent with the line when loaded or switched (a reworded line keeps it).
+  LinePick? pick;
+  bool pickSwitched = false;
+
+  /// The author's open suggestion for this line (until the owner adds it).
+  String? suggested;
+
+  /// The stored text when the row is untouched: a suggestion is made on the saved line.
+  String? get savedLine =>
+      original != null && sent == original!.trim() ? sent : null;
 
   final TextEditingController amount;
   String? unit;
@@ -226,6 +250,9 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           i.rawText ?? i.label,
           stored: true,
           optional: i.optional,
+          ingredient: i.name,
+          pick: i.pick,
+          suggested: i.suggested,
         ),
     ],
     _ => [_Ingredient()],
@@ -308,7 +335,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
   String _snapshot() => [
     _name.text.trim(),
     _servings.text.trim(),
-    for (final r in _ingredients) '${r.line} ${r.optional}',
+    for (final r in _ingredients) '${r.line} ${r.optional} ${r.pick?.ref}',
     '|',
     for (final s in _steps) s.text.text.trim(),
     '|',
@@ -704,6 +731,10 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
       for (final (i, r) in rows.indexed)
         if (r.optional || r.optionalSwitched) i: r.optional,
     };
+    final picks = {
+      for (final (i, r) in rows.indexed)
+        if (r.pick != null || r.pickSwitched) i: r.pick?.ref,
+    };
     final steps = [
       for (final s in _steps)
         if (s.text.text.trim().isNotEmpty) s.text.text.trim(),
@@ -719,6 +750,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           ingredients: ingredients,
           steps: steps,
           optional: optional,
+          picks: picks,
           servings: servings,
         ),
         null => await recipes.create(
@@ -726,6 +758,7 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           ingredients: ingredients,
           steps: steps,
           optional: optional,
+          picks: picks,
           servings: servings,
         ),
       };
@@ -943,18 +976,24 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
                   ),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Tooltip(
-                      message: l.recipeOptionalHint,
-                      child: FilterChip(
-                        key: ValueKey('ingredient-optional-$i'),
-                        label: Text(l.recipeOptional),
-                        selected: r.optional,
-                        visualDensity: VisualDensity.compact,
-                        onSelected: (on) => setState(() {
-                          r.optional = on;
-                          r.optionalSwitched = true;
-                        }),
-                      ),
+                    child: Wrap(
+                      spacing: spaceS,
+                      children: [
+                        Tooltip(
+                          message: l.recipeOptionalHint,
+                          child: FilterChip(
+                            key: ValueKey('ingredient-optional-$i'),
+                            label: Text(l.recipeOptional),
+                            selected: r.optional,
+                            visualDensity: VisualDensity.compact,
+                            onSelected: (on) => setState(() {
+                              r.optional = on;
+                              r.optionalSwitched = true;
+                            }),
+                          ),
+                        ),
+                        _pickChip(i, r),
+                      ],
                     ),
                   ),
                 ],
@@ -975,6 +1014,52 @@ class _RecipeEditPageState extends State<RecipeEditPage> {
           ),
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _pickChip(int i, _Ingredient r) {
+    final l = AppLocalizations.of(context);
+    final pick = r.pick;
+    final label = switch (pick) {
+      final p? when p.isBrand => l.recipePickAny(p.name),
+      final p? => p.name,
+      null => switch (r.suggested) {
+        final name? => l.recipePickSuggested(name),
+        null => l.recipePickNone,
+      },
+    };
+    return InputChip(
+      key: ValueKey('ingredient-pick-$i'),
+      avatar: const Icon(Icons.sell_outlined, size: 18),
+      label: Text(label, overflow: TextOverflow.ellipsis),
+      visualDensity: VisualDensity.compact,
+      onPressed: () async {
+        final saved = r.savedLine;
+        final result = await showLinePickSheet(
+          context,
+          ingredient: r.ingredient,
+          recipeId: saved == null ? null : widget.recipe?.id,
+          line: saved ?? r.sent,
+        );
+        if (!mounted) return;
+        setState(() {
+          switch (result) {
+            case Picked(:final pick):
+              r.pick = pick;
+              r.pickSwitched = true;
+            case Suggested(:final name):
+              r.suggested = name;
+            case null:
+          }
+        });
+      },
+      deleteIcon: const Icon(Icons.cancel, size: 18),
+      onDeleted: pick == null
+          ? null
+          : () => setState(() {
+              r.pick = null;
+              r.pickSwitched = true;
+            }),
     );
   }
 

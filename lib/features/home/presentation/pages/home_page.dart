@@ -112,20 +112,36 @@ class _HomePageState extends State<HomePage> {
     final shopping = context.read<ShoppingController>();
     final family = context
         .read<FamilyController?>(); // optional: the app works without a family
-    void refresh() {
-      family?.load();
-      places.load();
-      recipes.load();
-      shopping.load();
+    DateTime? loadedAt;
+    Future<void> refresh() async {
+      // Back from TikTok after sharing: the post may be read by now, so shares always. The rest at most every
+      // [_resumeGap] (a share that finishes reloads the book and recipes itself; pull-to-refresh is there too).
       shared.load();
+      final now = DateTime.now();
+      if (loadedAt != null && now.difference(loadedAt!) < _resumeGap) return;
+      loadedAt = now; // no second round while this one runs
+      await Future.wait([
+        ?family?.load(),
+        places.load(),
+        recipes.load(),
+        shopping.load(),
+      ]);
+      // Offline: not fresh, so the next return tries again.
+      if (places.error != null ||
+          recipes.error != null ||
+          shopping.error != null) {
+        loadedAt = null;
+      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => refresh());
-    // Back from TikTok after sharing: the post may be read by now.
     _life = AppLifecycleListener(onResume: refresh);
   }
 
   late final AppLifecycleListener _life;
+
+  /// Switching apps back and forth reloads the heavy lists at most this often.
+  static const _resumeGap = Duration(minutes: 2);
 
   @override
   void didUpdateWidget(covariant HomePage old) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:typed_data';
 
 import 'package:bukuresipi_flutter/features/places/domain/market.dart';
@@ -124,6 +126,7 @@ NearbyBranch nearbyBranch({
   RatingSummary? rating,
   HalalCert? cert,
   String? cuisine = 'Melayu',
+  List<MarketDay> schedule = const [],
 }) => NearbyBranch(
   branchId: branchId,
   placeId: 'r-1',
@@ -137,6 +140,7 @@ NearbyBranch nearbyBranch({
   halalClaim: 'says_halal',
   halalQuote: 'Halal ya',
   halalSourceUrl: 'https://www.tiktok.com/@makan/video/1',
+  schedule: schedule,
   saved: saved,
   savedPlaceId: savedPlaceId,
   cover: cover,
@@ -158,10 +162,20 @@ class FakePlaces implements PlacesRepository {
   final reports = <ReportDraft>[];
   Object? reportError;
 
+  /// How many times [list] was asked; [hold] keeps the next answer waiting until completed.
+  int lists = 0;
+  Completer<void>? hold;
+
   @override
   Future<List<Place>> list() async {
+    lists++;
+    final snapshot = places;
+    if (hold case final h?) {
+      hold = null;
+      await h.future;
+    }
     if (error != null) throw error!;
-    return places;
+    return snapshot;
   }
 
   @override
@@ -275,6 +289,12 @@ class FakePlaces implements PlacesRepository {
 
   /// `get:ID` / `refresh:ID` per company call.
   final companyCalls = <String>[];
+
+  /// What [prices] answers.
+  List<MenuPrice> pricesList = const [];
+
+  @override
+  Future<List<MenuPrice>> prices(String placeId) async => pricesList;
 
   /// What [placeCompanies] answers.
   PlaceCompanies placeCompaniesList = const [];
