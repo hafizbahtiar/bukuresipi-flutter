@@ -1449,6 +1449,8 @@
   "hoursOpensAt": "Buka {time}",
   "inboxTitle": "Notifikasi",
   "inboxEmpty": "Belum ada apa-apa. Pemberitahuan aplikasi akan muncul di sini.",
+  "inboxRemove": "Buang",
+  "inboxRemoved": "Dibuang",
   "ownerMessages": "Hantar notifikasi",
   "ownerMessageNew": "Notifikasi baharu",
   "ownerMessageTo": "Kepada {email}",

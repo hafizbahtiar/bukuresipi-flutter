@@ -16,6 +16,7 @@ class NotificationsApi {
         for (final n
             in (j['notifications'] as List).cast<Map<String, dynamic>>())
           InboxItem(
+            id: n['id'] as int,
             title: n['title'] as String,
             body: n['body'] as String,
             data: (n['data'] as Map).cast<String, String>(),
@@ -26,6 +27,9 @@ class NotificationsApi {
       unread: j['unread'] as int,
     );
   }
+
+  /// Out of this user's inbox only: DELETE /notifications/:id.
+  Future<void> hide(int id) => _dio.delete<void>('/notifications/$id');
 
   /// The inbox was opened: everything in it is read.
   Future<void> seen() => _dio.post<void>('/notifications/seen');

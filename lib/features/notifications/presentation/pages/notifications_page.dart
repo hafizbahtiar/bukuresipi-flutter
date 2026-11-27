@@ -12,6 +12,7 @@ import '../../../../core/widgets/load_view.dart';
 import '../../../../core/widgets/notebook.dart' show NotebookTitle;
 import '../../../../core/widgets/wide_page.dart';
 import '../../../../l10n/gen/app_localizations.dart';
+import '../../../auth/presentation/auth_text.dart';
 import '../../../push/push_controller.dart';
 import '../../../push/push_routes.dart';
 import '../../data/notifications_api.dart';
@@ -47,6 +48,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
       _inbox = next; // a block: an arrow would return the Future, which setState refuses
     });
     await next;
+  }
+
+  Future<void> _remove(InboxItem n) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await apiCall(() => _api.hide(n.id));
+      messenger.showSnackBar(SnackBar(content: Text(l.inboxRemoved)));
+      await _reload();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(l, e))));
+    }
   }
 
   void _open(InboxItem n) {
@@ -128,6 +141,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           // The whole text: the tile's subtitle stops at 2 lines.
                           footer: Text(n.body, style: TextStyle(color: nb.ink)),
                           onTap: tappable ? () => _open(n) : null,
+                          actions: [
+                            MenuAction(
+                              icon: Icons.delete_outline,
+                              label: l.inboxRemove,
+                              danger: true,
+                              onTap: () => _remove(n),
+                            ),
+                          ],
                         );
                       },
                     ),

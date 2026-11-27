@@ -16,6 +16,16 @@ class _FakeApi extends NotificationsApi {
   @override
   Future<({List<InboxItem> items, int unread})> list() async =>
       (items: items, unread: unread);
+  final hidden = <int>[];
+  @override
+  Future<void> hide(int id) async {
+    hidden.add(id);
+    items = [
+      for (final n in items)
+        if (n.id != id) n,
+    ];
+  }
+
   @override
   Future<void> seen() async {
     seenCalls++;
@@ -25,6 +35,7 @@ class _FakeApi extends NotificationsApi {
 
 InboxItem item(String title, Map<String, String> data, {bool owner = false}) =>
     InboxItem(
+      id: title.hashCode,
       title: title,
       body: 'Body of $title',
       data: data,
@@ -170,4 +181,23 @@ void main() {
     expect(t.takeException(), isNull);
     expect(find.text('New one'), findsOneWidget);
   });
+
+  testWidgets(
+    'a row is removed from the inbox from its menu (only for this user)',
+    (t) async {
+      final api = _FakeApi([
+        item('Keep', {'type': 'badge'}),
+        item('Gone', {'type': 'message'}, owner: true),
+      ], 0);
+      await pump(t, api);
+      await t.longPress(find.byKey(const ValueKey('inbox-1')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Remove'));
+      await t.pumpAndSettle();
+      expect(api.hidden, ['Gone'.hashCode]);
+      expect(find.text('Gone'), findsNothing);
+      expect(find.text('Keep'), findsOneWidget);
+      expect(find.text('Removed'), findsOneWidget); // the snackbar
+    },
+  );
 }
