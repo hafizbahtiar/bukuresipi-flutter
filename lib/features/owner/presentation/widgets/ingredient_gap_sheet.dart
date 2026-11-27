@@ -12,6 +12,7 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../../auth/presentation/auth_text.dart';
 import '../../domain/owner.dart';
 import '../../domain/owner_repository.dart';
+import '../../../places/presentation/widgets/owner_panel.dart';
 
 enum _Step { pick, alias, create }
 
@@ -163,197 +164,229 @@ class _IngredientGapSheetState extends State<IngredientGapSheet> {
     final l = AppLocalizations.of(context);
     final nb = Notebook.of(context);
     final text = Theme.of(context).textTheme;
-    Widget save(VoidCallback? onPressed) => Align(
-      alignment: Alignment.centerRight,
-      child: FilledButton(
-        key: const ValueKey('gap-save'),
-        onPressed: _busy ? null : onPressed,
-        child: Text(l.save),
-      ),
+    Widget save(VoidCallback? onPressed) => PanelActions(
+      children: [
+        BusyButton(
+          key: const ValueKey('gap-save'),
+          icon: Icons.check,
+          label: l.save,
+          busyLabel: l.ownerSaving,
+          busy: _busy,
+          kind: BusyButtonKind.filled,
+          onPressed: _busy ? null : onPressed,
+        ),
+      ],
+    );
+    // BaseTile keeps the sheet's gutter itself; rows are spaced as the catalogue list.
+    Widget row(Widget tile) => Padding(
+      padding: const EdgeInsets.only(top: spaceXs),
+      child: tile,
     );
     return SheetSwitcher(
       forward: _forward,
-      child: switch (_step) {
-        _Step.pick => Column(
-          key: const ValueKey('pick'),
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: spaceM),
-              child: Text(
-                l.ownerGapPick(widget.gap.key),
-                style: text.titleMedium,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(spaceM, spaceXs, spaceM, 0),
-              child: Text(
-                widget.gap.sample,
-                style: text.bodySmall?.copyWith(color: nb.inkSoft),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: AiButton(
-                  key: const ValueKey('gap-ai'),
-                  label: l.ownerGapAiSuggest,
-                  busy: _aiBusy,
-                  onPressed: _suggest,
+      // The sheet caps its height (less with the keyboard up): each step scrolls.
+      child: SingleChildScrollView(
+        key: ValueKey(_step),
+        child: switch (_step) {
+          _Step.pick => Column(
+            key: const ValueKey('pick'),
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: spaceM),
+                child: Text(
+                  l.ownerGapPick(widget.gap.key),
+                  style: text.titleMedium,
                 ),
               ),
-            ),
-            if (_ai case final ai?)
-              switch (ai) {
-                (name: _, ingredient: final String ingredient) => ListTile(
-                  key: const ValueKey('gap-ai-same'),
-                  leading: const AiBadge(),
-                  title: Text(l.ownerGapAiSame(ingredient)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _pick(ingredient),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(spaceM, spaceXs, spaceM, 0),
+                child: Text(
+                  widget.gap.sample,
+                  style: text.bodySmall?.copyWith(color: nb.inkSoft),
                 ),
-                (name: final String name, ingredient: null) => ListTile(
-                  key: const ValueKey('gap-ai-new'),
-                  leading: const AiBadge(),
-                  title: Text(l.ownerGapAiNew(name)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _createFromAi(name),
-                ),
-                _ => ListTile(
-                  leading: const AiBadge(),
-                  title: Text(
-                    l.ownerGapAiNone,
-                    style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(spaceM, spaceS, spaceM, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: AiButton(
+                    key: const ValueKey('gap-ai'),
+                    label: l.ownerGapAiSuggest,
+                    busy: _aiBusy,
+                    onPressed: _suggest,
                   ),
                 ),
-              },
-            Padding(
-              padding: const EdgeInsets.all(spaceM),
-              child: TextField(
-                key: const ValueKey('gap-search'),
-                controller: _search,
-                decoration: InputDecoration(
-                  labelText: l.ownerGapSearch,
-                  prefixIcon: const Icon(Icons.search),
-                ),
-                onChanged: _find,
               ),
-            ),
-            for (final name in _found.take(6))
-              ListTile(
-                key: ValueKey('gap-ingredient-$name'),
-                title: Text(name),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _pick(name),
-              ),
-            ListTile(
-              key: const ValueKey('gap-new'),
-              leading: const Icon(Icons.add),
-              title: Text(l.ownerGapNew),
-              onTap: () => _go(_Step.create),
-            ),
-          ],
-        ),
-        _Step.alias => Column(
-          key: const ValueKey('alias'),
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SheetStepTitle(
-              title: l.ownerGapAlias(_ingredient ?? ''),
-              onBack: () => _go(_Step.pick, forward: false),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(spaceM),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    key: const ValueKey('gap-alias'),
-                    controller: _alias,
-                    decoration: InputDecoration(
-                      labelText: l.ownerGapName,
-                      errorText: _taken ? l.ownerGapTaken : null,
+              if (_ai case final ai?)
+                switch (ai) {
+                  (name: _, ingredient: final String ingredient) => row(
+                    BaseTile(
+                      key: const ValueKey('gap-ai-same'),
+                      leading: const AiBadge(),
+                      title: l.ownerGapAiSame(ingredient),
+                      dense: true,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _pick(ingredient),
                     ),
-                    onChanged: _check,
                   ),
-                  const SizedBox(height: spaceS),
-                  if (_preview case final p?) ...[
-                    Text(l.ownerGapLinks(p.lines), style: text.titleSmall),
-                    for (final s in p.sample.take(3))
-                      Text(
-                        s,
-                        style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                  (name: final String name, ingredient: null) => row(
+                    BaseTile(
+                      key: const ValueKey('gap-ai-new'),
+                      leading: const AiBadge(),
+                      title: l.ownerGapAiNew(name),
+                      dense: true,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _createFromAi(name),
+                    ),
+                  ),
+                  _ => Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      spaceM,
+                      spaceS,
+                      spaceM,
+                      0,
+                    ),
+                    child: Text(
+                      l.ownerGapAiNone,
+                      style: text.bodyMedium?.copyWith(color: nb.inkSoft),
+                    ),
+                  ),
+                },
+              Padding(
+                padding: const EdgeInsets.all(spaceM),
+                child: TextField(
+                  key: const ValueKey('gap-search'),
+                  controller: _search,
+                  decoration: InputDecoration(
+                    labelText: l.ownerGapSearch,
+                    prefixIcon: const Icon(Icons.search),
+                  ),
+                  onChanged: _find,
+                ),
+              ),
+              for (final name in _found.take(6))
+                row(
+                  BaseTile(
+                    key: ValueKey('gap-ingredient-$name'),
+                    title: name,
+                    dense: true,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _pick(name),
+                  ),
+                ),
+              row(
+                BaseTile(
+                  key: const ValueKey('gap-new'),
+                  leading: const Icon(Icons.add),
+                  title: l.ownerGapNew,
+                  dense: true,
+                  onTap: () => _go(_Step.create),
+                ),
+              ),
+              const SizedBox(height: spaceS),
+            ],
+          ),
+          _Step.alias => Column(
+            key: const ValueKey('alias'),
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SheetStepTitle(
+                title: l.ownerGapAlias(_ingredient ?? ''),
+                onBack: () => _go(_Step.pick, forward: false),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(spaceM),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      key: const ValueKey('gap-alias'),
+                      controller: _alias,
+                      decoration: InputDecoration(
+                        labelText: l.ownerGapName,
+                        errorText: _taken ? l.ownerGapTaken : null,
                       ),
-                  ],
-                  const SizedBox(height: spaceM),
-                  save(
-                    _taken || _preview == null
-                        ? null
-                        : () => _save(
-                            () => _repo.addAlias(
-                              _ingredient!,
-                              _alias.text.trim(),
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        _Step.create => Column(
-          key: const ValueKey('create'),
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SheetStepTitle(
-              title: l.ownerGapNew,
-              onBack: () => _go(_Step.pick, forward: false),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(spaceM),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    key: const ValueKey('gap-name'),
-                    controller: _name,
-                    decoration: InputDecoration(
-                      labelText: l.ownerGapName,
-                      errorText: _taken ? l.ownerGapTaken : null,
+                      onChanged: _check,
                     ),
-                    onChanged: (_) => setState(() => _taken = false),
-                  ),
-                  const SizedBox(height: spaceS),
-                  PickerField(
-                    controller: _category,
-                    label: l.ownerGapCategory,
-                    options: widget.categories,
-                    onPicked: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: spaceM),
-                  ListenableBuilder(
-                    listenable: _name,
-                    builder: (_, _) => save(
-                      _name.text.trim().length < 2 || _category.text.isEmpty
+                    const SizedBox(height: spaceS),
+                    if (_preview case final p?) ...[
+                      Text(l.ownerGapLinks(p.lines), style: text.titleSmall),
+                      for (final s in p.sample.take(3))
+                        Text(
+                          s,
+                          style: text.bodySmall?.copyWith(color: nb.inkSoft),
+                        ),
+                    ],
+                    const SizedBox(height: spaceM),
+                    save(
+                      _taken || _preview == null
                           ? null
                           : () => _save(
-                              () => _repo.addIngredient(
-                                _name.text.trim(),
-                                _category.text,
+                              () => _repo.addAlias(
+                                _ingredient!,
+                                _alias.text.trim(),
                               ),
                             ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      },
+            ],
+          ),
+          _Step.create => Column(
+            key: const ValueKey('create'),
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SheetStepTitle(
+                title: l.ownerGapNew,
+                onBack: () => _go(_Step.pick, forward: false),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(spaceM),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      key: const ValueKey('gap-name'),
+                      controller: _name,
+                      decoration: InputDecoration(
+                        labelText: l.ownerGapName,
+                        errorText: _taken ? l.ownerGapTaken : null,
+                      ),
+                      onChanged: (_) => setState(() => _taken = false),
+                    ),
+                    const SizedBox(height: spaceS),
+                    PickerField(
+                      controller: _category,
+                      label: l.ownerGapCategory,
+                      options: widget.categories,
+                      onPicked: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: spaceM),
+                    ListenableBuilder(
+                      listenable: _name,
+                      builder: (_, _) => save(
+                        _name.text.trim().length < 2 || _category.text.isEmpty
+                            ? null
+                            : () => _save(
+                                () => _repo.addIngredient(
+                                  _name.text.trim(),
+                                  _category.text,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        },
+      ),
     );
   }
 }
