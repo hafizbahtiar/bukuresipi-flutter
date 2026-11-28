@@ -644,6 +644,9 @@ class FakeOwner implements OwnerRepository {
     }
   }
 
+  /// Holds a brand's save until completed (the sheet closed meanwhile).
+  Completer<void>? saveGate;
+
   @override
   Future<int> saveBrand({
     int? id,
@@ -651,6 +654,7 @@ class FakeOwner implements OwnerRepository {
     int? makerId,
     String? country,
   }) async {
+    await saveGate?.future;
     savedRows.add((
       'brands',
       id,

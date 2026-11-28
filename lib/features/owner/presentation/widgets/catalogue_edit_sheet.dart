@@ -103,7 +103,8 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
   String? _photoUrl;
   bool _photoRemoved = false;
 
-  OwnerRepository get _repo => context.read<OwnerRepository>();
+  // Read once (while mounted): a save goes on after the sheet is closed.
+  late final OwnerRepository _repo = context.read<OwnerRepository>();
 
   @override
   void initState() {
@@ -333,6 +334,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     setState(() => _busy = true);
     try {
       final name = _name.text.trim();
+      var photoSaved = true;
       switch (widget.kind) {
         case CatalogueKind.makers:
           await _repo.saveMaker(id: id, name: name);
@@ -347,7 +349,7 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
                       (_row as CatalogueBrand?)?.makerId,
             country: _orNull(_country),
           );
-          await _savePhoto('brands', saved);
+          photoSaved = await _savePhoto('brands', saved);
         case CatalogueKind.products:
           if (_fill case final f?
               when f.brandIsNew && !_brandAdded && _orNull(_brand) == null) {
@@ -365,7 +367,12 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
             size: double.tryParse(_size.text.trim().replaceAll(',', '.')),
             unit: _orNull(_unit),
           );
-          await _savePhoto('products', saved);
+          photoSaved = await _savePhoto('products', saved);
+      }
+      if (!photoSaved) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l.catalogueSavedNoPhoto)),
+        );
       }
       widget.onSaved?.call(name);
       if (mounted) Navigator.of(context).pop('saved');
@@ -419,11 +426,9 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
     _ => null,
   };
 
-  /// After the row is saved (a new one needs its id): its photo as picked. A failed photo only says so: the sheet
-  /// still closes (Save again would add the row twice).
-  Future<void> _savePhoto(String kind, int id) async {
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+  /// After the row is saved (a new one needs its id): its photo as picked; false = it failed (the sheet still
+  /// closes: Save again would add the row twice). No [context] here: the sheet may be closed by now.
+  Future<bool> _savePhoto(String kind, int id) async {
     try {
       if (_photoPath != null || _photoUrl != null) {
         await _repo.setCataloguePhoto(
@@ -435,8 +440,9 @@ class _CatalogueEditSheetState extends State<CatalogueEditSheet> {
       } else if (_photoRemoved && _savedPhoto != null) {
         await _repo.removeCataloguePhoto(kind, id);
       }
+      return true;
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.catalogueSavedNoPhoto)));
+      return false;
     }
   }
 
