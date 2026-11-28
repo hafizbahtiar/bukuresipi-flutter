@@ -1353,6 +1353,44 @@ void main() {
       },
     );
 
+    testWidgets('a sheet closed while it saves still sends the picked logo', (
+      t,
+    ) async {
+      await pump(
+        t,
+        Builder(
+          builder: (c) => Scaffold(
+            body: TextButton(
+              onPressed: () => showBaseSheet<String>(
+                c,
+                builder: (_) => const CatalogueEditSheet(
+                  kind: CatalogueKind.brands,
+                  row: CatalogueBrand(id: 3, name: 'Kara'),
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await t.tap(find.text('open'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('catalogue-photo-search')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('photo-candidate-0')));
+      await t.pumpAndSettle();
+      repo.saveGate = Completer<void>();
+      await t.tap(find.byKey(const ValueKey('catalogue-save')));
+      await t.pump();
+      t.state<NavigatorState>(find.byType(Navigator).first).pop();
+      await t.pumpAndSettle();
+      repo.saveGate!.complete();
+      await t.pumpAndSettle();
+      expect(repo.photoCalls, [
+        ('brands', 3, 'url:https://kara.test/logo.png'),
+      ]);
+    });
+
     testWidgets(
       'a fill that finds the product already: edit it instead of adding it again',
       (t) async {
